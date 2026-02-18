@@ -4,6 +4,39 @@ Registro de todas as sub-fases concluidas, ordenado do mais recente ao mais anti
 
 ---
 
+## [Sub-fase 3.7b] - 2026-02-18
+
+### Entregaveis: Prazo + Hierarquia Pai/Filho
+
+Adicionado prazo de entrega por entregavel com indicadores de urgencia,
+e conceito de entregavel pai (90") com reducoes/copias vinculadas (2x 30").
+
+**Migration:**
+- `add_parent_id_to_job_deliverables` — coluna parent_id (self-referencing FK) + indice + constraint
+
+**Edge Function atualizada (v3):**
+- `jobs-deliverables` — CreateDeliverableSchema: +delivery_date, +parent_id, +link
+- UpdateDeliverableSchema: +parent_id, +link
+- Validacao de parent_id (existe no mesmo job, nao e self-ref)
+
+**Arquivos modificados (5):**
+- `frontend/src/types/jobs.ts` — JobDeliverable: +parent_id, file_url/review_url substituidos por link
+- `frontend/src/lib/format.ts` — +formatIndustryDuration (90", 2'30"), +daysUntil
+- `frontend/src/hooks/useJobDeliverables.ts` — +delivery_date, +parent_id, +link nos params
+- `frontend/src/components/job-detail/tabs/DeliverableDialog.tsx` — +campo prazo (date), +selector entregavel pai, link unico
+- `frontend/src/components/job-detail/tabs/TabEntregaveis.tsx` — Hierarquia visual, coluna Prazo com urgencia, duracao industria
+
+**Funcionalidades:**
+- Hierarquia pai/filho: entregavel raiz (90") com reducoes indentadas abaixo (CornerDownRight icon)
+- Prazo com indicadores: vermelho (atrasado), amber (3 dias), tooltip com contagem de dias
+- Duracao formato industria: 90", 30", 2'30" (padrao audiovisual)
+- Ordenacao automatica: pais por data de entrega (mais urgente primeiro), filhos agrupados
+- Selector de pai no dialog: dropdown com entregaveis raiz do job
+- Campo link unico (substitui file_url/review_url que nao existiam no banco)
+- Entregaveis aprovados/entregues nao mostram indicador de urgencia
+
+---
+
 ## [Sub-fase 3.7] - 2026-02-18
 
 ### Pipeline Kanban com Drag-and-Drop

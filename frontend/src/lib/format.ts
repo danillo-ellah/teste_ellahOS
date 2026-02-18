@@ -83,6 +83,27 @@ export function parseBRNumber(text: string): number | null {
   return isNaN(num) ? null : num
 }
 
+// Formatar duracao em formato de industria audiovisual (90", 2'30")
+export function formatIndustryDuration(seconds: number | null | undefined): string {
+  if (seconds == null || seconds <= 0) return '-'
+  const min = Math.floor(seconds / 60)
+  const sec = seconds % 60
+  if (min === 0) return `${sec}"`
+  if (sec === 0) return min >= 60 ? `${Math.floor(min / 60)}'${min % 60}"` : `${min}'`
+  return `${min}'${sec.toString().padStart(2, '0')}"`
+}
+
+// Dias ate uma data (negativo = atrasado)
+export function daysUntil(date: string | null | undefined): number | null {
+  if (!date) return null
+  const parsed = safeParse(date)
+  if (!parsed) return null
+  const now = new Date()
+  now.setHours(0, 0, 0, 0)
+  parsed.setHours(0, 0, 0, 0)
+  return Math.ceil((parsed.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+}
+
 // Formatar horario HH:MM:SS para HH:MM
 export function formatTime(time: string | null | undefined): string {
   if (!time) return '-'

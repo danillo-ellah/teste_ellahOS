@@ -1,8 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { toast } from 'sonner'
-import { Plus, MoreHorizontal, Pencil, Trash2, Package, ExternalLink } from 'lucide-react'
+import {
+  Plus,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Package,
+  ExternalLink,
+  CornerDownRight,
+  AlertTriangle,
+  Clock,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -19,6 +29,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { ConfirmDialog } from '@/components/jobs/ConfirmDialog'
 import { EmptyTabState } from '@/components/shared/EmptyTabState'
 import { DeliverableDialog } from './DeliverableDialog'
@@ -30,11 +46,59 @@ import {
 } from '@/hooks/useJobDeliverables'
 import { ApiRequestError } from '@/lib/api'
 import { DELIVERABLE_STATUS_LABELS } from '@/lib/constants'
-import { formatDuration } from '@/lib/format'
+import { formatDate, formatIndustryDuration, daysUntil } from '@/lib/format'
+import { cn } from '@/lib/utils'
 import type { JobDetail, JobDeliverable, DeliverableStatus } from '@/types/jobs'
 
 interface TabEntregaveisProps {
   job: JobDetail
+}
+
+// Agrupar entregaveis por hierarquia: pais primeiro (ordenados por delivery_date),
+// filhos logo abaixo de cada pai
+function buildHierarchy(deliverables: JobDeliverable[]): JobDeliverable[] {
+  const parents: JobDeliverable[] = []
+  const childrenMap = new Map<string, JobDeliverable[]>()
+
+  for (const d of deliverables) {
+    if (d.parent_id) {
+      const siblings = childrenMap.get(d.parent_id) ?? []
+      siblings.push(d)
+      childrenMap.set(d.parent_id, siblings)
+    } else {
+      parents.push(d)
+    }
+  }
+
+  // Ordenar pais por delivery_date (mais urgente primeiro), null no final
+  parents.sort((a, b) => {
+    if (!a.delivery_date && !b.delivery_date) return 0
+    if (!a.delivery_date) return 1
+    if (!b.delivery_date) return -1
+    return a.delivery_date.localeCompare(b.delivery_date)
+  })
+
+  // Montar lista plana: pai -> filhos -> pai -> filhos
+  const result: JobDeliverable[] = []
+  for (const parent of parents) {
+    result.push(parent)
+    const children = childrenMap.get(parent.id) ?? []
+    children.sort((a, b) => {
+      if (!a.delivery_date && !b.delivery_date) return 0
+      if (!a.delivery_date) return 1
+      if (!b.delivery_date) return -1
+      return a.delivery_date.localeCompare(b.delivery_date)
+    })
+    result.push(...children)
+  }
+
+  // Orfaos (filhos cujo parent_id nao esta na lista) - nao deveria acontecer
+  const resultIds = new Set(result.map((d) => d.id))
+  for (const d of deliverables) {
+    if (!resultIds.has(d.id)) result.push(d)
+  }
+
+  return result
 }
 
 export function TabEntregaveis({ job }: TabEntregaveisProps) {
@@ -46,6 +110,22 @@ export function TabEntregaveis({ job }: TabEntregaveisProps) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<JobDeliverable | undefined>()
   const [deleting, setDeleting] = useState<JobDeliverable | null>(null)
+
+  const list = deliverables ?? []
+  const hierarchy = useMemo(() => buildHierarchy(list), [list])
+
+  // Opcoes de pai para o dialog (somente entregaveis sem parent_id = raiz)
+  const parentOptions = useMemo(
+    () =>
+      list
+        .filter((d) => !d.parent_id)
+        .map((d) => ({
+          id: d.id,
+          description: d.description,
+          duration_seconds: d.duration_seconds,
+        })),
+    [list],
+  )
 
   function handleOpenAdd() {
     setEditing(undefined)
@@ -63,8 +143,9 @@ export function TabEntregaveis({ job }: TabEntregaveisProps) {
     resolution: string | null
     duration_seconds: number | null
     status: string
-    file_url: string | null
-    review_url: string | null
+    delivery_date: string | null
+    parent_id: string | null
+    link: string | null
   }) {
     try {
       if (editing) {
@@ -121,8 +202,6 @@ export function TabEntregaveis({ job }: TabEntregaveisProps) {
     )
   }
 
-  const list = deliverables ?? []
-
   if (list.length === 0) {
     return (
       <>
@@ -155,91 +234,94 @@ export function TabEntregaveis({ job }: TabEntregaveisProps) {
         </Button>
       </div>
 
-      <div className="rounded-lg border border-border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Descricao</TableHead>
-              <TableHead>Formato</TableHead>
-              <TableHead>Resolucao</TableHead>
-              <TableHead>Duracao</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-[60px]">Links</TableHead>
-              <TableHead className="w-[50px]" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {list.map((d) => (
-              <TableRow key={d.id}>
-                <TableCell className="font-medium max-w-[200px] truncate">
-                  {d.description}
-                </TableCell>
-                <TableCell>{d.format || '-'}</TableCell>
-                <TableCell>{d.resolution || '-'}</TableCell>
-                <TableCell className="tabular-nums">
-                  {formatDuration(d.duration_seconds)}
-                </TableCell>
-                <TableCell>
-                  <DeliverableStatusBadge status={d.status} />
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    {d.file_url && (
-                      <a
-                        href={d.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:text-primary/80"
-                        title="Arquivo"
-                      >
-                        <ExternalLink className="size-3.5" />
-                      </a>
-                    )}
-                    {d.review_url && (
-                      <a
-                        href={d.review_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-muted-foreground hover:text-foreground"
-                        title="Review"
-                      >
-                        <ExternalLink className="size-3.5" />
-                      </a>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="size-8" aria-label={`Acoes para ${d.description}`}>
-                        <MoreHorizontal className="size-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleOpenEdit(d)}>
-                        <Pencil className="size-4" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => setDeleting(d)}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="size-4" />
-                        Remover
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+      <TooltipProvider>
+        <div className="rounded-lg border border-border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Descricao</TableHead>
+                <TableHead className="w-[70px]">Duracao</TableHead>
+                <TableHead>Formato</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Prazo</TableHead>
+                <TableHead className="w-[40px]">Link</TableHead>
+                <TableHead className="w-[50px]" />
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {hierarchy.map((d) => {
+                const isChild = !!d.parent_id
+                return (
+                  <TableRow key={d.id} className={cn(isChild && 'bg-muted/30')}>
+                    <TableCell className="font-medium max-w-[240px]">
+                      <div className="flex items-center gap-1.5">
+                        {isChild && (
+                          <CornerDownRight className="size-3.5 text-muted-foreground shrink-0" />
+                        )}
+                        <span className="truncate">{d.description}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="tabular-nums text-xs font-mono">
+                      {formatIndustryDuration(d.duration_seconds)}
+                    </TableCell>
+                    <TableCell className="text-xs">{d.format || '-'}</TableCell>
+                    <TableCell>
+                      <DeliverableStatusBadge status={d.status} />
+                    </TableCell>
+                    <TableCell>
+                      <DeliveryDateCell
+                        date={d.delivery_date}
+                        status={d.status}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {d.link && (
+                        <a
+                          href={d.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:text-primary/80"
+                          title="Abrir link"
+                        >
+                          <ExternalLink className="size-3.5" />
+                        </a>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="size-8" aria-label={`Acoes para ${d.description}`}>
+                            <MoreHorizontal className="size-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleOpenEdit(d)}>
+                            <Pencil className="size-4" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setDeleting(d)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="size-4" />
+                            Remover
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      </TooltipProvider>
 
       <DeliverableDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         deliverable={editing}
+        parentOptions={parentOptions}
         onSubmit={handleSubmit}
         isPending={isAdding || isUpdating}
       />
@@ -258,6 +340,61 @@ export function TabEntregaveis({ job }: TabEntregaveisProps) {
     </>
   )
 }
+
+// --- Badge de urgencia do prazo ---
+
+function DeliveryDateCell({ date, status }: { date: string | null; status: string }) {
+  if (!date) return <span className="text-xs text-muted-foreground">-</span>
+
+  // Entregue/aprovado nao mostra urgencia
+  const isFinished = status === 'entregue' || status === 'aprovado'
+  const days = daysUntil(date)
+
+  if (days === null) return <span className="text-xs">{formatDate(date)}</span>
+
+  if (isFinished) {
+    return <span className="text-xs text-muted-foreground">{formatDate(date)}</span>
+  }
+
+  // Atrasado
+  if (days < 0) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400">
+            <AlertTriangle className="size-3" />
+            {formatDate(date)}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          Atrasado {Math.abs(days)} dia{Math.abs(days) !== 1 ? 's' : ''}
+        </TooltipContent>
+      </Tooltip>
+    )
+  }
+
+  // Urgente (0-3 dias)
+  if (days <= 3) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+            <Clock className="size-3" />
+            {formatDate(date)}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          {days === 0 ? 'Vence hoje!' : `Faltam ${days} dia${days !== 1 ? 's' : ''}`}
+        </TooltipContent>
+      </Tooltip>
+    )
+  }
+
+  // Normal
+  return <span className="text-xs">{formatDate(date)}</span>
+}
+
+// --- Badge de status ---
 
 function DeliverableStatusBadge({ status }: { status: string }) {
   const colorMap: Record<string, string> = {

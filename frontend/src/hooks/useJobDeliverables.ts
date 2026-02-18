@@ -31,8 +31,9 @@ interface AddDeliverableParams {
   resolution?: string | null
   duration_seconds?: number | null
   status?: DeliverableStatus
-  file_url?: string | null
-  review_url?: string | null
+  delivery_date?: string | null
+  parent_id?: string | null
+  link?: string | null
 }
 
 export function useAddDeliverable() {
@@ -63,8 +64,9 @@ interface UpdateDeliverableParams {
   resolution?: string | null
   duration_seconds?: number | null
   status?: DeliverableStatus
-  file_url?: string | null
-  review_url?: string | null
+  delivery_date?: string | null
+  parent_id?: string | null
+  link?: string | null
 }
 
 export function useUpdateDeliverable() {

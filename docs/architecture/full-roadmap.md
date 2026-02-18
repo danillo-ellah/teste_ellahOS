@@ -22,13 +22,15 @@
 - **verify_jwt desabilitado** em todas as Edge Functions (auth feita via código com getAuthContext)
 
 ### 🔄 Em progresso
-- **Frontend Fase 3:** 6 de 8 sub-fases concluídas (falta Kanban + polimento)
+- **Frontend Fase 3:** 7 de 8 sub-fases concluídas (falta polimento)
 - Auth flow (login, forgot password, reset password)
 - Jobs List com filtros, busca, paginação, criação via modal
 - Job Detail com 6 abas CRUD (Geral, Equipe, Entregáveis, Financeiro, Diárias, Histórico)
+- Pipeline Kanban com drag-and-drop (@dnd-kit)
+- Entregáveis com hierarquia pai/filho, prazo de entrega e indicadores de urgência
 
 ### ❌ O que falta
-- Frontend Fase 3: Pipeline Kanban + polimento
+- Frontend Fase 3: Polimento final
 - 19 das 20 features planejadas
 - Integrações externas (Google Drive, WhatsApp, DocuSeal, n8n workflows)
 - Features de IA

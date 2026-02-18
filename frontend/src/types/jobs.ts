@@ -201,8 +201,8 @@ export interface JobDeliverable {
   status: DeliverableStatus
   version: number
   delivery_date: string | null
-  file_url: string | null
-  review_url: string | null
+  parent_id: string | null
+  link: string | null
   display_order: number
   notes: string | null
   created_at: string

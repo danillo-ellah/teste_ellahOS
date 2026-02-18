@@ -36,8 +36,9 @@ const schema = z.object({
     'Duracao deve ser maior que zero',
   ).optional(),
   status: z.string(),
-  file_url: z.union([z.string().url('URL invalida'), z.literal('')]).optional(),
-  review_url: z.union([z.string().url('URL invalida'), z.literal('')]).optional(),
+  delivery_date: z.string().optional(),
+  parent_id: z.string().optional(),
+  link: z.union([z.string().url('URL invalida'), z.literal('')]).optional(),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -46,14 +47,17 @@ interface DeliverableDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   deliverable?: JobDeliverable
+  /** Entregaveis existentes que podem ser selecionados como pai */
+  parentOptions?: Array<{ id: string; description: string; duration_seconds: number | null }>
   onSubmit: (data: {
     description: string
     format: string | null
     resolution: string | null
     duration_seconds: number | null
     status: string
-    file_url: string | null
-    review_url: string | null
+    delivery_date: string | null
+    parent_id: string | null
+    link: string | null
   }) => Promise<void>
   isPending: boolean
 }
@@ -62,6 +66,7 @@ export function DeliverableDialog({
   open,
   onOpenChange,
   deliverable,
+  parentOptions,
   onSubmit,
   isPending,
 }: DeliverableDialogProps) {
@@ -81,8 +86,9 @@ export function DeliverableDialog({
       resolution: '',
       duration_seconds: '',
       status: 'pendente',
-      file_url: '',
-      review_url: '',
+      delivery_date: '',
+      parent_id: '',
+      link: '',
     },
   })
 
@@ -94,8 +100,9 @@ export function DeliverableDialog({
         resolution: deliverable?.resolution ?? '',
         duration_seconds: deliverable?.duration_seconds?.toString() ?? '',
         status: deliverable?.status ?? 'pendente',
-        file_url: deliverable?.file_url ?? '',
-        review_url: deliverable?.review_url ?? '',
+        delivery_date: deliverable?.delivery_date ?? '',
+        parent_id: deliverable?.parent_id ?? '',
+        link: deliverable?.link ?? '',
       })
     }
   }, [open, deliverable, reset])
@@ -107,10 +114,17 @@ export function DeliverableDialog({
       resolution: values.resolution || null,
       duration_seconds: values.duration_seconds ? parseInt(values.duration_seconds, 10) : null,
       status: values.status,
-      file_url: values.file_url || null,
-      review_url: values.review_url || null,
+      delivery_date: values.delivery_date || null,
+      parent_id: values.parent_id || null,
+      link: values.link || null,
     })
   }
+
+  // Filtrar opcoes de pai: nao pode ser o proprio item, e nao pode ser filho de ninguem (so raiz)
+  const availableParents = (parentOptions ?? []).filter((p) => {
+    if (deliverable && p.id === deliverable.id) return false
+    return true
+  })
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -136,11 +150,40 @@ export function DeliverableDialog({
             error={errors.description?.message}
           >
             <Input
-              placeholder="Ex: Video 30s para Instagram"
+              placeholder="Ex: Filme 90&quot; institucional"
               aria-invalid={!!errors.description}
               {...register('description')}
             />
           </FormField>
+
+          {/* Entregavel pai (copia/reducao) */}
+          {availableParents.length > 0 && (
+            <FormField label="Entregavel pai (copia de)" optional>
+              <Controller
+                name="parent_id"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value || '_none'}
+                    onValueChange={(v) => field.onChange(v === '_none' ? '' : v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Nenhum (entregavel independente)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">Nenhum (independente)</SelectItem>
+                      {availableParents.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.description}
+                          {p.duration_seconds ? ` (${p.duration_seconds}")` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </FormField>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <FormField label="Formato" optional>
@@ -156,7 +199,7 @@ export function DeliverableDialog({
               <Input
                 type="number"
                 min="1"
-                placeholder="Ex: 30"
+                placeholder="Ex: 90"
                 {...register('duration_seconds')}
               />
             </FormField>
@@ -182,19 +225,19 @@ export function DeliverableDialog({
             </FormField>
           </div>
 
-          <FormField label="URL do arquivo" optional error={errors.file_url?.message}>
+          {/* Prazo de entrega */}
+          <FormField label="Prazo de entrega" optional>
             <Input
-              placeholder="https://..."
-              aria-invalid={!!errors.file_url}
-              {...register('file_url')}
+              type="date"
+              {...register('delivery_date')}
             />
           </FormField>
 
-          <FormField label="URL de review" optional error={errors.review_url?.message}>
+          <FormField label="Link (arquivo/review)" optional error={errors.link?.message}>
             <Input
               placeholder="https://..."
-              aria-invalid={!!errors.review_url}
-              {...register('review_url')}
+              aria-invalid={!!errors.link}
+              {...register('link')}
             />
           </FormField>
 
