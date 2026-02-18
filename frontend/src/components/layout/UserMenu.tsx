@@ -26,12 +26,14 @@ function getInitials(name: string): string {
 
 export function UserMenu() {
   const router = useRouter()
+  const [mounted, setMounted] = useState(false)
   const [userInfo, setUserInfo] = useState<{
     email: string
     name: string
   } | null>(null)
 
   useEffect(() => {
+    setMounted(true)
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
@@ -51,6 +53,20 @@ export function UserMenu() {
     await supabase.auth.signOut()
     router.push('/login')
     router.refresh()
+  }
+
+  // Evitar hydration mismatch: Radix gera IDs via useId() que diferem
+  // quando next-themes injeta script antes do React hidratar
+  if (!mounted) {
+    return (
+      <Button variant="ghost" size="icon" className="relative rounded-full">
+        <Avatar className="h-8 w-8">
+          <AvatarFallback className="bg-primary/10 text-primary text-xs">
+            <User className="h-4 w-4" />
+          </AvatarFallback>
+        </Avatar>
+      </Button>
+    )
   }
 
   return (

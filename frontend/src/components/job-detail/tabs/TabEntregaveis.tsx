@@ -32,7 +32,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { ConfirmDialog } from '@/components/jobs/ConfirmDialog'
@@ -234,8 +233,7 @@ export function TabEntregaveis({ job }: TabEntregaveisProps) {
         </Button>
       </div>
 
-      <TooltipProvider>
-        <div className="rounded-lg border border-border">
+      <div className="rounded-lg border border-border">
           <Table>
             <TableHeader>
               <TableRow>
@@ -314,8 +312,7 @@ export function TabEntregaveis({ job }: TabEntregaveisProps) {
               })}
             </TableBody>
           </Table>
-        </div>
-      </TooltipProvider>
+      </div>
 
       <DeliverableDialog
         open={dialogOpen}
