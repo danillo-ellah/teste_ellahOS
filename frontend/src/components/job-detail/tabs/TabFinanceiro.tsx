@@ -10,7 +10,10 @@ import { useUpdateJob } from '@/hooks/useUpdateJob'
 import { ApiRequestError } from '@/lib/api'
 import { formatCurrency, formatPercentage, formatBRNumber, parseBRNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { FinancialRecordsList } from './FinancialRecordsList'
+import { BudgetsList } from './BudgetsList'
 import type { JobDetail, UpdateJobPayload } from '@/types/jobs'
+import { useFinancialSummary } from '@/hooks/useFinancialRecords'
 
 interface TabFinanceiroProps {
   job: JobDetail
@@ -143,6 +146,12 @@ export function TabFinanceiro({ job }: TabFinanceiroProps) {
           </div>
         </div>
       </section>
+
+      {/* Lancamentos financeiros */}
+      <FinancialRecordsList jobId={job.id} />
+
+      {/* Orcamentos */}
+      <BudgetsList jobId={job.id} />
     </div>
   )
 }

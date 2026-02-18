@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   Clapperboard,
   Building2,
+  Briefcase,
   Users,
   DollarSign,
   CalendarDays,
@@ -31,9 +32,10 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Jobs', href: '/jobs', icon: Clapperboard },
-  { label: 'Clientes', href: '/clients', icon: Building2, disabled: true },
-  { label: 'Equipe', href: '/people', icon: Users, disabled: true },
-  { label: 'Financeiro', href: '/finance', icon: DollarSign, disabled: true },
+  { label: 'Clientes', href: '/clients', icon: Building2 },
+  { label: 'Agencias', href: '/agencies', icon: Briefcase },
+  { label: 'Equipe', href: '/people', icon: Users },
+  { label: 'Financeiro', href: '/financial', icon: DollarSign },
   { label: 'Calendario', href: '/calendar', icon: CalendarDays, disabled: true },
   { label: 'Arquivos', href: '/files', icon: FolderOpen, disabled: true },
 ]

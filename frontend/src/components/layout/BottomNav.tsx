@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   Clapperboard,
   Building2,
+  Briefcase,
   Users,
   DollarSign,
   Settings,
@@ -13,9 +14,10 @@ import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
   { label: 'Jobs', href: '/jobs', icon: Clapperboard },
-  { label: 'Clientes', href: '/clients', icon: Building2, disabled: true },
-  { label: 'Equipe', href: '/people', icon: Users, disabled: true },
-  { label: 'Financeiro', href: '/finance', icon: DollarSign, disabled: true },
+  { label: 'Clientes', href: '/clients', icon: Building2 },
+  { label: 'Agencias', href: '/agencies', icon: Briefcase },
+  { label: 'Equipe', href: '/people', icon: Users },
+  { label: 'Financeiro', href: '/financial', icon: DollarSign },
   { label: 'Config', href: '/settings', icon: Settings, disabled: true },
 ]
 

@@ -7,6 +7,7 @@ import type {
   DeliverableStatus,
   PosSubStatus,
 } from '@/types/jobs'
+import type { ClientSegment } from '@/types/clients'
 
 // --- Labels pt-BR ---
 
@@ -199,3 +200,125 @@ export const JOB_DETAIL_TABS: ReadonlyArray<{
   { id: 'diarias', label: 'Diarias', icon: 'Calendar' },
   { id: 'historico', label: 'Historico', icon: 'Clock' },
 ] as const
+
+// --- Cadastros: Segmento de cliente ---
+
+export const CLIENT_SEGMENT_LABELS: Record<ClientSegment, string> = {
+  automotivo: 'Automotivo',
+  varejo: 'Varejo',
+  fintech: 'Fintech',
+  alimentos_bebidas: 'Alimentos e Bebidas',
+  moda: 'Moda',
+  tecnologia: 'Tecnologia',
+  saude: 'Saude',
+  educacao: 'Educacao',
+  governo: 'Governo',
+  outro: 'Outro',
+}
+
+// --- Cadastros: Tipo de pessoa ---
+
+export const PERSON_TYPE_LABELS = {
+  internal: 'Interno',
+  freelancer: 'Freelancer',
+} as const
+
+// --- Financeiro: Labels ---
+
+export const FINANCIAL_RECORD_TYPE_LABELS: Record<
+  import('@/types/financial').FinancialRecordType,
+  string
+> = {
+  receita: 'Receita',
+  despesa: 'Despesa',
+}
+
+export const FINANCIAL_RECORD_STATUS_LABELS: Record<
+  import('@/types/financial').FinancialRecordStatus,
+  string
+> = {
+  pendente: 'Pendente',
+  pago: 'Pago',
+  atrasado: 'Atrasado',
+  cancelado: 'Cancelado',
+}
+
+export const FINANCIAL_RECORD_CATEGORY_LABELS: Record<
+  import('@/types/financial').FinancialRecordCategory,
+  string
+> = {
+  cache_equipe: 'Cache Equipe',
+  locacao: 'Locacao',
+  equipamento: 'Equipamento',
+  transporte: 'Transporte',
+  alimentacao: 'Alimentacao',
+  cenografia: 'Cenografia',
+  figurino: 'Figurino',
+  pos_producao: 'Pos-Producao',
+  musica_audio: 'Musica/Audio',
+  seguro: 'Seguro',
+  taxa_administrativa: 'Taxa Administrativa',
+  imposto: 'Imposto',
+  receita_cliente: 'Receita Cliente',
+  adiantamento: 'Adiantamento',
+  reembolso: 'Reembolso',
+  outro: 'Outro',
+}
+
+export const PAYMENT_METHOD_LABELS: Record<
+  import('@/types/financial').PaymentMethod,
+  string
+> = {
+  pix: 'PIX',
+  transferencia: 'Transferencia',
+  boleto: 'Boleto',
+  cartao_credito: 'Cartao de Credito',
+  cartao_debito: 'Cartao de Debito',
+  dinheiro: 'Dinheiro',
+  cheque: 'Cheque',
+  outro: 'Outro',
+}
+
+export const INVOICE_TYPE_LABELS: Record<
+  import('@/types/financial').InvoiceType,
+  string
+> = {
+  nf_servico: 'NF Servico',
+  nf_produto: 'NF Produto',
+  recibo: 'Recibo',
+  fatura: 'Fatura',
+}
+
+export const INVOICE_STATUS_LABELS: Record<
+  import('@/types/financial').InvoiceStatus,
+  string
+> = {
+  emitida: 'Emitida',
+  paga: 'Paga',
+  vencida: 'Vencida',
+  cancelada: 'Cancelada',
+}
+
+// --- Financeiro: Estilos ---
+
+export const FINANCIAL_STATUS_STYLE_MAP: Record<
+  import('@/types/financial').FinancialRecordStatus,
+  { bgClass: string; textClass: string }
+> = {
+  pendente: {
+    bgClass: 'bg-amber-500/10',
+    textClass: 'text-amber-600 dark:text-amber-400',
+  },
+  pago: {
+    bgClass: 'bg-green-500/10',
+    textClass: 'text-green-600 dark:text-green-400',
+  },
+  atrasado: {
+    bgClass: 'bg-red-500/10',
+    textClass: 'text-red-600 dark:text-red-400',
+  },
+  cancelado: {
+    bgClass: 'bg-zinc-500/10',
+    textClass: 'text-zinc-500 dark:text-zinc-400',
+  },
+}
