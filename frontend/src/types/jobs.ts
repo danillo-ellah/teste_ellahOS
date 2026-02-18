@@ -181,6 +181,7 @@ export interface JobTeamMember {
   id: string
   job_id: string
   person_id: string
+  person_name: string | null // API retorna flat (nao nested people)
   role: TeamRole
   fee: number | null // API: "fee" -> banco: "rate"
   hiring_status: HiringStatus
@@ -188,7 +189,6 @@ export interface JobTeamMember {
   notes: string | null
   created_at: string
   updated_at: string
-  people?: { id: string; full_name: string; email: string | null }
 }
 
 export interface JobDeliverable {
@@ -199,7 +199,11 @@ export interface JobDeliverable {
   resolution: string | null
   duration_seconds: number | null
   status: DeliverableStatus
-  delivery_url: string | null
+  version: number
+  delivery_date: string | null
+  file_url: string | null
+  review_url: string | null
+  display_order: number
   notes: string | null
   created_at: string
   updated_at: string
@@ -222,11 +226,11 @@ export interface JobHistoryEntry {
   job_id: string
   event_type: string
   description: string | null
-  data_before: Record<string, unknown> | null
-  data_after: Record<string, unknown> | null
-  performed_by: string | null
+  user_id: string | null
+  user_name: string | null // API retorna flat (nao nested profiles)
+  previous_data: Record<string, unknown> | null // API: "previous_data" -> banco: "data_before"
+  new_data: Record<string, unknown> | null // API: "new_data" -> banco: "data_after"
   created_at: string
-  profiles?: { full_name: string | null }
 }
 
 // --- Payloads ---
@@ -240,29 +244,29 @@ export interface CreateJobPayload {
   expected_delivery_date?: string
 }
 
+// Campos aceitos pela API UpdateJobSchema (validation.ts)
+// Campos que NAO existem no UpdateJobSchema da API:
+// expected_start_date, actual_start_date, budget_estimated, budget_approved,
+// cost_actual, agency_commission_percentage, status (usa /jobs-status),
+// approval_type (usa ApproveJobSchema), cancellation_reason (usa UpdateStatusSchema)
 export interface UpdateJobPayload {
   title?: string
   client_id?: string
   agency_id?: string | null
   brand?: string | null
   job_type?: ProjectType
-  status?: JobStatus
   priority?: PriorityLevel
   sub_status?: PosSubStatus | null
-  briefing?: string | null
+  briefing_text?: string | null // API usa briefing_text, nao briefing
   internal_notes?: string | null
-  expected_start_date?: string | null
+  notes?: string | null
   expected_delivery_date?: string | null
-  actual_start_date?: string | null
   actual_delivery_date?: string | null
-  budget_estimated?: number | null
-  budget_approved?: number | null
-  cost_actual?: number | null
   tax_percentage?: number | null
-  agency_commission_percentage?: number | null
   drive_folder_url?: string | null
-  approval_type?: 'internal' | 'external' | null
-  cancellation_reason?: string | null
+  closed_value?: number | null
+  production_cost?: number | null
+  other_costs?: number | null
   is_archived?: boolean
 }
 

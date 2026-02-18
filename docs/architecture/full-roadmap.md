@@ -21,8 +21,14 @@
 - **Tabelas existentes:** tenants, profiles, clients, agencies, contacts, people, jobs (~75 colunas), job_team, job_deliverables, job_history, job_budgets, job_files, job_code_sequences, job_shooting_dates
 - **verify_jwt desabilitado** em todas as Edge Functions (auth feita via código com getAuthContext)
 
+### 🔄 Em progresso
+- **Frontend Fase 3:** 6 de 8 sub-fases concluídas (falta Kanban + polimento)
+- Auth flow (login, forgot password, reset password)
+- Jobs List com filtros, busca, paginação, criação via modal
+- Job Detail com 6 abas CRUD (Geral, Equipe, Entregáveis, Financeiro, Diárias, Histórico)
+
 ### ❌ O que falta
-- Frontend (zero — nenhuma tela implementada)
+- Frontend Fase 3: Pipeline Kanban + polimento
 - 19 das 20 features planejadas
 - Integrações externas (Google Drive, WhatsApp, DocuSeal, n8n workflows)
 - Features de IA
@@ -111,15 +117,28 @@
 - ConfirmDialog (soft delete)
 
 **Decisões técnicas:**
-- Next.js 14 App Router
+- Next.js 16+ App Router (atualizado de 14 para 16 com React 19)
 - TypeScript strict
-- Tailwind + shadcn/ui (design system já definido)
+- Tailwind v4 + shadcn/ui (design system já definido)
 - Supabase JS client (auth + data)
-- React Query (cache, loading states, optimistic updates)
+- TanStack Query v5 (cache, loading states, mutations)
 - React Hook Form + Zod (validação igual ao backend)
 - Dark mode por padrão
 
 **Critério de done:** Conseguir criar um job pelo browser, ver na lista, abrir detalhes, mudar status, adicionar equipe.
+
+#### Progresso das Sub-fases:
+
+| Sub-fase | Descrição | Status | Data |
+|----------|-----------|--------|------|
+| 3.1 | Init projeto (Next.js, Tailwind, shadcn/ui, Supabase client, tipos) | ✅ Concluída | 18/02/2026 |
+| 3.2 | Auth flow (login, registro, forgot/reset password, middleware) | ✅ Concluída | 18/02/2026 |
+| 3.3 | Layout base (sidebar, topbar, dark mode, responsivo) | ✅ Concluída | 18/02/2026 |
+| 3.4 | Jobs List (tabela, filtros, busca, paginação, criar job modal) | ✅ Concluída | 18/02/2026 |
+| 3.5 | Job Detail (header sticky, pipeline de status, 6 abas placeholder) | ✅ Concluída | 18/02/2026 |
+| 3.6 | Conteúdo das abas (6 tabs CRUD, hooks, dialogs, formatação BR) | ✅ Concluída | 18/02/2026 |
+| 3.7 | Pipeline Kanban (visualização por colunas, drag-and-drop) | ⬜ Pendente | — |
+| 3.8 | Polimento final (testes e2e, responsivo mobile, edge cases) | ⬜ Pendente | — |
 
 ---
 

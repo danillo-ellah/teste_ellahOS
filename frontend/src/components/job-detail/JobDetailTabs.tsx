@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import {
   FileText,
   Users,
@@ -18,6 +18,12 @@ import {
 import { JOB_DETAIL_TABS } from '@/lib/constants'
 import type { JobDetailTabId } from '@/lib/constants'
 import { cn } from '@/lib/utils'
+import { TabGeral } from '@/components/job-detail/tabs/TabGeral'
+import { TabEquipe } from '@/components/job-detail/tabs/TabEquipe'
+import { TabEntregaveis } from '@/components/job-detail/tabs/TabEntregaveis'
+import { TabFinanceiro } from '@/components/job-detail/tabs/TabFinanceiro'
+import { TabDiarias } from '@/components/job-detail/tabs/TabDiarias'
+import { TabHistorico } from '@/components/job-detail/tabs/TabHistorico'
 import type { JobDetail } from '@/types/jobs'
 
 // Mapa de icones por nome
@@ -52,6 +58,7 @@ function getTabCount(tabId: JobDetailTabId, job: JobDetail): number | null {
 
 export function JobDetailTabs({ job }: JobDetailTabsProps) {
   const router = useRouter()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
   const currentTab = (searchParams.get('tab') as JobDetailTabId) || 'geral'
 
@@ -63,7 +70,7 @@ export function JobDetailTabs({ job }: JobDetailTabsProps) {
       params.set('tab', value)
     }
     const qs = params.toString()
-    router.replace(qs ? `?${qs}` : window.location.pathname, { scroll: false })
+    router.replace(qs ? `?${qs}` : pathname, { scroll: false })
   }
 
   return (
@@ -98,78 +105,32 @@ export function JobDetailTabs({ job }: JobDetailTabsProps) {
 
       {/* Tab: Geral */}
       <TabsContent value="geral" className="mt-6">
-        <div className="rounded-lg border border-border p-6">
-          <h3 className="text-sm font-semibold mb-4">Informacoes Gerais</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="text-muted-foreground">Briefing</span>
-              <p className="mt-1 whitespace-pre-wrap">
-                {job.briefing || 'Nenhum briefing informado'}
-              </p>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Notas internas</span>
-              <p className="mt-1 whitespace-pre-wrap">
-                {job.internal_notes || 'Sem notas'}
-              </p>
-            </div>
-          </div>
-        </div>
+        <TabGeral job={job} />
       </TabsContent>
 
       {/* Tab: Equipe */}
       <TabsContent value="equipe" className="mt-6">
-        <div className="rounded-lg border border-border p-6 text-center text-sm text-muted-foreground">
-          Gerenciamento de equipe sera implementado na proxima fase.
-          {job.team && job.team.length > 0 && (
-            <p className="mt-2 text-foreground font-medium">
-              {job.team.length} membro(s) na equipe
-            </p>
-          )}
-        </div>
+        <TabEquipe job={job} />
       </TabsContent>
 
       {/* Tab: Entregaveis */}
       <TabsContent value="entregaveis" className="mt-6">
-        <div className="rounded-lg border border-border p-6 text-center text-sm text-muted-foreground">
-          Gerenciamento de entregaveis sera implementado na proxima fase.
-          {job.deliverables && job.deliverables.length > 0 && (
-            <p className="mt-2 text-foreground font-medium">
-              {job.deliverables.length} entregavel(is)
-            </p>
-          )}
-        </div>
+        <TabEntregaveis job={job} />
       </TabsContent>
 
       {/* Tab: Financeiro */}
       <TabsContent value="financeiro" className="mt-6">
-        <div className="rounded-lg border border-border p-6 text-center text-sm text-muted-foreground">
-          Painel financeiro sera implementado na proxima fase.
-        </div>
+        <TabFinanceiro job={job} />
       </TabsContent>
 
       {/* Tab: Diarias */}
       <TabsContent value="diarias" className="mt-6">
-        <div className="rounded-lg border border-border p-6 text-center text-sm text-muted-foreground">
-          Gerenciamento de diarias sera implementado na proxima fase.
-          {job.shooting_dates && job.shooting_dates.length > 0 && (
-            <p className="mt-2 text-foreground font-medium">
-              {job.shooting_dates.length} diaria(s) programada(s)
-            </p>
-          )}
-        </div>
+        <TabDiarias job={job} />
       </TabsContent>
 
       {/* Tab: Historico */}
       <TabsContent value="historico" className="mt-6">
-        <div className="rounded-lg border border-border p-6 text-center text-sm text-muted-foreground">
-          Historico de alteracoes sera implementado na proxima fase.
-          {job.history && job.history.length > 0 && (
-            <p className="mt-2 text-foreground font-medium">
-              {job.history.length} registro(s) no historico
-            </p>
-          )}
-        </div>
+        <TabHistorico job={job} />
       </TabsContent>
     </Tabs>
   )
