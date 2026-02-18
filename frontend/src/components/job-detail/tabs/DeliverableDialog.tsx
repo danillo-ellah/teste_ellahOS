@@ -185,7 +185,7 @@ export function DeliverableDialog({
             </FormField>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Formato" optional>
               <Input placeholder="Ex: MP4, MOV" {...register('format')} />
             </FormField>
@@ -194,7 +194,7 @@ export function DeliverableDialog({
             </FormField>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Duracao (segundos)" optional>
               <Input
                 type="number"

@@ -4,6 +4,36 @@ Registro de todas as sub-fases concluidas, ordenado do mais recente ao mais anti
 
 ---
 
+## [Sub-fase 3.8] - 2026-02-18
+
+### Polimento Final: Responsivo, Acessibilidade e Code Quality
+
+Auditoria e correcoes em 3 ondas para fechar a Fase 3.
+
+**Onda 1 — Responsivo Mobile (8 arquivos):**
+- JobsTable: overflow-x-auto para scroll horizontal mobile
+- TabEquipe, TabEntregaveis: overflow-x-auto nas tabelas
+- DeliverableDialog, ShootingDateDialog: grids 2-col responsivos (1-col em mobile)
+- JobDetailTabs: scroll horizontal nas abas, texto responsivo
+- dialog.tsx: max-h-[85vh] overflow-y-auto para dialogs longos
+- jobs/page.tsx: header empilha em mobile (flex-col sm:flex-row)
+
+**Onda 2 — Acessibilidade (5 arquivos):**
+- jobs/page.tsx: aria-pressed nos botoes toggle tabela/kanban
+- JobsTable: title em celulas truncadas (titulo, cliente)
+- TabEquipe: title no nome truncado do membro
+- JobHeader: title no job_code truncado no breadcrumb
+- TabDiarias: truncate + title no texto de localizacao
+
+**Onda 3 — Code Quality (1 arquivo):**
+- KanbanView: substituido @ts-expect-error por `as React.CSSProperties` (CSS custom properties)
+
+**Verificacao:**
+- `next build` compila sem erros (TypeScript + pages OK)
+- tw-animate-css confirmado em uso (globals.css import)
+
+---
+
 ## [Sub-fase 3.7b] - 2026-02-18
 
 ### Entregaveis: Prazo + Hierarquia Pai/Filho

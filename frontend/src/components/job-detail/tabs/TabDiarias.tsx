@@ -163,9 +163,9 @@ export function TabDiarias({ job }: TabDiariasProps) {
 
                 {/* Local */}
                 {d.location && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin className="size-3.5" />
-                    {d.location}
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
+                    <MapPin className="size-3.5 shrink-0" />
+                    <span className="truncate" title={d.location}>{d.location}</span>
                   </div>
                 )}
 

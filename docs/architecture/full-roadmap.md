@@ -21,16 +21,15 @@
 - **Tabelas existentes:** tenants, profiles, clients, agencies, contacts, people, jobs (~75 colunas), job_team, job_deliverables, job_history, job_budgets, job_files, job_code_sequences, job_shooting_dates
 - **verify_jwt desabilitado** em todas as Edge Functions (auth feita via código com getAuthContext)
 
-### 🔄 Em progresso
-- **Frontend Fase 3:** 7 de 8 sub-fases concluídas (falta polimento)
+### ✅ Frontend Fase 3 — CONCLUÍDA (8/8 sub-fases)
 - Auth flow (login, forgot password, reset password)
 - Jobs List com filtros, busca, paginação, criação via modal
 - Job Detail com 6 abas CRUD (Geral, Equipe, Entregáveis, Financeiro, Diárias, Histórico)
 - Pipeline Kanban com drag-and-drop (@dnd-kit)
 - Entregáveis com hierarquia pai/filho, prazo de entrega e indicadores de urgência
+- Responsivo mobile, acessibilidade e polimento final
 
 ### ❌ O que falta
-- Frontend Fase 3: Polimento final
 - 19 das 20 features planejadas
 - Integrações externas (Google Drive, WhatsApp, DocuSeal, n8n workflows)
 - Features de IA
@@ -140,7 +139,7 @@
 | 3.5 | Job Detail (header sticky, pipeline de status, 6 abas placeholder) | ✅ Concluída | 18/02/2026 |
 | 3.6 | Conteúdo das abas (6 tabs CRUD, hooks, dialogs, formatação BR) | ✅ Concluída | 18/02/2026 |
 | 3.7 | Pipeline Kanban (drag-and-drop com @dnd-kit, optimistic UI) | ✅ Concluída | 18/02/2026 |
-| 3.8 | Polimento final (testes e2e, responsivo mobile, edge cases) | ⬜ Pendente | — |
+| 3.8 | Polimento final (responsivo mobile, acessibilidade, code quality) | ✅ Concluída | 18/02/2026 |
 
 ---
 

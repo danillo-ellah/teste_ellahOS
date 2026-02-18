@@ -182,7 +182,7 @@ export default function JobsPage() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight shrink-0">Jobs</h1>
           {!isLoading && !isError && (
@@ -203,6 +203,7 @@ export default function JobsPage() {
             <button
               type="button"
               aria-label="Visualizacao em tabela"
+              aria-pressed={view === 'table'}
               onClick={() => setView('table')}
               className={cn(
                 'flex items-center justify-center h-9 w-9 transition-colors',
@@ -217,6 +218,7 @@ export default function JobsPage() {
             <button
               type="button"
               aria-label="Visualizacao em kanban"
+              aria-pressed={view === 'kanban'}
               onClick={() => setView('kanban')}
               className={cn(
                 'flex items-center justify-center h-9 w-9 transition-colors',

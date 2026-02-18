@@ -170,7 +170,7 @@ export function TabEquipe({ job }: TabEquipeProps) {
       </div>
 
       {/* Tabela */}
-      <div className="rounded-lg border border-border">
+      <div className="rounded-lg border border-border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -186,8 +186,10 @@ export function TabEquipe({ job }: TabEquipeProps) {
             {teamList.map((m) => (
               <TableRow key={m.id}>
                 <TableCell className="font-medium">
-                  <div className="flex items-center gap-2">
-                    {m.person_name || 'Sem nome'}
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="truncate" title={m.person_name || 'Sem nome'}>
+                      {m.person_name || 'Sem nome'}
+                    </span>
                     {m.is_lead_producer && (
                       <Star className="size-3.5 text-amber-500 fill-amber-500" />
                     )}

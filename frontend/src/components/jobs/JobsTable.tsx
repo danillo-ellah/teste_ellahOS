@@ -114,7 +114,7 @@ export function JobsTable({
   }
 
   return (
-    <div className="rounded-lg border border-border overflow-hidden">
+    <div className="rounded-lg border border-border overflow-x-auto">
       <Table>
         <TableHeader className="bg-muted/40">
           <TableRow className="hover:bg-muted/40 border-b border-border">
@@ -189,13 +189,13 @@ export function JobsTable({
                       <span className="text-muted-foreground/40 text-xs select-none">
                         &bull;
                       </span>
-                      <span className="text-sm font-medium truncate group-hover:text-primary transition-colors duration-100">
+                      <span className="text-sm font-medium truncate group-hover:text-primary transition-colors duration-100" title={job.title}>
                         {job.title}
                       </span>
                     </div>
                     {/* Linha 2: cliente / agencia */}
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="text-xs text-muted-foreground truncate">
+                      <span className="text-xs text-muted-foreground truncate" title={job.clients?.name ?? undefined}>
                         {job.clients?.name ?? '-'}
                       </span>
                       {job.agencies && (

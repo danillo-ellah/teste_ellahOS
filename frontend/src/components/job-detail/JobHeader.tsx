@@ -115,7 +115,7 @@ export function JobHeader({ job }: JobHeaderProps) {
             Jobs
           </Link>
           <ChevronRight className="size-3.5" />
-          <span className="text-foreground font-medium truncate max-w-[200px]">
+          <span className="text-foreground font-medium truncate max-w-[200px]" title={job.job_code}>
             {job.job_code}
           </span>
         </nav>

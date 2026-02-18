@@ -204,9 +204,8 @@ function KanbanColumn({
       )}
       style={isOver ? {
         backgroundColor: `${color}1A`,
-        // @ts-expect-error CSS custom property for ring color
         '--tw-ring-color': color,
-      } : undefined}
+      } as React.CSSProperties : undefined}
     >
       {/* Header da coluna */}
       <div
@@ -238,9 +237,8 @@ function KanbanColumn({
         isOver && statusJobs.length === 0 && 'ring-1 ring-inset rounded-b-lg',
       )}
         style={isOver && statusJobs.length === 0 ? {
-          // @ts-expect-error CSS custom property for ring color
           '--tw-ring-color': `${color}40`,
-        } : undefined}
+        } as React.CSSProperties : undefined}
       >
         {statusJobs.length === 0 ? (
           <div className="flex items-center justify-center h-[80px]">

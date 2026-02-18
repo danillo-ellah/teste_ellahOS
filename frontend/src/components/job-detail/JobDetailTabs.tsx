@@ -75,7 +75,7 @@ export function JobDetailTabs({ job }: JobDetailTabsProps) {
 
   return (
     <Tabs value={currentTab} onValueChange={handleTabChange} className="mt-4">
-      <TabsList className="w-full justify-start h-auto p-0 bg-transparent border-b border-border rounded-none gap-0">
+      <TabsList className="w-full justify-start h-auto p-0 bg-transparent border-b border-border rounded-none gap-0 overflow-x-auto">
         {JOB_DETAIL_TABS.map((tab) => {
           const Icon = ICON_MAP[tab.icon]
           const count = getTabCount(tab.id, job)
@@ -85,7 +85,7 @@ export function JobDetailTabs({ job }: JobDetailTabsProps) {
               key={tab.id}
               value={tab.id}
               className={cn(
-                'relative rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-medium',
+                'relative rounded-none border-b-2 border-transparent px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium whitespace-nowrap',
                 'text-muted-foreground hover:text-foreground transition-colors',
                 'data-[state=active]:border-primary data-[state=active]:text-foreground',
                 'data-[state=active]:shadow-none data-[state=active]:bg-transparent',
