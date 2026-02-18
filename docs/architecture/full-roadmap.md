@@ -137,7 +137,7 @@
 | 3.4 | Jobs List (tabela, filtros, busca, paginação, criar job modal) | ✅ Concluída | 18/02/2026 |
 | 3.5 | Job Detail (header sticky, pipeline de status, 6 abas placeholder) | ✅ Concluída | 18/02/2026 |
 | 3.6 | Conteúdo das abas (6 tabs CRUD, hooks, dialogs, formatação BR) | ✅ Concluída | 18/02/2026 |
-| 3.7 | Pipeline Kanban (visualização por colunas, drag-and-drop) | ⬜ Pendente | — |
+| 3.7 | Pipeline Kanban (drag-and-drop com @dnd-kit, optimistic UI) | ✅ Concluída | 18/02/2026 |
 | 3.8 | Polimento final (testes e2e, responsivo mobile, edge cases) | ⬜ Pendente | — |
 
 ---

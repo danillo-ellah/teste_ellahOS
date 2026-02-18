@@ -4,6 +4,33 @@ Registro de todas as sub-fases concluidas, ordenado do mais recente ao mais anti
 
 ---
 
+## [Sub-fase 3.7] - 2026-02-18
+
+### Pipeline Kanban com Drag-and-Drop
+
+Adicionado drag-and-drop ao KanbanView existente usando @dnd-kit.
+Cards podem ser arrastados entre colunas para mudar status do job.
+
+**Dependencia adicionada:**
+- `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`
+
+**Arquivos modificados (3):**
+- `frontend/src/components/jobs/KanbanView.tsx` — Refatorado com DndContext, DraggableCard, DroppableColumn, DragOverlay
+- `frontend/src/app/(dashboard)/jobs/page.tsx` — Kanban usa per_page: 200, esconde paginacao, passa onCancelRequest
+- `frontend/package.json` / `package-lock.json` — Dependencia @dnd-kit
+
+**Funcionalidades:**
+- Arrastar card entre colunas muda status via API
+- Card fantasma com rotacao e sombra durante drag
+- Coluna destino destaca com ring colorido durante hover
+- Coluna vazia mostra "Soltar aqui" durante drag
+- Arrastar para "Cancelado" abre CancelReasonDialog (motivo obrigatorio)
+- Dropdown de status no card continua funcionando
+- Touch support nativo (dnd-kit)
+- Kanban carrega ate 200 jobs (sem paginacao visual)
+
+---
+
 ## [Sub-fase 3.6] - 2026-02-18
 
 ### Conteudo das Abas do Detalhe do Job

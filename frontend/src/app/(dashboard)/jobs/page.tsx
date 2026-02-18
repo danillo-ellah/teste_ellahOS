@@ -49,7 +49,11 @@ export default function JobsPage() {
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [isBulkArchiving, setIsBulkArchiving] = useState(false)
 
-  const { data: jobs, meta, isLoading, isError, refetch } = useJobs(filters)
+  // Kanban carrega mais jobs para preencher colunas (sem paginacao visual)
+  const activeFilters = view === 'kanban'
+    ? { ...filters, per_page: 200, page: 1 }
+    : filters
+  const { data: jobs, meta, isLoading, isError, refetch } = useJobs(activeFilters)
   const { mutateAsync: updateStatus, isPending: isUpdatingStatus } = useUpdateJobStatus()
   const { mutateAsync: archiveJob, isPending: isArchiving } = useArchiveJob()
 
@@ -300,10 +304,14 @@ export default function JobsPage() {
           )}
 
           {view === 'kanban' && (
-            <KanbanView jobs={jobs} onStatusChange={handleStatusChange} />
+            <KanbanView
+              jobs={jobs}
+              onStatusChange={handleStatusChange}
+              onCancelRequest={(jobId) => setCancelTarget({ jobIds: [jobId] })}
+            />
           )}
 
-          {meta && meta.total > 0 && (
+          {view === 'table' && meta && meta.total > 0 && (
             <JobsPagination
               page={filters.page ?? 1}
               totalPages={meta.total_pages}
