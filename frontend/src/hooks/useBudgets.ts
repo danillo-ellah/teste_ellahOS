@@ -125,7 +125,7 @@ export function useUpdateBudget() {
 export function useDeleteBudget() {
   const queryClient = useQueryClient()
   const mutation = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({ id }: { id: string; jobId?: string }) => {
       const supabase = createClient()
       const { error } = await supabase
         .from('job_budgets')
@@ -134,8 +134,13 @@ export function useDeleteBudget() {
         .is('deleted_at', null)
       if (error) throw new Error(error.message)
     },
-    onSuccess: () => {
+    onSuccess: (_data, { jobId }) => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.lists() })
+      if (jobId) {
+        queryClient.invalidateQueries({
+          queryKey: budgetKeys.listByJob(jobId),
+        })
+      }
     },
   })
 

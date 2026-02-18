@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useCreateAgency } from '@/hooks/useAgencies'
+import { safeErrorMessage } from '@/lib/api'
 
 const formSchema = z.object({
   name: z.string().min(2, 'Minimo 2 caracteres').max(200),
@@ -66,8 +67,7 @@ export function CreateAgencyModal({ open, onOpenChange }: CreateAgencyModalProps
       toast.success('Agencia criada com sucesso')
       handleOpenChange(false)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erro ao criar agencia'
-      toast.error(message)
+      toast.error(safeErrorMessage(err))
     }
   }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import {
@@ -74,6 +74,20 @@ export function FinancialRecordsTable() {
     null,
   )
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
+  const [searchValue, setSearchValue] = useState('')
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [])
+
+  function handleSearchChange(value: string) {
+    setSearchValue(value)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      updateFilter({ search: value || undefined })
+    }, 400)
+  }
 
   const { data: records, meta, isLoading } = useFinancialRecords(filters)
   const createRecord = useCreateFinancialRecord()
@@ -133,8 +147,8 @@ export function FinancialRecordsTable() {
       <div className="flex flex-wrap items-center gap-3">
         <Input
           placeholder="Buscar descricao..."
-          value={filters.search ?? ''}
-          onChange={(e) => updateFilter({ search: e.target.value || undefined })}
+          value={searchValue}
+          onChange={(e) => handleSearchChange(e.target.value)}
           className="w-60"
         />
         <Select

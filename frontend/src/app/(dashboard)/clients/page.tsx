@@ -9,8 +9,10 @@ import { ClientsTableSkeleton } from '@/components/clients/ClientsTableSkeleton'
 import { ClientFilters as ClientFiltersBar } from '@/components/clients/ClientFilters'
 import { CreateClientModal } from '@/components/clients/CreateClientModal'
 import { Pagination } from '@/components/shared/Pagination'
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { EmptyState } from '@/components/jobs/EmptyState'
 import { useClientsList, useUpdateClient } from '@/hooks/useClients'
+import { safeErrorMessage } from '@/lib/api'
 import type { ClientFilters } from '@/types/clients'
 
 const DEFAULT_FILTERS: ClientFilters = {
@@ -23,9 +25,10 @@ const DEFAULT_FILTERS: ClientFilters = {
 export default function ClientsPage() {
   const [filters, setFilters] = useState<ClientFilters>(DEFAULT_FILTERS)
   const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [archiveTarget, setArchiveTarget] = useState<{ id: string; isActive: boolean } | null>(null)
 
   const { data: clients, meta, isLoading, isError, refetch } = useClientsList(filters)
-  const { mutateAsync: updateClient } = useUpdateClient()
+  const { mutateAsync: updateClient, isPending: isArchiving } = useUpdateClient()
 
   function handleSortChange(column: string) {
     setFilters((prev) => ({
@@ -38,17 +41,23 @@ export default function ClientsPage() {
     }))
   }
 
-  async function handleArchive(id: string) {
+  function handleArchiveRequest(id: string) {
     const client = clients?.find((c) => c.id === id)
     if (!client) return
+    setArchiveTarget({ id, isActive: client.is_active })
+  }
+
+  async function handleArchiveConfirm() {
+    if (!archiveTarget) return
     try {
       await updateClient({
-        id,
-        payload: { is_active: !client.is_active },
+        id: archiveTarget.id,
+        payload: { is_active: !archiveTarget.isActive },
       })
-      toast.success(client.is_active ? 'Cliente desativado' : 'Cliente reativado')
-    } catch {
-      toast.error('Erro ao atualizar cliente')
+      toast.success(archiveTarget.isActive ? 'Cliente desativado' : 'Cliente reativado')
+      setArchiveTarget(null)
+    } catch (err) {
+      toast.error(safeErrorMessage(err))
     }
   }
 
@@ -125,7 +134,7 @@ export default function ClientsPage() {
             sortBy={filters.sort_by ?? 'name'}
             sortOrder={filters.sort_order ?? 'asc'}
             onSortChange={handleSortChange}
-            onArchive={handleArchive}
+            onArchive={handleArchiveRequest}
           />
 
           {meta && meta.total > 0 && (
@@ -145,6 +154,21 @@ export default function ClientsPage() {
       <CreateClientModal
         open={createModalOpen}
         onOpenChange={setCreateModalOpen}
+      />
+
+      <ConfirmDialog
+        open={archiveTarget !== null}
+        onOpenChange={(open) => { if (!open) setArchiveTarget(null) }}
+        title={archiveTarget?.isActive ? 'Desativar cliente' : 'Reativar cliente'}
+        description={
+          archiveTarget?.isActive
+            ? 'Este cliente sera desativado e nao aparecera em selecoes de novos jobs.'
+            : 'Este cliente sera reativado e voltara a aparecer nas selecoes.'
+        }
+        confirmLabel={archiveTarget?.isActive ? 'Desativar' : 'Reativar'}
+        variant={archiveTarget?.isActive ? 'destructive' : 'default'}
+        onConfirm={handleArchiveConfirm}
+        isPending={isArchiving}
       />
     </div>
   )

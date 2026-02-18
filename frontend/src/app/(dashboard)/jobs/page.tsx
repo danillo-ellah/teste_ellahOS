@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { ApiRequestError } from '@/lib/api'
 import { BulkActionsBar } from '@/components/jobs/BulkActionsBar'
 import { CancelReasonDialog } from '@/components/jobs/CancelReasonDialog'
-import { ConfirmDialog } from '@/components/jobs/ConfirmDialog'
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { CreateJobModal } from '@/components/jobs/CreateJobModal'
 import { EmptyState } from '@/components/jobs/EmptyState'
 import { JobFilters as JobFiltersBar } from '@/components/jobs/JobFilters'
@@ -162,16 +162,23 @@ export default function JobsPage() {
     }
   }
 
-  // Bulk: arquivar
-  async function handleBulkArchive() {
+  // Bulk: arquivar (abre confirmacao)
+  const [bulkArchiveOpen, setBulkArchiveOpen] = useState(false)
+
+  function handleBulkArchiveRequest() {
+    setBulkArchiveOpen(true)
+  }
+
+  async function handleBulkArchiveConfirm() {
     const ids = Array.from(selectedJobs)
     setIsBulkArchiving(true)
     try {
       await Promise.all(ids.map((jobId) => archiveJob({ jobId })))
-      toast.success(`\u2705 ${ids.length} job(s) arquivado(s)`)
+      toast.success(`${ids.length} job(s) arquivado(s)`)
       setSelectedJobs(new Set())
+      setBulkArchiveOpen(false)
     } catch {
-      toast.error('\u274C Erro ao arquivar jobs. Tente novamente.')
+      toast.error('Erro ao arquivar jobs. Tente novamente.')
     } finally {
       setIsBulkArchiving(false)
     }
@@ -330,7 +337,7 @@ export default function JobsPage() {
       <BulkActionsBar
         selectedCount={selectedJobs.size}
         onClearSelection={() => setSelectedJobs(new Set())}
-        onBulkArchive={handleBulkArchive}
+        onBulkArchive={handleBulkArchiveRequest}
         onBulkStatusChange={handleBulkStatusChange}
         isArchiving={isBulkArchiving}
       />
@@ -348,6 +355,18 @@ export default function JobsPage() {
         variant="destructive"
         isPending={isArchiving}
         onConfirm={handleArchiveConfirm}
+      />
+
+      {/* Dialog de confirmacao de arquivamento em massa */}
+      <ConfirmDialog
+        open={bulkArchiveOpen}
+        onOpenChange={(open) => { if (!open) setBulkArchiveOpen(false) }}
+        title="Arquivar jobs em massa"
+        description={`Tem certeza que deseja arquivar ${selectedJobs.size} job(s)? Eles serao movidos para o arquivo.`}
+        confirmLabel="Arquivar todos"
+        variant="destructive"
+        onConfirm={handleBulkArchiveConfirm}
+        isPending={isBulkArchiving}
       />
 
       {/* Dialog de motivo de cancelamento */}

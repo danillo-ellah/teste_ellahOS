@@ -83,7 +83,7 @@ async function fetchPeopleList(
     const safe = sanitizeSearch(filters.search)
     if (safe) {
       query = query.or(
-        `full_name.ilike.%${safe}%,email.ilike.%${safe}%,cpf.ilike.%${safe}%`,
+        `full_name.ilike.%${safe}%,email.ilike.%${safe}%`,
       )
     }
   }

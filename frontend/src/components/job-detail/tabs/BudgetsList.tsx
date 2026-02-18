@@ -64,7 +64,7 @@ export function BudgetsList({ jobId }: BudgetsListProps) {
   async function handleConfirmDelete() {
     if (!deleteTargetId) return
     try {
-      await deleteBudget.mutateAsync(deleteTargetId)
+      await deleteBudget.mutateAsync({ id: deleteTargetId, jobId })
       toast.success('Orcamento removido')
       setDeleteTargetId(null)
     } catch {

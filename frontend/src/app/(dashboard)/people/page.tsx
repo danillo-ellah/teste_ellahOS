@@ -9,8 +9,10 @@ import { PeopleTableSkeleton } from '@/components/people/PeopleTableSkeleton'
 import { PeopleFilters as PeopleFiltersBar } from '@/components/people/PeopleFilters'
 import { CreatePersonModal } from '@/components/people/CreatePersonModal'
 import { Pagination } from '@/components/shared/Pagination'
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { EmptyState } from '@/components/jobs/EmptyState'
 import { usePeopleList, useUpdatePerson } from '@/hooks/usePeople'
+import { safeErrorMessage } from '@/lib/api'
 import type { PersonFilters } from '@/types/people'
 
 const DEFAULT_FILTERS: PersonFilters = {
@@ -23,9 +25,10 @@ const DEFAULT_FILTERS: PersonFilters = {
 export default function PeoplePage() {
   const [filters, setFilters] = useState<PersonFilters>(DEFAULT_FILTERS)
   const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [archiveTarget, setArchiveTarget] = useState<{ id: string; isActive: boolean } | null>(null)
 
   const { data: people, meta, isLoading, isError, refetch } = usePeopleList(filters)
-  const { mutateAsync: updatePerson } = useUpdatePerson()
+  const { mutateAsync: updatePerson, isPending: isArchiving } = useUpdatePerson()
 
   function handleSortChange(column: string) {
     setFilters((prev) => ({
@@ -38,17 +41,23 @@ export default function PeoplePage() {
     }))
   }
 
-  async function handleArchive(id: string) {
+  function handleArchiveRequest(id: string) {
     const person = people?.find((p) => p.id === id)
     if (!person) return
+    setArchiveTarget({ id, isActive: person.is_active })
+  }
+
+  async function handleArchiveConfirm() {
+    if (!archiveTarget) return
     try {
       await updatePerson({
-        id,
-        payload: { is_active: !person.is_active },
+        id: archiveTarget.id,
+        payload: { is_active: !archiveTarget.isActive },
       })
-      toast.success(person.is_active ? 'Pessoa desativada' : 'Pessoa reativada')
-    } catch {
-      toast.error('Erro ao atualizar pessoa')
+      toast.success(archiveTarget.isActive ? 'Pessoa desativada' : 'Pessoa reativada')
+      setArchiveTarget(null)
+    } catch (err) {
+      toast.error(safeErrorMessage(err))
     }
   }
 
@@ -129,7 +138,7 @@ export default function PeoplePage() {
             sortBy={filters.sort_by ?? 'full_name'}
             sortOrder={filters.sort_order ?? 'asc'}
             onSortChange={handleSortChange}
-            onArchive={handleArchive}
+            onArchive={handleArchiveRequest}
           />
 
           {meta && meta.total > 0 && (
@@ -149,6 +158,21 @@ export default function PeoplePage() {
       <CreatePersonModal
         open={createModalOpen}
         onOpenChange={setCreateModalOpen}
+      />
+
+      <ConfirmDialog
+        open={archiveTarget !== null}
+        onOpenChange={(open) => { if (!open) setArchiveTarget(null) }}
+        title={archiveTarget?.isActive ? 'Desativar pessoa' : 'Reativar pessoa'}
+        description={
+          archiveTarget?.isActive
+            ? 'Esta pessoa sera desativada e nao aparecera em selecoes de equipe.'
+            : 'Esta pessoa sera reativada e voltara a aparecer nas selecoes.'
+        }
+        confirmLabel={archiveTarget?.isActive ? 'Desativar' : 'Reativar'}
+        variant={archiveTarget?.isActive ? 'destructive' : 'default'}
+        onConfirm={handleArchiveConfirm}
+        isPending={isArchiving}
       />
     </div>
   )

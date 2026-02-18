@@ -9,8 +9,10 @@ import { AgenciesTableSkeleton } from '@/components/agencies/AgenciesTableSkelet
 import { AgencyFilters as AgencyFiltersBar } from '@/components/agencies/AgencyFilters'
 import { CreateAgencyModal } from '@/components/agencies/CreateAgencyModal'
 import { Pagination } from '@/components/shared/Pagination'
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { EmptyState } from '@/components/jobs/EmptyState'
 import { useAgenciesList, useUpdateAgency } from '@/hooks/useAgencies'
+import { safeErrorMessage } from '@/lib/api'
 import type { AgencyFilters } from '@/types/clients'
 
 const DEFAULT_FILTERS: AgencyFilters = {
@@ -23,9 +25,10 @@ const DEFAULT_FILTERS: AgencyFilters = {
 export default function AgenciesPage() {
   const [filters, setFilters] = useState<AgencyFilters>(DEFAULT_FILTERS)
   const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [archiveTarget, setArchiveTarget] = useState<{ id: string; isActive: boolean } | null>(null)
 
   const { data: agencies, meta, isLoading, isError, refetch } = useAgenciesList(filters)
-  const { mutateAsync: updateAgency } = useUpdateAgency()
+  const { mutateAsync: updateAgency, isPending: isArchiving } = useUpdateAgency()
 
   function handleSortChange(column: string) {
     setFilters((prev) => ({
@@ -38,17 +41,23 @@ export default function AgenciesPage() {
     }))
   }
 
-  async function handleArchive(id: string) {
+  function handleArchiveRequest(id: string) {
     const agency = agencies?.find((a) => a.id === id)
     if (!agency) return
+    setArchiveTarget({ id, isActive: agency.is_active })
+  }
+
+  async function handleArchiveConfirm() {
+    if (!archiveTarget) return
     try {
       await updateAgency({
-        id,
-        payload: { is_active: !agency.is_active },
+        id: archiveTarget.id,
+        payload: { is_active: !archiveTarget.isActive },
       })
-      toast.success(agency.is_active ? 'Agencia desativada' : 'Agencia reativada')
-    } catch {
-      toast.error('Erro ao atualizar agencia')
+      toast.success(archiveTarget.isActive ? 'Agencia desativada' : 'Agencia reativada')
+      setArchiveTarget(null)
+    } catch (err) {
+      toast.error(safeErrorMessage(err))
     }
   }
 
@@ -125,7 +134,7 @@ export default function AgenciesPage() {
             sortBy={filters.sort_by ?? 'name'}
             sortOrder={filters.sort_order ?? 'asc'}
             onSortChange={handleSortChange}
-            onArchive={handleArchive}
+            onArchive={handleArchiveRequest}
           />
 
           {meta && meta.total > 0 && (
@@ -145,6 +154,21 @@ export default function AgenciesPage() {
       <CreateAgencyModal
         open={createModalOpen}
         onOpenChange={setCreateModalOpen}
+      />
+
+      <ConfirmDialog
+        open={archiveTarget !== null}
+        onOpenChange={(open) => { if (!open) setArchiveTarget(null) }}
+        title={archiveTarget?.isActive ? 'Desativar agencia' : 'Reativar agencia'}
+        description={
+          archiveTarget?.isActive
+            ? 'Esta agencia sera desativada e nao aparecera em selecoes de novos jobs.'
+            : 'Esta agencia sera reativada e voltara a aparecer nas selecoes.'
+        }
+        confirmLabel={archiveTarget?.isActive ? 'Desativar' : 'Reativar'}
+        variant={archiveTarget?.isActive ? 'destructive' : 'default'}
+        onConfirm={handleArchiveConfirm}
+        isPending={isArchiving}
       />
     </div>
   )

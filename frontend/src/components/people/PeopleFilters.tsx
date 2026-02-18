@@ -95,7 +95,7 @@ export function PeopleFilters({ filters, onFiltersChange }: PeopleFiltersProps) 
           <Input
             value={searchValue}
             onChange={(e) => handleSearchChange(e.target.value)}
-            placeholder="Buscar por nome, email, CPF..."
+            placeholder="Buscar por nome ou email..."
             className="pl-9 pr-8 h-9"
           />
           {searchValue && (

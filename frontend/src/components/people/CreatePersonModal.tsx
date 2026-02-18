@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { useCreatePerson } from '@/hooks/usePeople'
+import { safeErrorMessage } from '@/lib/api'
 import { TEAM_ROLES } from '@/types/jobs'
 import { TEAM_ROLE_LABELS } from '@/lib/constants'
 import type { TeamRole } from '@/types/jobs'
@@ -83,8 +84,7 @@ export function CreatePersonModal({ open, onOpenChange }: CreatePersonModalProps
       toast.success('Pessoa cadastrada com sucesso')
       handleOpenChange(false)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erro ao cadastrar pessoa'
-      toast.error(message)
+      toast.error(safeErrorMessage(err))
     }
   }
 

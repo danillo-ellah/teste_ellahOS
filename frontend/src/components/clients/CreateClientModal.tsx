@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useCreateClient } from '@/hooks/useClients'
+import { safeErrorMessage } from '@/lib/api'
 import { CLIENT_SEGMENTS } from '@/types/clients'
 import { CLIENT_SEGMENT_LABELS } from '@/lib/constants'
 
@@ -79,8 +80,7 @@ export function CreateClientModal({ open, onOpenChange }: CreateClientModalProps
       toast.success('Cliente criado com sucesso')
       handleOpenChange(false)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erro ao criar cliente'
-      toast.error(message)
+      toast.error(safeErrorMessage(err))
     }
   }
 
