@@ -1,0 +1,100 @@
+import { getSupabaseClient } from '../../_shared/supabase-client.ts';
+import { success } from '../../_shared/response.ts';
+import { AppError } from '../../_shared/errors.ts';
+import { validate, UpdateJobSchema } from '../../_shared/validation.ts';
+import {
+  mapApiToDb,
+  mapDbToApi,
+  removeImmutableFields,
+} from '../../_shared/column-map.ts';
+import {
+  insertHistory,
+  describeFieldChange,
+} from '../../_shared/history.ts';
+import type { AuthContext } from '../../_shared/auth.ts';
+
+export async function updateJob(
+  req: Request,
+  auth: AuthContext,
+  jobId: string,
+): Promise<Response> {
+  const supabase = getSupabaseClient(auth.token);
+
+  // 1. Verificar que o job existe
+  const { data: currentJob, error: fetchError } = await supabase
+    .from('jobs')
+    .select('*')
+    .eq('id', jobId)
+    .is('deleted_at', null)
+    .single();
+
+  if (fetchError || !currentJob) {
+    throw new AppError('NOT_FOUND', 'Job nao encontrado', 404);
+  }
+
+  // 2. Parsear e validar body
+  const body = await req.json();
+  const validated = validate(UpdateJobSchema, body);
+
+  // 3. Mapear API -> banco e remover campos imutaveis
+  const dbPayload = removeImmutableFields(mapApiToDb(validated));
+
+  if (Object.keys(dbPayload).length === 0) {
+    throw new AppError(
+      'VALIDATION_ERROR',
+      'Nenhum campo valido para atualizacao',
+      400,
+    );
+  }
+
+  // 4. Executar update
+  const { data: updatedJob, error: updateError } = await supabase
+    .from('jobs')
+    .update(dbPayload)
+    .eq('id', jobId)
+    .select()
+    .single();
+
+  if (updateError) {
+    if (updateError.code === '23503') {
+      throw new AppError(
+        'VALIDATION_ERROR',
+        'Referencia invalida: verifique client_id ou agency_id',
+        400,
+      );
+    }
+    throw new AppError('INTERNAL_ERROR', updateError.message, 500);
+  }
+
+  // 5. Registrar mudancas no historico
+  const changedFields: Record<string, unknown> = {};
+  const previousFields: Record<string, unknown> = {};
+
+  for (const [key, newValue] of Object.entries(dbPayload)) {
+    const oldValue = currentJob[key as keyof typeof currentJob];
+    if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+      changedFields[key] = newValue;
+      previousFields[key] = oldValue;
+    }
+  }
+
+  if (Object.keys(changedFields).length > 0) {
+    // Gerar descricao das mudancas
+    const descriptions = Object.keys(changedFields).map((field) =>
+      describeFieldChange(field, previousFields[field], changedFields[field]),
+    );
+
+    await insertHistory(supabase, {
+      tenantId: auth.tenantId,
+      jobId,
+      eventType: 'field_update',
+      userId: auth.userId,
+      dataBefore: previousFields,
+      dataAfter: changedFields,
+      description: descriptions.join('; '),
+    });
+  }
+
+  // 6. Retornar job atualizado
+  return success(mapDbToApi(updatedJob));
+}
