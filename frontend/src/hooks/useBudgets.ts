@@ -103,6 +103,7 @@ export function useUpdateBudget() {
         .from('job_budgets')
         .update(payload)
         .eq('id', id)
+        .is('deleted_at', null)
         .select()
         .single()
       if (error) throw new Error(error.message)
@@ -130,6 +131,7 @@ export function useDeleteBudget() {
         .from('job_budgets')
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', id)
+        .is('deleted_at', null)
       if (error) throw new Error(error.message)
     },
     onSuccess: () => {
@@ -218,6 +220,7 @@ export function useUpdateBudgetItem() {
         .from('budget_items')
         .update(payload)
         .eq('id', id)
+        .is('deleted_at', null)
         .select()
         .single()
       if (error) throw new Error(error.message)
@@ -255,6 +258,7 @@ export function useDeleteBudgetItem() {
         .from('budget_items')
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', id)
+        .is('deleted_at', null)
       if (error) throw new Error(error.message)
     },
     onSuccess: (_data, { budgetId }) => {

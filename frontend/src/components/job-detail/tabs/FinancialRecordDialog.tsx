@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -65,15 +66,40 @@ export function FinancialRecordDialog({
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      type: record?.type ?? 'despesa',
-      category: record?.category ?? 'cache_equipe',
-      description: record?.description ?? '',
-      amount: record?.amount ?? 0,
-      due_date: record?.due_date?.split('T')[0] ?? '',
-      payment_method: record?.payment_method ?? '',
-      notes: record?.notes ?? '',
+      type: 'despesa',
+      category: 'cache_equipe',
+      description: '',
+      amount: 0,
+      due_date: '',
+      payment_method: '',
+      notes: '',
     },
   })
+
+  // Reset form quando dialog abre/fecha ou record muda
+  useEffect(() => {
+    if (open && record) {
+      form.reset({
+        type: record.type ?? 'despesa',
+        category: record.category ?? 'cache_equipe',
+        description: record.description ?? '',
+        amount: record.amount ?? 0,
+        due_date: record.due_date?.split('T')[0] ?? '',
+        payment_method: record.payment_method ?? '',
+        notes: record.notes ?? '',
+      })
+    } else if (open) {
+      form.reset({
+        type: 'despesa',
+        category: 'cache_equipe',
+        description: '',
+        amount: 0,
+        due_date: '',
+        payment_method: '',
+        notes: '',
+      })
+    }
+  }, [open, record, form])
 
   async function handleSubmit(data: FormValues) {
     const cleaned = {

@@ -35,6 +35,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Pagination } from '@/components/shared/Pagination'
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { FinancialRecordDialog } from '@/components/job-detail/tabs/FinancialRecordDialog'
 import {
   useFinancialRecords,
@@ -72,6 +73,7 @@ export function FinancialRecordsTable() {
   const [editingRecord, setEditingRecord] = useState<FinancialRecord | null>(
     null,
   )
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
 
   const { data: records, meta, isLoading } = useFinancialRecords(filters)
   const createRecord = useCreateFinancialRecord()
@@ -112,10 +114,12 @@ export function FinancialRecordsTable() {
     }
   }
 
-  async function handleDelete(id: string) {
+  async function handleConfirmDelete() {
+    if (!deleteTargetId) return
     try {
-      await deleteRecord.mutateAsync(id)
+      await deleteRecord.mutateAsync(deleteTargetId)
       toast.success('Lancamento removido')
+      setDeleteTargetId(null)
     } catch {
       toast.error('Erro ao remover lancamento')
     }
@@ -312,7 +316,7 @@ export function FinancialRecordsTable() {
                             Editar
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleDelete(record.id)}
+                            onClick={() => setDeleteTargetId(record.id)}
                             className="text-destructive"
                           >
                             <Trash2 className="mr-2 size-3.5" />
@@ -350,6 +354,16 @@ export function FinancialRecordsTable() {
         record={editingRecord}
         onSubmit={handleSubmit}
         isPending={createRecord.isPending || updateRecord.isPending}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTargetId}
+        onOpenChange={(open) => { if (!open) setDeleteTargetId(null) }}
+        title="Remover lancamento"
+        description="Tem certeza que deseja remover este lancamento financeiro?"
+        confirmLabel="Remover"
+        onConfirm={handleConfirmDelete}
+        isPending={deleteRecord.isPending}
       />
     </div>
   )

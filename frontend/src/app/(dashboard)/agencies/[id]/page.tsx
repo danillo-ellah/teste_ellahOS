@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { AgencyHeader } from '@/components/agencies/AgencyHeader'
 import { AgencyDetailTabs } from '@/components/agencies/AgencyDetailTabs'
 import { useAgency, useUpdateAgency } from '@/hooks/useAgencies'
+import { isNotFoundError } from '@/lib/api'
 import type { UpdateAgencyPayload } from '@/types/clients'
 
 interface PageProps {
@@ -68,7 +69,7 @@ export default function AgencyDetailPage({ params }: PageProps) {
     )
   }
 
-  if (isError && error?.message?.includes('not found')) {
+  if (isError && isNotFoundError(error)) {
     notFound()
   }
 

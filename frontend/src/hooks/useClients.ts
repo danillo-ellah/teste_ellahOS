@@ -26,7 +26,8 @@ async function fetchClients(search?: string): Promise<ClientOption[]> {
     .order('name')
 
   if (search && search.trim().length > 0) {
-    query = query.ilike('name', `%${search.trim()}%`)
+    const safe = search.replace(/[%_\\(),.]/g, '').trim()
+    if (safe) query = query.ilike('name', `%${safe}%`)
   }
 
   const { data, error } = await query
@@ -55,6 +56,16 @@ export function useClients(search?: string) {
 
 const DEFAULT_PER_PAGE = 20
 
+const CLIENT_SORT_WHITELIST = new Set([
+  'name', 'trading_name', 'cnpj', 'segment', 'city', 'state',
+  'is_active', 'created_at', 'updated_at',
+])
+
+function sanitizeSearch(input: string): string {
+  // Remove caracteres especiais do PostgREST que podem causar filter injection
+  return input.replace(/[%_\\(),.]/g, '').trim()
+}
+
 async function fetchClientsList(
   filters: ClientFilters,
 ): Promise<{ data: Client[]; total: number }> {
@@ -70,9 +81,12 @@ async function fetchClientsList(
     .is('deleted_at', null)
 
   if (filters.search?.trim()) {
-    query = query.or(
-      `name.ilike.%${filters.search.trim()}%,trading_name.ilike.%${filters.search.trim()}%,cnpj.ilike.%${filters.search.trim()}%`,
-    )
+    const safe = sanitizeSearch(filters.search)
+    if (safe) {
+      query = query.or(
+        `name.ilike.%${safe}%,trading_name.ilike.%${safe}%,cnpj.ilike.%${safe}%`,
+      )
+    }
   }
   if (filters.segment) {
     query = query.eq('segment', filters.segment)
@@ -81,7 +95,7 @@ async function fetchClientsList(
     query = query.eq('is_active', filters.is_active)
   }
 
-  const sortBy = filters.sort_by ?? 'name'
+  const sortBy = CLIENT_SORT_WHITELIST.has(filters.sort_by ?? '') ? filters.sort_by! : 'name'
   const ascending = (filters.sort_order ?? 'asc') === 'asc'
   query = query.order(sortBy, { ascending }).range(from, to)
 
@@ -191,6 +205,7 @@ export function useUpdateClient() {
         .from('clients')
         .update(payload)
         .eq('id', id)
+        .is('deleted_at', null)
         .select()
         .single()
       if (error) throw new Error(error.message)
@@ -218,6 +233,7 @@ export function useDeleteClient() {
         .from('clients')
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', id)
+        .is('deleted_at', null)
       if (error) throw new Error(error.message)
     },
     onSuccess: () => {

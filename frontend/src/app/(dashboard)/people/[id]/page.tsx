@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { PersonHeader } from '@/components/people/PersonHeader'
 import { PersonDetailTabs } from '@/components/people/PersonDetailTabs'
 import { usePerson, useUpdatePerson } from '@/hooks/usePeople'
+import { isNotFoundError } from '@/lib/api'
 import type { UpdatePersonPayload } from '@/types/people'
 
 interface PageProps {
@@ -76,7 +77,7 @@ export default function PersonDetailPage({ params }: PageProps) {
     )
   }
 
-  if (isError && error?.message?.includes('not found')) {
+  if (isError && isNotFoundError(error)) {
     notFound()
   }
 

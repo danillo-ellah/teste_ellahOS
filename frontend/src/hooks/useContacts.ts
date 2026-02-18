@@ -110,6 +110,7 @@ export function useUpdateContact() {
         .from('contacts')
         .update(payload)
         .eq('id', id)
+        .is('deleted_at', null)
         .select()
         .single()
       if (error) throw new Error(error.message)
@@ -151,6 +152,7 @@ export function useDeleteContact() {
         .from('contacts')
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', id)
+        .is('deleted_at', null)
       if (error) throw new Error(error.message)
     },
     onSuccess: (_data, { entityId }) => {

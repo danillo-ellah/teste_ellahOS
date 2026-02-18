@@ -12,6 +12,15 @@ import type {
 
 const DEFAULT_PER_PAGE = 20
 
+const FINANCIAL_SORT_WHITELIST = new Set([
+  'created_at', 'updated_at', 'amount', 'due_date', 'paid_at',
+  'type', 'category', 'status', 'description',
+])
+
+function sanitizeSearch(input: string): string {
+  return input.replace(/[%_\\(),.]/g, '').trim()
+}
+
 interface FinancialSummary {
   total_receitas: number
   total_despesas: number
@@ -45,10 +54,11 @@ async function fetchFinancialRecords(
     query = query.eq('category', filters.category)
   }
   if (filters.search?.trim()) {
-    query = query.ilike('description', `%${filters.search.trim()}%`)
+    const safe = sanitizeSearch(filters.search)
+    if (safe) query = query.ilike('description', `%${safe}%`)
   }
 
-  const sortBy = filters.sort_by ?? 'created_at'
+  const sortBy = FINANCIAL_SORT_WHITELIST.has(filters.sort_by ?? '') ? filters.sort_by! : 'created_at'
   const ascending = (filters.sort_order ?? 'desc') === 'asc'
   query = query.order(sortBy, { ascending }).range(from, to)
 
@@ -84,40 +94,24 @@ export function useFinancialRecords(filters: FinancialRecordFilters = {}) {
   }
 }
 
-// --- Resumo financeiro (agregacoes) ---
+// --- Resumo financeiro (agregacao server-side via RPC) ---
 
 async function fetchFinancialSummary(
   jobId?: string,
 ): Promise<FinancialSummary> {
   const supabase = createClient()
 
-  let query = supabase
-    .from('financial_records')
-    .select('type, amount, status')
-    .is('deleted_at', null)
-    .neq('status', 'cancelado')
-
-  if (jobId) {
-    query = query.eq('job_id', jobId)
-  }
-
-  const { data, error } = await query
+  const { data, error } = await supabase.rpc('get_financial_summary', {
+    p_job_id: jobId ?? null,
+  })
 
   if (error) throw new Error(error.message)
 
-  const records = data ?? []
-  let total_receitas = 0
-  let total_despesas = 0
-
-  for (const r of records) {
-    if (r.type === 'receita') total_receitas += Number(r.amount)
-    else total_despesas += Number(r.amount)
-  }
-
+  const result = data as Record<string, number> | null
   return {
-    total_receitas,
-    total_despesas,
-    saldo: total_receitas - total_despesas,
+    total_receitas: result?.total_receitas ?? 0,
+    total_despesas: result?.total_despesas ?? 0,
+    saldo: result?.saldo ?? 0,
   }
 }
 
@@ -200,6 +194,7 @@ export function useUpdateFinancialRecord() {
         .from('financial_records')
         .update(payload)
         .eq('id', id)
+        .is('deleted_at', null)
         .select('*, people(full_name), jobs(title, code)')
         .single()
       if (error) throw new Error(error.message)
@@ -228,6 +223,7 @@ export function useDeleteFinancialRecord() {
         .from('financial_records')
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', id)
+        .is('deleted_at', null)
       if (error) throw new Error(error.message)
     },
     onSuccess: () => {

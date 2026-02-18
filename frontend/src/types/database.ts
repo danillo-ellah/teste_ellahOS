@@ -76,6 +76,69 @@ export type Database = {
           },
         ]
       }
+      budget_items: {
+        Row: {
+          budget_id: string
+          category: string
+          created_at: string
+          deleted_at: string | null
+          description: string
+          display_order: number | null
+          id: string
+          notes: string | null
+          quantity: number
+          tenant_id: string
+          total_value: number | null
+          unit_value: number
+          updated_at: string
+        }
+        Insert: {
+          budget_id: string
+          category?: string
+          created_at?: string
+          deleted_at?: string | null
+          description: string
+          display_order?: number | null
+          id?: string
+          notes?: string | null
+          quantity?: number
+          tenant_id: string
+          total_value?: number | null
+          unit_value?: number
+          updated_at?: string
+        }
+        Update: {
+          budget_id?: string
+          category?: string
+          created_at?: string
+          deleted_at?: string | null
+          description?: string
+          display_order?: number | null
+          id?: string
+          notes?: string | null
+          quantity?: number
+          tenant_id?: string
+          total_value?: number | null
+          unit_value?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_items_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "job_budgets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           address: string | null
@@ -201,6 +264,154 @@ export type Database = {
           },
           {
             foreignKeyName: "contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_records: {
+        Row: {
+          amount: number
+          category: Database["public"]["Enums"]["financial_record_category"]
+          created_at: string
+          deleted_at: string | null
+          description: string
+          due_date: string | null
+          id: string
+          job_id: string | null
+          notes: string | null
+          paid_at: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
+          person_id: string | null
+          status: Database["public"]["Enums"]["financial_record_status"]
+          tenant_id: string
+          type: Database["public"]["Enums"]["financial_record_type"]
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category?: Database["public"]["Enums"]["financial_record_category"]
+          created_at?: string
+          deleted_at?: string | null
+          description: string
+          due_date?: string | null
+          id?: string
+          job_id?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          person_id?: string | null
+          status?: Database["public"]["Enums"]["financial_record_status"]
+          tenant_id: string
+          type: Database["public"]["Enums"]["financial_record_type"]
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: Database["public"]["Enums"]["financial_record_category"]
+          created_at?: string
+          deleted_at?: string | null
+          description?: string
+          due_date?: string | null
+          id?: string
+          job_id?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          person_id?: string | null
+          status?: Database["public"]["Enums"]["financial_record_status"]
+          tenant_id?: string
+          type?: Database["public"]["Enums"]["financial_record_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_records_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_records_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_records_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          amount: number
+          created_at: string
+          deleted_at: string | null
+          due_date: string | null
+          id: string
+          issued_at: string | null
+          job_id: string | null
+          nf_number: string | null
+          notes: string | null
+          paid_at: string | null
+          pdf_url: string | null
+          status: Database["public"]["Enums"]["invoice_status"]
+          tenant_id: string
+          type: Database["public"]["Enums"]["invoice_type"]
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          deleted_at?: string | null
+          due_date?: string | null
+          id?: string
+          issued_at?: string | null
+          job_id?: string | null
+          nf_number?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          pdf_url?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          tenant_id: string
+          type?: Database["public"]["Enums"]["invoice_type"]
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          deleted_at?: string | null
+          due_date?: string | null
+          id?: string
+          issued_at?: string | null
+          job_id?: string | null
+          nf_number?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          pdf_url?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          tenant_id?: string
+          type?: Database["public"]["Enums"]["invoice_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -345,6 +556,7 @@ export type Database = {
           job_id: string
           link: string | null
           notes: string | null
+          parent_id: string | null
           resolution: string | null
           status: Database["public"]["Enums"]["deliverable_status"]
           tenant_id: string
@@ -363,6 +575,7 @@ export type Database = {
           job_id: string
           link?: string | null
           notes?: string | null
+          parent_id?: string | null
           resolution?: string | null
           status?: Database["public"]["Enums"]["deliverable_status"]
           tenant_id: string
@@ -381,6 +594,7 @@ export type Database = {
           job_id?: string
           link?: string | null
           notes?: string | null
+          parent_id?: string | null
           resolution?: string | null
           status?: Database["public"]["Enums"]["deliverable_status"]
           tenant_id?: string
@@ -393,6 +607,13 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_deliverables_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "job_deliverables"
             referencedColumns: ["id"]
           },
           {
@@ -754,237 +975,54 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          actual_delivery_date?: string | null
-          agency_contact_id?: string | null
-          agency_id?: string | null
-          ancine_number?: string | null
-          approval_date?: string | null
-          approval_type?: Database["public"]["Enums"]["approval_type"] | null
-          approved_by_email?: string | null
-          approved_by_name?: string | null
-          brand?: string | null
-          briefing_date?: string | null
-          briefing_text?: string | null
-          budget_letter_url?: string | null
-          budget_sent_date?: string | null
-          cancellation_reason?: string | null
-          cast_sheet_url?: string | null
-          client_approval_deadline?: string | null
-          client_contact_id?: string | null
-          client_id: string
-          closed_value?: number | null
-          closing_art_url?: string | null
-          closing_costume_url?: string | null
-          closing_production_url?: string | null
-          code: string
-          commercial_responsible?: string | null
-          complexity_level?: string | null
-          contracts_folder_url?: string | null
-          created_at?: string
-          created_by?: string | null
-          currency?: string
-          custom_fields?: Json | null
-          deleted_at?: string | null
-          display_order?: number | null
-          drive_folder_url?: string | null
-          expected_delivery_date?: string | null
-          final_delivery_url?: string | null
-          format?: string | null
-          gross_profit?: number | null
-          has_computer_graphics?: boolean | null
-          has_contracted_audio?: boolean | null
-          has_mockup_scenography?: boolean | null
-          health_score?: number | null
-          id?: string
-          index_number: number
-          internal_approval_doc_url?: string | null
-          internal_notes?: string | null
-          is_archived?: boolean
-          is_parent_job?: boolean
-          job_aba: string
-          kickoff_ppm_date?: string | null
-          margin_percentage?: number | null
-          media_type?: string | null
-          net_profit?: number | null
-          notes?: string | null
-          other_costs?: number | null
-          parent_job_id?: string | null
-          payment_date?: string | null
-          payment_terms?: string | null
-          po_number?: string | null
-          pos_sub_status?: Database["public"]["Enums"]["pos_sub_status"] | null
-          post_deadline?: string | null
-          post_start_date?: string | null
-          ppm_url?: string | null
-          pre_art_url?: string | null
-          pre_costume_url?: string | null
-          pre_production_url?: string | null
-          priority?: Database["public"]["Enums"]["priority_level"] | null
-          production_cost?: number | null
-          production_sheet_url?: string | null
-          project_type?: Database["public"]["Enums"]["project_type"]
-          proposal_validity?: string | null
-          raw_material_url?: string | null
-          references_text?: string | null
-          schedule_url?: string | null
-          script_url?: string | null
-          segment?: Database["public"]["Enums"]["client_segment"] | null
-          shooting_dates?: string[] | null
-          status?: Database["public"]["Enums"]["job_status"]
-          status_updated_at?: string | null
-          status_updated_by?: string | null
-          tags?: string[] | null
-          tax_percentage?: number
-          tax_value?: number | null
-          team_form_url?: string | null
-          team_sheet_url?: string | null
-          tenant_id: string
-          title: string
-          total_duration_seconds?: number | null
-          updated_at?: string
+          [key: string]: unknown
         }
         Update: {
-          actual_delivery_date?: string | null
-          agency_contact_id?: string | null
-          agency_id?: string | null
-          ancine_number?: string | null
-          approval_date?: string | null
-          approval_type?: Database["public"]["Enums"]["approval_type"] | null
-          approved_by_email?: string | null
-          approved_by_name?: string | null
-          brand?: string | null
-          briefing_date?: string | null
-          briefing_text?: string | null
-          budget_letter_url?: string | null
-          budget_sent_date?: string | null
-          cancellation_reason?: string | null
-          cast_sheet_url?: string | null
-          client_approval_deadline?: string | null
-          client_contact_id?: string | null
-          client_id?: string
-          closed_value?: number | null
-          closing_art_url?: string | null
-          closing_costume_url?: string | null
-          closing_production_url?: string | null
-          code?: string
-          commercial_responsible?: string | null
-          complexity_level?: string | null
-          contracts_folder_url?: string | null
+          [key: string]: unknown
+        }
+        Relationships: []
+      }
+      payment_history: {
+        Row: {
+          amount: number
+          created_at: string
+          financial_record_id: string
+          id: string
+          notes: string | null
+          paid_at: string
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
+          tenant_id: string
+        }
+        Insert: {
+          amount: number
           created_at?: string
-          created_by?: string | null
-          currency?: string
-          custom_fields?: Json | null
-          deleted_at?: string | null
-          display_order?: number | null
-          drive_folder_url?: string | null
-          expected_delivery_date?: string | null
-          final_delivery_url?: string | null
-          format?: string | null
-          gross_profit?: number | null
-          has_computer_graphics?: boolean | null
-          has_contracted_audio?: boolean | null
-          has_mockup_scenography?: boolean | null
-          health_score?: number | null
+          financial_record_id: string
           id?: string
-          index_number?: number
-          internal_approval_doc_url?: string | null
-          internal_notes?: string | null
-          is_archived?: boolean
-          is_parent_job?: boolean
-          job_aba?: string
-          kickoff_ppm_date?: string | null
-          margin_percentage?: number | null
-          media_type?: string | null
-          net_profit?: number | null
           notes?: string | null
-          other_costs?: number | null
-          parent_job_id?: string | null
-          payment_date?: string | null
-          payment_terms?: string | null
-          po_number?: string | null
-          pos_sub_status?: Database["public"]["Enums"]["pos_sub_status"] | null
-          post_deadline?: string | null
-          post_start_date?: string | null
-          ppm_url?: string | null
-          pre_art_url?: string | null
-          pre_costume_url?: string | null
-          pre_production_url?: string | null
-          priority?: Database["public"]["Enums"]["priority_level"] | null
-          production_cost?: number | null
-          production_sheet_url?: string | null
-          project_type?: Database["public"]["Enums"]["project_type"]
-          proposal_validity?: string | null
-          raw_material_url?: string | null
-          references_text?: string | null
-          schedule_url?: string | null
-          script_url?: string | null
-          segment?: Database["public"]["Enums"]["client_segment"] | null
-          shooting_dates?: string[] | null
-          status?: Database["public"]["Enums"]["job_status"]
-          status_updated_at?: string | null
-          status_updated_by?: string | null
-          tags?: string[] | null
-          tax_percentage?: number
-          tax_value?: number | null
-          team_form_url?: string | null
-          team_sheet_url?: string | null
+          paid_at?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          tenant_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          financial_record_id?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
           tenant_id?: string
-          title?: string
-          total_duration_seconds?: number | null
-          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "jobs_agency_contact_id_fkey"
-            columns: ["agency_contact_id"]
+            foreignKeyName: "payment_history_financial_record_id_fkey"
+            columns: ["financial_record_id"]
             isOneToOne: false
-            referencedRelation: "contacts"
+            referencedRelation: "financial_records"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "jobs_agency_id_fkey"
-            columns: ["agency_id"]
-            isOneToOne: false
-            referencedRelation: "agencies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_client_contact_id_fkey"
-            columns: ["client_contact_id"]
-            isOneToOne: false
-            referencedRelation: "contacts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_parent_job_id_fkey"
-            columns: ["parent_job_id"]
-            isOneToOne: false
-            referencedRelation: "jobs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_status_updated_by_fkey"
-            columns: ["status_updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_tenant_id_fkey"
+            foreignKeyName: "payment_history_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -1001,6 +1039,8 @@ export type Database = {
           city: string | null
           cpf: string | null
           created_at: string
+          ctps_number: string | null
+          ctps_series: string | null
           default_rate: number | null
           default_role: Database["public"]["Enums"]["team_role"] | null
           deleted_at: string | null
@@ -1027,6 +1067,8 @@ export type Database = {
           city?: string | null
           cpf?: string | null
           created_at?: string
+          ctps_number?: string | null
+          ctps_series?: string | null
           default_rate?: number | null
           default_role?: Database["public"]["Enums"]["team_role"] | null
           deleted_at?: string | null
@@ -1053,6 +1095,8 @@ export type Database = {
           city?: string | null
           cpf?: string | null
           created_at?: string
+          ctps_number?: string | null
+          ctps_series?: string | null
           default_rate?: number | null
           default_role?: Database["public"]["Enums"]["team_role"] | null
           deleted_at?: string | null
@@ -1185,6 +1229,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_financial_summary: { Args: { p_job_id?: string }; Returns: Json }
       get_tenant_id: { Args: never; Returns: string }
       get_user_role: { Args: never; Returns: string }
     }
@@ -1207,6 +1252,25 @@ export type Database = {
         | "aguardando_aprovacao"
         | "aprovado"
         | "entregue"
+      financial_record_category:
+        | "cache_equipe"
+        | "locacao"
+        | "equipamento"
+        | "transporte"
+        | "alimentacao"
+        | "cenografia"
+        | "figurino"
+        | "pos_producao"
+        | "musica_audio"
+        | "seguro"
+        | "taxa_administrativa"
+        | "imposto"
+        | "receita_cliente"
+        | "adiantamento"
+        | "reembolso"
+        | "outro"
+      financial_record_status: "pendente" | "pago" | "atrasado" | "cancelado"
+      financial_record_type: "receita" | "despesa"
       hiring_status: "orcado" | "proposta_enviada" | "confirmado" | "cancelado"
       history_event_type:
         | "status_change"
@@ -1216,6 +1280,8 @@ export type Database = {
         | "file_upload"
         | "approval"
         | "financial_update"
+      invoice_status: "emitida" | "paga" | "vencida" | "cancelada"
+      invoice_type: "nf_servico" | "nf_produto" | "recibo" | "fatura"
       job_status:
         | "briefing_recebido"
         | "orcamento_elaboracao"
@@ -1231,6 +1297,15 @@ export type Database = {
         | "finalizado"
         | "cancelado"
         | "pausado"
+      payment_method:
+        | "pix"
+        | "transferencia"
+        | "boleto"
+        | "cartao_credito"
+        | "cartao_debito"
+        | "dinheiro"
+        | "cheque"
+        | "outro"
       pos_sub_status:
         | "edicao"
         | "cor"
@@ -1283,120 +1358,3 @@ export type Database = {
     }
   }
 }
-
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
-
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
-
-export type Tables<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R
-    }
-    ? R
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
-      }
-      ? R
-      : never
-    : never
-
-export type TablesInsert<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
-    }
-    ? I
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
-      }
-      ? I
-      : never
-    : never
-
-export type TablesUpdate<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
-    }
-    ? U
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
-      }
-      ? U
-      : never
-    : never
-
-export type Enums<
-  DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
-> = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
-
-export type CompositeTypes<
-  PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
-> = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never

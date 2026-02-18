@@ -21,6 +21,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import {
   useBudgetsByJob,
   useCreateBudget,
@@ -37,6 +38,7 @@ export function BudgetsList({ jobId }: BudgetsListProps) {
   const [createOpen, setCreateOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [notes, setNotes] = useState('')
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
 
   const { data: budgets, isLoading } = useBudgetsByJob(jobId)
   const createBudget = useCreateBudget()
@@ -59,10 +61,12 @@ export function BudgetsList({ jobId }: BudgetsListProps) {
     }
   }
 
-  async function handleDelete(id: string) {
+  async function handleConfirmDelete() {
+    if (!deleteTargetId) return
     try {
-      await deleteBudget.mutateAsync(id)
+      await deleteBudget.mutateAsync(deleteTargetId)
       toast.success('Orcamento removido')
+      setDeleteTargetId(null)
     } catch {
       toast.error('Erro ao remover orcamento')
     }
@@ -100,11 +104,21 @@ export function BudgetsList({ jobId }: BudgetsListProps) {
             <BudgetCard
               key={budget.id}
               budget={budget}
-              onDelete={() => handleDelete(budget.id)}
+              onDelete={() => setDeleteTargetId(budget.id)}
             />
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTargetId}
+        onOpenChange={(open) => { if (!open) setDeleteTargetId(null) }}
+        title="Remover orcamento"
+        description="Tem certeza que deseja remover este orcamento?"
+        confirmLabel="Remover"
+        onConfirm={handleConfirmDelete}
+        isPending={deleteBudget.isPending}
+      />
 
       {/* Dialog criar */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>

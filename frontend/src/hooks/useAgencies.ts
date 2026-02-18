@@ -26,7 +26,8 @@ async function fetchAgencies(search?: string): Promise<AgencyOption[]> {
     .order('name')
 
   if (search && search.trim().length > 0) {
-    query = query.ilike('name', `%${search.trim()}%`)
+    const safe = search.replace(/[%_\\(),.]/g, '').trim()
+    if (safe) query = query.ilike('name', `%${safe}%`)
   }
 
   const { data, error } = await query
@@ -55,6 +56,15 @@ export function useAgencies(search?: string) {
 
 const DEFAULT_PER_PAGE = 20
 
+const AGENCY_SORT_WHITELIST = new Set([
+  'name', 'trading_name', 'cnpj', 'city', 'state',
+  'is_active', 'created_at', 'updated_at',
+])
+
+function sanitizeSearch(input: string): string {
+  return input.replace(/[%_\\(),.]/g, '').trim()
+}
+
 async function fetchAgenciesList(
   filters: AgencyFilters,
 ): Promise<{ data: Agency[]; total: number }> {
@@ -70,15 +80,18 @@ async function fetchAgenciesList(
     .is('deleted_at', null)
 
   if (filters.search?.trim()) {
-    query = query.or(
-      `name.ilike.%${filters.search.trim()}%,trading_name.ilike.%${filters.search.trim()}%,cnpj.ilike.%${filters.search.trim()}%`,
-    )
+    const safe = sanitizeSearch(filters.search)
+    if (safe) {
+      query = query.or(
+        `name.ilike.%${safe}%,trading_name.ilike.%${safe}%,cnpj.ilike.%${safe}%`,
+      )
+    }
   }
   if (filters.is_active !== undefined) {
     query = query.eq('is_active', filters.is_active)
   }
 
-  const sortBy = filters.sort_by ?? 'name'
+  const sortBy = AGENCY_SORT_WHITELIST.has(filters.sort_by ?? '') ? filters.sort_by! : 'name'
   const ascending = (filters.sort_order ?? 'asc') === 'asc'
   query = query.order(sortBy, { ascending }).range(from, to)
 
@@ -188,6 +201,7 @@ export function useUpdateAgency() {
         .from('agencies')
         .update(payload)
         .eq('id', id)
+        .is('deleted_at', null)
         .select()
         .single()
       if (error) throw new Error(error.message)
@@ -215,6 +229,7 @@ export function useDeleteAgency() {
         .from('agencies')
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', id)
+        .is('deleted_at', null)
       if (error) throw new Error(error.message)
     },
     onSuccess: () => {

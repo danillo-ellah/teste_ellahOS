@@ -15,6 +15,53 @@ export class ApiRequestError extends Error {
   }
 }
 
+/** Detecta erro 404 tanto de Edge Functions (ApiRequestError) quanto do Supabase client (PGRST116) */
+export function isNotFoundError(error: Error | null): boolean {
+  if (!error) return false
+  if (error instanceof ApiRequestError && error.status === 404) return true
+  // Supabase PostgREST retorna PGRST116 quando .single() nao encontra row
+  if (error.message?.includes('PGRST116')) return true
+  // Fallback — JSON-parsed error objects
+  const msg = error.message ?? ''
+  if (msg.includes('JSON object requested, multiple (or no) rows returned')) return true
+  return false
+}
+
+/** Converte erros do Supabase/PostgREST em mensagens seguras para o usuario */
+export function safeErrorMessage(error: unknown): string {
+  if (!error) return 'Erro desconhecido'
+  if (error instanceof ApiRequestError) return error.message
+
+  const msg = error instanceof Error ? error.message : String(error)
+
+  // Erros de constraint do PostgreSQL
+  if (msg.includes('unique') || msg.includes('duplicate key')) {
+    if (msg.includes('cnpj')) return 'CNPJ ja cadastrado para esta empresa'
+    return 'Registro duplicado. Verifique os dados e tente novamente.'
+  }
+  if (msg.includes('violates check constraint')) {
+    if (msg.includes('amount')) return 'Valor deve ser positivo'
+    if (msg.includes('quantity')) return 'Quantidade deve ser positiva'
+    if (msg.includes('entity_xor')) return 'Contato deve pertencer a um cliente OU agencia'
+    return 'Dados invalidos. Verifique os campos e tente novamente.'
+  }
+  if (msg.includes('violates foreign key')) {
+    return 'Referencia invalida. O registro vinculado pode ter sido removido.'
+  }
+  if (msg.includes('PGRST116')) return 'Registro nao encontrado'
+  if (msg.includes('JWT')) return 'Sessao expirada. Faca login novamente.'
+  if (msg.includes('permission denied') || msg.includes('RLS')) {
+    return 'Voce nao tem permissao para esta acao.'
+  }
+
+  // Nao expor mensagens internas do banco
+  if (msg.includes('pg_') || msg.includes('relation') || msg.includes('column')) {
+    return 'Erro interno. Tente novamente ou contate o suporte.'
+  }
+
+  return 'Erro ao processar a requisicao. Tente novamente.'
+}
+
 async function getToken(): Promise<string> {
   const supabase = createClient()
   // Validar JWT contra o servidor antes de usar o token

@@ -26,7 +26,8 @@ async function fetchPeople(search?: string): Promise<PersonOption[]> {
     .order('full_name')
 
   if (search && search.trim().length > 0) {
-    query = query.ilike('full_name', `%${search.trim()}%`)
+    const safe = search.replace(/[%_\\(),.]/g, '').trim()
+    if (safe) query = query.ilike('full_name', `%${safe}%`)
   }
 
   const { data, error } = await query
@@ -55,6 +56,15 @@ export function usePeople(search?: string) {
 
 const DEFAULT_PER_PAGE = 20
 
+const PEOPLE_SORT_WHITELIST = new Set([
+  'full_name', 'email', 'profession', 'default_role', 'default_rate',
+  'is_internal', 'is_active', 'created_at', 'updated_at',
+])
+
+function sanitizeSearch(input: string): string {
+  return input.replace(/[%_\\(),.]/g, '').trim()
+}
+
 async function fetchPeopleList(
   filters: PersonFilters,
 ): Promise<{ data: Person[]; total: number }> {
@@ -70,9 +80,12 @@ async function fetchPeopleList(
     .is('deleted_at', null)
 
   if (filters.search?.trim()) {
-    query = query.or(
-      `full_name.ilike.%${filters.search.trim()}%,email.ilike.%${filters.search.trim()}%,cpf.ilike.%${filters.search.trim()}%`,
-    )
+    const safe = sanitizeSearch(filters.search)
+    if (safe) {
+      query = query.or(
+        `full_name.ilike.%${safe}%,email.ilike.%${safe}%,cpf.ilike.%${safe}%`,
+      )
+    }
   }
   if (filters.is_internal !== undefined) {
     query = query.eq('is_internal', filters.is_internal)
@@ -84,7 +97,7 @@ async function fetchPeopleList(
     query = query.eq('is_active', filters.is_active)
   }
 
-  const sortBy = filters.sort_by ?? 'full_name'
+  const sortBy = PEOPLE_SORT_WHITELIST.has(filters.sort_by ?? '') ? filters.sort_by! : 'full_name'
   const ascending = (filters.sort_order ?? 'asc') === 'asc'
   query = query.order(sortBy, { ascending }).range(from, to)
 
@@ -194,6 +207,7 @@ export function useUpdatePerson() {
         .from('people')
         .update(payload)
         .eq('id', id)
+        .is('deleted_at', null)
         .select()
         .single()
       if (error) throw new Error(error.message)
@@ -221,6 +235,7 @@ export function useDeletePerson() {
         .from('people')
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', id)
+        .is('deleted_at', null)
       if (error) throw new Error(error.message)
     },
     onSuccess: () => {

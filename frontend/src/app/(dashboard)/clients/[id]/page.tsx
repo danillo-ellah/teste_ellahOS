@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { ClientHeader } from '@/components/clients/ClientHeader'
 import { ClientDetailTabs } from '@/components/clients/ClientDetailTabs'
 import { useClient, useUpdateClient } from '@/hooks/useClients'
+import { isNotFoundError } from '@/lib/api'
 import type { UpdateClientPayload } from '@/types/clients'
 
 interface PageProps {
@@ -69,7 +70,7 @@ export default function ClientDetailPage({ params }: PageProps) {
     )
   }
 
-  if (isError && error?.message?.includes('not found')) {
+  if (isError && isNotFoundError(error)) {
     notFound()
   }
 

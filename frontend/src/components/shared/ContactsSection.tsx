@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ContactDialog } from './ContactDialog'
+import { ConfirmDialog } from './ConfirmDialog'
 import {
   useContacts,
   useCreateContact,
@@ -28,6 +29,7 @@ export function ContactsSection({ clientId, agencyId }: ContactsSectionProps) {
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingContact, setEditingContact] = useState<Contact | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Contact | null>(null)
 
   function handleAdd() {
     setEditingContact(null)
@@ -39,10 +41,12 @@ export function ContactsSection({ clientId, agencyId }: ContactsSectionProps) {
     setDialogOpen(true)
   }
 
-  async function handleDelete(contact: Contact) {
+  async function handleConfirmDelete() {
+    if (!deleteTarget) return
     try {
-      await deleteContact({ id: contact.id, entityId })
+      await deleteContact({ id: deleteTarget.id, entityId })
       toast.success('Contato removido')
+      setDeleteTarget(null)
     } catch {
       toast.error('Erro ao remover contato')
     }
@@ -163,7 +167,7 @@ export function ContactsSection({ clientId, agencyId }: ContactsSectionProps) {
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7 text-destructive hover:text-destructive"
-                onClick={() => handleDelete(contact)}
+                onClick={() => setDeleteTarget(contact)}
                 aria-label={`Remover ${contact.name}`}
               >
                 <Trash2 className="size-3.5" />
@@ -179,6 +183,15 @@ export function ContactsSection({ clientId, agencyId }: ContactsSectionProps) {
         contact={editingContact}
         onSave={handleSave}
         isPending={isCreating || isUpdating}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+        title="Remover contato"
+        description={`Tem certeza que deseja remover o contato "${deleteTarget?.name}"?`}
+        confirmLabel="Remover"
+        onConfirm={handleConfirmDelete}
       />
     </div>
   )
