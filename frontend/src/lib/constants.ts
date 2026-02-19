@@ -299,6 +299,32 @@ export const INVOICE_STATUS_LABELS: Record<
   cancelada: 'Cancelada',
 }
 
+// --- Notificacoes: Labels ---
+
+export const NOTIFICATION_TYPE_LABELS: Record<
+  import('@/types/notifications').NotificationType,
+  string
+> = {
+  job_approved: 'Job Aprovado',
+  status_changed: 'Status Alterado',
+  team_added: 'Adicionado a Equipe',
+  deadline_approaching: 'Prazo Proximo',
+  margin_alert: 'Alerta de Margem',
+  deliverable_overdue: 'Entregavel Atrasado',
+  shooting_date_approaching: 'Diaria Proxima',
+  integration_failed: 'Falha de Integracao',
+}
+
+export const NOTIFICATION_PRIORITY_LABELS: Record<
+  import('@/types/notifications').NotificationPriority,
+  string
+> = {
+  low: 'Baixa',
+  normal: 'Normal',
+  high: 'Alta',
+  urgent: 'Urgente',
+}
+
 // --- Financeiro: Estilos ---
 
 export const FINANCIAL_STATUS_STYLE_MAP: Record<

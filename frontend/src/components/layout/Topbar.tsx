@@ -4,6 +4,7 @@ import { Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from './ThemeToggle'
 import { UserMenu } from './UserMenu'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { Breadcrumb } from './Breadcrumb'
 import { usePathname } from 'next/navigation'
 
@@ -18,12 +19,25 @@ function getDefaultBreadcrumb(pathname: string) {
 
   if (pathname.startsWith('/jobs')) {
     items.push({ label: 'Jobs', href: '/jobs' })
-
-    // Se for detalhe do job: /jobs/[id]
     const match = pathname.match(/^\/jobs\/([^/]+)/)
     if (match) {
       items.push({ label: 'Detalhe' })
     }
+  } else if (pathname.startsWith('/settings')) {
+    items.push({ label: 'Configuracoes', href: '/settings' })
+    if (pathname.includes('/integrations')) {
+      items.push({ label: 'Integracoes' })
+    }
+  } else if (pathname.startsWith('/clients')) {
+    items.push({ label: 'Clientes', href: '/clients' })
+  } else if (pathname.startsWith('/agencies')) {
+    items.push({ label: 'Agencias', href: '/agencies' })
+  } else if (pathname.startsWith('/people')) {
+    items.push({ label: 'Equipe', href: '/people' })
+  } else if (pathname.startsWith('/financial')) {
+    items.push({ label: 'Financeiro', href: '/financial' })
+  } else if (pathname.startsWith('/notifications')) {
+    items.push({ label: 'Notificacoes' })
   }
 
   return items
@@ -55,6 +69,7 @@ export function Topbar({ onMenuClick, showMenuButton, breadcrumbItems }: TopbarP
 
       {/* Acoes */}
       <div className="flex items-center gap-1">
+        <NotificationBell />
         <ThemeToggle />
         <UserMenu />
       </div>

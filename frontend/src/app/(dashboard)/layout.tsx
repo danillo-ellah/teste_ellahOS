@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
 import { BottomNav } from '@/components/layout/BottomNav'
@@ -11,6 +11,8 @@ import {
   SheetContent,
 } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
+import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications'
 
 export default function DashboardLayout({
   children,
@@ -20,6 +22,18 @@ export default function DashboardLayout({
   const isDesktop = useIsDesktop()
   const [collapsed, setCollapsed] = useLocalStorage('sidebar-collapsed', false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [userId, setUserId] = useState<string>()
+
+  // Obter userId para Realtime subscription
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setUserId(user.id)
+    })
+  }, [])
+
+  // Realtime: atualiza badge de notificacoes sem refresh
+  useRealtimeNotifications(userId)
 
   return (
     <div className="min-h-screen bg-background">

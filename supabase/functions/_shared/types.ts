@@ -196,6 +196,8 @@ export interface JobRow {
   has_computer_graphics: boolean;
   media_type: string | null;
   ancine_number: string | null;
+  audio_company: string | null;
+  risk_buffer: number | null;
   health_score: number;
   created_at: string;
   updated_at: string;
@@ -267,4 +269,167 @@ export interface HistoryRow {
   data_after: Record<string, unknown> | null;
   description: string;
   created_at: string;
+}
+
+// === Fase 5: Integracoes Core ===
+
+// Notificacao (tabela notifications)
+export interface NotificationRow {
+  id: string;
+  tenant_id: string;
+  user_id: string;
+  type: string;
+  priority: string;
+  title: string;
+  body: string;
+  metadata: Record<string, unknown> | null;
+  action_url: string | null;
+  job_id: string | null;
+  read_at: string | null;
+  created_at: string;
+}
+
+// Preferencias de notificacao (tabela notification_preferences)
+export interface NotificationPreferencesRow {
+  id: string;
+  tenant_id: string;
+  user_id: string;
+  preferences: { in_app: boolean; whatsapp: boolean; email?: boolean };
+  muted_types: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+// Pasta do Drive (tabela drive_folders)
+export interface DriveFolderRow {
+  id: string;
+  tenant_id: string;
+  job_id: string;
+  folder_key: string;
+  google_drive_id: string | null;
+  url: string | null;
+  parent_folder_id: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+// Mensagem WhatsApp (tabela whatsapp_messages)
+export interface WhatsAppMessageRow {
+  id: string;
+  tenant_id: string;
+  job_id: string | null;
+  phone: string;
+  recipient_name: string | null;
+  message: string;
+  status: string;
+  provider: string | null;
+  external_message_id: string | null;
+  sent_at: string | null;
+  created_at: string;
+}
+
+// Evento de integracao (tabela integration_events)
+export interface IntegrationEventRow {
+  id: string;
+  tenant_id: string;
+  event_type: string;
+  payload: Record<string, unknown>;
+  status: string;
+  attempts: number;
+  locked_at: string | null;
+  started_at: string | null;
+  processed_at: string | null;
+  error_message: string | null;
+  next_retry_at: string | null;
+  result: Record<string, unknown> | null;
+  idempotency_key: string | null;
+  created_at: string;
+}
+
+// Constantes de tipos de notificacao
+export const NOTIFICATION_TYPES = [
+  'job_approved',
+  'status_changed',
+  'team_added',
+  'deadline_approaching',
+  'margin_alert',
+  'deliverable_overdue',
+  'shooting_date_approaching',
+  'integration_failed',
+] as const;
+
+export const NOTIFICATION_PRIORITIES = ['low', 'normal', 'high', 'urgent'] as const;
+
+// Constantes de eventos de integracao
+export const INTEGRATION_EVENT_TYPES = [
+  'drive_create_structure',
+  'whatsapp_send',
+  'n8n_webhook',
+  'nf_request_sent',
+  'nf_received',
+  'nf_validated',
+  'docuseal_submission_created',
+  'docuseal_submission_signed',
+  'docuseal_submission_failed',
+] as const;
+
+export const INTEGRATION_EVENT_STATUSES = [
+  'pending',
+  'processing',
+  'completed',
+  'failed',
+  'stalled',
+] as const;
+
+// Tipos derivados das constantes da Fase 5
+export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+export type NotificationPriority = (typeof NOTIFICATION_PRIORITIES)[number];
+export type IntegrationEventType = (typeof INTEGRATION_EVENT_TYPES)[number];
+export type IntegrationEventStatus = (typeof INTEGRATION_EVENT_STATUSES)[number];
+
+// Drive folder keys padrao (26 pastas reais da Ellah Filmes)
+// folder_key e TEXT (nao ENUM) para flexibilidade sem migrations
+export const DEFAULT_FOLDER_KEYS = [
+  'root',
+  'documentos',
+  'financeiro',
+  'fin_carta_orcamento',
+  'fin_decupado',
+  'fin_gastos_gerais',
+  'fin_nf_recebimento',
+  'fin_comprovantes_pg',
+  'fin_notinhas_producao',
+  'fin_nf_final',
+  'fin_fechamento',
+  'monstro_pesquisa',
+  'cronograma',
+  'contratos',
+  'fornecedores',
+  'clientes',
+  'pos_producao',
+  'pos_material_bruto',
+  'pos_material_limpo',
+  'pos_pesquisa',
+  'pos_storyboard',
+  'pos_montagem',
+  'pos_color',
+  'pos_finalizacao',
+  'pos_copias',
+  'atendimento',
+  'vendas',
+] as const;
+
+export type DefaultFolderKey = (typeof DEFAULT_FOLDER_KEYS)[number];
+
+// BankInfo — estrutura do campo JSONB people.bank_info
+export interface BankInfo {
+  bank_name: string | null;
+  bank_code: string | null;
+  agency: string | null;
+  account: string | null;
+  account_type: 'corrente' | 'poupanca' | null;
+  pix_key: string | null;
+  pix_key_type: 'cpf' | 'email' | 'telefone' | 'aleatoria' | null;
+  holder_name: string | null;
+  holder_document: string | null;
 }

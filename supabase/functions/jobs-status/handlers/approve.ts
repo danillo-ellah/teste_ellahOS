@@ -1,8 +1,10 @@
-import { getSupabaseClient } from '../../_shared/supabase-client.ts';
+import { getSupabaseClient, getServiceClient } from '../../_shared/supabase-client.ts';
 import { success } from '../../_shared/response.ts';
 import { AppError } from '../../_shared/errors.ts';
 import { validate, ApproveJobSchema } from '../../_shared/validation.ts';
 import { insertHistory } from '../../_shared/history.ts';
+import { notifyJobTeam } from '../../_shared/notification-helper.ts';
+import { enqueueEvent } from '../../_shared/integration-client.ts';
 import type { AuthContext } from '../../_shared/auth.ts';
 
 // Mapa de approval_type API -> banco
@@ -21,7 +23,7 @@ export async function approveJob(
   // 1. Buscar job atual
   const { data: job, error: fetchError } = await supabase
     .from('jobs')
-    .select('id, status, title')
+    .select('id, status, title, code')
     .eq('id', jobId)
     .is('deleted_at', null)
     .single();
@@ -69,6 +71,53 @@ export async function approveJob(
     },
     description: `Job "${job.title}" aprovado (${validated.approval_type}) com valor R$ ${validated.closed_value.toLocaleString('pt-BR')}`,
   });
+
+  // 5. Disparar notificacoes e eventos de integracao (fire-and-forget)
+  try {
+    const serviceClient = getServiceClient();
+
+    // 5a. Notificacao in-app para equipe do job
+    await notifyJobTeam(serviceClient, jobId, {
+      tenant_id: auth.tenantId,
+      type: 'job_approved',
+      priority: 'high',
+      title: `Job aprovado!`,
+      body: `"${job.title}" foi aprovado com valor R$ ${validated.closed_value.toLocaleString('pt-BR')}`,
+      metadata: {
+        approval_type: validated.approval_type,
+        closed_value: validated.closed_value,
+      },
+      action_url: `/jobs/${jobId}`,
+      job_id: jobId,
+    });
+
+    // 5b. Enfileirar criacao de pastas no Drive
+    await enqueueEvent(serviceClient, {
+      tenant_id: auth.tenantId,
+      event_type: 'drive_create_structure',
+      payload: { job_id: jobId, job_title: job.title },
+      idempotency_key: `drive:${jobId}`,
+    });
+
+    // 5c. Enfileirar webhook n8n (WhatsApp + orquestracao)
+    await enqueueEvent(serviceClient, {
+      tenant_id: auth.tenantId,
+      event_type: 'n8n_webhook',
+      payload: {
+        workflow: 'wf-job-approved',
+        job_id: jobId,
+        job_title: job.title,
+        closed_value: validated.closed_value,
+        approval_type: validated.approval_type,
+        approved_by: auth.email,
+      },
+      idempotency_key: `wf-approved:${jobId}`,
+    });
+
+  } catch (notifError) {
+    console.error('[approve] falha ao disparar notificacoes/integracoes:', notifError);
+    // Nao bloqueia a operacao principal (ADR-003)
+  }
 
   return success({
     id: updatedJob.id,

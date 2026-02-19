@@ -1,9 +1,10 @@
-import { getSupabaseClient } from '../../_shared/supabase-client.ts';
+import { getSupabaseClient, getServiceClient } from '../../_shared/supabase-client.ts';
 import { success } from '../../_shared/response.ts';
 import { AppError } from '../../_shared/errors.ts';
 import { validate, UpdateStatusSchema } from '../../_shared/validation.ts';
 import { mapApiToDb } from '../../_shared/column-map.ts';
 import { insertHistory } from '../../_shared/history.ts';
+import { notifyJobTeam } from '../../_shared/notification-helper.ts';
 import type { AuthContext } from '../../_shared/auth.ts';
 
 export async function updateStatus(
@@ -121,6 +122,24 @@ export async function updateStatus(
     dataAfter: { status: newStatus },
     description: `Status alterado de ${oldStatus} para ${newStatus}`,
   });
+
+  // 6. Notificar equipe sobre mudanca de status (fire-and-forget)
+  try {
+    const serviceClient = getServiceClient();
+    await notifyJobTeam(serviceClient, jobId, {
+      tenant_id: auth.tenantId,
+      type: 'status_changed',
+      priority: 'normal',
+      title: `Status alterado: ${newStatus}`,
+      body: `O job mudou de "${oldStatus}" para "${newStatus}"`,
+      metadata: { old_status: oldStatus, new_status: newStatus },
+      action_url: `/jobs/${jobId}`,
+      job_id: jobId,
+    });
+  } catch (notifError) {
+    console.error('[update-status] falha ao notificar equipe:', notifError);
+    // Nao bloqueia a operacao principal
+  }
 
   return success({
     id: updatedJob.id,

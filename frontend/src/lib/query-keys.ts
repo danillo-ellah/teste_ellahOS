@@ -2,6 +2,7 @@ import type { JobFilters } from '@/types/jobs'
 import type { ClientFilters, AgencyFilters } from '@/types/clients'
 import type { PersonFilters } from '@/types/people'
 import type { FinancialRecordFilters } from '@/types/financial'
+import type { NotificationFilters } from '@/types/notifications'
 
 export const jobKeys = {
   all: ['jobs'] as const,
@@ -16,6 +17,10 @@ export const jobKeys = {
     [...jobKeys.detail(jobId), 'shooting-dates'] as const,
   history: (jobId: string, filters?: Record<string, string>) =>
     [...jobKeys.detail(jobId), 'history', filters] as const,
+  driveFolders: (jobId: string) =>
+    [...jobKeys.detail(jobId), 'drive-folders'] as const,
+  whatsappMessages: (jobId: string) =>
+    [...jobKeys.detail(jobId), 'whatsapp-messages'] as const,
 }
 
 export const clientKeys = {
@@ -80,4 +85,20 @@ export const invoiceKeys = {
   listByJob: (jobId: string) => [...invoiceKeys.lists(), jobId] as const,
   details: () => [...invoiceKeys.all, 'detail'] as const,
   detail: (id: string) => [...invoiceKeys.details(), id] as const,
+}
+
+export const notificationKeys = {
+  all: ['notifications'] as const,
+  lists: () => [...notificationKeys.all, 'list'] as const,
+  list: (filters: NotificationFilters) => [...notificationKeys.lists(), filters] as const,
+  unreadCount: () => [...notificationKeys.all, 'unread-count'] as const,
+  preferences: () => [...notificationKeys.all, 'preferences'] as const,
+}
+
+export const settingsKeys = {
+  all: ['settings'] as const,
+  integrations: () => [...settingsKeys.all, 'integrations'] as const,
+  integration: (name: string) => [...settingsKeys.integrations(), name] as const,
+  logs: () => [...settingsKeys.all, 'logs'] as const,
+  logsList: (filters: Record<string, string>) => [...settingsKeys.logs(), filters] as const,
 }

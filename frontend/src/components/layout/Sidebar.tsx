@@ -41,7 +41,7 @@ const NAV_ITEMS: NavItem[] = [
 ]
 
 const BOTTOM_ITEMS: NavItem[] = [
-  { label: 'Configuracoes', href: '/settings', icon: Settings, disabled: true },
+  { label: 'Configuracoes', href: '/settings', icon: Settings },
 ]
 
 interface SidebarProps {

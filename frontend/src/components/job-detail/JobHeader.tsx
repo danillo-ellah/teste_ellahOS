@@ -22,6 +22,7 @@ import { JobCodeBadge } from '@/components/jobs/JobCodeBadge'
 import { PriorityBadge } from '@/components/jobs/PriorityBadge'
 import { ConfirmDialog } from '@/components/jobs/ConfirmDialog'
 import { StatusChangeDropdown } from '@/components/job-detail/StatusChangeDropdown'
+import { IntegrationBadges } from '@/components/job-detail/IntegrationBadges'
 import { SyncIndicator } from '@/components/job-detail/SyncIndicator'
 import type { SyncState } from '@/components/job-detail/SyncIndicator'
 import { useUpdateJob } from '@/hooks/useUpdateJob'
@@ -185,6 +186,7 @@ export function JobHeader({ job }: JobHeaderProps) {
                   Entrega: <span className="text-foreground">{formatDate(job.expected_delivery_date)}</span>
                 </span>
               )}
+              <IntegrationBadges jobId={job.id} driveFolderUrl={job.drive_folder_url} />
             </div>
           </div>
 

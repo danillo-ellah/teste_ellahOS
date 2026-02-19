@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
-import { ExternalLink } from 'lucide-react'
+import { DriveSection } from '@/components/job-detail/tabs/DriveSection'
+import { WhatsAppSection } from '@/components/job-detail/tabs/WhatsAppSection'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -84,22 +85,6 @@ export function TabGeral({ job }: TabGeralProps) {
                 : null
             }
           />
-          {job.drive_folder_url && (
-            <div>
-              <span className="text-muted-foreground">Google Drive</span>
-              <p className="mt-1">
-                <a
-                  href={job.drive_folder_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-primary hover:underline"
-                >
-                  Abrir pasta
-                  <ExternalLink className="size-3" />
-                </a>
-              </p>
-            </div>
-          )}
           {job.is_parent_job && (
             <InfoField label="Job pai" value="Este job tem sub-jobs" />
           )}
@@ -108,6 +93,12 @@ export function TabGeral({ job }: TabGeralProps) {
           )}
         </div>
       </section>
+
+      {/* Secao: Google Drive */}
+      <DriveSection job={job} />
+
+      {/* Secao: WhatsApp */}
+      <WhatsAppSection job={job} />
 
       {/* Secao 2: Datas */}
       <section className="rounded-lg border border-border p-6">
