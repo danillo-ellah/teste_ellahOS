@@ -14,11 +14,19 @@ import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications'
 
+// Hook para evitar hydration mismatch de IDs Radix (SSR gera IDs diferentes do client)
+function useMounted() {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  return mounted
+}
+
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const mounted = useMounted()
   const isDesktop = useIsDesktop()
   const [collapsed, setCollapsed] = useLocalStorage('sidebar-collapsed', false)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -34,6 +42,20 @@ export default function DashboardLayout({
 
   // Realtime: atualiza badge de notificacoes sem refresh
   useRealtimeNotifications(userId)
+
+  // SSR: renderizar shell minimo para evitar hydration mismatch dos IDs Radix
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="flex min-h-screen flex-col">
+          <header className="sticky top-0 z-30 flex h-14 items-center border-b bg-background/95 px-4 lg:px-6" />
+          <main className="flex-1 px-4 py-6 lg:px-6">
+            <div className="mx-auto max-w-7xl">{children}</div>
+          </main>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">

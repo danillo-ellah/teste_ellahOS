@@ -1,12 +1,21 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from './ThemeToggle'
-import { UserMenu } from './UserMenu'
-import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { Breadcrumb } from './Breadcrumb'
 import { usePathname } from 'next/navigation'
+
+// Dynamic imports para evitar hydration mismatch (Radix gera IDs diferentes no SSR vs CSR)
+const NotificationBell = dynamic(
+  () => import('@/components/notifications/NotificationBell').then((m) => m.NotificationBell),
+  { ssr: false },
+)
+const UserMenu = dynamic(
+  () => import('./UserMenu').then((m) => m.UserMenu),
+  { ssr: false },
+)
 
 interface TopbarProps {
   onMenuClick?: () => void
