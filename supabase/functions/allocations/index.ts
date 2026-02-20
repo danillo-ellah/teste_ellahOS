@@ -5,6 +5,7 @@ import { error, fromAppError } from './_shared/response.ts';
 import { AppError } from './_shared/errors.ts';
 import { listByJob } from './handlers/list-by-job.ts';
 import { listByPerson } from './handlers/list-by-person.ts';
+import { listByRange } from './handlers/list-by-range.ts';
 import { createAllocation } from './handlers/create.ts';
 import { updateAllocation } from './handlers/update.ts';
 import { softDelete } from './handlers/soft-delete.ts';
@@ -13,6 +14,7 @@ import { getConflicts } from './handlers/get-conflicts.ts';
 // Roteamento:
 // GET  /allocations?job_id=X                 -> list-by-job
 // GET  /allocations?people_id=X&from=Y&to=Z  -> list-by-person
+// GET  /allocations?from=Y&to=Z              -> list-by-range (calendario)
 // GET  /allocations/conflicts?from=Y&to=Z    -> get-conflicts
 // POST /allocations                          -> create
 // PUT  /allocations/:id                      -> update
@@ -54,7 +56,13 @@ Deno.serve(async (req: Request) => {
 
       if (jobId) return await listByJob(req, auth, jobId);
       if (peopleId) return await listByPerson(req, auth, peopleId);
-      return error('VALIDATION_ERROR', 'Informe job_id ou people_id como query param', 400);
+
+      // Fallback: from+to sem job_id/people_id = listar todas do periodo (calendario)
+      const from = url.searchParams.get('from');
+      const to = url.searchParams.get('to');
+      if (from && to) return await listByRange(req, auth);
+
+      return error('VALIDATION_ERROR', 'Informe job_id, people_id ou from/to como query params', 400);
     }
 
     // POST /allocations
