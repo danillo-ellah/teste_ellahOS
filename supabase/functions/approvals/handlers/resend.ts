@@ -1,8 +1,8 @@
-import { getSupabaseClient, getServiceClient } from '../../_shared/supabase-client.ts';
-import { success } from '../../_shared/response.ts';
-import { AppError } from '../../_shared/errors.ts';
-import { enqueueEvent } from '../../_shared/integration-client.ts';
-import type { AuthContext } from '../../_shared/auth.ts';
+import { getSupabaseClient, getServiceClient } from '../_shared/supabase-client.ts';
+import { success } from '../_shared/response.ts';
+import { AppError } from '../_shared/errors.ts';
+import { enqueueEvent } from '../_shared/integration-client.ts';
+import type { AuthContext } from '../_shared/auth.ts';
 
 // POST /approvals/:id/resend — reenvia link de aprovacao
 export async function resend(

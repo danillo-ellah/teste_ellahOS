@@ -1,6 +1,6 @@
-import { getServiceClient } from '../../_shared/supabase-client.ts';
-import { success, error } from '../../_shared/response.ts';
-import { AppError } from '../../_shared/errors.ts';
+import { getServiceClient } from '../_shared/supabase-client.ts';
+import { success, error } from '../_shared/response.ts';
+import { AppError } from '../_shared/errors.ts';
 
 // GET /approvals/public/:token — busca dados da aprovacao sem auth (publico)
 export async function getByToken(

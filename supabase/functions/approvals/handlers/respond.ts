@@ -1,8 +1,8 @@
-import { getServiceClient } from '../../_shared/supabase-client.ts';
-import { success, error } from '../../_shared/response.ts';
-import { AppError } from '../../_shared/errors.ts';
-import { validate, z } from '../../_shared/validation.ts';
-import { createNotification } from '../../_shared/notification-helper.ts';
+import { getServiceClient } from '../_shared/supabase-client.ts';
+import { success, error } from '../_shared/response.ts';
+import { AppError } from '../_shared/errors.ts';
+import { validate, z } from '../_shared/validation.ts';
+import { createNotification } from '../_shared/notification-helper.ts';
 
 const RespondSchema = z.object({
   action: z.enum(['approved', 'rejected'], {
@@ -57,7 +57,7 @@ export async function respond(
     .gte('created_at', new Date(Date.now() - 3600000).toISOString());
 
   if (count && count >= 10) {
-    return error('BUSINESS_RULE_VIOLATION' as any, 'Muitas tentativas. Tente novamente em 1 hora.', 429);
+    return error('BUSINESS_RULE_VIOLATION', 'Muitas tentativas. Tente novamente em 1 hora.', 429);
   }
 
   // Validar payload
@@ -107,7 +107,7 @@ export async function respond(
   await createNotification(serviceClient, {
     tenant_id: approval.tenant_id,
     user_id: approval.created_by,
-    type: 'approval_responded' as any,
+    type: 'approval_responded',
     priority: validated.action === 'rejected' ? 'high' : 'normal',
     title: `Aprovacao ${actionLabel}: ${approval.title}`,
     body: `A aprovacao de ${approval.approval_type} para o job ${(approval as any).jobs?.code} foi ${actionLabel} pelo cliente${validated.comment ? `. Motivo: ${validated.comment}` : ''}`,

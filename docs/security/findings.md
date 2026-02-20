@@ -263,3 +263,324 @@ GET /approvals/:id/logs retorna full_name de usuarios internos via join actor:ac
 | FASE6-BAIXO-003 | BAIXA | allocationId sem validacao UUID em allocations | Aberto |
 | FASE6-BAIXO-004 | BAIXA | actor full_name exposto em logs | Aberto |
 
+
+---
+
+# Auditoria de Seguranca Preventiva - Fase 7 (Dashboard + Relatorios + Portal do Cliente)
+
+**Data:** 2026-02-20
+**Auditor:** Security Engineer - ELLAHOS
+**Supabase Project:** etvapcxesaxhsvzgaane
+**Escopo:** Arquitetura preventiva da Fase 7 (ainda nao implementada)
+**Documento auditado:** docs/architecture/fase-7-architecture.md
+**Foco:** RPCs SECURITY DEFINER, portal publico, RLS novas tabelas, dados sensiveis, idempotencia
+
+---
+
+## RESUMO EXECUTIVO DA FASE 7
+
+A arquitetura da Fase 7 demonstra boas praticas em varios pontos: RPCs SECURITY DEFINER com search_path fixo, tenant_id como parametro em 8 de 9 RPCs, filtros de dados sensiveis aplicados no banco, e lista explicita de campos financeiros proibidos no portal.
+
+Foram identificados **0 CRITICOS**, **1 ALTO**, **4 MEDIOS** e **3 BAIXOS**.
+
+Achados prioritarios antes da implementacao:
+1. [FASE7-ALTO-001] RLS de client_portal_messages nao restringe direction: usuario autenticado pode fabricar mensagens como se fossem do cliente externo.
+2. [FASE7-MEDIO-001] idempotency_key nullable torna o UNIQUE constraint ineficaz quando o cliente nao envia a chave explicitamente.
+
+---
+
+## RESULTADO POR ITEM AUDITADO
+
+### 1. RPCs SECURITY DEFINER
+
+Todas as 9 RPCs usam SECURITY DEFINER e SET search_path = public.
+
+| RPC | p_tenant_id | Filtro correto | Cross-tenant possivel | Resultado |
+|-----|-------------|----------------|----------------------|-----------|
+| get_dashboard_kpis | OK | OK (7 subqueries) | Nao | OK |
+| get_pipeline_summary | OK | OK | Nao | OK |
+| get_revenue_by_month | OK | OK | Nao | OK |
+| get_alerts | OK | OK (4 UNION branches) | Nao | OK |
+| get_recent_activity | OK | OK | Nao | OK |
+| get_report_financial_monthly | OK | OK | Nao | OK |
+| get_report_performance | OK | OK (4 branches IF) | Nao | OK |
+| get_report_team_utilization | OK | Parcial (ver FASE7-MEDIO-002) | False positive possivel | ATENCAO |
+| get_portal_timeline | Nao tem (usa token) | OK via v_session.tenant_id | Nao | ATENCAO (ver FASE7-MEDIO-003) |
+
+### 2. Portal do Cliente (endpoints publicos)
+
+| Aspecto | Resultado | Detalhe |
+|---------|-----------|---------|
+| Token UUID v4 (2^122) | OK | gen_random_uuid() = 122 bits. Brute force inviavel. |
+| Rate limiting descrito | ATENCAO | Ver FASE7-MEDIO-004 - conta sucesso, nao tentativas |
+| Dados financeiros filtrados | OK | Nenhum campo proibido na RPC get_portal_timeline |
+| Eventos de historico filtrados | OK | SQL: IN (status_change, approval, file_upload) |
+| Arquivos filtrados | OK | SQL: IN (briefing, aprovacoes, entregaveis) |
+| Aprovacoes internas excluidas | OK | SQL: AND ar.approver_type = 'external' |
+
+### 3. RLS das novas tabelas
+
+| Tabela | RLS | SELECT | INSERT | UPDATE | DELETE | Resultado |
+|--------|-----|--------|--------|--------|--------|-----------|
+| client_portal_sessions | OK | OK | OK | OK | Ausente (intencional) | OK |
+| client_portal_messages | OK | OK | PROBLEMA (ver FASE7-ALTO-001) | Ausente | Ausente | ALTO |
+| report_snapshots | OK | OK | OK | Ausente (imutavel) | Ausente (pg_cron) | OK |
+
+### 4. Dados sensiveis no portal
+
+A RPC get_portal_timeline retorna para o endpoint publico apenas:
+- session: id, job_title, job_code, job_status, permissions
+- timeline: id, event_type, description, created_at
+- documents: id, name, url, category, created_at
+- approvals: id, approval_type, title, description, file_url, status, approval_token, expires_at, created_at
+- messages: id, direction, sender_name, content, attachments, created_at
+
+Campos auditados ausentes na resposta publica: closed_value, production_cost, margin_percentage, gross_profit, health_score, tax_value, other_costs, risk_buffer. **OK**.
+
+Nota: health_score e margin_percentage aparecem nos KPIs do dashboard e alertas, porem esses endpoints sao AUTENTICADOS (usuarios internos do tenant). Correto.
+
+### 5. Idempotencia de client_portal_messages
+
+Ver FASE7-MEDIO-001. **ATENCAO**.
+
+---
+## ALTO
+
+---
+
+### [FASE7-ALTO-001] RLS portal_messages_insert nao restringe direction - falsificacao de remetente
+
+**Classificacao:** ALTA
+**OWASP:** A01 - Broken Access Control
+**Tabela:** client_portal_messages
+**Referencia:** docs/architecture/fase-7-architecture.md, secao 2.1.2 (linhas 164-177)
+
+**Descricao do problema:**
+
+A policy RLS de INSERT autenticado para client_portal_messages e:
+
+
+
+O WITH CHECK valida apenas tenant_id. Nao valida o campo direction. Qualquer usuario autenticado do tenant pode executar um INSERT com direction = 'client_to_producer', falsificando que a mensagem foi enviada pelo cliente externo, sem passar pela Edge Function.
+
+**Cenario de ataque:**
+1. Usuario interno autenticado acessa o SDK Supabase diretamente com o JWT dele.
+2. Insere linha em client_portal_messages com direction = 'client_to_producer' e sender_name = [nome do cliente].
+3. A equipe ve a mensagem como se fosse do cliente.
+4. Em caso de disputa contratual, o historico esta contaminado.
+5. A notificacao portal_message_received e disparada como se fosse mensagem real do cliente.
+
+A arquitetura documenta que client_to_producer e inserido via service_role (endpoint publico), mas o banco nao enforca essa invariante. O RLS e a ultima linha de defesa.
+
+**Correcao necessaria (dois niveis):**
+
+Nivel 1 - CHECK constraint no schema (defesa no banco):
+
+
+Nivel 2 - Refinar policy RLS de INSERT autenticado:
+
+
+Com as duas correcoes, o banco garante: (a) usuario autenticado so insere producer_to_client, (b) sender_user_id deve bater com o usuario logado, (c) client_to_producer so pode ter sender_user_id NULL.
+
+---
+## MEDIOS
+
+---
+
+### [FASE7-MEDIO-001] idempotency_key nullable - UNIQUE constraint ineficaz sem chave explicita
+
+**Classificacao:** MEDIA
+**OWASP:** A08 - Software and Data Integrity Failures
+**Tabela:** client_portal_messages
+**Referencia:** docs/architecture/fase-7-architecture.md, linhas 136 e 145
+
+**Descricao do problema:**
+
+O schema define idempotency_key TEXT sem NOT NULL e um UNIQUE constraint:
+
+    idempotency_key  TEXT,
+    CONSTRAINT uq_portal_messages_idempotency UNIQUE (idempotency_key)
+
+Em PostgreSQL, UNIQUE em coluna nullable permite multiplos NULLs (NULL != NULL na semantica SQL). Qualquer requisicao sem idempotency_key pode ser inserida multiplas vezes. Em rede instavel com retry automatico no cliente, a mesma mensagem e duplicada sem que o banco rejeite.
+
+**Correcao:**
+
+Tornar obrigatorio para client_to_producer via CHECK constraint:
+
+    ALTER TABLE client_portal_messages
+      ADD CONSTRAINT chk_portal_messages_idempotency_required
+        CHECK (
+          direction = 'producer_to_client'
+          OR (direction = 'client_to_producer' AND idempotency_key IS NOT NULL)
+        );
+
+Na Edge Function send-message: se o cliente nao enviar idempotency_key, gerar no handler como hash(session_id + truncate(content, 100) + floor(epoch/60)). Retornar 409 Conflict em UNIQUE violation.
+
+---
+
+### [FASE7-MEDIO-002] get_report_team_utilization - subquery de conflitos sem tenant_id em a2
+
+**Classificacao:** MEDIA
+**OWASP:** A01 - Broken Access Control (vazamento de informacao entre tenants)
+**RPC:** get_report_team_utilization
+**Referencia:** docs/architecture/fase-7-architecture.md, linhas 789-802
+
+**Descricao do problema:**
+
+A subquery de conflict_count junta allocations a1 e a2 via people_id mas a2 nao tem filtro de tenant_id:
+
+    SELECT count(*)
+    FROM allocations a1
+    JOIN allocations a2 ON a1.people_id = a2.people_id
+      AND a1.id < a2.id
+      AND a1.deleted_at IS NULL
+      AND a2.deleted_at IS NULL
+      -- a2 NAO tem filtro de tenant_id
+      AND a1.allocation_start <= a2.allocation_end
+      AND a1.allocation_end >= a2.allocation_start
+    WHERE a1.people_id = p.id
+      AND a1.tenant_id = p_tenant_id
+
+Como a RPC e SECURITY DEFINER, ela le allocations de qualquer tenant. Se o mesmo UUID de people_id existir em dois tenants, a subquery conta conflitos com allocations do outro tenant, vazando a existencia de dados entre tenants e retornando conflict_count incorreto.
+
+**Correcao:**
+
+    JOIN allocations a2 ON a1.people_id = a2.people_id
+      AND a1.id < a2.id
+      AND a1.deleted_at IS NULL
+      AND a2.deleted_at IS NULL
+      AND a2.tenant_id = p_tenant_id    -- ADICIONAR ESTE FILTRO
+      AND a1.allocation_start <= a2.allocation_end
+      AND a1.allocation_end >= a2.allocation_start
+
+---
+### [FASE7-MEDIO-003] get_portal_timeline SECURITY DEFINER sem rate limiting no endpoint GET publico
+
+**Classificacao:** MEDIA
+**OWASP:** A05 - Security Misconfiguration
+**RPC:** get_portal_timeline / Endpoint GET /client-portal/public/:token
+**Referencia:** docs/architecture/fase-7-architecture.md, secao 3.3 e 9.2
+
+**Descricao do problema:**
+
+A arquitetura define rate limiting apenas para POST (envio de mensagens), nao para GET (leitura do portal). O endpoint GET aceita qualquer UUID como token e dispara uma query SQL por requisicao. Sem rate limiting no GET, um atacante pode chamar o endpoint com UUIDs aleatorios em alta frequencia (fuzzing de tokens), causando carga no banco.
+
+A funcao nao faz UPDATE quando o token nao existe (RETURN NULL antes do UPDATE), portanto o overhead e apenas o SELECT inicial. O risco principal e consumo de compute da Edge Function.
+
+Adicionalmente, a funcao deve retornar HTTP 404 generico tanto para token nao encontrado quanto para sessao expirada ou inativa, sem distinguir os casos (previne enumeracao de estado do token).
+
+**Correcao:**
+
+1. Aplicar rate limiting por IP no handler get-by-token: maximo 60 requisicoes/minuto por IP (x-forwarded-for).
+2. Documentar na migration que get_portal_timeline e a unica excecao ao padrao p_tenant_id, com justificativa.
+3. Verificar que a Edge Function retorna 404 identico para token invalido, expirado e inativo.
+
+---
+
+### [FASE7-MEDIO-004] Rate limiting conta mensagens bem-sucedidas, nao tentativas de envio
+
+**Classificacao:** MEDIA
+**OWASP:** A05 - Security Misconfiguration
+**Endpoint:** POST /client-portal/public/:token/message
+**Referencia:** docs/architecture/fase-7-architecture.md, secao 3.3 e 9.2
+
+**Descricao do problema:**
+
+A arquitetura define rate limit de max 20 mensagens por sessao na ultima hora. O mecanismo conta mensagens inseridas com sucesso em client_portal_messages, diferente do pattern da Fase 6 que conta approval_logs incluindo tentativas rejeitadas.
+
+Problema 1 (UX): Apos 20 mensagens legitimas enviadas com sucesso, o cliente real e bloqueado. Em projeto com revisoes intensas o limite e atingivel por clientes honestos.
+Problema 2 (seguranca): Limite e por sessao, nao por IP. Atacante com token valido pode enviar 20 mensagens/hora continuamente.
+Problema 3 (semantica): Nao registra tentativas bloqueadas, impossibilitando deteccao de abuse.
+
+**Correcao:**
+
+1. Aumentar limite de 20 para 50 mensagens por hora por sessao, ou tornar configuravel via permissions JSONB.
+2. Adicionar rate limiting secundario por IP: maximo 200 requisicoes/hora no endpoint por IP de origem.
+3. Logar tentativas rejeitadas (429) para detectar padroes de abuse.
+
+---
+## BAIXOS
+
+---
+
+### [FASE7-BAIXO-001] sender_name livre no endpoint publico - spoofing de identidade
+
+**Classificacao:** BAIXA
+**OWASP:** A03 - Injection
+**Endpoint:** POST /client-portal/public/:token/message
+**Referencia:** docs/architecture/fase-7-architecture.md, secao 3.3
+
+**Descricao do problema:**
+
+O endpoint publico aceita sender_name do cliente sem restricao documentada. Um cliente com o token pode enviar mensagens com sender_name = "Ellah Producoes" ou outro nome interno, gerando confusao para a equipe sobre a origem da mensagem.
+
+**Correcao:**
+
+No handler send-message, nao aceitar sender_name do payload. Usar como sender_name o campo label da client_portal_session (controlado pela equipe ao criar a sessao). Se label for null, usar o nome do contact_id associado buscado do banco. O nome exibido deve ser controlado pela produtora, nao pelo cliente externo.
+
+---
+
+### [FASE7-BAIXO-002] Ausencia de policy DELETE em client_portal_sessions nao documentada
+
+**Classificacao:** BAIXA
+**Tabela:** client_portal_sessions
+**Referencia:** docs/architecture/fase-7-architecture.md, secao 2.1.1
+
+**Descricao do problema:**
+
+O RLS de client_portal_sessions tem policies para SELECT, INSERT e UPDATE mas nao ha policy para DELETE. A ausencia e intencional (soft delete via deleted_at), mas nao esta comentada no schema. Um desenvolvedor que tente DELETE fisico via SDK recebera erro de permissao sem mensagem clara, podendo adicionar uma policy DELETE por engano.
+
+**Correcao:**
+
+Adicionar comentario explicito na migration:
+
+    -- Nota: DELETE fisico nao e permitido por design (soft delete via deleted_at).
+    -- A ausencia de policy DELETE e intencional: RLS nega por padrao (deny by default).
+
+---
+
+### [FASE7-BAIXO-003] session.id exposto desnecessariamente na resposta publica
+
+**Classificacao:** BAIXA
+**RPC:** get_portal_timeline
+**Referencia:** docs/architecture/fase-7-architecture.md, linha 859
+
+**Descricao do problema:**
+
+A RPC retorna o campo id da sessao na resposta publica (linha 859: 'id', v_session.id). Nenhuma funcionalidade documentada do portal necessita do session.id no lado do cliente: o token ja serve como identificador unico. O session.id e informacao interna desnecessaria para o contexto publico.
+
+**Correcao:**
+
+Remover o campo id da resposta da RPC e atualizar o Response Example na secao 3.3 da arquitetura.
+
+---
+
+## ASPECTOS POSITIVOS DA FASE 7
+
+1. SET search_path = public em todas as RPCs: previne schema injection em funcoes SECURITY DEFINER.
+2. p_tenant_id como parametro em 8 de 9 RPCs: padrao correto, tenant_id nunca confiado ao RLS em SECURITY DEFINER.
+3. Lista completa de campos financeiros proibidos no portal (secao 9.2): closed_value, production_cost, gross_profit, margin_percentage, net_profit, tax_value, other_costs, risk_buffer.
+4. Filtros de historico e arquivo aplicados no SQL da RPC, nao no TypeScript apos retorno.
+5. Aprovacoes internas excluidas do portal: AND ar.approver_type = 'external' na RPC.
+6. Token UUID v4 para sessoes: 2^122 combinacoes, consistente com Fase 6.
+7. is_active + expires_at: dois mecanismos independentes de revogacao de acesso ao portal.
+8. Soft delete em client_portal_sessions: historico de acesso preservado para auditoria.
+9. RLS habilitado em todas as 3 novas tabelas com get_tenant_id().
+10. get_portal_timeline verifica expires_at antes de retornar dados.
+11. Sessao pode ser desativada instantaneamente via is_active = false.
+12. RLS em report_snapshots impede acesso cruzado entre tenants em dados cacheados.
+
+---
+
+## TABELA RESUMO - FASE 7
+
+| ID | Severidade | Descricao | Status |
+|----|------------|-----------|--------|
+| FASE7-ALTO-001 | ALTA | RLS portal_messages_insert sem restricao de direction - falsificacao de remetente | Aberto |
+| FASE7-MEDIO-001 | MEDIA | idempotency_key nullable - UNIQUE constraint ineficaz sem chave explicita | Aberto |
+| FASE7-MEDIO-002 | MEDIA | get_report_team_utilization - subquery de conflitos sem tenant_id em a2 | Aberto |
+| FASE7-MEDIO-003 | MEDIA | get_portal_timeline sem rate limiting no endpoint GET publico | Aberto |
+| FASE7-MEDIO-004 | MEDIA | Rate limiting conta mensagens bem-sucedidas, nao tentativas | Aberto |
+| FASE7-BAIXO-001 | BAIXA | sender_name livre no endpoint publico - spoofing de identidade | Aberto |
+| FASE7-BAIXO-002 | BAIXA | Ausencia de policy DELETE em client_portal_sessions nao documentada | Aberto |
+| FASE7-BAIXO-003 | BAIXA | session.id exposto desnecessariamente na resposta publica | Aberto |

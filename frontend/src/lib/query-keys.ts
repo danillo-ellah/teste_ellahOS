@@ -122,3 +122,31 @@ export const settingsKeys = {
   logs: () => [...settingsKeys.all, 'logs'] as const,
   logsList: (filters: Record<string, string>) => [...settingsKeys.logs(), filters] as const,
 }
+
+export const dashboardKeys = {
+  all: ['dashboard'] as const,
+  kpis: () => [...dashboardKeys.all, 'kpis'] as const,
+  pipeline: () => [...dashboardKeys.all, 'pipeline'] as const,
+  alerts: (limit?: number) => [...dashboardKeys.all, 'alerts', limit] as const,
+  activity: (hours?: number, limit?: number) => [...dashboardKeys.all, 'activity', hours, limit] as const,
+  revenue: (months?: number) => [...dashboardKeys.all, 'revenue', months] as const,
+}
+
+export const reportKeys = {
+  all: ['reports'] as const,
+  financial: (startDate?: string, endDate?: string) =>
+    [...reportKeys.all, 'financial', startDate, endDate] as const,
+  performance: (groupBy?: string, startDate?: string, endDate?: string) =>
+    [...reportKeys.all, 'performance', groupBy, startDate, endDate] as const,
+  team: (startDate?: string, endDate?: string) =>
+    [...reportKeys.all, 'team', startDate, endDate] as const,
+}
+
+export const portalKeys = {
+  all: ['portal'] as const,
+  sessions: () => [...portalKeys.all, 'sessions'] as const,
+  sessionsByJob: (jobId: string) => [...portalKeys.sessions(), 'job', jobId] as const,
+  sessionMessages: (sessionId: string) =>
+    [...portalKeys.all, 'session-messages', sessionId] as const,
+  public: (token: string) => ['portal-public', token] as const,
+}

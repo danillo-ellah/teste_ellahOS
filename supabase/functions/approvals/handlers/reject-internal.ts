@@ -1,9 +1,9 @@
-import { getSupabaseClient, getServiceClient } from '../../_shared/supabase-client.ts';
-import { success } from '../../_shared/response.ts';
-import { AppError } from '../../_shared/errors.ts';
-import { validate, z } from '../../_shared/validation.ts';
-import { createNotification } from '../../_shared/notification-helper.ts';
-import type { AuthContext } from '../../_shared/auth.ts';
+import { getSupabaseClient, getServiceClient } from '../_shared/supabase-client.ts';
+import { success } from '../_shared/response.ts';
+import { AppError } from '../_shared/errors.ts';
+import { validate, z } from '../_shared/validation.ts';
+import { createNotification } from '../_shared/notification-helper.ts';
+import type { AuthContext } from '../_shared/auth.ts';
 
 const RejectInternalSchema = z.object({
   comment: z.string().min(1, 'Comentario obrigatorio para rejeicao').max(5000),
@@ -67,7 +67,7 @@ export async function rejectInternal(
     await createNotification(serviceClient, {
       tenant_id: auth.tenantId,
       user_id: approval.created_by,
-      type: 'approval_responded' as any,
+      type: 'approval_responded',
       priority: 'high',
       title: `Aprovacao rejeitada: ${approval.title}`,
       body: `A aprovacao de ${approval.approval_type} para o job ${(approval as any).jobs?.code} foi rejeitada. Motivo: ${validated.comment}`,

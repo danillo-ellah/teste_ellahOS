@@ -10,6 +10,9 @@ export const NOTIFICATION_TYPES = [
   'deliverable_overdue',
   'shooting_date_approaching',
   'integration_failed',
+  'portal_message_received',
+  'approval_responded',
+  'approval_requested',
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];

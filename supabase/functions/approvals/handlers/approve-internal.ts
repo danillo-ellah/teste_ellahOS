@@ -1,9 +1,9 @@
-import { getSupabaseClient, getServiceClient } from '../../_shared/supabase-client.ts';
-import { success } from '../../_shared/response.ts';
-import { AppError } from '../../_shared/errors.ts';
-import { validate, z } from '../../_shared/validation.ts';
-import { createNotification } from '../../_shared/notification-helper.ts';
-import type { AuthContext } from '../../_shared/auth.ts';
+import { getSupabaseClient, getServiceClient } from '../_shared/supabase-client.ts';
+import { success } from '../_shared/response.ts';
+import { AppError } from '../_shared/errors.ts';
+import { validate, z } from '../_shared/validation.ts';
+import { createNotification } from '../_shared/notification-helper.ts';
+import type { AuthContext } from '../_shared/auth.ts';
 
 const ApproveInternalSchema = z.object({
   comment: z.string().max(5000).optional().nullable(),
@@ -67,7 +67,7 @@ export async function approveInternal(
     await createNotification(serviceClient, {
       tenant_id: auth.tenantId,
       user_id: approval.created_by,
-      type: 'approval_responded' as any,
+      type: 'approval_responded',
       priority: 'normal',
       title: `Aprovacao aprovada: ${approval.title}`,
       body: `A aprovacao de ${approval.approval_type} para o job ${(approval as any).jobs?.code} foi aprovada internamente`,

@@ -188,6 +188,7 @@ export type JobDetailTabId =
   | 'diarias'
   | 'aprovacoes'
   | 'historico'
+  | 'portal'
 
 export const JOB_DETAIL_TABS: ReadonlyArray<{
   id: JobDetailTabId
@@ -201,6 +202,7 @@ export const JOB_DETAIL_TABS: ReadonlyArray<{
   { id: 'diarias', label: 'Diarias', icon: 'Calendar' },
   { id: 'aprovacoes', label: 'Aprovacoes', icon: 'CheckSquare' },
   { id: 'historico', label: 'Historico', icon: 'Clock' },
+  { id: 'portal', label: 'Portal', icon: 'Globe' },
 ] as const
 
 // --- Cadastros: Segmento de cliente ---

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
+  LayoutDashboard,
   Clapperboard,
   Building2,
   Briefcase,
@@ -11,9 +12,11 @@ import {
   CalendarDays,
   ClipboardCheck,
   FolderOpen,
+  Globe,
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
+  BarChart3,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -32,13 +35,16 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
+  { label: 'Dashboard', href: '/', icon: LayoutDashboard },
   { label: 'Jobs', href: '/jobs', icon: Clapperboard },
+  { label: 'Relatorios', href: '/reports', icon: BarChart3 },
   { label: 'Clientes', href: '/clients', icon: Building2 },
   { label: 'Agencias', href: '/agencies', icon: Briefcase },
   { label: 'Equipe', href: '/people', icon: Users },
   { label: 'Financeiro', href: '/financial', icon: DollarSign },
   { label: 'Calendario', href: '/team/calendar', icon: CalendarDays },
   { label: 'Aprovacoes', href: '/approvals', icon: ClipboardCheck },
+  { label: 'Portal', href: '/portal', icon: Globe },
   { label: 'Arquivos', href: '/files', icon: FolderOpen, disabled: true },
 ]
 
@@ -80,7 +86,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           <NavLink
             key={item.href}
             item={item}
-            active={pathname.startsWith(item.href)}
+            active={
+              item.href === '/'
+                ? pathname === '/'
+                : pathname.startsWith(item.href)
+            }
             collapsed={collapsed}
           />
         ))}

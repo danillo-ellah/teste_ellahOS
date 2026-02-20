@@ -1,7 +1,7 @@
-import { getSupabaseClient } from '../../_shared/supabase-client.ts';
-import { success } from '../../_shared/response.ts';
-import { AppError } from '../../_shared/errors.ts';
-import type { AuthContext } from '../../_shared/auth.ts';
+import { getSupabaseClient } from '../_shared/supabase-client.ts';
+import { success } from '../_shared/response.ts';
+import { AppError } from '../_shared/errors.ts';
+import type { AuthContext } from '../_shared/auth.ts';
 
 // GET /approvals/pending — lista todas aprovacoes pendentes do tenant
 export async function listPending(
