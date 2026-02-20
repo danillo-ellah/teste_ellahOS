@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Supabase temp
+supabase/.temp/
+
+# Temp files
+temp_*.py
+*.pyc
+__pycache__/
+
+# Empty placeholder dirs (created by accident)
+Baseado
+Design
+
+# Logs
+*.log
+npm-debug.log*
