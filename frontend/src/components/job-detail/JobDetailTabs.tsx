@@ -7,6 +7,7 @@ import {
   Package,
   DollarSign,
   Calendar,
+  CheckSquare,
   Clock,
 } from 'lucide-react'
 import {
@@ -23,6 +24,7 @@ import { TabEquipe } from '@/components/job-detail/tabs/TabEquipe'
 import { TabEntregaveis } from '@/components/job-detail/tabs/TabEntregaveis'
 import { TabFinanceiro } from '@/components/job-detail/tabs/TabFinanceiro'
 import { TabDiarias } from '@/components/job-detail/tabs/TabDiarias'
+import { TabAprovacoes } from '@/components/job-detail/tabs/TabAprovacoes'
 import { TabHistorico } from '@/components/job-detail/tabs/TabHistorico'
 import type { JobDetail } from '@/types/jobs'
 
@@ -33,6 +35,7 @@ const ICON_MAP: Record<string, typeof FileText> = {
   Package,
   DollarSign,
   Calendar,
+  CheckSquare,
   Clock,
 }
 
@@ -126,6 +129,11 @@ export function JobDetailTabs({ job }: JobDetailTabsProps) {
       {/* Tab: Diarias */}
       <TabsContent value="diarias" className="mt-6">
         <TabDiarias job={job} />
+      </TabsContent>
+
+      {/* Tab: Aprovacoes */}
+      <TabsContent value="aprovacoes" className="mt-6">
+        <TabAprovacoes job={job} />
       </TabsContent>
 
       {/* Tab: Historico */}

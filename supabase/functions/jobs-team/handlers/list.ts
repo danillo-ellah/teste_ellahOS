@@ -31,6 +31,8 @@ export async function listTeam(
     hiring_status: m.hiring_status,
     is_lead_producer: m.is_responsible_producer,
     notes: m.notes,
+    allocation_start: m.allocation_start ?? null,
+    allocation_end: m.allocation_end ?? null,
     created_at: m.created_at,
     updated_at: m.updated_at,
   }));

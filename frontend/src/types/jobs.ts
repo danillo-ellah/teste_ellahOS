@@ -187,6 +187,8 @@ export interface JobTeamMember {
   hiring_status: HiringStatus
   is_lead_producer: boolean // API: "is_lead_producer" -> banco: "is_responsible_producer"
   notes: string | null
+  allocation_start: string | null
+  allocation_end: string | null
   created_at: string
   updated_at: string
 }

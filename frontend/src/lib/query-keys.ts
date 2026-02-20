@@ -95,6 +95,26 @@ export const notificationKeys = {
   preferences: () => [...notificationKeys.all, 'preferences'] as const,
 }
 
+export const allocationKeys = {
+  all: ['allocations'] as const,
+  lists: () => [...allocationKeys.all, 'list'] as const,
+  listByJob: (jobId: string) => [...allocationKeys.lists(), 'job', jobId] as const,
+  listByPerson: (personId: string, from: string, to: string) =>
+    [...allocationKeys.lists(), 'person', personId, from, to] as const,
+  conflicts: (from: string, to: string) =>
+    [...allocationKeys.all, 'conflicts', from, to] as const,
+}
+
+export const approvalKeys = {
+  all: ['approvals'] as const,
+  lists: () => [...approvalKeys.all, 'list'] as const,
+  listByJob: (jobId: string) => [...approvalKeys.lists(), 'job', jobId] as const,
+  pending: () => [...approvalKeys.all, 'pending'] as const,
+  detail: (id: string) => [...approvalKeys.all, 'detail', id] as const,
+  logs: (id: string) => [...approvalKeys.detail(id), 'logs'] as const,
+  public: (token: string) => ['approval-public', token] as const,
+}
+
 export const settingsKeys = {
   all: ['settings'] as const,
   integrations: () => [...settingsKeys.all, 'integrations'] as const,

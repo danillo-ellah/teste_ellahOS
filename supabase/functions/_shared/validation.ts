@@ -168,6 +168,8 @@ export const CreateTeamMemberSchema = z.object({
     .optional(),
   is_lead_producer: z.boolean().optional(),
   notes: z.string().optional().nullable(),
+  allocation_start: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  allocation_end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
 });
 
 export const UpdateTeamMemberSchema = z
@@ -177,6 +179,8 @@ export const UpdateTeamMemberSchema = z
     hiring_status: z.enum(HIRING_STATUSES),
     is_lead_producer: z.boolean(),
     notes: z.string().nullable(),
+    allocation_start: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+    allocation_end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
   })
   .partial()
   .refine((data) => Object.keys(data).length > 0, {

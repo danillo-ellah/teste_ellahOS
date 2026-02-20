@@ -137,6 +137,82 @@ export async function apiGet<T>(
   return apiFetch<T>(fullPath, { method: 'GET' })
 }
 
+// GET publico sem autenticacao (para paginas publicas como aprovacao)
+export async function apiPublicGet<T>(
+  functionName: string,
+  path: string,
+): Promise<ApiResponse<T>> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 30000)
+
+  let res: Response
+  try {
+    res = await fetch(`${SUPABASE_URL}/functions/v1/${functionName}/${path}`, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  } catch (err) {
+    clearTimeout(timeoutId)
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new ApiRequestError('TIMEOUT', 'Requisicao expirou. Tente novamente.', 408)
+    }
+    throw new ApiRequestError('NETWORK_ERROR', 'Erro de conexao. Verifique sua internet.', 0)
+  }
+  clearTimeout(timeoutId)
+
+  const data = await res.json()
+  if (!res.ok || data?.error) {
+    const err = data?.error || {}
+    throw new ApiRequestError(
+      err.code || 'UNKNOWN_ERROR',
+      err.message || 'Erro desconhecido',
+      res.status || 500,
+      err.details,
+    )
+  }
+  return data as ApiResponse<T>
+}
+
+// POST publico sem autenticacao (para paginas publicas como aprovacao)
+export async function apiPublicMutate<T>(
+  functionName: string,
+  path: string,
+  body?: Record<string, unknown>,
+): Promise<ApiResponse<T>> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 30000)
+
+  let res: Response
+  try {
+    res = await fetch(`${SUPABASE_URL}/functions/v1/${functionName}/${path}`, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    })
+  } catch (err) {
+    clearTimeout(timeoutId)
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new ApiRequestError('TIMEOUT', 'Requisicao expirou. Tente novamente.', 408)
+    }
+    throw new ApiRequestError('NETWORK_ERROR', 'Erro de conexao. Verifique sua internet.', 0)
+  }
+  clearTimeout(timeoutId)
+
+  const data = await res.json()
+  if (!res.ok || data?.error) {
+    const err = data?.error || {}
+    throw new ApiRequestError(
+      err.code || 'UNKNOWN_ERROR',
+      err.message || 'Erro desconhecido',
+      res.status || 500,
+      err.details,
+    )
+  }
+  return data as ApiResponse<T>
+}
+
 // POST/PATCH/DELETE com body
 export async function apiMutate<T>(
   functionName: string,

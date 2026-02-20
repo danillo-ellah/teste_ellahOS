@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { Plus, MoreHorizontal, Pencil, Trash2, Users, Star } from 'lucide-react'
+import { Plus, MoreHorizontal, Pencil, Trash2, Users, Star, CalendarDays } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -31,7 +31,7 @@ import {
 } from '@/hooks/useJobTeam'
 import { ApiRequestError } from '@/lib/api'
 import { TEAM_ROLE_LABELS, HIRING_STATUS_LABELS } from '@/lib/constants'
-import { formatCurrency } from '@/lib/format'
+import { formatCurrency, formatDateShort } from '@/lib/format'
 import type { JobDetail, JobTeamMember, TeamRole, HiringStatus } from '@/types/jobs'
 
 interface TabEquipeProps {
@@ -65,6 +65,8 @@ export function TabEquipe({ job }: TabEquipeProps) {
     fee: number | null
     is_lead_producer: boolean
     notes: string | null
+    allocation_start: string | null
+    allocation_end: string | null
   }) {
     try {
       if (editingMember) {
@@ -76,6 +78,8 @@ export function TabEquipe({ job }: TabEquipeProps) {
           fee: data.fee,
           is_lead_producer: data.is_lead_producer,
           notes: data.notes,
+          allocation_start: data.allocation_start,
+          allocation_end: data.allocation_end,
         })
         toast.success('Membro atualizado')
       } else {
@@ -87,6 +91,8 @@ export function TabEquipe({ job }: TabEquipeProps) {
           fee: data.fee,
           is_lead_producer: data.is_lead_producer,
           notes: data.notes,
+          allocation_start: data.allocation_start,
+          allocation_end: data.allocation_end,
         })
         toast.success('Membro adicionado')
         // Mostrar warnings de conflito de agenda
@@ -178,6 +184,7 @@ export function TabEquipe({ job }: TabEquipeProps) {
               <TableHead>Funcao</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Valor</TableHead>
+              <TableHead className="hidden md:table-cell">Periodo</TableHead>
               <TableHead className="w-[50px]" />
               <TableHead className="w-[50px]" />
             </TableRow>
@@ -191,7 +198,7 @@ export function TabEquipe({ job }: TabEquipeProps) {
                       {m.person_name || 'Sem nome'}
                     </span>
                     {m.is_lead_producer && (
-                      <Star className="size-3.5 text-amber-500 fill-amber-500" />
+                      <Star className="size-3.5 text-amber-500 fill-amber-500" aria-label="Produtor responsavel" />
                     )}
                   </div>
                 </TableCell>
@@ -205,6 +212,16 @@ export function TabEquipe({ job }: TabEquipeProps) {
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
                   {m.fee != null ? formatCurrency(m.fee) : '-'}
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  {m.allocation_start && m.allocation_end ? (
+                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      <CalendarDays className="size-3" />
+                      {formatDateShort(m.allocation_start)} - {formatDateShort(m.allocation_end)}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">-</span>
+                  )}
                 </TableCell>
                 <TableCell>
                   {m.notes && (

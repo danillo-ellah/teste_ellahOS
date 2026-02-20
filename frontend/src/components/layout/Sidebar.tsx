@@ -9,6 +9,7 @@ import {
   Users,
   DollarSign,
   CalendarDays,
+  ClipboardCheck,
   FolderOpen,
   Settings,
   PanelLeftClose,
@@ -36,7 +37,8 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Agencias', href: '/agencies', icon: Briefcase },
   { label: 'Equipe', href: '/people', icon: Users },
   { label: 'Financeiro', href: '/financial', icon: DollarSign },
-  { label: 'Calendario', href: '/calendar', icon: CalendarDays, disabled: true },
+  { label: 'Calendario', href: '/team/calendar', icon: CalendarDays },
+  { label: 'Aprovacoes', href: '/approvals', icon: ClipboardCheck },
   { label: 'Arquivos', href: '/files', icon: FolderOpen, disabled: true },
 ]
 

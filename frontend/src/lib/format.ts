@@ -33,6 +33,14 @@ export function formatDate(date: string | null | undefined): string {
   return format(parsed, 'dd/MM/yyyy', { locale: ptBR })
 }
 
+// Formatar data curta dd/mm (sem ano)
+export function formatDateShort(date: string | null | undefined): string {
+  if (!date) return '-'
+  const parsed = safeParse(date)
+  if (!parsed) return '-'
+  return format(parsed, 'dd/MM', { locale: ptBR })
+}
+
 // Formatar data relativa (ex: "ha 2 dias")
 export function formatRelativeDate(date: string | null | undefined): string {
   if (!date) return '-'

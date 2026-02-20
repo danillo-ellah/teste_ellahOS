@@ -3,6 +3,7 @@ import { created, createdWithWarnings } from '../../_shared/response.ts';
 import { AppError } from '../../_shared/errors.ts';
 import { validate, CreateTeamMemberSchema } from '../../_shared/validation.ts';
 import { insertHistory } from '../../_shared/history.ts';
+import { detectConflicts } from '../../_shared/conflict-detection.ts';
 import type { AuthContext } from '../../_shared/auth.ts';
 
 export async function addMember(
@@ -28,8 +29,15 @@ export async function addMember(
   const body = await req.json();
   const validated = validate(CreateTeamMemberSchema, body);
 
-  // 3. Mapear campos API -> banco
-  const dbPayload = {
+  // 3. Validar datas de alocacao (se ambas fornecidas, end >= start)
+  if (validated.allocation_start && validated.allocation_end) {
+    if (validated.allocation_end < validated.allocation_start) {
+      throw new AppError('VALIDATION_ERROR', 'allocation_end deve ser >= allocation_start', 400);
+    }
+  }
+
+  // 4. Mapear campos API -> banco
+  const dbPayload: Record<string, unknown> = {
     tenant_id: auth.tenantId,
     job_id: jobId,
     person_id: validated.person_id,
@@ -38,9 +46,11 @@ export async function addMember(
     hiring_status: validated.hiring_status ?? 'orcado',
     is_responsible_producer: validated.is_lead_producer ?? false,
     notes: validated.notes ?? null,
+    allocation_start: validated.allocation_start ?? null,
+    allocation_end: validated.allocation_end ?? null,
   };
 
-  // 4. Inserir membro
+  // 5. Inserir membro
   const { data: member, error: insertError } = await supabase
     .from('job_team')
     .insert(dbPayload)
@@ -65,41 +75,69 @@ export async function addMember(
     throw new AppError('INTERNAL_ERROR', insertError.message, 500);
   }
 
-  // 5. Verificar conflito de agenda (warning, nao bloqueia)
-  const warnings: Array<{ code: string; message: string }> = [];
+  // 6. Sync com tabela allocations (se datas fornecidas)
+  let warnings: Array<{ code: string; message: string }> = [];
 
-  const { data: shootingDates } = await supabase
-    .from('job_shooting_dates')
-    .select('shooting_date')
-    .eq('job_id', jobId)
-    .is('deleted_at', null);
+  if (validated.allocation_start && validated.allocation_end) {
+    const { data: allocation } = await supabase
+      .from('allocations')
+      .insert({
+        tenant_id: auth.tenantId,
+        job_id: jobId,
+        people_id: validated.person_id,
+        job_team_id: member.id,
+        allocation_start: validated.allocation_start,
+        allocation_end: validated.allocation_end,
+        created_by: auth.userId,
+      })
+      .select('id')
+      .single();
 
-  if (shootingDates && shootingDates.length > 0) {
-    const dates = shootingDates.map((d) => d.shooting_date);
-
-    // Buscar outros jobs onde esta pessoa esta alocada nas mesmas datas
-    const { data: conflicts } = await supabase
-      .from('job_team')
-      .select('job_id, jobs!inner(title, job_shooting_dates!inner(shooting_date))')
-      .eq('person_id', validated.person_id)
-      .neq('job_id', jobId)
+    // Detectar conflitos via allocations
+    if (allocation) {
+      warnings = await detectConflicts(
+        supabase,
+        auth.tenantId,
+        validated.person_id,
+        validated.allocation_start,
+        validated.allocation_end,
+        allocation.id,
+      );
+    }
+  } else {
+    // Fallback: verificar conflito de agenda via shooting dates (comportamento legado)
+    const { data: shootingDates } = await supabase
+      .from('job_shooting_dates')
+      .select('shooting_date')
+      .eq('job_id', jobId)
       .is('deleted_at', null);
 
-    if (conflicts) {
-      for (const conflict of conflicts) {
-        const conflictDates = (conflict as any).jobs?.job_shooting_dates ?? [];
-        const overlap = conflictDates.filter((d: any) => dates.includes(d.shooting_date));
-        if (overlap.length > 0) {
-          warnings.push({
-            code: 'SCHEDULE_CONFLICT',
-            message: `${member.people?.full_name} esta alocado em "${(conflict as any).jobs?.title}" em data(s) conflitante(s)`,
-          });
+    if (shootingDates && shootingDates.length > 0) {
+      const dates = shootingDates.map((d) => d.shooting_date);
+
+      const { data: conflicts } = await supabase
+        .from('job_team')
+        .select('job_id, jobs!inner(title, job_shooting_dates!inner(shooting_date))')
+        .eq('person_id', validated.person_id)
+        .neq('job_id', jobId)
+        .is('deleted_at', null);
+
+      if (conflicts) {
+        for (const conflict of conflicts) {
+          const conflictDates = (conflict as any).jobs?.job_shooting_dates ?? [];
+          const overlap = conflictDates.filter((d: any) => dates.includes(d.shooting_date));
+          if (overlap.length > 0) {
+            warnings.push({
+              code: 'SCHEDULE_CONFLICT',
+              message: `${member.people?.full_name} esta alocado em "${(conflict as any).jobs?.title}" em data(s) conflitante(s)`,
+            });
+          }
         }
       }
     }
   }
 
-  // 6. Registrar no historico
+  // 7. Registrar no historico
   await insertHistory(supabase, {
     tenantId: auth.tenantId,
     jobId,
@@ -109,11 +147,13 @@ export async function addMember(
       person_name: member.people?.full_name,
       role: validated.role,
       action: 'added',
+      allocation_start: validated.allocation_start ?? null,
+      allocation_end: validated.allocation_end ?? null,
     },
     description: `${member.people?.full_name ?? 'Membro'} adicionado como ${validated.role}`,
   });
 
-  // 7. Retornar com mapeamento banco -> API
+  // 8. Retornar com mapeamento banco -> API
   const response = {
     id: member.id,
     person_id: member.person_id,
@@ -123,6 +163,8 @@ export async function addMember(
     hiring_status: member.hiring_status,
     is_lead_producer: member.is_responsible_producer,
     notes: member.notes,
+    allocation_start: member.allocation_start ?? null,
+    allocation_end: member.allocation_end ?? null,
     created_at: member.created_at,
   };
 

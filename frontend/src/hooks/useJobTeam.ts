@@ -32,6 +32,8 @@ interface AddTeamMemberParams {
   hiring_status?: HiringStatus
   is_lead_producer?: boolean
   notes?: string | null
+  allocation_start?: string | null
+  allocation_end?: string | null
 }
 
 export function useAddTeamMember() {
@@ -62,6 +64,8 @@ interface UpdateTeamMemberParams {
   hiring_status?: HiringStatus
   is_lead_producer?: boolean
   notes?: string | null
+  allocation_start?: string | null
+  allocation_end?: string | null
 }
 
 export function useUpdateTeamMember() {

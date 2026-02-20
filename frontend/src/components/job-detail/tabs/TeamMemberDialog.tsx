@@ -45,7 +45,17 @@ const schema = z.object({
   fee: z.string().optional(),
   is_lead_producer: z.boolean(),
   notes: z.string().optional(),
-})
+  allocation_start: z.string().optional(),
+  allocation_end: z.string().optional(),
+}).refine(
+  (data) => {
+    if (data.allocation_start && data.allocation_end) {
+      return data.allocation_end >= data.allocation_start
+    }
+    return true
+  },
+  { message: 'Data fim deve ser apos data inicio', path: ['allocation_end'] },
+)
 
 type FormValues = z.infer<typeof schema>
 
@@ -62,6 +72,8 @@ interface TeamMemberDialogProps {
     fee: number | null
     is_lead_producer: boolean
     notes: string | null
+    allocation_start: string | null
+    allocation_end: string | null
   }) => Promise<void>
   isPending: boolean
 }
@@ -90,6 +102,8 @@ export function TeamMemberDialog({
       fee: '',
       is_lead_producer: false,
       notes: '',
+      allocation_start: '',
+      allocation_end: '',
     },
   })
 
@@ -103,6 +117,8 @@ export function TeamMemberDialog({
         fee: member?.fee != null ? formatBRNumber(member.fee) : '',
         is_lead_producer: member?.is_lead_producer ?? false,
         notes: member?.notes ?? '',
+        allocation_start: member?.allocation_start ?? '',
+        allocation_end: member?.allocation_end ?? '',
       })
     }
   }, [open, member, reset])
@@ -115,6 +131,8 @@ export function TeamMemberDialog({
       fee: values.fee ? parseBRNumber(values.fee) : null,
       is_lead_producer: values.is_lead_producer,
       notes: values.notes || null,
+      allocation_start: values.allocation_start || null,
+      allocation_end: values.allocation_end || null,
     })
   }
 
@@ -223,6 +241,36 @@ export function TeamMemberDialog({
               )}
             />
           </FormField>
+
+          {/* Periodo de alocacao */}
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Inicio alocacao" optional>
+              <Controller
+                name="allocation_start"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    type="date"
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+            </FormField>
+            <FormField label="Fim alocacao" optional>
+              <Controller
+                name="allocation_end"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    type="date"
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+            </FormField>
+          </div>
 
           {/* Produtor responsavel */}
           <div className="flex items-center gap-3">
