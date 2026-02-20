@@ -28,7 +28,7 @@ export async function listByRange(
 
   if (error) {
     console.error('[allocations/list-by-range] erro:', error.message);
-    throw new Error(error.message);
+    throw new AppError('INTERNAL_ERROR', error.message, 500);
   }
 
   return success(data ?? []);

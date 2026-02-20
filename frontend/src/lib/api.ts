@@ -216,7 +216,7 @@ export async function apiPublicMutate<T>(
 // POST/PATCH/DELETE com body
 export async function apiMutate<T>(
   functionName: string,
-  method: 'POST' | 'PATCH' | 'DELETE',
+  method: 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   body?: Record<string, unknown>,
   path?: string,
 ): Promise<ApiResponse<T>> {

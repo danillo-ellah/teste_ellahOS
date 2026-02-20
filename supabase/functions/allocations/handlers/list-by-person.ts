@@ -30,7 +30,7 @@ export async function listByPerson(
 
   if (error) {
     console.error('[allocations/list-by-person] erro:', error.message);
-    throw new Error(error.message);
+    throw new AppError('INTERNAL_ERROR', error.message, 500);
   }
 
   return success(data ?? []);

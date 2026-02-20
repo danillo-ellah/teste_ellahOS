@@ -1,5 +1,6 @@
 import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 import { success } from '../../_shared/response.ts';
+import { AppError } from '../../_shared/errors.ts';
 import type { AuthContext } from '../../_shared/auth.ts';
 
 // GET /approvals/pending — lista todas aprovacoes pendentes do tenant
@@ -18,7 +19,7 @@ export async function listPending(
 
   if (error) {
     console.error('[approvals/list-pending] erro:', error.message);
-    throw new Error(error.message);
+    throw new AppError('INTERNAL_ERROR', error.message, 500);
   }
 
   return success(data ?? []);

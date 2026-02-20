@@ -1,5 +1,6 @@
 import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 import { success } from '../../_shared/response.ts';
+import { AppError } from '../../_shared/errors.ts';
 import type { AuthContext } from '../../_shared/auth.ts';
 
 // GET /allocations?job_id=X — lista alocacoes de um job
@@ -19,7 +20,7 @@ export async function listByJob(
 
   if (error) {
     console.error('[allocations/list-by-job] erro:', error.message);
-    throw new Error(error.message);
+    throw new AppError('INTERNAL_ERROR', error.message, 500);
   }
 
   return success(data ?? []);

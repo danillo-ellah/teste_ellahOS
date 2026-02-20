@@ -76,7 +76,7 @@ export function useUpdateAllocation() {
 
   return useMutation({
     mutationFn: async ({ id, jobId, ...payload }: UpdateAllocationPayload & { id: string; jobId: string }) => {
-      const res = await apiMutate<Allocation>('allocations', 'PATCH', payload as unknown as Record<string, unknown>, id)
+      const res = await apiMutate<Allocation>('allocations', 'PUT', payload as unknown as Record<string, unknown>, id)
       return res
     },
     onSuccess: () => {

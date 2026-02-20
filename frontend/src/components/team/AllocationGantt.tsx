@@ -192,6 +192,7 @@ export function AllocationGantt({
     display: 'grid',
     gridTemplateColumns: `${LABEL_COL_WIDTH}px repeat(${totalDays}, ${DAY_COL_WIDTH}px)`,
     minWidth: LABEL_COL_WIDTH + totalDays * DAY_COL_WIDTH,
+    position: 'relative',
   }
 
   // Dia atual

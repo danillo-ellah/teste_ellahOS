@@ -50,6 +50,8 @@ import {
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyTabState } from '@/components/shared/EmptyTabState'
+import { SearchableSelect } from '@/components/shared/SearchableSelect'
+import { usePeople } from '@/hooks/usePeople'
 import {
   useJobApprovals,
   useCreateApproval,
@@ -95,6 +97,7 @@ export function TabAprovacoes({ job }: TabApprovacoesProps) {
   const [newFileUrl, setNewFileUrl] = useState('')
   const [newApproverEmail, setNewApproverEmail] = useState('')
   const [newApproverPhone, setNewApproverPhone] = useState('')
+  const [newApproverPeopleId, setNewApproverPeopleId] = useState('')
 
   function resetCreateForm() {
     setNewTitle('')
@@ -104,6 +107,7 @@ export function TabAprovacoes({ job }: TabApprovacoesProps) {
     setNewFileUrl('')
     setNewApproverEmail('')
     setNewApproverPhone('')
+    setNewApproverPeopleId('')
   }
 
   async function handleCreate() {
@@ -117,6 +121,7 @@ export function TabAprovacoes({ job }: TabApprovacoesProps) {
         approver_type: newApproverType,
         approver_email: newApproverEmail || undefined,
         approver_phone: newApproverPhone || undefined,
+        approver_people_id: newApproverPeopleId || undefined,
       })
       toast.success('Aprovacao criada')
       setCreateOpen(false)
@@ -210,6 +215,8 @@ export function TabAprovacoes({ job }: TabApprovacoesProps) {
           setApproverEmail={setNewApproverEmail}
           approverPhone={newApproverPhone}
           setApproverPhone={setNewApproverPhone}
+          approverPeopleId={newApproverPeopleId}
+          setApproverPeopleId={setNewApproverPeopleId}
         />
       </>
     )
@@ -281,6 +288,8 @@ export function TabAprovacoes({ job }: TabApprovacoesProps) {
         setApproverEmail={setNewApproverEmail}
         approverPhone={newApproverPhone}
         setApproverPhone={setNewApproverPhone}
+        approverPeopleId={newApproverPeopleId}
+        setApproverPeopleId={setNewApproverPeopleId}
       />
 
       {/* Dialog rejeitar */}
@@ -506,6 +515,7 @@ function CreateApprovalDialog({
   fileUrl, setFileUrl,
   approverEmail, setApproverEmail,
   approverPhone, setApproverPhone,
+  approverPeopleId, setApproverPeopleId,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -518,7 +528,9 @@ function CreateApprovalDialog({
   fileUrl: string; setFileUrl: (v: string) => void
   approverEmail: string; setApproverEmail: (v: string) => void
   approverPhone: string; setApproverPhone: (v: string) => void
+  approverPeopleId: string; setApproverPeopleId: (v: string) => void
 }) {
+  const { data: people = [], isLoading: loadingPeople } = usePeople()
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
@@ -589,6 +601,19 @@ function CreateApprovalDialog({
             </div>
           )}
 
+          {approverType === 'internal' && (
+            <div>
+              <Label>Aprovador interno *</Label>
+              <SearchableSelect
+                value={approverPeopleId}
+                onChange={setApproverPeopleId}
+                placeholder="Buscar pessoa..."
+                options={people}
+                isLoading={loadingPeople}
+              />
+            </div>
+          )}
+
           <div>
             <Label>Descricao</Label>
             <Textarea
@@ -613,7 +638,10 @@ function CreateApprovalDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
             Cancelar
           </Button>
-          <Button onClick={onSubmit} disabled={isPending || !title.trim()}>
+          <Button
+            onClick={onSubmit}
+            disabled={isPending || !title.trim() || (approverType === 'internal' && !approverPeopleId)}
+          >
             {isPending ? 'Criando...' : 'Criar aprovacao'}
           </Button>
         </DialogFooter>

@@ -25,10 +25,11 @@ export async function removeMember(
     throw new AppError('NOT_FOUND', 'Membro nao encontrado neste job', 404);
   }
 
-  // 2. Soft delete
+  // 2. Soft delete job_team
+  const now = new Date().toISOString();
   const { data: deleted, error: deleteError } = await supabase
     .from('job_team')
-    .update({ deleted_at: new Date().toISOString() })
+    .update({ deleted_at: now })
     .eq('id', memberId)
     .select('id, deleted_at')
     .single();
@@ -36,6 +37,13 @@ export async function removeMember(
   if (deleteError) {
     throw new AppError('INTERNAL_ERROR', deleteError.message, 500);
   }
+
+  // 2b. Cascade soft-delete allocations vinculadas
+  await supabase
+    .from('allocations')
+    .update({ deleted_at: now })
+    .eq('job_team_id', memberId)
+    .is('deleted_at', null);
 
   // 3. Registrar no historico
   await insertHistory(supabase, {
