@@ -1,4 +1,4 @@
-import { getServiceClient } from '../_shared/supabase-client.ts';
+import { getSupabaseClient } from '../_shared/supabase-client.ts';
 import { error } from '../_shared/response.ts';
 import { AppError } from '../_shared/errors.ts';
 import { corsHeaders } from '../_shared/cors.ts';
@@ -22,7 +22,7 @@ const FINANCIAL_COLUMNS: CsvColumn[] = [
   { key: 'revenue', header: 'Receita (R$)', format: formatCurrency },
   { key: 'expenses', header: 'Despesas (R$)', format: formatCurrency },
   { key: 'balance', header: 'Saldo (R$)', format: formatCurrency },
-  { key: 'record_count', header: 'Registros' },
+  { key: 'job_count', header: 'Jobs' },
 ];
 
 // Performance: exporta o array raiz (cada elemento e um grupo: diretor, tipo, cliente ou segmento)
@@ -216,9 +216,8 @@ export async function exportCsv(
     );
   }
 
-  // Montar parametros da RPC
-  const rpcParams: RpcParams & { p_tenant_id: string; p_start_date: string; p_end_date: string } = {
-    p_tenant_id: auth.tenantId,
+  // Montar parametros da RPC (sem p_tenant_id — RLS filtra pelo JWT)
+  const rpcParams: RpcParams & { p_start_date: string; p_end_date: string } = {
     p_start_date: resolvedStart,
     p_end_date: resolvedEnd,
   };
@@ -243,11 +242,11 @@ export async function exportCsv(
     'periodo:', resolvedStart, '->', resolvedEnd,
   );
 
-  // Executar a RPC correspondente via service client
-  const serviceClient = getServiceClient();
+  // Executar a RPC correspondente via client autenticado (RLS filtra pelo JWT)
+  const supabase = getSupabaseClient(auth.token);
   const rpcName = REPORT_RPC[resolvedType];
 
-  const { data: rpcResult, error: rpcError } = await serviceClient.rpc(rpcName, rpcParams);
+  const { data: rpcResult, error: rpcError } = await supabase.rpc(rpcName, rpcParams);
 
   if (rpcError) {
     console.error('[reports/export-csv] erro na RPC:', rpcError.message);

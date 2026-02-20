@@ -35,13 +35,11 @@ export type AlertType =
 
 export interface DashboardAlert {
   alert_type: AlertType
-  severity: AlertSeverity
-  title: string
-  description: string
-  job_id: string | null
-  job_code: string | null
+  entity_id: string | null
+  entity_title: string | null
+  entity_code: string | null
   alert_date: string | null
-  metric_value: number | null
+  metadata: Record<string, unknown> | null
 }
 
 export interface ActivityEvent {

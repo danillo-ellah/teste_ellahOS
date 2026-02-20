@@ -69,8 +69,9 @@ export async function listJobs(
   // Busca textual
   const search = url.searchParams.get('search');
   if (search) {
+    const safeSearch = search.replace(/[%_,().]/g, '').slice(0, 200);
     query = query.or(
-      `title.ilike.%${search}%,code.ilike.%${search}%,brand.ilike.%${search}%`,
+      `title.ilike.%${safeSearch}%,code.ilike.%${safeSearch}%,brand.ilike.%${safeSearch}%`,
     );
   }
 

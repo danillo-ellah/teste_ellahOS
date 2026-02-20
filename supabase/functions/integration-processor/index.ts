@@ -1,4 +1,5 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getServiceClient } from './_shared/supabase-client.ts';
 import {
   getNextEvents,
@@ -79,12 +80,12 @@ Deno.serve(async (req: Request) => {
         await notifyAdminOfFailure(serviceClient, event.tenant_id, event, errMsg);
       } else {
         // Agendar retry com backoff exponencial
-        // Status = 'retrying' para que o RPC lock_integration_events o pegue no next_retry_at
+        // Status = 'pending' para que o RPC lock_integration_events o pegue no next_retry_at
         const nextRetry = calculateNextRetry(event.attempts);
         await serviceClient
           .from('integration_events')
           .update({
-            status: 'retrying',
+            status: 'pending',
             error_message: errMsg,
             next_retry_at: nextRetry.toISOString(),
             locked_at: null,
@@ -147,5 +148,3 @@ async function notifyAdminOfFailure(
   }
 }
 
-// Import type (Deno resolve via bundling)
-import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';

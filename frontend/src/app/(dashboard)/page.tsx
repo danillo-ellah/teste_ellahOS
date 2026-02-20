@@ -56,7 +56,7 @@ export default function DashboardPage() {
 
   // Estado de erro global (qualquer secao com erro)
   const hasAnyError =
-    kpis.isError || pipeline.isError || alerts.isError || activity.isError
+    kpis.isError || pipeline.isError || alerts.isError || activity.isError || revenue.isError
 
   function handleRefetchAll() {
     kpis.refetch()

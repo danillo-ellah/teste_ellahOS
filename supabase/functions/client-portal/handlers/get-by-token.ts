@@ -18,7 +18,7 @@ export async function getByToken(
 
   const serviceClient = getServiceClient();
 
-  console.log(`[client-portal/get-by-token] token=${token}`);
+  console.log(`[client-portal/get-by-token] token=${token.slice(0, 8)}...`);
 
   // Chamar RPC get_portal_timeline — retorna session + timeline + documents + approvals + messages
   const { data: timeline, error: rpcError } = await serviceClient

@@ -1,5 +1,6 @@
 import { getServiceClient } from '../../_shared/supabase-client.ts';
 import { success, error } from '../../_shared/response.ts';
+import { AppError } from '../../_shared/errors.ts';
 
 // POST /whatsapp/webhook
 // Callback para atualizar status de mensagens WhatsApp
@@ -10,13 +11,16 @@ export async function handleWebhook(req: Request): Promise<Response> {
     return error('METHOD_NOT_ALLOWED', 'Apenas POST', 405);
   }
 
-  // Validar webhook secret (se configurado)
-  const expectedSecret = Deno.env.get('WHATSAPP_WEBHOOK_SECRET');
-  if (expectedSecret) {
-    const providedSecret = req.headers.get('X-Webhook-Secret');
-    if (providedSecret !== expectedSecret) {
-      return error('UNAUTHORIZED', 'Webhook secret invalido', 401);
-    }
+  // Validar webhook secret — obrigatorio para evitar acesso nao autorizado
+  const secret = Deno.env.get('WHATSAPP_WEBHOOK_SECRET');
+  if (!secret) {
+    console.error('[whatsapp/webhook] WHATSAPP_WEBHOOK_SECRET nao configurado');
+    throw new AppError('INTERNAL_ERROR', 'Webhook secret nao configurado', 503);
+  }
+
+  const providedSecret = req.headers.get('X-Webhook-Secret');
+  if (providedSecret !== secret) {
+    return error('UNAUTHORIZED', 'Webhook secret invalido', 401);
   }
 
   // Parse body

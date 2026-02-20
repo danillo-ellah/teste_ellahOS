@@ -1,6 +1,6 @@
 'use client'
 
-import { Bell, HelpCircle, MoreHorizontal } from 'lucide-react'
+import { Bell, MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -61,17 +61,6 @@ export function PortalHeader({ job, approvals, onScrollToApprovals }: PortalHead
 
         {/* Acoes */}
         <div className="flex items-center gap-1 shrink-0">
-          {/* Botao ajuda */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 text-muted-foreground"
-            aria-label="Ajuda"
-            title="Ajuda"
-          >
-            <HelpCircle className="h-[18px] w-[18px]" />
-          </Button>
-
           {/* Notificacoes (scroll para aprovacoes) */}
           {hasPendingApprovals && (
             <Button

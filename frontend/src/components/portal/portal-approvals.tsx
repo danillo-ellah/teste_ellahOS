@@ -242,11 +242,17 @@ function ApprovalCard({
                 'inline-flex items-center gap-1.5 text-xs font-medium',
                 approval.status === 'approved'
                   ? 'text-green-600 dark:text-green-400'
-                  : 'text-amber-600 dark:text-amber-400',
+                  : approval.status === 'expired'
+                    ? 'text-zinc-500 dark:text-zinc-400'
+                    : 'text-amber-600 dark:text-amber-400',
               )}
             >
               <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-              {approval.status === 'approved' ? 'Aprovado' : 'Alteracoes solicitadas'}
+              {approval.status === 'approved'
+                ? 'Aprovado'
+                : approval.status === 'expired'
+                  ? 'Expirado'
+                  : 'Alteracoes solicitadas'}
             </span>
           </div>
         )}

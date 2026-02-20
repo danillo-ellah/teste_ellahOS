@@ -1,5 +1,6 @@
 import { getServiceClient } from '../_shared/supabase-client.ts';
 import { success, error } from '../_shared/response.ts';
+import { AppError } from '../_shared/errors.ts';
 import { validate, z } from '../_shared/validation.ts';
 import { notifyJobTeam } from '../_shared/notification-helper.ts';
 
@@ -80,6 +81,7 @@ export async function sendMessage(
 
   if (countError) {
     console.error(`[client-portal/send-message] erro rate limit check: ${countError.message}`);
+    throw new AppError('INTERNAL_ERROR', 'Erro ao verificar limite de mensagens', 500);
   }
 
   if (count && count >= RATE_LIMIT_MAX) {

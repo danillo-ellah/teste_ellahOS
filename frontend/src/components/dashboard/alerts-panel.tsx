@@ -41,6 +41,54 @@ const SEVERITY_LABEL: Record<AlertSeverity, string> = {
   low: 'Baixo',
 }
 
+// Derivar severity a partir do alert_type (a RPC nao retorna severity)
+function getAlertSeverity(type: AlertType): AlertSeverity {
+  switch (type) {
+    case 'margin_alert':
+      return 'critical'
+    case 'overdue_deliverable':
+      return 'high'
+    case 'low_health_score':
+      return 'high'
+    case 'approval_expiring':
+      return 'medium'
+    default:
+      return 'low'
+  }
+}
+
+// Derivar titulo a partir dos campos da RPC
+function getAlertTitle(alert: DashboardAlert): string {
+  switch (alert.alert_type) {
+    case 'margin_alert':
+      return `Margem baixa: ${alert.entity_code ?? ''}`
+    case 'overdue_deliverable':
+      return `Entregavel atrasado: ${alert.entity_code ?? ''}`
+    case 'low_health_score':
+      return `Health score baixo: ${alert.entity_code ?? ''}`
+    case 'approval_expiring':
+      return `Aprovacao expirando: ${alert.entity_code ?? ''}`
+    default:
+      return alert.entity_title ?? 'Alerta'
+  }
+}
+
+// Derivar descricao a partir dos campos da RPC
+function getAlertDescription(alert: DashboardAlert): string {
+  switch (alert.alert_type) {
+    case 'margin_alert':
+      return `Job ${alert.entity_title ?? ''} com margem abaixo de 15%`
+    case 'overdue_deliverable':
+      return `Entregavel de ${alert.entity_title ?? ''} esta atrasado`
+    case 'low_health_score':
+      return `Job ${alert.entity_title ?? ''} com health score abaixo de 50`
+    case 'approval_expiring':
+      return `Aprovacao de ${alert.entity_title ?? ''} expira em breve`
+    default:
+      return ''
+  }
+}
+
 interface AlertItemProps {
   alert: DashboardAlert
 }
@@ -52,10 +100,15 @@ function AlertItem({ alert }: AlertItemProps) {
       color: 'text-amber-500',
     }
   const Icon = iconConfig.icon
+
+  const severity = getAlertSeverity(alert.alert_type)
   const severityClass =
-    SEVERITY_BADGE[alert.severity] ??
+    SEVERITY_BADGE[severity] ??
     'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
-  const severityLabel = SEVERITY_LABEL[alert.severity] ?? alert.severity
+  const severityLabel = SEVERITY_LABEL[severity] ?? severity
+
+  const title = getAlertTitle(alert)
+  const description = getAlertDescription(alert)
 
   return (
     <li
@@ -73,16 +126,16 @@ function AlertItem({ alert }: AlertItemProps) {
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            {alert.job_code && (
+            {alert.entity_code && (
               <span className="font-mono text-[11px] text-muted-foreground">
-                {alert.job_code}
+                {alert.entity_code}
               </span>
             )}
             <p className="truncate text-[13px] font-medium text-foreground">
-              {alert.title}
+              {title}
             </p>
             <p className="text-[12px] text-muted-foreground">
-              {alert.description}
+              {description}
             </p>
           </div>
           {/* Badge de severity */}
@@ -97,9 +150,9 @@ function AlertItem({ alert }: AlertItemProps) {
         </div>
 
         {/* Link para o job */}
-        {alert.job_id && (
+        {alert.entity_id && (
           <Link
-            href={`/jobs/${alert.job_id}`}
+            href={`/jobs/${alert.entity_id}`}
             className="mt-1 text-[12px] text-rose-500 hover:underline"
           >
             Ver job
@@ -187,7 +240,7 @@ export function AlertsPanel({ data, isLoading }: AlertsPanelProps) {
           >
             {visibleAlerts.map((alert, index) => (
               <AlertItem
-                key={`${alert.alert_type}-${alert.job_id}-${index}`}
+                key={`${alert.alert_type}-${alert.entity_id}-${index}`}
                 alert={alert}
               />
             ))}

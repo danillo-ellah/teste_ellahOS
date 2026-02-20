@@ -61,6 +61,7 @@ export async function createSession(
       .from('contacts')
       .select('id')
       .eq('id', validated.contact_id)
+      .is('deleted_at', null)
       .single();
 
     if (contactError || !contact) {

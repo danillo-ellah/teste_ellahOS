@@ -61,11 +61,17 @@ export function CreateSessionDialog({
 
   async function onSubmit(values: FormValues) {
     try {
+      // Converter YYYY-MM-DD para ISO 8601 datetime (backend espera datetime completo)
+      let expiresAt: string | null = values.expires_at || null
+      if (expiresAt) {
+        expiresAt = new Date(expiresAt + 'T23:59:59.000Z').toISOString()
+      }
+
       const data = await createSession({
         job_id: jobId,
         label: values.label,
         contact_id: values.contact_id || null,
-        expires_at: values.expires_at || null,
+        expires_at: expiresAt,
         permissions: {
           timeline: values.perm_timeline,
           documents: values.perm_documents,

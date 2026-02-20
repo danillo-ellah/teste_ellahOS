@@ -1,4 +1,4 @@
-import { getServiceClient } from '../_shared/supabase-client.ts';
+import { getSupabaseClient } from '../_shared/supabase-client.ts';
 import { success } from '../_shared/response.ts';
 import { AppError } from '../_shared/errors.ts';
 import type { AuthContext } from '../_shared/auth.ts';
@@ -65,13 +65,12 @@ export async function getTeamReport(
     'periodo:', resolvedStart, '->', resolvedEnd,
   );
 
-  // Usar service client: a RPC e SECURITY DEFINER e recebe tenant_id como parametro
-  const serviceClient = getServiceClient();
+  // Usar client autenticado: RLS filtra pelo tenant_id do JWT
+  const supabase = getSupabaseClient(auth.token);
 
-  const { data, error: rpcError } = await serviceClient.rpc(
+  const { data, error: rpcError } = await supabase.rpc(
     'get_report_team_utilization',
     {
-      p_tenant_id: auth.tenantId,
       p_start_date: resolvedStart,
       p_end_date: resolvedEnd,
     },

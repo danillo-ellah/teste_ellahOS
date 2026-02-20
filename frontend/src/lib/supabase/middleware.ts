@@ -40,6 +40,14 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith('/forgot-password') &&
     !request.nextUrl.pathname.startsWith('/reset-password')
   ) {
+    // Rotas publicas: portal do cliente e aprovacoes externas nao requerem autenticacao
+    const isPublicRoute =
+      request.nextUrl.pathname.startsWith('/portal/') ||
+      request.nextUrl.pathname.startsWith('/approve/')
+    if (isPublicRoute) {
+      return supabaseResponse
+    }
+
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     url.searchParams.set('returnUrl', request.nextUrl.pathname)

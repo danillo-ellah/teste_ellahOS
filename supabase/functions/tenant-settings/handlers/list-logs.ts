@@ -1,6 +1,7 @@
 import type { AuthContext } from '../../_shared/auth.ts';
 import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 import { paginated } from '../../_shared/response.ts';
+import { AppError } from '../../_shared/errors.ts';
 import { parsePagination, getOffset, buildMeta } from '../../_shared/pagination.ts';
 
 export async function listLogs(
@@ -35,6 +36,7 @@ export async function listLogs(
 
   if (countError) {
     console.error('Erro ao contar logs:', countError.message);
+    throw new AppError('INTERNAL_ERROR', countError.message, 500);
   }
 
   const total = count ?? 0;
@@ -60,6 +62,7 @@ export async function listLogs(
 
   if (fetchError) {
     console.error('Erro ao buscar logs:', fetchError.message);
+    throw new AppError('INTERNAL_ERROR', fetchError.message, 500);
   }
 
   return paginated(logs ?? [], meta);

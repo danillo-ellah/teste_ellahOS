@@ -114,7 +114,7 @@ export function PortalDocuments({ documents }: PortalDocumentsProps) {
           Documentos e Arquivos
         </h2>
         {documents.length > 1 && (
-          <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8">
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8" disabled title="Em breve">
             <Download className="h-3.5 w-3.5" aria-hidden="true" />
             Baixar tudo
           </Button>

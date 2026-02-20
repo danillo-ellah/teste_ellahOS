@@ -3,6 +3,7 @@ import { success } from '../../_shared/response.ts';
 import { AppError } from '../../_shared/errors.ts';
 import { validate, z } from '../../_shared/validation.ts';
 import { detectConflicts } from '../../_shared/conflict-detection.ts';
+import { corsHeaders } from '../../_shared/cors.ts';
 import type { AuthContext } from '../../_shared/auth.ts';
 
 const UpdateAllocationSchema = z.object({
@@ -75,13 +76,12 @@ export async function updateAllocation(
     allocationId,
   );
 
-  const responseBody: Record<string, unknown> = { data: updated };
   if (warnings.length > 0) {
-    responseBody.warnings = warnings;
+    return new Response(JSON.stringify({ data: updated, warnings }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 
-  return new Response(JSON.stringify(responseBody), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-  });
+  return success(updated);
 }

@@ -70,6 +70,14 @@ export async function replyMessage(
     throw new AppError('FORBIDDEN', 'Mensagens nao estao habilitadas nesta sessao', 403);
   }
 
+  // Buscar nome do perfil autenticado (nao confiar no payload)
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', auth.userId)
+    .single();
+  const senderName = profile?.full_name ?? 'Equipe';
+
   // Idempotency key gerada automaticamente para reply do produtor
   const idempotencyKey = `producer-reply-${sessionId}-${auth.userId}-${Date.now()}`;
 
@@ -81,7 +89,7 @@ export async function replyMessage(
       session_id: sessionId,
       job_id: session.job_id,
       direction: 'producer_to_client',
-      sender_name: validated.sender_name,
+      sender_name: senderName,
       sender_user_id: auth.userId, // produtor autenticado
       content: validated.content,
       attachments: validated.attachments ?? [],

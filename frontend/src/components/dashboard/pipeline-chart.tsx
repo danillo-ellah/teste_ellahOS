@@ -134,7 +134,7 @@ export function PipelineChart({ data, isLoading }: PipelineChartProps) {
             <Skeleton
               key={i}
               className="flex-1 rounded-t"
-              style={{ height: `${30 + Math.random() * 30}px` }}
+              style={{ height: `${30 + (i % 4) * 10}px` }}
             />
           ))}
         </div>
