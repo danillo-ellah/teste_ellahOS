@@ -3,12 +3,19 @@ import { success } from '../../_shared/response.ts';
 import { AppError } from '../../_shared/errors.ts';
 import type { AuthContext } from '../../_shared/auth.ts';
 
+// UUID v4 regex para validacao de formato
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // DELETE /allocations/:id — soft delete
 export async function softDelete(
   _req: Request,
   auth: AuthContext,
   allocationId: string,
 ): Promise<Response> {
+  if (!UUID_REGEX.test(allocationId)) {
+    throw new AppError('NOT_FOUND', 'Alocacao nao encontrada', 404);
+  }
+
   const supabase = getSupabaseClient(auth.token);
 
   // Verificar que existe

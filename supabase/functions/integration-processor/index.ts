@@ -26,10 +26,29 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  // Validar X-Cron-Secret — obrigatorio para evitar invocacao nao autorizada
+  const serviceClient = getServiceClient();
+  const providedSecret = req.headers.get('x-cron-secret');
+  if (!providedSecret) {
+    console.warn('[integration-processor] chamada sem X-Cron-Secret');
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Ler secret do Vault e comparar
+  const { data: storedSecret } = await serviceClient.rpc('read_secret', { secret_name: 'CRON_SECRET' });
+  if (!storedSecret || providedSecret !== storedSecret) {
+    console.warn('[integration-processor] X-Cron-Secret invalido');
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   const body = await req.json().catch(() => ({}));
   const batchSize = Math.min(Number(body.batch_size) || 20, 50);
-
-  const serviceClient = getServiceClient();
 
   // Buscar e travar proximo lote de eventos
   const events = await getNextEvents(serviceClient, batchSize);

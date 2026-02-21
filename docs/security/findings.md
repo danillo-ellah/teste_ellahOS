@@ -584,3 +584,245 @@ Remover o campo id da resposta da RPC e atualizar o Response Example na secao 3.
 | FASE7-BAIXO-001 | BAIXA | sender_name livre no endpoint publico - spoofing de identidade | Aberto |
 | FASE7-BAIXO-002 | BAIXA | Ausencia de policy DELETE em client_portal_sessions nao documentada | Aberto |
 | FASE7-BAIXO-003 | BAIXA | session.id exposto desnecessariamente na resposta publica | Aberto |
+
+---
+
+# Auditoria de Seguranca e Performance - Fase 7 (Codigo Implementado)
+
+**Data:** 2026-02-20
+**Auditor:** Security Engineer - ELLAHOS
+**Supabase Project:** etvapcxesaxhsvzgaane
+**Escopo:** Codigo implementado da Fase 7 (Edge Functions + migrations)
+**Tipo:** Post-implementation review (codigo real, nao arquitetura preventiva)
+**Arquivos auditados:**
+- supabase/functions/_shared/auth.ts
+- supabase/functions/_shared/supabase-client.ts
+- supabase/functions/_shared/cors.ts
+- supabase/functions/_shared/validation.ts
+- supabase/functions/_shared/vault.ts
+- supabase/functions/_shared/pagination.ts
+- supabase/functions/client-portal/handlers/create-session.ts
+- supabase/functions/client-portal/handlers/get-by-token.ts
+- supabase/functions/client-portal/handlers/send-message.ts
+- supabase/functions/client-portal/handlers/reply-message.ts
+- supabase/functions/reports/handlers/financial.ts
+- supabase/functions/reports/handlers/performance.ts
+- supabase/functions/reports/handlers/team.ts
+- supabase/functions/reports/handlers/export-csv.ts
+- supabase/functions/tenant-settings/handlers/list-logs.ts
+- supabase/functions/allocations/handlers/update.ts
+- supabase/functions/jobs-team/handlers/update-member.ts
+- supabase/functions/drive-integration/handlers/list-folders.ts
+- supabase/functions/jobs/handlers/list.ts
+- supabase/functions/whatsapp/handlers/webhook.ts
+- supabase/functions/integration-processor/index.ts
+- supabase/migrations/20260219_fase5_2_pg_cron_jobs.sql
+- supabase/migrations/20260220_fase7_1_dashboard_portal.sql
+- frontend/src/lib/supabase/middleware.ts
+
+
+## RESUMO EXECUTIVO - AUDITORIA FASE 7 (CODIGO IMPLEMENTADO)
+
+Data: 2026-02-20 | Auditor: Security Engineer | Tipo: Post-implementation review
+
+Esta auditoria revisou o codigo implementado da Fase 7 contra os achados preventivos anteriores.
+
+### Status geral
+
+| Categoria | Preventivo | Real | Delta |
+|-----------|------------|------|-------|
+| CRITICOS  | 0 | 0 | 0 |
+| ALTOS     | 1 | 1 | 0 (ALTO-001 fechado, IMPL-ALTO-001 novo) |
+| MEDIOS    | 4 | 4 | 0 (2 fechados, 2 novos) |
+| BAIXOS    | 3 | 4 | +1 |---
+
+## RESUMO EXECUTIVO - AUDITORIA FASE 7 (CODIGO IMPLEMENTADO)
+
+Data: 2026-02-20 | Auditor: Security Engineer ELLAHOS | Tipo: Post-implementation review
+
+Esta auditoria revisou o codigo real implementado da Fase 7, verificando achados preventivos
+e identificando novos problemas encontrados no codigo final deployado.
+
+### Status dos achados preventivos
+
+| ID | Descricao | Status |
+|----|-----------|--------|
+| FASE7-ALTO-001 | RLS portal_messages sem restricao de direction | FECHADO (policy correta no codigo implementado) |
+| FASE7-MEDIO-001 | idempotency_key nullable sem CHECK constraint | FECHADO (CHECK implementado na migration linha 90-93) |
+| FASE7-MEDIO-002 | subquery conflitos sem tenant_id em a2 | FECHADO (a2.tenant_id presente na migration linha 929) |
+| FASE7-MEDIO-003 | GET portal sem rate limiting por IP | ABERTO |
+| FASE7-MEDIO-004 | Rate limit conta apenas mensagens enviadas com sucesso | ABERTO |
+| FASE7-BAIXO-001 | sender_name livre no endpoint publico | ABERTO |
+| FASE7-BAIXO-002 | No-DELETE policy nao documentada | ABERTO |
+| FASE7-BAIXO-003 | session.id exposto na resposta publica | ABERTO |
+
+---
+
+### [FASE7-IMPL-ALTO-001] integration-processor sem autenticacao de origem
+
+**Classificacao:** ALTA
+**OWASP:** A07 - Identification and Authentication Failures
+**Arquivo:** supabase/functions/integration-processor/index.ts (linhas 20-28)
+**Migration:** supabase/migrations/20260219_fase5_2_pg_cron_jobs.sql (linhas 52-62)
+
+O pg_cron invoca a Edge Function sem nenhum header de autenticacao (migration linha 58):
+
+    headers := chr(39)+chr(123)+chr(34)+chr(125)+chr(39)+chr(58)+chr(58)+ aplicacao/json + jsonb
+
+Na pratica: headers := chr(39)+chr(123)+chr(34)+Content-Type":"application/json"}'::jsonb
+
+A Edge Function aceita qualquer POST sem validar autenticidade da origem.
+O comentario na migration (linha 43) menciona X-Cron-Secret mas o codigo nao valida.
+Qualquer pessoa com a URL publica pode disparar processamento com batch_size ate 50,
+consumindo chamadas pagas de WhatsApp (Evolution API), Google Drive e n8n.
+
+**Correcao necessaria:**
+1. Migration: adicionar x-cron-secret ao net.http_post headers
+2. Edge Function: validar header antes de processar qualquer evento
+
+---
+
+### [FASE7-IMPL-MEDIO-001] RPCs dashboard passam p_tenant_id sem validacao cruzada interna
+
+**Classificacao:** MEDIA
+**OWASP:** A01 - Broken Access Control (defesa em profundidade ausente)
+**Arquivos:** supabase/functions/dashboard/handlers/kpis.ts, alerts.ts, pipeline.ts, revenue-chart.ts, activity.ts
+
+As RPCs SECURITY DEFINER das 5 funcoes de dashboard recebem p_tenant_id da Edge Function
+e aceitam qualquer UUID sem verificar internamente se o caller tem direito sobre o tenant.
+
+Em condicoes normais nao ha risco: auth.tenantId vem do JWT validado pelo Supabase.
+O risco surge em refactoring futuro: se alguem mudar a fonte do tenantId por engano.
+
+Contraste SEGURO: handlers de reports (financial.ts, performance.ts, team.ts) NAO passam
+p_tenant_id. As RPCs de relatorios usam get_tenant_id() internamente. Pattern CORRETO.
+
+**Recomendacao:** Refatorar RPCs de dashboard para usar get_tenant_id() internamente,
+eliminando o parametro p_tenant_id por completo (alinhando com o padrao dos reports).
+
+---
+
+### [FASE7-IMPL-MEDIO-002] Grants da role anon em tabelas novas nao verificados
+
+**Classificacao:** MEDIA
+**OWASP:** A05 - Security Misconfiguration
+
+As migrations nao incluem REVOKE explicitamente para anon nas novas tabelas.
+O Supabase pode conceder privilegios a anon por padrao dependendo da configuracao.
+
+Verificacao necessaria no Supabase SQL Editor:
+
+    SELECT tablename, grantee, privilege_type
+    FROM information_schema.role_table_grants
+    WHERE grantee = chr(39)+anon+chr(39)
+      AND table_schema = chr(39)+public+chr(39)
+      AND tablename IN (client_portal_sessions, client_portal_messages,
+        report_snapshots, notifications, integration_events);
+
+Esperado: zero linhas. Se houver resultados, revogar com REVOKE ALL ON tabela FROM anon.
+
+---
+
+### [FASE7-IMPL-BAIXO-001] list-logs retorna payload completo dos integration_events
+
+**Classificacao:** BAIXA
+**OWASP:** A09 - Security Logging and Monitoring Failures
+**Arquivo:** supabase/functions/tenant-settings/handlers/list-logs.ts (linha 48)
+
+O select inclui os campos payload, result e error_message completos.
+O payload pode conter nomes e telefones (WhatsApp), estrutura de pastas Drive.
+O error_message pode conter stack traces com informacoes internas em falhas.
+O endpoint e autenticado (admin/ceo via RLS), mas o retorno e mais amplo que necessario.
+
+**Recomendacao:** Omitir payload do retorno padrao; adicionar apenas com parametro explicito
+
+?include_payload=true restrito a role admin para debug especifico.
+
+---
+
+## AUDITORIA DE AUTH - ESTADO ATUAL
+
+### getAuthContext() (auth.ts) - CORRETO
+
+A autenticacao usa supabase.auth.getUser(token): validacao server-side, nao decode local.
+tenant_id extraido de app_metadata (nao de claims publicos manipulaveis).
+Role padrao freelancer (principle of least privilege). Erros retornam 401/403.
+
+### Uso de service_role (15 pontos verificados)
+
+- client-portal/get-by-token.ts: CORRETO (RPC filtra dados sensiveis, endpoint publico)
+- client-portal/send-message.ts: CORRETO (tenant_id da sessao do banco, nao do payload)
+- whatsapp/webhook.ts: CORRETO (X-Webhook-Secret validado antes de qualquer processamento)
+- approvals/get-by-token.ts: CORRETO (acesso por token publico, dados filtrados)
+- integration-processor/index.ts: INCORRETO (sem autenticacao de origem - FASE7-IMPL-ALTO-001)
+- drive-integration/handlers: CORRETO (autenticado via auth antes de usar service_role)
+
+### Middleware Next.js (middleware.ts) - FUNCIONAL
+
+- Valida sessao via supabase.auth.getUser() em toda requisicao autenticada
+- Rotas /portal/* e /approve/* sem autenticacao (correto - publicas por design)
+- NOTA: arquivo exporta updateSession. Verificar que proxy.ts do Next.js 16 importa corretamente.
+
+---
+
+## AUDITORIA DE PERFORMANCE
+
+### Indices implementados - OK
+idx_jobs_tenant_status_active, idx_deliverables_overdue_dashboard, idx_job_history_tenant_recent,
+idx_financial_records_tenant_date, idx_client_portal_sessions_token, idx_portal_messages_session
+
+### Problemas identificados
+
+1. get_dashboard_kpis: 9 subqueries independentes por chamada. Monitorar com tabelas grandes.
+2. get_portal_timeline: UPDATE last_accessed_at em toda leitura (escreve por leitura).
+   Corrigir: WHERE last_accessed_at IS NULL OR last_accessed_at < now() - interval chr(39)5 minutes chr(39)
+3. pg_cron daily-deadline-alerts: SQL complexo com 3 CTEs + INSERTs sem timeout explicito.
+4. get_report_team_utilization: subquery correlata O(N) por pessoa.
+
+### Controles de performance verificados
+- export-csv.ts: periodo maximo 24 meses validado corretamente
+- pagination.ts: MAX_PER_PAGE=200, whitelist de colunas de sort
+- send-message.ts: rate limit de 20 mensagens por hora por sessao
+- get_alerts RPC: LIMIT 5 por categoria + LIMIT p_limit no total
+
+---
+
+## TABELA RESUMO CONSOLIDADA - FASE 7 IMPLEMENTADA
+
+| ID | Severidade | Descricao | Status |
+|----|------------|-----------|--------|
+| FASE7-IMPL-ALTO-001 | ALTA | integration-processor sem X-Cron-Secret | ABERTO |
+| FASE7-IMPL-MEDIO-001 | MEDIA | RPCs dashboard p_tenant_id sem validacao cruzada | ABERTO |
+| FASE7-IMPL-MEDIO-002 | MEDIA | Grants anon em tabelas novas nao verificados | ABERTO |
+| FASE7-MEDIO-003 | MEDIA | GET portal sem rate limiting por IP | ABERTO |
+| FASE7-MEDIO-004 | MEDIA | Rate limit conta mensagens enviadas com sucesso | ABERTO |
+| FASE7-IMPL-BAIXO-001 | BAIXA | list-logs retorna payload completo | ABERTO |
+| FASE7-BAIXO-001 | BAIXA | sender_name livre no endpoint publico | ABERTO |
+| FASE7-BAIXO-002 | BAIXA | No-DELETE policy nao documentada | ABERTO |
+| FASE7-BAIXO-003 | BAIXA | session.id na resposta publica da RPC | ABERTO |
+| FASE7-ALTO-001 | ALTA | RLS portal_messages sem restricao direction | FECHADO |
+| FASE7-MEDIO-001 | MEDIA | idempotency_key nullable sem CHECK | FECHADO |
+| FASE7-MEDIO-002 | MEDIA | subquery conflitos sem tenant_id em a2 | FECHADO |
+
+---
+
+## ASPECTOS POSITIVOS DA IMPLEMENTACAO
+
+1. Auth server-side: getUser() server-side, nao decode local do JWT.
+2. tenant_id sempre do JWT em todas as Edge Functions sem excecao.
+3. Zod em todas as mutacoes: CreateSessionSchema, SendMessageSchema, ReplyMessageSchema.
+4. Rate limiting no portal: 20 mensagens por hora por sessao implementado.
+5. UUID regex validation antes de qualquer query nos endpoints publicos.
+6. Sanitizacao de busca textual: replace de chars especiais antes de LIKE.
+7. Whitelist de colunas para sort em pagination.ts: SQL injection via sort_by impossivel.
+8. Webhook WhatsApp com WHATSAPP_WEBHOOK_SECRET obrigatorio (retorna 503 se ausente).
+9. CHECK constraints no banco validam direction + sender + idempotency no PostgreSQL.
+10. Filtros de dados sensiveis na RPC get_portal_timeline aplicados no SQL, nao no TS.
+11. Aprovacoes internas excluidas do portal via AND ar.approver_type = external.
+12. Secrets via Supabase Vault com fallback para Deno.env.
+13. Idempotency automatica em send-message: gera chave se cliente nao enviar.
+14. CORS em todas as responses incluindo export CSV.
+15. Logs de console sem dados sensiveis: apenas IDs, tipos e tamanhos.
+16. Periodo maximo de 24 meses nos relatorios: previne full table scans excessivos.
+17. is_active + expires_at: dois mecanismos independentes de revogacao no portal.
+18. Soft delete em sessions: historico de acesso preservado para auditoria.

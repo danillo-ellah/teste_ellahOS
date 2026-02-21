@@ -16,9 +16,7 @@ export async function getKpis(
 
   const supabase = getSupabaseClient(auth.token);
 
-  const { data, error } = await supabase.rpc('get_dashboard_kpis', {
-    p_tenant_id: auth.tenantId,
-  });
+  const { data, error } = await supabase.rpc('get_dashboard_kpis');
 
   if (error) {
     console.error('[dashboard/kpis] erro RPC:', error.message);

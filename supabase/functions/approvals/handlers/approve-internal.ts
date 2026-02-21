@@ -9,12 +9,19 @@ const ApproveInternalSchema = z.object({
   comment: z.string().max(5000).optional().nullable(),
 });
 
+// UUID v4 regex para validacao de formato
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // POST /approvals/:id/approve — aprovacao interna
 export async function approveInternal(
   req: Request,
   auth: AuthContext,
   approvalId: string,
 ): Promise<Response> {
+  if (!UUID_REGEX.test(approvalId)) {
+    throw new AppError('NOT_FOUND', 'Solicitacao de aprovacao nao encontrada', 404);
+  }
+
   const body = await req.json().catch(() => ({}));
   const validated = validate(ApproveInternalSchema, body);
 

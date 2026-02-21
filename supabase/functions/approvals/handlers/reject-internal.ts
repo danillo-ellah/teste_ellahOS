@@ -9,12 +9,19 @@ const RejectInternalSchema = z.object({
   comment: z.string().min(1, 'Comentario obrigatorio para rejeicao').max(5000),
 });
 
+// UUID v4 regex para validacao de formato
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // POST /approvals/:id/reject — rejeicao interna
 export async function rejectInternal(
   req: Request,
   auth: AuthContext,
   approvalId: string,
 ): Promise<Response> {
+  if (!UUID_REGEX.test(approvalId)) {
+    throw new AppError('NOT_FOUND', 'Solicitacao de aprovacao nao encontrada', 404);
+  }
+
   const body = await req.json();
   const validated = validate(RejectInternalSchema, body);
 

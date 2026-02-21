@@ -4,12 +4,19 @@ import { AppError } from '../_shared/errors.ts';
 import { enqueueEvent } from '../_shared/integration-client.ts';
 import type { AuthContext } from '../_shared/auth.ts';
 
+// UUID v4 regex para validacao de formato
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // POST /approvals/:id/resend — reenvia link de aprovacao
 export async function resend(
   _req: Request,
   auth: AuthContext,
   approvalId: string,
 ): Promise<Response> {
+  if (!UUID_REGEX.test(approvalId)) {
+    throw new AppError('NOT_FOUND', 'Solicitacao de aprovacao nao encontrada', 404);
+  }
+
   const supabase = getSupabaseClient(auth.token);
 
   // Buscar aprovacao

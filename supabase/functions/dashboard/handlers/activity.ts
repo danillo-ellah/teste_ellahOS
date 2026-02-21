@@ -54,7 +54,6 @@ export async function getActivity(
   const supabase = getSupabaseClient(auth.token);
 
   const { data, error } = await supabase.rpc('get_recent_activity', {
-    p_tenant_id: auth.tenantId,
     p_hours: hours,
     p_limit: limit,
   });

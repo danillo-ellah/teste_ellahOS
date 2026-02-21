@@ -49,14 +49,15 @@ export async function respond(
     return error('BUSINESS_RULE_VIOLATION', `Esta aprovacao ja foi ${approval.status}`, 409);
   }
 
-  // Rate limiting: contar logs na ultima hora para este request
+  // Rate limiting: contar logs na ultima hora para este request (max 5 por hora)
   const { count } = await serviceClient
     .from('approval_logs')
     .select('id', { count: 'exact', head: true })
     .eq('approval_request_id', approval.id)
     .gte('created_at', new Date(Date.now() - 3600000).toISOString());
 
-  if (count && count >= 10) {
+  if (count && count >= 5) {
+    console.warn(`[approvals/respond] rate limit atingido para approval ${approval.id}: ${count} tentativas`);
     return error('BUSINESS_RULE_VIOLATION', 'Muitas tentativas. Tente novamente em 1 hora.', 429);
   }
 

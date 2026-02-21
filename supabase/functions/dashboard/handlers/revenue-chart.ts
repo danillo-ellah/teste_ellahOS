@@ -38,7 +38,6 @@ export async function getRevenueChart(
   const supabase = getSupabaseClient(auth.token);
 
   const { data, error } = await supabase.rpc('get_revenue_by_month', {
-    p_tenant_id: auth.tenantId,
     p_months: months,
   });
 

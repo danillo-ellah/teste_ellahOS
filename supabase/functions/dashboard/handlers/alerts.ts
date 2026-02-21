@@ -40,7 +40,6 @@ export async function getAlerts(
   const supabase = getSupabaseClient(auth.token);
 
   const { data, error } = await supabase.rpc('get_alerts', {
-    p_tenant_id: auth.tenantId,
     p_limit: limit,
   });
 

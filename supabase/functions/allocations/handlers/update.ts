@@ -16,12 +16,19 @@ const UpdateAllocationSchema = z.object({
   { message: 'Pelo menos um campo deve ser enviado' },
 );
 
+// UUID v4 regex para validacao de formato
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // PUT /allocations/:id — atualiza alocacao
 export async function updateAllocation(
   req: Request,
   auth: AuthContext,
   allocationId: string,
 ): Promise<Response> {
+  if (!UUID_REGEX.test(allocationId)) {
+    throw new AppError('NOT_FOUND', 'Alocacao nao encontrada', 404);
+  }
+
   const body = await req.json();
   const validated = validate(UpdateAllocationSchema, body);
 

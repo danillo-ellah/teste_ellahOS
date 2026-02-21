@@ -15,9 +15,7 @@ export async function getPipeline(
 
   const supabase = getSupabaseClient(auth.token);
 
-  const { data, error } = await supabase.rpc('get_pipeline_summary', {
-    p_tenant_id: auth.tenantId,
-  });
+  const { data, error } = await supabase.rpc('get_pipeline_summary');
 
   if (error) {
     console.error('[dashboard/pipeline] erro RPC:', error.message);
