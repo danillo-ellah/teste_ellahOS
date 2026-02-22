@@ -24,6 +24,12 @@ temp_*.py
 *.pyc
 __pycache__/
 
+# Scripts auxiliares temporarios
+sec_append.py
+sec_report_writer.py
+write_spec7.py
+scripts/
+
 # Empty placeholder dirs (created by accident)
 Baseado
 Design
