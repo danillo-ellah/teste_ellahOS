@@ -228,28 +228,17 @@ async function persistMessages(
     console.error(`[ai-copilot/chat] erro ao persistir msg do assistant: ${assistantError.message}`);
   }
 
-  // Atualizar contadores da conversa
-  // Usamos RPC-like approach: buscar valores atuais e somar
-  const { data: conv } = await serviceClient
-    .from('ai_conversations')
-    .select('total_input_tokens, total_output_tokens, message_count')
-    .eq('id', params.conversationId)
-    .single();
-
-  const currentInputTokens = (conv as any)?.total_input_tokens ?? 0;
-  const currentOutputTokens = (conv as any)?.total_output_tokens ?? 0;
-  const currentMessageCount = (conv as any)?.message_count ?? 0;
-
-  const { error: updateError } = await serviceClient
-    .from('ai_conversations')
-    .update({
-      total_input_tokens: currentInputTokens + params.inputTokens,
-      total_output_tokens: currentOutputTokens + params.outputTokens,
-      message_count: currentMessageCount + 2, // user + assistant
-      last_message_at: new Date().toISOString(),
-      model_used: params.modelUsed, // atualiza caso tenha escalado
-    })
-    .eq('id', params.conversationId);
+  // Atualizar contadores da conversa via RPC para evitar race condition (BUG-005)
+  const { error: updateError } = await serviceClient.rpc(
+    'increment_conversation_counters',
+    {
+      p_conversation_id: params.conversationId,
+      p_input_tokens: params.inputTokens,
+      p_output_tokens: params.outputTokens,
+      p_message_count: 2, // user + assistant
+      p_model_used: params.modelUsed,
+    },
+  );
 
   if (updateError) {
     console.error(`[ai-copilot/chat] erro ao atualizar conversa: ${updateError.message}`);
@@ -443,13 +432,41 @@ export async function handleChat(
   // 10. Chamar Claude com streaming
   const startTime = Date.now();
 
-  const { stream: claudeStream, getUsage } = await callClaudeStream(supabase, {
-    model,
-    system: systemPrompt,
-    messages,
-    max_tokens: maxTokens,
-    temperature: 0.7,
-  });
+  let claudeStreamResult;
+  try {
+    claudeStreamResult = await callClaudeStream(supabase, {
+      model,
+      system: systemPrompt,
+      messages,
+      max_tokens: maxTokens,
+      temperature: 0.7,
+    });
+  } catch (err) {
+    // BUG-004 fix: log de uso mesmo quando callClaudeStream falha
+    const durationMs = Date.now() - startTime;
+    const status = err instanceof AppError && err.statusCode === 504 ? 'timeout' : 'error';
+    await logAiUsage(serviceClient, {
+      tenantId: auth.tenantId,
+      userId: auth.userId,
+      feature: 'copilot',
+      modelUsed: model,
+      inputTokens: 0,
+      outputTokens: 0,
+      estimatedCostUsd: 0,
+      durationMs,
+      status,
+      errorMessage: err instanceof Error ? err.message : String(err),
+      metadata: {
+        conversation_id: conversationId,
+        prompt_version: COPILOT_PROMPT_VERSION,
+        escalated_to_sonnet: model === SONNET_MODEL,
+        job_id: payload.context?.job_id ?? null,
+      },
+    });
+    throw err;
+  }
+
+  const { stream: claudeStream, getUsage } = claudeStreamResult;
 
   // 11. Criar wrapper TransformStream que:
   //   a. Emite evento 'start' com conversation_id e message_id
@@ -506,29 +523,36 @@ export async function handleChat(
       const durationMs = Date.now() - startTime;
       const usage = getUsage();
 
+      // BUG-003 fix: detectar stream incompleto (sem output tokens ou texto vazio)
+      const isIncomplete = usage.output_tokens === 0 || accumulatedText.trim().length === 0;
+      const logStatus = isIncomplete ? 'error' : 'success';
+
       console.log(
-        `[ai-copilot/chat] stream finalizado model=${model} input=${usage.input_tokens} output=${usage.output_tokens} duration=${durationMs}ms text_length=${accumulatedText.length}`,
+        `[ai-copilot/chat] stream finalizado model=${model} input=${usage.input_tokens} output=${usage.output_tokens} duration=${durationMs}ms text_length=${accumulatedText.length} complete=${!isIncomplete}`,
       );
 
-      // Persistir mensagens (user + assistant) e atualizar conversa
-      try {
-        await persistMessages(serviceClient, {
-          tenantId: auth.tenantId,
-          userId: auth.userId,
-          conversationId: conversationId!,
-          userMessage: payload.message,
-          assistantMessage: accumulatedText,
-          modelUsed: model,
-          inputTokens: usage.input_tokens,
-          outputTokens: usage.output_tokens,
-          durationMs,
-        });
-      } catch (err) {
-        console.error(`[ai-copilot/chat] erro ao persistir mensagens: ${err}`);
-        // Nao quebra o stream — as mensagens ja foram enviadas ao cliente
+      // Persistir mensagens apenas se o stream completou com texto
+      if (!isIncomplete) {
+        try {
+          await persistMessages(serviceClient, {
+            tenantId: auth.tenantId,
+            userId: auth.userId,
+            conversationId: conversationId!,
+            userMessage: payload.message,
+            assistantMessage: accumulatedText,
+            modelUsed: model,
+            inputTokens: usage.input_tokens,
+            outputTokens: usage.output_tokens,
+            durationMs,
+          });
+        } catch (err) {
+          console.error(`[ai-copilot/chat] erro ao persistir mensagens: ${err}`);
+        }
+      } else {
+        console.warn(`[ai-copilot/chat] stream incompleto — mensagens NAO persistidas`);
       }
 
-      // Registrar uso de IA
+      // Registrar uso de IA (sempre, com status correto)
       try {
         const costUsd = estimateCost(model, usage.input_tokens, usage.output_tokens);
 
@@ -541,7 +565,8 @@ export async function handleChat(
           outputTokens: usage.output_tokens,
           estimatedCostUsd: costUsd,
           durationMs,
-          status: 'success',
+          status: logStatus,
+          errorMessage: isIncomplete ? 'Stream incompleto — texto vazio ou sem output tokens' : undefined,
           metadata: {
             conversation_id: conversationId,
             message_id: messageId,

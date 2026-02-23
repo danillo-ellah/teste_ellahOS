@@ -232,14 +232,14 @@ function EstimateResult({ result, onRegenerate, isRegenerating }: EstimateResult
                       <span
                         className={cn(
                           'inline-block rounded-full px-1.5 py-0.5 text-xs font-medium',
-                          job.similarity_score >= 0.8
+                          job.similarity_score >= 80
                             ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
-                            : job.similarity_score >= 0.5
+                            : job.similarity_score >= 50
                               ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
                               : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400',
                         )}
                       >
-                        {Math.round(job.similarity_score * 100)}%
+                        {Math.round(job.similarity_score)}%
                       </span>
                     </td>
                   </tr>

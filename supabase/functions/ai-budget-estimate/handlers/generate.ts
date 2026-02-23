@@ -180,12 +180,27 @@ export async function handleGenerate(
   };
 
   try {
-    // Extrair JSON do content (pode ter texto antes/depois)
-    const jsonMatch = claudeResponse.content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('Nenhum JSON encontrado na resposta');
+    // Tentar parse direto primeiro, fallback para regex nao-greedy
+    let jsonText: string;
+    try {
+      JSON.parse(claudeResponse.content);
+      jsonText = claudeResponse.content;
+    } catch {
+      const jsonMatch = claudeResponse.content.match(/\{[\s\S]*?\}(?=[^}]*$)/);
+      if (!jsonMatch) {
+        throw new Error('Nenhum JSON encontrado na resposta');
+      }
+      jsonText = jsonMatch[0];
+      // Se falhar, tentar greedy como ultimo recurso
+      try {
+        JSON.parse(jsonText);
+      } catch {
+        const greedyMatch = claudeResponse.content.match(/\{[\s\S]*\}/);
+        if (!greedyMatch) throw new Error('Nenhum JSON valido na resposta');
+        jsonText = greedyMatch[0];
+      }
     }
-    parsedResponse = JSON.parse(jsonMatch[0]);
+    parsedResponse = JSON.parse(jsonText);
   } catch (parseErr) {
     console.error('[ai-budget-estimate/generate] falha ao parsear resposta Claude:', parseErr);
 

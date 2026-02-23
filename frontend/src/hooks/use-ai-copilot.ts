@@ -151,21 +151,37 @@ export function useChatStream() {
         const lines = buffer.split('\n')
         buffer = lines.pop() ?? '' // ultima linha pode estar incompleta
 
+        // currentEvent captura a linha `event:` que precede cada bloco `data:`
+        let currentEvent = ''
+
         for (const line of lines) {
           const trimmed = line.trim()
+
+          // Captura tipo do evento SSE (linha `event: start`, `event: delta`, etc.)
+          if (trimmed.startsWith('event:')) {
+            currentEvent = trimmed.slice(6).trim()
+            continue
+          }
+
           if (!trimmed.startsWith('data:')) continue
 
           const jsonStr = trimmed.slice(5).trim()
-          if (!jsonStr || jsonStr === '[DONE]') continue
+          if (!jsonStr || jsonStr === '[DONE]') {
+            currentEvent = ''
+            continue
+          }
 
           let parsed: Record<string, unknown>
           try {
             parsed = JSON.parse(jsonStr)
           } catch {
+            currentEvent = ''
             continue
           }
 
-          const eventType = parsed.type as string
+          // Usa evento da linha `event:` como tipo; `parsed.type` e fallback de compatibilidade
+          const eventType = currentEvent || (parsed.type as string) || ''
+          currentEvent = '' // reset apos consumir
 
           if (eventType === 'start') {
             // Recebe conversation_id atribuido pelo servidor

@@ -48,24 +48,28 @@ export interface BudgetEstimateResult {
 }
 
 export interface BudgetEstimateHistoryItem {
-  id: string
+  estimate_id: string
   job_id: string
-  created_at: string
-  suggested_budget: SuggestedBudget
+  requested_by: string
+  suggested_budget: {
+    total: number
+    breakdown: BudgetBreakdown
+    confidence: EstimateConfidence
+  }
   similar_jobs: SimilarJob[]
   reasoning: string
   warnings: string[]
+  model_used: string
   tokens_used: TokenUsage
-  cached: boolean
+  was_applied: boolean
+  created_at: string
 }
 
 // Contexto opcional para sobrescrever parametros na geracao
 export interface BudgetEstimateOverrideContext {
-  project_type?: string
-  duration_seconds?: number
-  shooting_days?: number
-  team_size?: number
-  notes?: string
+  additional_requirements?: string
+  reference_jobs?: string[]
+  budget_ceiling?: number
 }
 
 // --- Copilot ELLA (chat) ---

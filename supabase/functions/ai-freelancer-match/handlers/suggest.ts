@@ -97,9 +97,12 @@ function validatePayload(body: unknown): SuggestPayload {
     throw new AppError('VALIDATION_ERROR', 'role e obrigatorio (string)', 400);
   }
 
-  // requirements opcional (string)
+  // requirements opcional (string, max 2000 chars)
   if (payload.requirements !== undefined && typeof payload.requirements !== 'string') {
     throw new AppError('VALIDATION_ERROR', 'requirements deve ser string', 400);
+  }
+  if (typeof payload.requirements === 'string' && payload.requirements.length > 2000) {
+    throw new AppError('VALIDATION_ERROR', 'requirements deve ter no maximo 2000 caracteres', 400);
   }
 
   // max_rate opcional (numero positivo)
@@ -130,7 +133,7 @@ function validatePayload(body: unknown): SuggestPayload {
 
   return {
     job_id: payload.job_id as string,
-    role: (payload.role as string).trim(),
+    role: (payload.role as string).trim().substring(0, 200),
     requirements: payload.requirements as string | undefined,
     max_rate: (payload.max_rate as number | undefined) ?? undefined,
     preferred_start: payload.preferred_start as string | undefined,
@@ -338,11 +341,19 @@ export async function handleSuggest(
   let parsedResponse: ClaudeParsedResponse;
 
   try {
-    const jsonMatch = claudeResponse.content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('Nenhum JSON encontrado na resposta');
+    // Tentar parse direto primeiro, fallback para regex
+    let jsonText: string;
+    try {
+      JSON.parse(claudeResponse.content);
+      jsonText = claudeResponse.content;
+    } catch {
+      const jsonMatch = claudeResponse.content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('Nenhum JSON encontrado na resposta');
+      }
+      jsonText = jsonMatch[0];
     }
-    const rawParsed = JSON.parse(jsonMatch[0]);
+    const rawParsed = JSON.parse(jsonText);
 
     // 9. Validar campos obrigatorios e filtrar person_ids desconhecidos
     parsedResponse = validateParsedResponse(rawParsed, validPersonIds);

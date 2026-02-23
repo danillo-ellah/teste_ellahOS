@@ -137,7 +137,7 @@ export async function getSimilarJobsContext(
   // Buscar o job alvo para extrair criterios de similaridade
   const { data: targetJob, error: targetError } = await svc
     .from('jobs')
-    .select('id, project_type, segment, complexity_level')
+    .select('id, project_type, client_segment, complexity_level')
     .eq('id', jobId)
     .eq('tenant_id', tenantId)
     .is('deleted_at', null)
@@ -148,7 +148,7 @@ export async function getSimilarJobsContext(
     return [];
   }
 
-  const { project_type, segment, complexity_level } = targetJob;
+  const { project_type, client_segment: segment, complexity_level } = targetJob;
 
   // Como o supabase-js nao suporta SQL raw diretamente em Edge Functions,
   // montamos a logica com queries separadas e calculo de similarity_score em memoria.
@@ -157,7 +157,7 @@ export async function getSimilarJobsContext(
   const { data: candidateJobs, error: queryError } = await svc
     .from('jobs')
     .select(
-      'id, title, code, project_type, segment, complexity_level, closed_value, production_cost, margin_percentage, created_at',
+      'id, title, code, project_type, client_segment, complexity_level, closed_value, production_cost, margin_percentage, created_at',
     )
     .eq('tenant_id', tenantId)
     .is('deleted_at', null)
@@ -220,8 +220,8 @@ export async function getSimilarJobsContext(
       score += 40;
     }
 
-    // +25 se mesmo segment (e ambos nao null)
-    if (segment && j.segment && j.segment === segment) {
+    // +25 se mesmo client_segment (e ambos nao null)
+    if (segment && j.client_segment && j.client_segment === segment) {
       score += 25;
     }
 
@@ -243,7 +243,7 @@ export async function getSimilarJobsContext(
       title: j.title,
       code: j.code,
       project_type: j.project_type,
-      client_segment: j.segment,
+      client_segment: j.client_segment,
       complexity_level: j.complexity_level,
       closed_value: j.closed_value,
       production_cost: j.production_cost,
@@ -290,7 +290,7 @@ export async function getJobFullContext(
     svc
       .from('jobs')
       .select(
-        `id, code, title, project_type, segment, complexity_level, status, priority,
+        `id, code, title, project_type, client_segment, complexity_level, status, priority_level,
          briefing_text, tags, media_type,
          briefing_date, expected_delivery_date, actual_delivery_date,
          closed_value, production_cost, margin_percentage,
@@ -383,10 +383,10 @@ export async function getJobFullContext(
     code: j.code,
     title: j.title,
     project_type: j.project_type,
-    client_segment: j.segment,
+    client_segment: j.client_segment,
     complexity_level: j.complexity_level,
     status: j.status,
-    priority: j.priority,
+    priority: j.priority_level,
     briefing_text: j.briefing_text,
     tags: j.tags ?? [],
     media_type: j.media_type,

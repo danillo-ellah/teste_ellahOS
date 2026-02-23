@@ -283,11 +283,19 @@ export async function handleAnalyze(
   let parsedResponse: ClaudeParsedResponse;
 
   try {
-    const jsonMatch = claudeResponse.content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('Nenhum JSON encontrado na resposta');
+    // Tentar parse direto primeiro, fallback para regex
+    let jsonText: string;
+    try {
+      JSON.parse(claudeResponse.content);
+      jsonText = claudeResponse.content;
+    } catch {
+      const jsonMatch = claudeResponse.content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('Nenhum JSON encontrado na resposta');
+      }
+      jsonText = jsonMatch[0];
     }
-    const rawParsed = JSON.parse(jsonMatch[0]);
+    const rawParsed = JSON.parse(jsonText);
     parsedResponse = validateParsedResponse(rawParsed);
   } catch (parseErr) {
     console.error(
