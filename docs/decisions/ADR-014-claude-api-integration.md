@@ -1,7 +1,7 @@
 # ADR-014: Padrao de Integracao com a Claude API
 
 **Data:** 20/02/2026
-**Status:** Proposta
+**Status:** Aceita
 **Autor:** Tech Lead -- ELLAHOS
 **Contexto:** Fase 8 -- Inteligencia Artificial
 

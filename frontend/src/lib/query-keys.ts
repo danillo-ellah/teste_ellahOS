@@ -150,3 +150,24 @@ export const portalKeys = {
     [...portalKeys.all, 'session-messages', sessionId] as const,
   public: (token: string) => ['portal-public', token] as const,
 }
+
+export const aiBudgetKeys = {
+  all: ['ai-budget-estimates'] as const,
+  history: (jobId: string) => [...aiBudgetKeys.all, 'history', jobId] as const,
+}
+
+export const copilotKeys = {
+  all: ['ai-copilot'] as const,
+  conversations: () => [...copilotKeys.all, 'conversations'] as const,
+  conversation: (id: string) => [...copilotKeys.conversations(), id] as const,
+}
+
+export const dailiesKeys = {
+  all: ['ai-dailies'] as const,
+  history: (jobId: string) => [...dailiesKeys.all, 'history', jobId] as const,
+}
+
+export const freelancerMatchKeys = {
+  all: ['ai-freelancer-match'] as const,
+  suggestions: (jobId: string, role: string) => [...freelancerMatchKeys.all, 'suggestions', jobId, role] as const,
+}

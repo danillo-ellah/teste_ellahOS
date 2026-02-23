@@ -436,3 +436,109 @@ export interface BankInfo {
   holder_name: string | null;
   holder_document: string | null;
 }
+
+// === Fase 8: Inteligencia Artificial ===
+
+// Features de IA disponiveis
+export const AI_FEATURES = [
+  'budget_estimate',
+  'copilot',
+  'dailies_analysis',
+  'freelancer_match',
+] as const;
+
+export type AiFeature = (typeof AI_FEATURES)[number];
+
+// Status de chamadas a Claude API
+export const AI_USAGE_STATUSES = [
+  'success',
+  'error',
+  'rate_limited',
+  'timeout',
+] as const;
+
+export type AiUsageStatus = (typeof AI_USAGE_STATUSES)[number];
+
+// Modelos Claude suportados
+export const CLAUDE_MODELS = [
+  'claude-sonnet-4-20250514',
+  'claude-haiku-4-20250514',
+] as const;
+
+export type ClaudeModelId = (typeof CLAUDE_MODELS)[number];
+
+// Conversa do Copilot (tabela ai_conversations)
+export interface AiConversationRow {
+  id: string;
+  tenant_id: string;
+  user_id: string;
+  title: string | null;
+  job_id: string | null;
+  model_used: string;
+  total_input_tokens: number;
+  total_output_tokens: number;
+  message_count: number;
+  last_message_at: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+// Mensagem do Copilot (tabela ai_conversation_messages)
+export interface AiConversationMessageRow {
+  id: string;
+  tenant_id: string;
+  conversation_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  sources: Array<{ type: string; id: string; title: string }>;
+  model_used: string | null;
+  input_tokens: number;
+  output_tokens: number;
+  duration_ms: number | null;
+  created_at: string;
+}
+
+// Estimativa de orcamento (tabela ai_budget_estimates)
+export interface AiBudgetEstimateRow {
+  id: string;
+  tenant_id: string;
+  job_id: string;
+  requested_by: string;
+  input_hash: string;
+  override_context: Record<string, unknown>;
+  suggested_total: number | null;
+  breakdown: Record<string, number>;
+  confidence: 'high' | 'medium' | 'low';
+  reasoning: string | null;
+  similar_jobs: Array<Record<string, unknown>>;
+  warnings: string[];
+  model_used: string;
+  input_tokens: number;
+  output_tokens: number;
+  duration_ms: number | null;
+  was_applied: boolean;
+  created_at: string;
+}
+
+// Log de uso de IA (tabela ai_usage_logs)
+export interface AiUsageLogRow {
+  id: string;
+  tenant_id: string;
+  user_id: string;
+  feature: AiFeature;
+  model_used: string;
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+  estimated_cost_usd: number;
+  duration_ms: number | null;
+  status: AiUsageStatus;
+  error_message: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+// Niveis de confianca para estimativas AI
+export const AI_CONFIDENCE_LEVELS = ['high', 'medium', 'low'] as const;
+export type AiConfidenceLevel = (typeof AI_CONFIDENCE_LEVELS)[number];

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
 import { BottomNav } from '@/components/layout/BottomNav'
+import { AiCopilotTrigger } from '@/components/ai/ai-copilot-trigger'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { useIsDesktop } from '@/hooks/useMediaQuery'
 import {
@@ -103,6 +104,9 @@ export default function DashboardLayout({
 
       {/* Bottom nav mobile */}
       <BottomNav />
+
+      {/* Copilot ELLA — disponivel em todas as paginas do dashboard */}
+      <AiCopilotTrigger />
     </div>
   )
 }
