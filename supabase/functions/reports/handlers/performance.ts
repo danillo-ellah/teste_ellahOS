@@ -86,6 +86,7 @@ export async function getPerformanceReport(
   const { data, error: rpcError } = await supabase.rpc(
     'get_report_performance',
     {
+      p_tenant_id: auth.tenantId,
       p_start_date: resolvedStart,
       p_end_date: resolvedEnd,
       p_group_by: groupByParam,

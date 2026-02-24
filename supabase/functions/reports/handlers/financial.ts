@@ -70,6 +70,7 @@ export async function getFinancialReport(
   const { data, error: rpcError } = await supabase.rpc(
     'get_report_financial_monthly',
     {
+      p_tenant_id: auth.tenantId,
       p_start_date: resolvedStart,
       p_end_date: resolvedEnd,
     },

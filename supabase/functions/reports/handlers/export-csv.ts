@@ -216,8 +216,9 @@ export async function exportCsv(
     );
   }
 
-  // Montar parametros da RPC (sem p_tenant_id — RLS filtra pelo JWT)
-  const rpcParams: RpcParams & { p_start_date: string; p_end_date: string } = {
+  // Montar parametros da RPC (p_tenant_id obrigatorio — RPCs sao SECURITY DEFINER)
+  const rpcParams: RpcParams & { p_tenant_id: string; p_start_date: string; p_end_date: string } = {
+    p_tenant_id: auth.tenantId,
     p_start_date: resolvedStart,
     p_end_date: resolvedEnd,
   };

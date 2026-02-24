@@ -71,6 +71,7 @@ export async function getTeamReport(
   const { data, error: rpcError } = await supabase.rpc(
     'get_report_team_utilization',
     {
+      p_tenant_id: auth.tenantId,
       p_start_date: resolvedStart,
       p_end_date: resolvedEnd,
     },

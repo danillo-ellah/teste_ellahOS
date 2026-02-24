@@ -17,6 +17,13 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     const supabase = createClient()
 
+    // Se nao ha hash na URL, nao ha token de recovery — mostrar erro imediatamente
+    const hasHash = typeof window !== 'undefined' && window.location.hash.length > 1
+    if (!hasHash) {
+      setChecking(false)
+      return
+    }
+
     // Escutar evento PASSWORD_RECOVERY do Supabase (vem do magic link)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event) => {
@@ -29,25 +36,21 @@ export default function ResetPasswordPage() {
 
     // Fallback: verificar se ja ha sessao ativa (link processado antes do mount)
     supabase.auth.getUser().then(({ data: { user } }) => {
-      // Se nao houve evento PASSWORD_RECOVERY e nao ha user, redirecionar
-      // Se ha user mas sem evento de recovery, pode ter vindo do hash da URL
-      // Damos um timeout curto para o evento chegar
       setTimeout(() => {
         setChecking((prev) => {
-          // Se ainda estiver checking, decidir baseado no user
           if (prev) {
             if (!user) {
-              router.replace('/login')
-              return false
+              return false // Mostrar "Link invalido"
             }
-            // User existe - pode ser recovery via hash processado pelo SDK
-            // Permitir o formulario (o updateUser validara server-side)
             setIsRecoverySession(true)
             return false
           }
           return prev
         })
       }, 1000)
+    }).catch(() => {
+      // Se getUser falhar, parar de verificar
+      setChecking(false)
     })
 
     return () => subscription.unsubscribe()
