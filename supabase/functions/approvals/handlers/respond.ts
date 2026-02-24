@@ -25,6 +25,16 @@ export async function respond(
     return error('NOT_FOUND', 'Token invalido', 404);
   }
 
+  // Validar Origin (FASE6-ALTO-002)
+  const origin = req.headers.get('origin') ?? '';
+  const siteUrl = Deno.env.get('SITE_URL') ?? '';
+  const isLocalhost = origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1');
+  const isSiteUrl = siteUrl !== '' && origin === siteUrl;
+  if (!isLocalhost && !isSiteUrl) {
+    console.warn(`[approvals/respond] origem rejeitada: "${origin}"`);
+    return error('FORBIDDEN', 'Origem nao autorizada', 403);
+  }
+
   const serviceClient = getServiceClient();
 
   // Buscar aprovacao pelo token

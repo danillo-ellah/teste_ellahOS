@@ -212,7 +212,7 @@ export async function handleSuggest(
   req: Request,
   auth: AuthContext,
 ): Promise<Response> {
-  console.log('[ai-freelancer-match/suggest] tenant:', auth.tenantId, 'user:', auth.userId);
+  console.log('[ai-freelancer-match/suggest] tenant:', auth.tenantId.substring(0, 8) + '...', 'user:', auth.userId.substring(0, 8) + '...');
 
   // 1. Parsear e validar payload
   let body: unknown;

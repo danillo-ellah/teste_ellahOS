@@ -14,7 +14,7 @@ export function usePublicApproval(token: string) {
       return res.data
     },
     enabled: !!token,
-    staleTime: 60_000,
+    staleTime: 0,
     retry: 1,
   })
 }

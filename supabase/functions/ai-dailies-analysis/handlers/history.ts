@@ -28,6 +28,12 @@ export async function handleHistory(
   req: Request,
   auth: AuthContext,
 ): Promise<Response> {
+  // Apenas roles com visibilidade operacional podem consultar historico de analises
+  const allowedRoles = ['admin', 'ceo', 'produtor_executivo'];
+  if (!allowedRoles.includes(auth.role)) {
+    throw new AppError('FORBIDDEN', 'Acesso negado: apenas admin/ceo/produtor_executivo', 403);
+  }
+
   const url = new URL(req.url);
   const jobId = url.searchParams.get('job_id');
 
@@ -37,7 +43,7 @@ export async function handleHistory(
   }
 
   console.log(
-    `[ai-dailies-analysis/history] tenant=${auth.tenantId} job=${jobId} user=${auth.userId}`,
+    `[ai-dailies-analysis/history] tenant=${auth.tenantId.substring(0, 8)}... job=${jobId} user=${auth.userId.substring(0, 8)}...`,
   );
 
   // serviceClient faz bypass do RLS — filtro manual por tenant_id e obrigatorio

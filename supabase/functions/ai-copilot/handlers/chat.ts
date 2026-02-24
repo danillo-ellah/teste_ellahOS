@@ -413,7 +413,7 @@ export async function handleChat(
   req: Request,
   auth: AuthContext,
 ): Promise<Response> {
-  console.log(`[ai-copilot/chat] streaming tenant=${auth.tenantId} user=${auth.userId}`);
+  console.log(`[ai-copilot/chat] streaming tenant=${auth.tenantId.substring(0, 8)}... user=${auth.userId.substring(0, 8)}...`);
 
   // 1. Parsear e validar payload
   const payload = await parsePayload(req);
@@ -618,7 +618,7 @@ export async function handleChatSync(
   req: Request,
   auth: AuthContext,
 ): Promise<Response> {
-  console.log(`[ai-copilot/chat] sync tenant=${auth.tenantId} user=${auth.userId}`);
+  console.log(`[ai-copilot/chat] sync tenant=${auth.tenantId.substring(0, 8)}... user=${auth.userId.substring(0, 8)}...`);
 
   // 1. Parsear e validar payload
   const payload = await parsePayload(req);

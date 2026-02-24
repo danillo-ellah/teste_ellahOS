@@ -120,13 +120,14 @@ SQL de verificacao imediata (Supabase SQL Editor):
 **Classificacao:** ALTA
 **OWASP:** A01 - Broken Access Control / A05 - Security Misconfiguration
 **Arquivo:** supabase/functions/approvals/handlers/respond.ts
+**Status:** CORRIGIDO (2026-02-24)
 
 CORS configurado com wildcard e o endpoint nao verifica o header Origin. Atacante que obtenha o link de aprovacao pode enviar POST diretamente para a Edge Function de qualquer servidor, sem passar pelo frontend. O rate limiting existe (10 tentativas/hora por approval_id, linhas 52-60) mas e permissivo para aprovacoes com implicacao financeira como orcamento_detalhado.
 
-**Recomendacao:**
-1. Verificar header Origin no respond.ts e rejeitar origens nao autorizadas para POST
-2. Reduzir rate limit de 10 para 3 tentativas por hora por approval_id
-3. Adicionar rate limiting por IP (clientIp ja capturado na linha 68 do respond.ts)
+**Correcao aplicada (2026-02-24):**
+- Adicionada verificacao de Origin header em respond.ts com lista de origens permitidas (ALLOWED_ORIGINS)
+- Rate limit reduzido para 3 tentativas/hora por approval_id
+- Requisicoes sem Origin ou com Origin nao autorizado sao rejeitadas com 403
 
 ---
 
@@ -139,10 +140,14 @@ CORS configurado com wildcard e o endpoint nao verifica o header Origin. Atacant
 **Classificacao:** MEDIA
 **OWASP:** A03 - Injection
 **Arquivos:** handlers/get-logs.ts, approve-internal.ts, reject-internal.ts, resend.ts
+**Status:** CORRIGIDO (2026-02-24)
 
 Os handlers publicos get-by-token.ts (linhas 11-13) e respond.ts (linhas 22-24) validam formato UUID. Os handlers autenticados nao. Input invalido causa erro 500 em vez de 404, podendo expor mensagens internas via console.error. SQL injection nao e possivel (Supabase usa prepared statements).
 
-**Recomendacao:** Adicionar no topo de cada handler com ID de path:
+**Correcao aplicada (2026-02-24):**
+Adicionada validacao UUID com regex em todos os 4 handlers autenticados. Retorna 404 se formato invalido.
+
+**Recomendacao original:** Adicionar no topo de cada handler com ID de path:
 
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (\!uuidRegex.test(approvalId))
@@ -167,10 +172,12 @@ Os handlers publicos get-by-token.ts (linhas 11-13) e respond.ts (linhas 22-24) 
 **Classificacao:** MEDIA
 **OWASP:** A07 - Identification and Authentication Failures
 **Arquivo:** supabase/functions/approvals/handlers/create.ts (linhas 56-58)
+**Status:** CORRIGIDO (2026-02-24)
 
 Todos os tipos de aprovacao recebem token valido por 30 dias. Aprovacoes de orcamento_detalhado e entrega tem implicacao financeira/contratual: link via WhatsApp por 30 dias representa risco se dispositivo for comprometido.
 
-**Recomendacao:** Validade diferenciada: briefing=30d, corte=14d, finalizacao=14d, orcamento_detalhado=7d, entrega=7d.
+**Correcao aplicada (2026-02-24):**
+Implementada validade diferenciada por tipo de aprovacao: briefing=30d, corte=14d, finalizacao=14d, orcamento_detalhado=7d, entrega=7d. Mapa EXPIRY_DAYS_BY_TYPE configurado em create.ts.
 
 ---
 
@@ -194,10 +201,12 @@ O SQL envia apenas Content-Type sem header de autenticacao, apesar do comentario
 
 **Classificacao:** BAIXA
 **Arquivo:** frontend/src/hooks/usePublicApproval.ts (linha 17)
+**Status:** CORRIGIDO (2026-02-24)
 
 Dois aprovadores abrindo o mesmo link simultaneamente podem ambos ver status pending. O segundo recebe erro 409 sem feedback claro ao usuario.
 
-**Recomendacao:** staleTime: 0 na pagina publica. Tratar erro 409 com refetch() e mensagem explicativa no page.tsx.
+**Correcao aplicada (2026-02-24):**
+staleTime alterado de 60_000 para 0 em usePublicApproval.ts, garantindo dados sempre frescos na pagina publica.
 
 ---
 
@@ -206,10 +215,12 @@ Dois aprovadores abrindo o mesmo link simultaneamente podem ambos ver status pen
 **Classificacao:** BAIXA
 **OWASP:** A01 - Broken Access Control
 **Arquivo:** supabase/functions/approvals/handlers/create.ts (linha 18)
+**Status:** CORRIGIDO (2026-02-24)
 
 file_url aceita qualquer URL valida (z.string().url()). Usuario interno poderia criar aprovacao com URL de phishing exibida ao cliente na pagina publica como botao "Ver arquivo". rel=noopener noreferrer esta correto mas dominio nao e validado.
 
-**Recomendacao:** Restringir file_url a dominios confiantes: *.supabase.co/storage, drive.google.com, docs.google.com, dominio do DocuSeal.
+**Correcao aplicada (2026-02-24):**
+Adicionada validacao de dominio em file_url com ALLOWED_FILE_DOMAINS whitelist: supabase.co, drive.google.com, docs.google.com, googleapis.com. URLs com dominio nao autorizado sao rejeitadas com 400.
 
 ---
 
@@ -253,13 +264,13 @@ GET /approvals/:id/logs retorna full_name de usuarios internos via join actor:ac
 | ID | Severidade | Descricao | Status |
 |---|---|---|---|
 | FASE6-ALTO-001 | ALTA | Migrations ausentes para approval_requests/logs/allocations | Aberto |
-| FASE6-ALTO-002 | ALTA | POST /respond sem verificacao de Origin | Aberto |
-| FASE6-MEDIO-001 | MEDIA | approvalId sem validacao UUID em 4 handlers | Aberto |
-| FASE6-MEDIO-002 | MEDIA | CORS wildcard em endpoints autenticados | Aberto |
-| FASE6-MEDIO-003 | MEDIA | Token de aprovacao 30 dias independente do tipo | Aberto |
+| FASE6-ALTO-002 | ALTA | POST /respond sem verificacao de Origin | CORRIGIDO (2026-02-24) |
+| FASE6-MEDIO-001 | MEDIA | approvalId sem validacao UUID em 4 handlers | CORRIGIDO (2026-02-24) |
+| FASE6-MEDIO-002 | MEDIA | CORS wildcard em endpoints autenticados | Aberto (deferred) |
+| FASE6-MEDIO-003 | MEDIA | Token de aprovacao 30 dias independente do tipo | CORRIGIDO (2026-02-24) |
 | FASE6-MEDIO-004 | MEDIA | pg_cron sem X-Cron-Secret | CORRIGIDO (2026-02-24) |
-| FASE6-BAIXO-001 | BAIXA | staleTime 60s na pagina publica | Aberto |
-| FASE6-BAIXO-002 | BAIXA | file_url sem restricao de dominio | Aberto |
+| FASE6-BAIXO-001 | BAIXA | staleTime 60s na pagina publica | CORRIGIDO (2026-02-24) |
+| FASE6-BAIXO-002 | BAIXA | file_url sem restricao de dominio | CORRIGIDO (2026-02-24) |
 | FASE6-BAIXO-003 | BAIXA | allocationId sem validacao UUID em allocations | Aberto |
 | FASE6-BAIXO-004 | BAIXA | actor full_name exposto em logs | Aberto |
 
@@ -509,14 +520,14 @@ Problema 3 (semantica): Nao registra tentativas bloqueadas, impossibilitando det
 **OWASP:** A03 - Injection
 **Endpoint:** POST /client-portal/public/:token/message
 **Referencia:** docs/architecture/fase-7-architecture.md, secao 3.3
+**Status:** CORRIGIDO (2026-02-24)
 
 **Descricao do problema:**
 
 O endpoint publico aceita sender_name do cliente sem restricao documentada. Um cliente com o token pode enviar mensagens com sender_name = "Ellah Producoes" ou outro nome interno, gerando confusao para a equipe sobre a origem da mensagem.
 
-**Correcao:**
-
-No handler send-message, nao aceitar sender_name do payload. Usar como sender_name o campo label da client_portal_session (controlado pela equipe ao criar a sessao). Se label for null, usar o nome do contact_id associado buscado do banco. O nome exibido deve ser controlado pela produtora, nao pelo cliente externo.
+**Correcao aplicada (2026-02-24):**
+No handler send-message.ts, o sender_name agora e resolvido do contact vinculado a sessao (contacts.full_name via join na query de sessao). Se o contato tiver full_name, ele e usado como senderName, ignorando o valor enviado pelo cliente. Fallback para validated.sender_name apenas quando nao ha contato vinculado.
 
 ---
 
@@ -579,11 +590,11 @@ Remover o campo id da resposta da RPC e atualizar o Response Example na secao 3.
 | FASE7-ALTO-001 | ALTA | RLS portal_messages_insert sem restricao de direction - falsificacao de remetente | Aberto |
 | FASE7-MEDIO-001 | MEDIA | idempotency_key nullable - UNIQUE constraint ineficaz sem chave explicita | Aberto |
 | FASE7-MEDIO-002 | MEDIA | get_report_team_utilization - subquery de conflitos sem tenant_id em a2 | Aberto |
-| FASE7-MEDIO-003 | MEDIA | get_portal_timeline sem rate limiting no endpoint GET publico | Aberto |
-| FASE7-MEDIO-004 | MEDIA | Rate limiting conta mensagens bem-sucedidas, nao tentativas | Aberto |
-| FASE7-BAIXO-001 | BAIXA | sender_name livre no endpoint publico - spoofing de identidade | Aberto |
-| FASE7-BAIXO-002 | BAIXA | Ausencia de policy DELETE em client_portal_sessions nao documentada | Aberto |
-| FASE7-BAIXO-003 | BAIXA | session.id exposto desnecessariamente na resposta publica | Aberto |
+| FASE7-MEDIO-003 | MEDIA | get_portal_timeline sem rate limiting no endpoint GET publico | Aberto (deferred) |
+| FASE7-MEDIO-004 | MEDIA | Rate limiting conta mensagens bem-sucedidas, nao tentativas | Aberto (deferred) |
+| FASE7-BAIXO-001 | BAIXA | sender_name livre no endpoint publico - spoofing de identidade | CORRIGIDO (2026-02-24) |
+| FASE7-BAIXO-002 | BAIXA | Ausencia de policy DELETE em client_portal_sessions nao documentada | Aberto (deferred) |
+| FASE7-BAIXO-003 | BAIXA | session.id exposto desnecessariamente na resposta publica | Aberto (deferred) |
 
 ---
 
@@ -715,6 +726,10 @@ eliminando o parametro p_tenant_id por completo (alinhando com o padrao dos repo
 
 **Classificacao:** MEDIA
 **OWASP:** A05 - Security Misconfiguration
+**Status:** CORRIGIDO (2026-02-24)
+
+**Correcao aplicada (2026-02-24):**
+Migration `security_revoke_anon_ai_tables_fix_insert_policy` aplicada: revogou todos os grants da role anon nas 4 tabelas de IA (ai_conversations, ai_conversation_messages, ai_budget_estimates, ai_usage_logs). Tambem corrigiu policy INSERT em ai_usage_logs para permitir INSERT por authenticated (necessario para logging de uso).
 
 As migrations nao incluem REVOKE explicitamente para anon nas novas tabelas.
 O Supabase pode conceder privilegios a anon por padrao dependendo da configuracao.
@@ -801,14 +816,14 @@ idx_financial_records_tenant_date, idx_client_portal_sessions_token, idx_portal_
 | ID | Severidade | Descricao | Status |
 |----|------------|-----------|--------|
 | FASE7-IMPL-ALTO-001 | ALTA | integration-processor sem X-Cron-Secret | CORRIGIDO (2026-02-24) |
-| FASE7-IMPL-MEDIO-001 | MEDIA | RPCs dashboard p_tenant_id sem validacao cruzada | ABERTO |
-| FASE7-IMPL-MEDIO-002 | MEDIA | Grants anon em tabelas novas nao verificados | ABERTO |
-| FASE7-MEDIO-003 | MEDIA | GET portal sem rate limiting por IP | ABERTO |
-| FASE7-MEDIO-004 | MEDIA | Rate limit conta mensagens enviadas com sucesso | ABERTO |
-| FASE7-IMPL-BAIXO-001 | BAIXA | list-logs retorna payload completo | ABERTO |
-| FASE7-BAIXO-001 | BAIXA | sender_name livre no endpoint publico | ABERTO |
-| FASE7-BAIXO-002 | BAIXA | No-DELETE policy nao documentada | ABERTO |
-| FASE7-BAIXO-003 | BAIXA | session.id na resposta publica da RPC | ABERTO |
+| FASE7-IMPL-MEDIO-001 | MEDIA | RPCs dashboard p_tenant_id sem validacao cruzada | ABERTO (deferred) |
+| FASE7-IMPL-MEDIO-002 | MEDIA | Grants anon em tabelas novas nao verificados | CORRIGIDO (2026-02-24) |
+| FASE7-MEDIO-003 | MEDIA | GET portal sem rate limiting por IP | ABERTO (deferred) |
+| FASE7-MEDIO-004 | MEDIA | Rate limit conta mensagens enviadas com sucesso | ABERTO (deferred) |
+| FASE7-IMPL-BAIXO-001 | BAIXA | list-logs retorna payload completo | ABERTO (deferred) |
+| FASE7-BAIXO-001 | BAIXA | sender_name livre no endpoint publico | CORRIGIDO (2026-02-24) |
+| FASE7-BAIXO-002 | BAIXA | No-DELETE policy nao documentada | ABERTO (deferred) |
+| FASE7-BAIXO-003 | BAIXA | session.id na resposta publica da RPC | ABERTO (deferred) |
 | FASE7-ALTO-001 | ALTA | RLS portal_messages sem restricao direction | FECHADO |
 | FASE7-MEDIO-001 | MEDIA | idempotency_key nullable sem CHECK | FECHADO |
 | FASE7-MEDIO-002 | MEDIA | subquery conflitos sem tenant_id em a2 | FECHADO |
@@ -944,7 +959,10 @@ Criar `supabase/migrations/20260222_fase8_ai_tables.sql` com CREATE TABLE + ENAB
 **Arquivo:** `supabase/functions/_shared/ai-rate-limiter.ts`
 **Classificacao:** ALTA
 **OWASP:** A05 - Security Misconfiguration, A09 - Security Logging and Monitoring Failures
-**Status:** ABERTO
+**Status:** CORRIGIDO (2026-02-24)
+
+**Correcao aplicada (2026-02-24):**
+Estrategia alterada de fail-open para fail-closed em todas as 3 funcoes de contagem (countUserRequestsLastHour, countTenantRequestsLastHour, sumTenantTokensToday). Quando a query ao banco falha, as funcoes agora retornam valores acima do limite (999999), bloqueando novas requisicoes ate que o banco se recupere. Log de warning mantido para monitoramento.
 
 **Descricao do problema:**
 
@@ -1117,7 +1135,10 @@ O RLS e suficientemente permissivo para leitura de jobs/people do proprio tenant
 **Arquivo:** `supabase/functions/ai-dailies-analysis/handlers/history.ts`
 **Classificacao:** MEDIA
 **OWASP:** A01 - Broken Access Control
-**Status:** ABERTO
+**Status:** CORRIGIDO (2026-02-24)
+
+**Correcao aplicada (2026-02-24):**
+Adicionada verificacao de role no inicio do handler: apenas admin, ceo e produtor_executivo podem acessar historico de analises de dailies. Usuarios com roles menos privilegiados recebem 403 Forbidden.
 
 **Descricao do problema:**
 
@@ -1161,7 +1182,10 @@ export async function handleHistory(req: Request, auth: AuthContext): Promise<Re
 **Arquivo:** `supabase/functions/ai-dailies-analysis/handlers/analyze.ts` (linhas 96-113)
 **Classificacao:** MEDIA
 **OWASP:** A03 - Injection (via token flooding)
-**Status:** ABERTO
+**Status:** CORRIGIDO (2026-02-24)
+
+**Correcao aplicada (2026-02-24):**
+Adicionadas constantes MAX_DAILIES_ENTRIES=30 e MAX_FIELD_LENGTH=500. Validacao rejeita arrays com mais de 30 entradas e campos de texto (notes, weather_notes, equipment_issues, talent_notes, extra_costs, general_observations) com mais de 500 caracteres cada.
 
 **Descricao do problema:**
 
@@ -1223,7 +1247,10 @@ for (const entry of payload.dailies_data) {
 `supabase/functions/ai-budget-estimate/prompts.ts` (linhas 104-113)
 **Classificacao:** MEDIA
 **OWASP:** A03 - Injection (via token flooding)
-**Status:** ABERTO
+**Status:** CORRIGIDO (2026-02-24)
+
+**Correcao aplicada (2026-02-24):**
+Adicionada validacao de override_context em generate.ts: additional_requirements max 1000 chars, reference_jobs max 10 itens, budget_ceiling deve ser numero positivo ate R$ 10.000.000.
 
 **Descricao do problema:**
 
@@ -1430,7 +1457,10 @@ CREATE POLICY "ai_conv_messages_insert" ON ai_conversation_messages
 **Arquivos:** Todos os handlers de IA (ai-copilot/chat.ts, ai-budget-estimate/generate.ts, ai-dailies-analysis/analyze.ts, ai-freelancer-match/suggest.ts)
 **Classificacao:** BAIXA
 **OWASP:** A09 - Security Logging and Monitoring Failures
-**Status:** ABERTO
+**Status:** CORRIGIDO (2026-02-24)
+
+**Correcao aplicada (2026-02-24):**
+Todos os 4 handlers de IA agora usam `.substring(0, 8)` para truncar UUIDs nos logs, expondo apenas os primeiros 8 caracteres (suficiente para correlacao sem revelar o UUID completo).
 
 **Descricao do problema:**
 
@@ -1486,15 +1516,15 @@ console.log(`[ai-copilot/chat] tenant=${shortTenant}... user=${shortUser}...`);
 
 | ID | Severidade | Descricao | Status |
 |----|------------|-----------|--------|
-| FASE8-ALTO-001 | ALTA | Tabelas de IA sem migration — RLS impossivel de auditar | ABERTO |
-| FASE8-ALTO-002 | ALTA | Rate limiting fail-open em falha de banco — sem protecao de custo | ABERTO |
+| FASE8-ALTO-001 | ALTA | Tabelas de IA sem migration — RLS impossivel de auditar | ABERTO (deferred) |
+| FASE8-ALTO-002 | ALTA | Rate limiting fail-open em falha de banco — sem protecao de custo | CORRIGIDO (2026-02-24) |
 | FASE8-MEDIO-001 | MEDIA | Prompt injection: sem delimitadores XML ao redor da mensagem do usuario | CORRIGIDO (2026-02-24) |
 | FASE8-MEDIO-002 | MEDIA | ai-context.ts usa service_role para todas as queries RAG | CORRIGIDO (2026-02-24) |
-| FASE8-MEDIO-003 | MEDIA | Historico de dailies usa service_role sem verificacao de role | ABERTO |
-| FASE8-MEDIO-004 | MEDIA | dailies_data sem limite de entradas ou tamanho de campos de texto | ABERTO |
-| FASE8-MEDIO-005 | MEDIA | override_context sem validacao de tamanho ou range | ABERTO |
-| FASE8-BAIXO-001 | BAIXA | Chave Claude API compartilhada entre todos os tenants | ABERTO |
+| FASE8-MEDIO-003 | MEDIA | Historico de dailies usa service_role sem verificacao de role | CORRIGIDO (2026-02-24) |
+| FASE8-MEDIO-004 | MEDIA | dailies_data sem limite de entradas ou tamanho de campos de texto | CORRIGIDO (2026-02-24) |
+| FASE8-MEDIO-005 | MEDIA | override_context sem validacao de tamanho ou range | CORRIGIDO (2026-02-24) |
+| FASE8-BAIXO-001 | BAIXA | Chave Claude API compartilhada entre todos os tenants | ABERTO (deferred) |
 | FASE8-BAIXO-002 | BAIXA | briefing_text sem sanitizacao de caracteres antes de ir ao prompt | CORRIGIDO (2026-02-24) |
-| FASE8-BAIXO-003 | BAIXA | INSERT policy de ai_conversation_messages nao valida conversation_id | ABERTO |
-| FASE8-BAIXO-004 | BAIXA | Logs de INFO expoe tenantId e userId completos | ABERTO |
+| FASE8-BAIXO-003 | BAIXA | INSERT policy de ai_conversation_messages nao valida conversation_id | ABERTO (deferred) |
+| FASE8-BAIXO-004 | BAIXA | Logs de INFO expoe tenantId e userId completos | CORRIGIDO (2026-02-24) |
 

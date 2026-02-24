@@ -92,7 +92,20 @@ function validatePayload(body: unknown): AnalyzePayload {
     throw new AppError('VALIDATION_ERROR', 'dailies_data deve ter ao menos 1 item', 400);
   }
 
+  if (payload.dailies_data.length > 30) {
+    throw new AppError('VALIDATION_ERROR', 'dailies_data nao pode ter mais de 30 entradas', 400);
+  }
+
   // Validar cada entry minimamente (shooting_date obrigatorio)
+  const textFields = [
+    'notes',
+    'weather_notes',
+    'equipment_issues',
+    'talent_notes',
+    'extra_costs',
+    'general_observations',
+  ] as const;
+
   for (let i = 0; i < payload.dailies_data.length; i++) {
     const entry = payload.dailies_data[i] as Record<string, unknown>;
 
@@ -110,6 +123,16 @@ function validatePayload(body: unknown): AnalyzePayload {
         `dailies_data[${i}].shooting_date e obrigatorio (string YYYY-MM-DD)`,
         400,
       );
+    }
+
+    for (const field of textFields) {
+      if (entry[field] !== undefined && typeof entry[field] === 'string' && (entry[field] as string).length > 500) {
+        throw new AppError(
+          'VALIDATION_ERROR',
+          `Campo ${field} excede 500 caracteres`,
+          400,
+        );
+      }
     }
   }
 
@@ -186,7 +209,7 @@ export async function handleAnalyze(
   req: Request,
   auth: AuthContext,
 ): Promise<Response> {
-  console.log('[ai-dailies-analysis/analyze] tenant:', auth.tenantId, 'user:', auth.userId);
+  console.log('[ai-dailies-analysis/analyze] tenant:', auth.tenantId.substring(0, 8) + '...', 'user:', auth.userId.substring(0, 8) + '...');
 
   // 1. Parsear e validar payload
   let body: unknown;

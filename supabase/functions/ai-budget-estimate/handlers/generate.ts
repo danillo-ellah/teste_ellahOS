@@ -42,7 +42,7 @@ export async function handleGenerate(
   req: Request,
   auth: AuthContext,
 ): Promise<Response> {
-  console.log('[ai-budget-estimate/generate] tenant:', auth.tenantId, 'user:', auth.userId);
+  console.log('[ai-budget-estimate/generate] tenant:', auth.tenantId.substring(0, 8) + '...', 'user:', auth.userId.substring(0, 8) + '...');
 
   // 1. Parsear e validar payload
   let payload: GeneratePayload;
@@ -54,6 +54,41 @@ export async function handleGenerate(
 
   if (!payload.job_id || typeof payload.job_id !== 'string') {
     throw new AppError('VALIDATION_ERROR', 'job_id e obrigatorio (UUID)', 400);
+  }
+
+  // Validar override_context se fornecido
+  if (payload.override_context) {
+    const oc = payload.override_context;
+
+    if (
+      oc.additional_requirements !== undefined &&
+      typeof oc.additional_requirements === 'string' &&
+      oc.additional_requirements.length > 1000
+    ) {
+      throw new AppError('VALIDATION_ERROR', 'additional_requirements excede 1000 caracteres', 400);
+    }
+
+    if (
+      oc.reference_jobs !== undefined &&
+      Array.isArray(oc.reference_jobs) &&
+      oc.reference_jobs.length > 10
+    ) {
+      throw new AppError('VALIDATION_ERROR', 'reference_jobs nao pode ter mais de 10 itens', 400);
+    }
+
+    if (oc.budget_ceiling !== undefined) {
+      if (
+        typeof oc.budget_ceiling !== 'number' ||
+        oc.budget_ceiling <= 0 ||
+        oc.budget_ceiling > 10_000_000
+      ) {
+        throw new AppError(
+          'VALIDATION_ERROR',
+          'budget_ceiling deve ser numero positivo ate R$ 10.000.000',
+          400,
+        );
+      }
+    }
   }
 
   const supabase = getSupabaseClient(auth.token);

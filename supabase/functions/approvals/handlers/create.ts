@@ -15,7 +15,18 @@ const CreateApprovalSchema = z.object({
   }),
   title: z.string().min(1, 'Titulo e obrigatorio').max(500),
   description: z.string().max(5000).optional().nullable(),
-  file_url: z.string().url().max(2000).optional().nullable(),
+  file_url: z.string().url().max(2000).refine(
+    (url) => {
+      try {
+        const { hostname } = new URL(url);
+        const allowed = ['supabase.co', 'drive.google.com', 'docs.google.com'];
+        return hostname === 'localhost' || allowed.some((d) => hostname === d || hostname.endsWith(`.${d}`));
+      } catch {
+        return false;
+      }
+    },
+    { message: 'URL do arquivo deve ser de um dominio autorizado (supabase.co, drive.google.com, docs.google.com)' },
+  ).optional().nullable(),
   approver_type: z.enum(['external', 'internal'], {
     errorMap: () => ({ message: 'Tipo de aprovador invalido' }),
   }),
@@ -53,9 +64,16 @@ export async function createApproval(
     throw new AppError('NOT_FOUND', 'Job nao encontrado', 404);
   }
 
-  // Validade do token: 30 dias
+  // Validade do token: varia por tipo de aprovacao (FASE6-MEDIO-003)
+  const EXPIRY_DAYS_BY_TYPE: Record<typeof validated.approval_type, number> = {
+    briefing: 30,
+    orcamento_detalhado: 7,
+    corte: 14,
+    finalizacao: 14,
+    entrega: 7,
+  };
   const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 30);
+  expiresAt.setDate(expiresAt.getDate() + EXPIRY_DAYS_BY_TYPE[validated.approval_type]);
 
   // Inserir aprovacao
   const { data: approval, error: insertError } = await supabase

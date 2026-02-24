@@ -45,7 +45,7 @@ export async function sendMessage(
   // Buscar sessao pelo token (validar existencia, status ativo e permissao de mensagens)
   const { data: session, error: sessionError } = await serviceClient
     .from('client_portal_sessions')
-    .select('id, tenant_id, job_id, is_active, expires_at, permissions')
+    .select('id, tenant_id, job_id, is_active, expires_at, permissions, contact_id, contacts(full_name)')
     .eq('token', token)
     .is('deleted_at', null)
     .single();
@@ -102,7 +102,11 @@ export async function sendMessage(
   // Gerar idempotency_key se nao fornecido
   const idempotencyKey = validated.idempotency_key ?? `${session.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-  console.log(`[client-portal/send-message] sessao=${session.id}, remetente="${validated.sender_name}", idempotency_key=${idempotencyKey}`);
+  // Usar nome do contato vinculado a sessao quando disponivel (FASE7-BAIXO-001: prevenir impersonacao)
+  const contactName = (session as any).contacts?.full_name;
+  const senderName = contactName || validated.sender_name;
+
+  console.log(`[client-portal/send-message] sessao=${session.id}, remetente="${senderName}", idempotency_key=${idempotencyKey}`);
 
   // Inserir mensagem do cliente (client_to_producer, sender_user_id = null)
   const { data: message, error: insertError } = await serviceClient
@@ -112,7 +116,7 @@ export async function sendMessage(
       session_id: session.id,
       job_id: session.job_id,
       direction: 'client_to_producer',
-      sender_name: validated.sender_name,
+      sender_name: senderName,
       sender_user_id: null, // cliente nao tem usuario no sistema
       content: validated.content,
       attachments: validated.attachments ?? [],
@@ -136,7 +140,7 @@ export async function sendMessage(
     tenant_id: session.tenant_id,
     type: 'portal_message_received',
     priority: 'normal',
-    title: `Nova mensagem do cliente: ${validated.sender_name}`,
+    title: `Nova mensagem do cliente: ${senderName}`,
     body: validated.content.length > 200
       ? `${validated.content.slice(0, 197)}...`
       : validated.content,
