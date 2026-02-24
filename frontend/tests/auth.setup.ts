@@ -11,8 +11,8 @@ setup('authenticate', async ({ page }) => {
   await page.fill('input#password', 'Ellah2026!');
   await page.click('button[type="submit"]');
 
-  // Wait for redirect after login (should go to /jobs)
-  await page.waitForURL('**/jobs**', { timeout: 15000 });
+  // Wait for redirect after login (should go to / dashboard)
+  await page.waitForURL(/\/$/, { timeout: 15000 });
   await expect(page).not.toHaveURL(/\/login/);
 
   // Save auth state

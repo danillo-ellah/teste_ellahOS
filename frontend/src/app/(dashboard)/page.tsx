@@ -90,14 +90,25 @@ export default function DashboardPage() {
       )}
 
       {/* Header da pagina */}
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          {greeting}
-          {userName ? `, ${userName}` : ''}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Aqui esta um resumo do seu dia
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            {greeting}
+            {userName ? `, ${userName}` : ''}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Aqui esta um resumo do seu dia
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefetchAll}
+          className="shrink-0"
+        >
+          <RefreshCw className="size-3.5 mr-1.5" />
+          Atualizar
+        </Button>
       </div>
 
       {/* KPI Cards */}

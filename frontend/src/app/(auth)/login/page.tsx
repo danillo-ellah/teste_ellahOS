@@ -6,10 +6,10 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
 function sanitizeReturnUrl(url: string | null): string {
-  if (!url) return '/jobs'
-  if (!url.startsWith('/')) return '/jobs'
-  if (url.startsWith('//')) return '/jobs'
-  if (/^[a-zA-Z][a-zA-Z0-9+\-.]*:/.test(url)) return '/jobs'
+  if (!url) return '/'
+  if (!url.startsWith('/')) return '/'
+  if (url.startsWith('//')) return '/'
+  if (/^[a-zA-Z][a-zA-Z0-9+\-.]*:/.test(url)) return '/'
   return url
 }
 

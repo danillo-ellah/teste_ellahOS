@@ -54,14 +54,9 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Redirecionar / para /jobs se logado
-  if (user && request.nextUrl.pathname === '/') {
-    return NextResponse.redirect(new URL('/jobs', request.url))
-  }
-
-  // Redirecionar /login para /jobs se ja logado
+  // Redirecionar /login para / (dashboard) se ja logado
   if (user && request.nextUrl.pathname.startsWith('/login')) {
-    return NextResponse.redirect(new URL('/jobs', request.url))
+    return NextResponse.redirect(new URL('/', request.url))
   }
 
   return supabaseResponse
