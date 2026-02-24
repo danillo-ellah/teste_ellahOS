@@ -17,45 +17,45 @@ export async function getPreferences(
 ): Promise<Response> {
   const supabase = getSupabaseClient(auth.token);
 
-  // UPSERT: garante que o registro existe com defaults se for o primeiro acesso.
-  // onConflict usa a constraint UNIQUE(tenant_id, user_id).
-  // ignoreDuplicates: true preserva os dados existentes sem sobrescrever.
-  const { data: preferences, error: dbError } = await supabase
+  // 1. Tentar buscar registro existente
+  const { data: existing, error: fetchError } = await supabase
     .from('notification_preferences')
-    .upsert(
-      {
-        tenant_id: auth.tenantId,
-        user_id: auth.userId,
-        preferences: DEFAULT_PREFERENCES,
-        muted_types: [],
-      },
-      {
-        onConflict: 'tenant_id,user_id',
-        ignoreDuplicates: true,
-      },
-    )
     .select()
-    .single();
+    .eq('user_id', auth.userId)
+    .maybeSingle();
 
-  if (dbError) {
-    throw new AppError('INTERNAL_ERROR', dbError.message, 500);
+  if (fetchError) {
+    throw new AppError('INTERNAL_ERROR', fetchError.message, 500);
   }
 
-  // Se o UPSERT com ignoreDuplicates nao retornou dados (registro ja existia),
-  // busca o registro existente diretamente
-  if (!preferences) {
-    const { data: existing, error: fetchError } = await supabase
-      .from('notification_preferences')
-      .select()
-      .eq('user_id', auth.userId)
-      .single();
-
-    if (fetchError) {
-      throw new AppError('INTERNAL_ERROR', fetchError.message, 500);
-    }
-
+  if (existing) {
     return success(existing);
   }
 
-  return success(preferences);
+  // 2. Primeiro acesso: criar com defaults
+  const { data: created, error: insertError } = await supabase
+    .from('notification_preferences')
+    .insert({
+      tenant_id: auth.tenantId,
+      user_id: auth.userId,
+      preferences: DEFAULT_PREFERENCES,
+      muted_types: [],
+    })
+    .select()
+    .single();
+
+  if (insertError) {
+    // Race condition: registro criado entre o SELECT e INSERT
+    if (insertError.code === '23505') {
+      const { data: retry } = await supabase
+        .from('notification_preferences')
+        .select()
+        .eq('user_id', auth.userId)
+        .single();
+      return success(retry);
+    }
+    throw new AppError('INTERNAL_ERROR', insertError.message, 500);
+  }
+
+  return success(created);
 }

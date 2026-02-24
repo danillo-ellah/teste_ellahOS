@@ -26,7 +26,7 @@ export default defineConfig({
     },
     {
       name: 'authenticated',
-      testMatch: /dashboard-pages\.spec\.ts|forms-and-interactions\.spec\.ts/,
+      testMatch: /dashboard-pages\.spec\.ts|forms-and-interactions\.spec\.ts|screenshots\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
         storageState: 'tests/.auth/user.json',
