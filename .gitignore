@@ -39,3 +39,10 @@ Design
 # Logs
 *.log
 npm-debug.log*
+
+# Test artifacts
+frontend/tests/.auth/
+frontend/tests/screenshots/
+frontend/tests/results.json
+frontend/test-results/
+test-results/
