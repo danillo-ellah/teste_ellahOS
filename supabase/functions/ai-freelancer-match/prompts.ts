@@ -3,6 +3,8 @@
 // Mudancas no prompt = novo deploy da Edge Function.
 // Versao atual: v1
 
+import { sanitizeUserInput } from './_shared/claude-client.ts';
+
 // --- Versao do prompt (para tracking em ai_usage_logs) ---
 export const FREELANCER_PROMPT_VERSION = 'v1';
 
@@ -122,8 +124,10 @@ export function buildFreelancerUserPrompt(params: FreelancerMatchData): string {
     lines.push('');
     lines.push('### Briefing (resumo)');
     // Truncar briefing em 1500 chars para economizar tokens Sonnet
-    const briefing = params.job.briefing_text.slice(0, 1500);
+    const briefing = sanitizeUserInput(params.job.briefing_text, 1500);
+    lines.push('<user-input>');
     lines.push(briefing);
+    lines.push('</user-input>');
     if (params.job.briefing_text.length > 1500) {
       lines.push('... (briefing truncado)');
     }
@@ -134,7 +138,7 @@ export function buildFreelancerUserPrompt(params: FreelancerMatchData): string {
   lines.push('## Requisitos da vaga');
   lines.push(`- **Funcao:** ${params.request.role}`);
   if (params.request.requirements) {
-    lines.push(`- **Requisitos:** ${params.request.requirements.slice(0, 500)}`);
+    lines.push(`- **Requisitos:** <user-input>${sanitizeUserInput(params.request.requirements, 500)}</user-input>`);
   }
   if (params.request.max_rate !== null) {
     lines.push(`- **Rate maximo:** R$ ${params.request.max_rate.toLocaleString('pt-BR')}`);

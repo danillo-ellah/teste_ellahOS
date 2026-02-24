@@ -384,6 +384,9 @@ CREATE TRIGGER trg_notification_preferences_updated_at
 -- 7. RLS POLICIES
 -- Padrao existente: get_tenant_id() retorna tenant_id do JWT.
 -- Policies aplicam isolamento por tenant + user_id onde necessario.
+-- NOTA: Esta migration original usava get_tenant_id() sem wrapper
+--   (SELECT ...). Corrigido em 20260224_fix_rls_select_wrapper.sql
+--   para usar (SELECT get_tenant_id()) — avaliacao unica por query.
 -- ============================================================
 
 -- ----------------------------------------------------------

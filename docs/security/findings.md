@@ -257,7 +257,7 @@ GET /approvals/:id/logs retorna full_name de usuarios internos via join actor:ac
 | FASE6-MEDIO-001 | MEDIA | approvalId sem validacao UUID em 4 handlers | Aberto |
 | FASE6-MEDIO-002 | MEDIA | CORS wildcard em endpoints autenticados | Aberto |
 | FASE6-MEDIO-003 | MEDIA | Token de aprovacao 30 dias independente do tipo | Aberto |
-| FASE6-MEDIO-004 | MEDIA | pg_cron sem X-Cron-Secret | Aberto |
+| FASE6-MEDIO-004 | MEDIA | pg_cron sem X-Cron-Secret | CORRIGIDO (2026-02-24) |
 | FASE6-BAIXO-001 | BAIXA | staleTime 60s na pagina publica | Aberto |
 | FASE6-BAIXO-002 | BAIXA | file_url sem restricao de dominio | Aberto |
 | FASE6-BAIXO-003 | BAIXA | allocationId sem validacao UUID em allocations | Aberto |
@@ -664,6 +664,7 @@ e identificando novos problemas encontrados no codigo final deployado.
 **OWASP:** A07 - Identification and Authentication Failures
 **Arquivo:** supabase/functions/integration-processor/index.ts (linhas 20-28)
 **Migration:** supabase/migrations/20260219_fase5_2_pg_cron_jobs.sql (linhas 52-62)
+**Status:** CORRIGIDO (2026-02-24)
 
 O pg_cron invoca a Edge Function sem nenhum header de autenticacao (migration linha 58):
 
@@ -679,6 +680,14 @@ consumindo chamadas pagas de WhatsApp (Evolution API), Google Drive e n8n.
 **Correcao necessaria:**
 1. Migration: adicionar x-cron-secret ao net.http_post headers
 2. Edge Function: validar header antes de processar qualquer evento
+
+**Correcao aplicada (2026-02-24):**
+- A migration 20260220233349_security_hardening_revoke_anon_cron_secret.sql ja armazenava o CRON_SECRET no Vault e configurava o pg_cron para enviar o header X-Cron-Secret.
+- O arquivo supabase/functions/integration-processor/index.ts foi atualizado para autenticacao dual:
+  - Caminho 1 (pg_cron): valida X-Cron-Secret contra o Vault via read_secret(CRON_SECRET). Retorna 401 se ausente ou incorreto.
+  - Caminho 2 (chamadas manuais): aceita Bearer JWT de usuario com role admin ou ceo. Retorna 401 se JWT invalido, 403 se role insuficiente.
+  - Sem credencial: retorna 401 Unauthorized.
+- Import de getSupabaseClient adicionado ao modulo _shared/supabase-client.ts para validacao do JWT no caminho 2.
 
 ---
 
@@ -791,7 +800,7 @@ idx_financial_records_tenant_date, idx_client_portal_sessions_token, idx_portal_
 
 | ID | Severidade | Descricao | Status |
 |----|------------|-----------|--------|
-| FASE7-IMPL-ALTO-001 | ALTA | integration-processor sem X-Cron-Secret | ABERTO |
+| FASE7-IMPL-ALTO-001 | ALTA | integration-processor sem X-Cron-Secret | CORRIGIDO (2026-02-24) |
 | FASE7-IMPL-MEDIO-001 | MEDIA | RPCs dashboard p_tenant_id sem validacao cruzada | ABERTO |
 | FASE7-IMPL-MEDIO-002 | MEDIA | Grants anon em tabelas novas nao verificados | ABERTO |
 | FASE7-MEDIO-003 | MEDIA | GET portal sem rate limiting por IP | ABERTO |
@@ -989,9 +998,16 @@ Implementar contador em memoria (Map) com TTL como fallback. Se a query falhar 3
 `supabase/functions/ai-freelancer-match/prompts.ts`
 **Classificacao:** MEDIA
 **OWASP:** A03 - Injection
-**Status:** ABERTO
+**Status:** CORRIGIDO (2026-02-24)
 
-**Descricao do problema:**
+**Correcao aplicada (2026-02-24):**
+Adicionada funcao `sanitizeUserInput()` exportada em `supabase/functions/_shared/claude-client.ts` (linhas 499-515) que: (1) trunca o input no limite de tamanho (padrao 10.000 chars), (2) remove caracteres de controle nao-printaveis, (3) escapa caracteres especiais XML (`<`, `>`, `&`, `"`, `'`). Todos os user inputs nas 4 Edge Functions de IA foram envolvidos com delimitadores `<user-input>...</user-input>` e passados por `sanitizeUserInput()` antes de ir ao prompt:
+- `ai-copilot/handlers/chat.ts`: `payload.message` envolvido em `<user-input>` na montagem do array `messages`
+- `ai-budget-estimate/prompts.ts`: `briefingText` e `additional_requirements` sanitizados e delimitados
+- `ai-dailies-analysis/prompts.ts`: 6 campos de texto livre das dailies (notes, weather_notes, equipment_issues, talent_notes, extra_costs, general_observations) + briefing_text
+- `ai-freelancer-match/prompts.ts`: `briefing_text` e `requirements` sanitizados e delimitados
+
+**Descricao do problema (original):**
 
 A mensagem do usuario e inserida diretamente na lista de mensagens enviadas ao Claude,
 sem delimitadores XML que separem claramente o conteudo do usuario das instrucoes do sistema:
@@ -1056,9 +1072,11 @@ const messages: ClaudeMessage[] = [
 **Arquivo:** `supabase/functions/_shared/ai-context.ts`
 **Classificacao:** MEDIA
 **OWASP:** A01 - Broken Access Control
-**Status:** ABERTO
+**Status:** CORRIGIDO (2026-02-24)
 
-**Descricao do problema:**
+**Correcao aplicada (2026-02-24):** Removida a funcao `getServiceClient()` interna e o import de `createClient` de `ai-context.ts`. As 4 funcoes exportadas agora utilizam o parametro `client: SupabaseClient` (que antes era `_client` — unused). O cliente autenticado usa `ANON_KEY + Bearer token do JWT`, mantendo o RLS ativo como segunda linha de defesa. Comentario de seguranca adicionado no ponto de uso. Arquivo: `supabase/functions/_shared/ai-context.ts`.
+
+**Descricao do problema (original):**
 
 O modulo `ai-context.ts` define uma funcao `getServiceClient()` interna que cria um cliente com
 `SUPABASE_SERVICE_ROLE_KEY` (bypass total de RLS). Todas as 4 funcoes exportadas ignoram o
@@ -1309,7 +1327,7 @@ separadas por tenant de alto volume.
 `supabase/functions/ai-freelancer-match/prompts.ts` (linhas 121-129)
 **Classificacao:** BAIXA
 **OWASP:** A03 - Injection
-**Status:** ABERTO
+**Status:** CORRIGIDO (2026-02-24) — coberto pela correcao de FASE8-MEDIO-001
 
 **Descricao do problema:**
 
@@ -1470,13 +1488,13 @@ console.log(`[ai-copilot/chat] tenant=${shortTenant}... user=${shortUser}...`);
 |----|------------|-----------|--------|
 | FASE8-ALTO-001 | ALTA | Tabelas de IA sem migration — RLS impossivel de auditar | ABERTO |
 | FASE8-ALTO-002 | ALTA | Rate limiting fail-open em falha de banco — sem protecao de custo | ABERTO |
-| FASE8-MEDIO-001 | MEDIA | Prompt injection: sem delimitadores XML ao redor da mensagem do usuario | ABERTO |
-| FASE8-MEDIO-002 | MEDIA | ai-context.ts usa service_role para todas as queries RAG | ABERTO |
+| FASE8-MEDIO-001 | MEDIA | Prompt injection: sem delimitadores XML ao redor da mensagem do usuario | CORRIGIDO (2026-02-24) |
+| FASE8-MEDIO-002 | MEDIA | ai-context.ts usa service_role para todas as queries RAG | CORRIGIDO (2026-02-24) |
 | FASE8-MEDIO-003 | MEDIA | Historico de dailies usa service_role sem verificacao de role | ABERTO |
 | FASE8-MEDIO-004 | MEDIA | dailies_data sem limite de entradas ou tamanho de campos de texto | ABERTO |
 | FASE8-MEDIO-005 | MEDIA | override_context sem validacao de tamanho ou range | ABERTO |
 | FASE8-BAIXO-001 | BAIXA | Chave Claude API compartilhada entre todos os tenants | ABERTO |
-| FASE8-BAIXO-002 | BAIXA | briefing_text sem sanitizacao de caracteres antes de ir ao prompt | ABERTO |
+| FASE8-BAIXO-002 | BAIXA | briefing_text sem sanitizacao de caracteres antes de ir ao prompt | CORRIGIDO (2026-02-24) |
 | FASE8-BAIXO-003 | BAIXA | INSERT policy de ai_conversation_messages nao valida conversation_id | ABERTO |
 | FASE8-BAIXO-004 | BAIXA | Logs de INFO expoe tenantId e userId completos | ABERTO |
 

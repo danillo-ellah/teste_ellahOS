@@ -101,12 +101,27 @@ const DASHBOARD_PAGES = [
   { path: '/settings/notifications', name: 'Settings Notifications', expectedText: /notifica|preferencia|email/i },
 ];
 
+// Paginas que fazem fetch para APIs externas (React Query) podem nunca atingir
+// networkidle pois as requests ficam em polling/streaming. Usar domcontentloaded
+// com waitForTimeout para aguardar o conteudo renderizar apos o SSR/hydration.
+async function gotoPage(page: Page, path: string) {
+  try {
+    // Tentar networkidle primeiro com timeout generoso
+    await page.goto(path, { waitUntil: 'networkidle', timeout: 25000 });
+  } catch {
+    // Fallback: se networkidle expirar (ex: /team/calendar com React Query polling),
+    // usar domcontentloaded e aguardar um pouco para o React hidratar
+    await page.goto(path, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await page.waitForTimeout(3000);
+  }
+}
+
 for (const pg of DASHBOARD_PAGES) {
   test.describe(pg.name, () => {
     test(`loads without crash`, async ({ page }) => {
       setupPageMonitoring(page, pg.name);
 
-      const response = await page.goto(pg.path, { waitUntil: 'networkidle', timeout: 20000 });
+      const response = await page.goto(pg.path, { waitUntil: 'domcontentloaded', timeout: 25000 });
 
       // Should not get server error
       expect(response?.status()).toBeLessThan(500);
@@ -115,8 +130,8 @@ for (const pg of DASHBOARD_PAGES) {
       const url = page.url();
       expect(url).not.toContain('/login');
 
-      // Wait for content to settle
-      await page.waitForTimeout(1500);
+      // Wait for content to settle (React hydration + initial data load)
+      await page.waitForTimeout(2000);
 
       // Check page has content matching expected pattern
       const bodyText = await page.locator('body').textContent();
@@ -141,7 +156,7 @@ for (const pg of DASHBOARD_PAGES) {
       });
       page.on('pageerror', (err) => errors.push(`PAGE_ERROR: ${err.message}`));
 
-      await page.goto(pg.path, { waitUntil: 'networkidle', timeout: 20000 });
+      await gotoPage(page, pg.path);
       await page.waitForTimeout(2000);
 
       if (errors.length > 0) {
@@ -153,19 +168,19 @@ for (const pg of DASHBOARD_PAGES) {
     });
 
     test(`no layout overflow`, async ({ page }) => {
-      await page.goto(pg.path, { waitUntil: 'networkidle', timeout: 20000 });
+      await gotoPage(page, pg.path);
       await page.waitForTimeout(1000);
       await checkOverflow(page, pg.name);
     });
 
     test(`no broken images`, async ({ page }) => {
-      await page.goto(pg.path, { waitUntil: 'networkidle', timeout: 20000 });
+      await gotoPage(page, pg.path);
       await page.waitForTimeout(1000);
       await checkBrokenImages(page, pg.name);
     });
 
     test(`links are valid`, async ({ page }) => {
-      await page.goto(pg.path, { waitUntil: 'networkidle', timeout: 20000 });
+      await gotoPage(page, pg.path);
       await page.waitForTimeout(1000);
       await checkLinks(page, pg.name);
     });
@@ -199,12 +214,31 @@ test.describe('Navigation', () => {
     await page.goto('/jobs', { waitUntil: 'networkidle' });
     await page.waitForTimeout(1000);
 
-    // Try clicking on clients link
-    const clientsLink = page.locator('a[href="/clients"], a[href*="/clients"]').first();
-    if (await clientsLink.isVisible()) {
+    // Usar seletor especifico do sidebar (aside) para evitar pegar links do conteudo
+    // O Sidebar renderiza <aside> com <nav> contendo <Link href="/clients">
+    const clientsLink = page.locator('aside a[href="/clients"]').first();
+    const isVisible = await clientsLink.isVisible().catch(() => false);
+
+    if (isVisible) {
       await clientsLink.click();
       await page.waitForLoadState('networkidle');
       expect(page.url()).toContain('/clients');
+    } else {
+      // Fallback: tentar pelo texto do link no sidebar
+      const clientsLinkByText = page.locator('aside a').filter({ hasText: /clientes/i }).first();
+      const isFallbackVisible = await clientsLinkByText.isVisible().catch(() => false);
+      if (isFallbackVisible) {
+        await clientsLinkByText.click();
+        await page.waitForLoadState('networkidle');
+        expect(page.url()).toContain('/clients');
+      } else {
+        // Se nao encontrar o link, registrar como problema mas nao falhar o teste
+        allProblems.push({
+          page: 'Navigation',
+          type: 'missing_element',
+          detail: 'Clients link not found in sidebar (aside a[href="/clients"])',
+        });
+      }
     }
   });
 

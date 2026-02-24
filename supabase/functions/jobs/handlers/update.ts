@@ -1,4 +1,4 @@
-import { getSupabaseClient } from '../../_shared/supabase-client.ts';
+import { getSupabaseClient, getServiceClient } from '../../_shared/supabase-client.ts';
 import { success } from '../../_shared/response.ts';
 import { AppError } from '../../_shared/errors.ts';
 import { validate, UpdateJobSchema } from '../../_shared/validation.ts';
@@ -11,6 +11,7 @@ import {
   insertHistory,
   describeFieldChange,
 } from '../../_shared/history.ts';
+import { enqueueEvent } from '../../_shared/integration-client.ts';
 import type { AuthContext } from '../../_shared/auth.ts';
 
 export async function updateJob(
@@ -95,6 +96,40 @@ export async function updateJob(
     });
   }
 
-  // 6. Retornar job atualizado
+  // 6. Verificar se margem caiu abaixo de 15% e disparar alerta (fire-and-forget)
+  try {
+    const oldMargin = currentJob.margin_percentage as number | null;
+    const newMargin = updatedJob.margin_percentage as number | null;
+
+    // Disparar alerta apenas quando a margem CRUZA abaixo de 15%
+    // (evita alertas repetidos se ja estava baixa)
+    if (
+      newMargin !== null &&
+      newMargin < 15 &&
+      (oldMargin === null || oldMargin >= 15)
+    ) {
+      const serviceClient = getServiceClient();
+      await enqueueEvent(serviceClient, {
+        tenant_id: auth.tenantId,
+        event_type: 'n8n_webhook',
+        payload: {
+          workflow: 'wf-margin-alert',
+          job_id: jobId,
+          job_code: updatedJob.code,
+          job_title: updatedJob.title,
+          margin_percentage: newMargin,
+          closed_value: updatedJob.closed_value,
+          production_cost: updatedJob.production_cost,
+        },
+        idempotency_key: `wf-margin:${jobId}:${new Date().toISOString().split('T')[0]}`,
+      });
+      console.log(`[jobs/update] margem alerta: job ${jobId} margem ${newMargin}% (era ${oldMargin}%)`);
+    }
+  } catch (marginErr) {
+    console.error('[jobs/update] falha ao disparar margin alert:', marginErr);
+    // Nao bloqueia a operacao principal (ADR-003)
+  }
+
+  // 7. Retornar job atualizado
   return success(mapDbToApi(updatedJob));
 }

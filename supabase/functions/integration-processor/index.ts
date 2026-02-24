@@ -1,6 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { getServiceClient } from './_shared/supabase-client.ts';
+import { getServiceClient, getSupabaseClient } from './_shared/supabase-client.ts';
 import {
   getNextEvents,
   updateEventStatus,
@@ -14,38 +14,67 @@ import { processWhatsappEvent } from './handlers/whatsapp-handler.ts';
 
 // ========================================================
 // integration-processor — Processa fila de integration_events
-// Invocado via pg_cron a cada minuto (sem JWT, sem CORS)
+// Autenticacao aceita duas formas:
+//   1. X-Cron-Secret header (pg_cron via pg_net) — caminho primario
+//   2. Bearer JWT de usuario admin ou ceo  — chamadas manuais
 // ========================================================
 
 Deno.serve(async (req: Request) => {
   // Apenas POST (pg_cron via pg_net)
-  if (req.method !== 'POST') {
+  if (req.method \!== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
       headers: { 'Content-Type': 'application/json' },
     });
   }
 
-  // Validar X-Cron-Secret — obrigatorio para evitar invocacao nao autorizada
   const serviceClient = getServiceClient();
-  const providedSecret = req.headers.get('x-cron-secret');
-  if (!providedSecret) {
-    console.warn('[integration-processor] chamada sem X-Cron-Secret');
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
 
-  // Ler secret do Vault e comparar
-  const { data: storedSecret } = await serviceClient.rpc('read_secret', { secret_name: 'CRON_SECRET' });
-  if (!storedSecret || providedSecret !== storedSecret) {
-    console.warn('[integration-processor] X-Cron-Secret invalido');
+  // --- Autenticacao dual: cron secret OU JWT admin/ceo ---
+  const providedSecret = req.headers.get('x-cron-secret');
+  const authHeader = req.headers.get('authorization') ?? req.headers.get('Authorization');
+
+  if (providedSecret) {
+    // Caminho 1: pg_cron envia X-Cron-Secret — validar contra o Vault
+    const { data: storedSecret } = await serviceClient.rpc('read_secret', { secret_name: 'CRON_SECRET' });
+    if (\!storedSecret || providedSecret \!== storedSecret) {
+      console.warn('[integration-processor] X-Cron-Secret invalido');
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    console.log('[integration-processor] autenticado via X-Cron-Secret');
+  } else if (authHeader?.startsWith('Bearer ')) {
+    // Caminho 2: chamada manual com JWT — exige role admin ou ceo
+    const token = authHeader.replace('Bearer ', '');
+    const userClient = getSupabaseClient(token);
+    const { data: { user }, error } = await userClient.auth.getUser(token);
+    if (error || \!user) {
+      console.warn('[integration-processor] JWT invalido');
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    const role = user.app_metadata?.role ?? '';
+    if (\!['admin', 'ceo'].includes(role)) {
+      console.warn('[integration-processor] JWT valido mas role insuficiente:', role);
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    console.log('[integration-processor] autenticado via JWT (role:', role + ')');
+  } else {
+    // Nenhuma credencial fornecida
+    console.warn('[integration-processor] chamada sem credenciais (sem X-Cron-Secret e sem Bearer token)');
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
     });
   }
+  // --- fim da autenticacao ---
 
   const body = await req.json().catch(() => ({}));
   const batchSize = Math.min(Number(body.batch_size) || 20, 50);

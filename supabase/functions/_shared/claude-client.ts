@@ -480,3 +480,36 @@ export function estimateCost(
   const pricing = PRICING[model];
   return (inputTokens / 1_000_000) * pricing.input + (outputTokens / 1_000_000) * pricing.output;
 }
+
+// ---------------------------------------------------------------------------
+// sanitizeUserInput — protecao contra prompt injection
+// ---------------------------------------------------------------------------
+
+/**
+ * Sanitiza input do usuario antes de inserir em prompts da Claude API.
+ *
+ * Defesas aplicadas:
+ * 1. Limita tamanho maximo (10.000 chars) para evitar context overflow
+ * 2. Escapa caracteres especiais XML (<, >, &, ", ') que poderiam
+ *    fechar/abrir tags XML usadas como delimiters no prompt
+ * 3. Remove sequencias de controle nao-printaveis
+ *
+ * Uso: envolver todo input do usuario com <user-input>${sanitizeUserInput(raw)}</user-input>
+ */
+export function sanitizeUserInput(input: string, maxLength = 10_000): string {
+  if (!input || typeof input !== 'string') return '';
+
+  // 1. Truncar no limite de tamanho
+  const truncated = input.length > maxLength ? input.slice(0, maxLength) : input;
+
+  // 2. Remover caracteres de controle nao-printaveis (exceto tab, newline, carriage return)
+  const noControl = truncated.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+
+  // 3. Escapar caracteres especiais XML para evitar injecao via tags
+  return noControl
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}

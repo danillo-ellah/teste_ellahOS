@@ -14,6 +14,279 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_budget_estimates: {
+        Row: {
+          breakdown: Json
+          confidence: string
+          created_at: string
+          duration_ms: number | null
+          id: string
+          input_hash: string
+          input_tokens: number
+          job_id: string
+          model_used: string
+          output_tokens: number
+          override_context: Json | null
+          reasoning: string | null
+          requested_by: string
+          similar_jobs: Json | null
+          suggested_total: number | null
+          tenant_id: string
+          warnings: Json | null
+        }
+        Insert: {
+          breakdown?: Json
+          confidence?: string
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          input_hash: string
+          input_tokens?: number
+          job_id: string
+          model_used?: string
+          output_tokens?: number
+          override_context?: Json | null
+          reasoning?: string | null
+          requested_by: string
+          similar_jobs?: Json | null
+          suggested_total?: number | null
+          tenant_id: string
+          warnings?: Json | null
+        }
+        Update: {
+          breakdown?: Json
+          confidence?: string
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          input_hash?: string
+          input_tokens?: number
+          job_id?: string
+          model_used?: string
+          output_tokens?: number
+          override_context?: Json | null
+          reasoning?: string | null
+          requested_by?: string
+          similar_jobs?: Json | null
+          suggested_total?: number | null
+          tenant_id?: string
+          warnings?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_budget_estimates_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_budget_estimates_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_budget_estimates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_conversation_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          duration_ms: number | null
+          id: string
+          input_tokens: number | null
+          model_used: string | null
+          output_tokens: number | null
+          role: string
+          sources: Json | null
+          tenant_id: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          input_tokens?: number | null
+          model_used?: string | null
+          output_tokens?: number | null
+          role: string
+          sources?: Json | null
+          tenant_id: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          input_tokens?: number | null
+          model_used?: string | null
+          output_tokens?: number | null
+          role?: string
+          sources?: Json | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_conversation_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_conversation_messages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_conversations: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          id: string
+          job_id: string | null
+          last_message_at: string | null
+          message_count: number
+          model_used: string
+          tenant_id: string
+          title: string | null
+          total_input_tokens: number
+          total_output_tokens: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          job_id?: string | null
+          last_message_at?: string | null
+          message_count?: number
+          model_used?: string
+          tenant_id: string
+          title?: string | null
+          total_input_tokens?: number
+          total_output_tokens?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          job_id?: string | null
+          last_message_at?: string | null
+          message_count?: number
+          model_used?: string
+          tenant_id?: string
+          title?: string | null
+          total_input_tokens?: number
+          total_output_tokens?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_conversations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_conversations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_usage_logs: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          estimated_cost_usd: number | null
+          feature: string
+          id: string
+          input_tokens: number
+          metadata: Json | null
+          model_used: string
+          output_tokens: number
+          status: string
+          tenant_id: string
+          total_tokens: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          estimated_cost_usd?: number | null
+          feature: string
+          id?: string
+          input_tokens?: number
+          metadata?: Json | null
+          model_used: string
+          output_tokens?: number
+          status?: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          estimated_cost_usd?: number | null
+          feature?: string
+          id?: string
+          input_tokens?: number
+          metadata?: Json | null
+          model_used?: string
+          output_tokens?: number
+          status?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_usage_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agencies: {
         Row: {
           address: string | null
@@ -2234,6 +2507,16 @@ export type Database = {
       get_alerts: {
         Args: { p_limit?: number; p_tenant_id: string }
         Returns: Json
+      }
+      increment_conversation_counters: {
+        Args: {
+          p_conversation_id: string
+          p_input_tokens: number
+          p_message_count: number
+          p_model_used: string
+          p_output_tokens: number
+        }
+        Returns: undefined
       }
       get_dashboard_kpis: { Args: { p_tenant_id: string }; Returns: Json }
       get_financial_summary: { Args: { p_job_id?: string }; Returns: Json }

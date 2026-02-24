@@ -3,6 +3,8 @@
 // Mudancas no prompt = novo deploy da Edge Function.
 // Versao atual: v1
 
+import { sanitizeUserInput } from './_shared/claude-client.ts';
+
 // --- Versao do prompt (para tracking em ai_usage_logs) ---
 export const DAILIES_PROMPT_VERSION = 'v1';
 
@@ -135,8 +137,10 @@ export function buildDailiesUserPrompt(params: DailiesData): string {
     lines.push('');
     lines.push('### Briefing do job');
     // Truncar briefing em 2000 chars para economizar tokens (limite definido na arquitetura)
-    const briefing = params.job.briefing_text.slice(0, 2000);
+    const briefing = sanitizeUserInput(params.job.briefing_text, 2000);
+    lines.push('<user-input>');
     lines.push(briefing);
+    lines.push('</user-input>');
     if (params.job.briefing_text.length > 2000) {
       lines.push('... (briefing truncado)');
     }
@@ -198,22 +202,22 @@ export function buildDailiesUserPrompt(params: DailiesData): string {
         hasSceneData = true;
       }
       if (entry.notes) {
-        lines.push(`- Notas do set: ${entry.notes.slice(0, 1000)}`);
+        lines.push(`- Notas do set: <user-input>${sanitizeUserInput(entry.notes, 1000)}</user-input>`);
       }
       if (entry.weather_notes) {
-        lines.push(`- Clima: ${entry.weather_notes.slice(0, 500)}`);
+        lines.push(`- Clima: <user-input>${sanitizeUserInput(entry.weather_notes, 500)}</user-input>`);
       }
       if (entry.equipment_issues) {
-        lines.push(`- Problemas de equipamento: ${entry.equipment_issues.slice(0, 500)}`);
+        lines.push(`- Problemas de equipamento: <user-input>${sanitizeUserInput(entry.equipment_issues, 500)}</user-input>`);
       }
       if (entry.talent_notes) {
-        lines.push(`- Observacoes de elenco/talento: ${entry.talent_notes.slice(0, 500)}`);
+        lines.push(`- Observacoes de elenco/talento: <user-input>${sanitizeUserInput(entry.talent_notes, 500)}</user-input>`);
       }
       if (entry.extra_costs) {
-        lines.push(`- Custos extras: ${entry.extra_costs.slice(0, 500)}`);
+        lines.push(`- Custos extras: <user-input>${sanitizeUserInput(entry.extra_costs, 500)}</user-input>`);
       }
       if (entry.general_observations) {
-        lines.push(`- Observacoes gerais: ${entry.general_observations.slice(0, 1000)}`);
+        lines.push(`- Observacoes gerais: <user-input>${sanitizeUserInput(entry.general_observations, 1000)}</user-input>`);
       }
     }
 

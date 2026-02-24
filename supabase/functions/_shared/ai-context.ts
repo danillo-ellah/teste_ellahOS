@@ -2,20 +2,13 @@
 // Monta contexto dos dados do tenant para injetar nos prompts da Claude API.
 // Todas as queries filtram por tenant_id e deleted_at IS NULL (isolamento total).
 // internal_notes NUNCA sao incluidos nos contextos (dados sensiveis).
+//
+// SEGURANCA (P1-4): Todas as funcoes recebem o SupabaseClient autenticado do usuario
+// (criado com ANON_KEY + Bearer token do JWT) e o usam diretamente — sem service_role.
+// O RLS do banco filtra os dados pelo tenant do usuario e funciona como segunda linha
+// de defesa contra vazamento entre tenants. Nao usar getServiceClient() aqui.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-// ---------------------------------------------------------------------------
-// Service client (bypass RLS) — usado internamente pelas funcoes de contexto
-// ---------------------------------------------------------------------------
-
-function getServiceClient(): SupabaseClient {
-  return createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Interfaces exportadas
@@ -127,12 +120,14 @@ export interface FreelancerCandidate {
  * Ordena por similarity_score DESC. Retorna ate `limit` resultados.
  */
 export async function getSimilarJobsContext(
-  _client: SupabaseClient,
+  client: SupabaseClient,
   tenantId: string,
   jobId: string,
   limit = 10,
 ): Promise<SimilarJobContext[]> {
-  const svc = getServiceClient();
+  // Usa o cliente autenticado do usuario (com RLS ativo) — principio de menor privilegio.
+  // Nao usar service_role aqui: o RLS e a segunda linha de defesa para acesso entre tenants.
+  const svc = client;
 
   // Buscar o job alvo para extrair criterios de similaridade
   const { data: targetJob, error: targetError } = await svc
@@ -277,12 +272,12 @@ export async function getSimilarJobsContext(
  * NUNCA inclui internal_notes (dados sensiveis).
  */
 export async function getJobFullContext(
-  _client: SupabaseClient,
+  client: SupabaseClient,
   tenantId: string,
   jobId: string,
   includeFinancials = false,
 ): Promise<JobFullContext> {
-  const svc = getServiceClient();
+  const svc = client;
 
   // Buscar job + client em paralelo com team, deliverables, shooting_dates, history
   const [jobRes, teamRes, deliverablesRes, shootingRes, historyRes] = await Promise.all([
@@ -480,10 +475,10 @@ export async function getJobFullContext(
  * Inclui total de jobs, margem media, top project_types e top clientes.
  */
 export async function getTenantMetrics(
-  _client: SupabaseClient,
+  client: SupabaseClient,
   tenantId: string,
 ): Promise<TenantMetrics> {
-  const svc = getServiceClient();
+  const svc = client;
 
   // Buscar todas as queries em paralelo
   const [allJobsRes, activeJobsRes, finishedJobsRes, peopleRes] = await Promise.all([
@@ -629,14 +624,14 @@ export async function getTenantMetrics(
  * project_type e opcional — se fornecido, conta jobs_same_type.
  */
 export async function getFreelancerCandidates(
-  _client: SupabaseClient,
+  client: SupabaseClient,
   tenantId: string,
   role: string,
   startDate?: string,
   endDate?: string,
   projectType?: string,
 ): Promise<FreelancerCandidate[]> {
-  const svc = getServiceClient();
+  const svc = client;
 
   // 1. Buscar pessoas ativas do tenant que tem o role como default_role
   //    OU que ja trabalharam nesse role (via job_team)

@@ -5,6 +5,7 @@ import { validate, UpdateStatusSchema } from '../../_shared/validation.ts';
 import { mapApiToDb } from '../../_shared/column-map.ts';
 import { insertHistory } from '../../_shared/history.ts';
 import { notifyJobTeam } from '../../_shared/notification-helper.ts';
+import { enqueueEvent } from '../../_shared/integration-client.ts';
 import type { AuthContext } from '../../_shared/auth.ts';
 
 export async function updateStatus(
@@ -123,9 +124,11 @@ export async function updateStatus(
     description: `Status alterado de ${oldStatus} para ${newStatus}`,
   });
 
-  // 6. Notificar equipe sobre mudanca de status (fire-and-forget)
+  // 6. Notificar equipe e disparar integracoes (fire-and-forget)
   try {
     const serviceClient = getServiceClient();
+
+    // 6a. Notificacao in-app para equipe do job
     await notifyJobTeam(serviceClient, jobId, {
       tenant_id: auth.tenantId,
       type: 'status_changed',
@@ -136,9 +139,23 @@ export async function updateStatus(
       action_url: `/jobs/${jobId}`,
       job_id: jobId,
     });
+
+    // 6b. Enfileirar webhook n8n para status change (WhatsApp + orquestracao)
+    await enqueueEvent(serviceClient, {
+      tenant_id: auth.tenantId,
+      event_type: 'n8n_webhook',
+      payload: {
+        workflow: 'wf-status-change',
+        job_id: jobId,
+        old_status: oldStatus,
+        new_status: newStatus,
+        changed_by: auth.email,
+      },
+      idempotency_key: `wf-status:${jobId}:${oldStatus}:${newStatus}`,
+    });
   } catch (notifError) {
-    console.error('[update-status] falha ao notificar equipe:', notifError);
-    // Nao bloqueia a operacao principal
+    console.error('[update-status] falha ao notificar equipe/integracoes:', notifError);
+    // Nao bloqueia a operacao principal (ADR-003)
   }
 
   return success({

@@ -10,7 +10,7 @@ import { success } from '../_shared/response.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { AppError } from '../_shared/errors.ts';
 import type { AuthContext } from '../_shared/auth.ts';
-import { callClaude, callClaudeStream, estimateCost } from '../_shared/claude-client.ts';
+import { callClaude, callClaudeStream, estimateCost, sanitizeUserInput } from '../_shared/claude-client.ts';
 import type { ClaudeModel, ClaudeMessage } from '../_shared/claude-client.ts';
 import { getJobFullContext, getTenantMetrics } from '../_shared/ai-context.ts';
 import { checkRateLimit, logAiUsage } from '../_shared/ai-rate-limiter.ts';
@@ -375,7 +375,7 @@ async function prepareContext(
   // 9. Montar array de mensagens: historico + nova mensagem
   const messages: ClaudeMessage[] = [
     ...history,
-    { role: 'user', content: payload.message },
+    { role: 'user', content: `<user-input>${sanitizeUserInput(payload.message)}</user-input>` },
   ];
 
   return {

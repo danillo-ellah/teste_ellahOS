@@ -1,6 +1,8 @@
 // Rate limiting para features de IA do ELLAHOS
 // Controla uso por usuario/tenant com base em contagem de ai_usage_logs no banco
-// Estrategia: fail open — se a query falhar, permite a requisicao (melhor do que bloquear por erro)
+// Estrategia: fail-CLOSED — se a query falhar, BLOQUEIA a requisicao.
+// Decisao de seguranca: um erro de DB silencioso nao deve abrir custo ilimitado na Claude API.
+// E preferivel rejeitar uma requisicao legitima a permitir abuso irrestrito por falha de infraestrutura.
 
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -71,10 +73,17 @@ async function countUserRequestsLastHour(
     .gte('created_at', oneHourAgo);
 
   if (error) {
-    console.warn(
+    // Fail-closed: lancamos erro para bloquear a requisicao ao inves de retornar 0
+    // (retornar 0 criaria um bypass silencioso que permite custo ilimitado na Claude API)
+    console.error(
       `[rate-limiter] falha ao contar requests do usuario ${userId}: ${error.message}`,
     );
-    return 0; // fail open
+    throw new AppError(
+      'INTERNAL_ERROR',
+      'Servico de rate limiting temporariamente indisponivel. Tente novamente em instantes.',
+      503,
+      { reason: 'db_query_failed', query: 'user_requests_last_hour' },
+    );
   }
 
   return count ?? 0;
@@ -94,10 +103,17 @@ async function countTenantRequestsLastHour(
     .gte('created_at', oneHourAgo);
 
   if (error) {
-    console.warn(
+    // Fail-closed: lancamos erro para bloquear a requisicao ao inves de retornar 0
+    // (retornar 0 criaria um bypass silencioso que permite custo ilimitado na Claude API)
+    console.error(
       `[rate-limiter] falha ao contar requests do tenant ${tenantId}: ${error.message}`,
     );
-    return 0; // fail open
+    throw new AppError(
+      'INTERNAL_ERROR',
+      'Servico de rate limiting temporariamente indisponivel. Tente novamente em instantes.',
+      503,
+      { reason: 'db_query_failed', query: 'tenant_requests_last_hour' },
+    );
   }
 
   return count ?? 0;
@@ -117,10 +133,17 @@ async function sumTenantTokensToday(
     .gte('created_at', oneDayAgo);
 
   if (error) {
-    console.warn(
+    // Fail-closed: lancamos erro para bloquear a requisicao ao inves de retornar 0
+    // (retornar 0 criaria um bypass silencioso que permite custo ilimitado na Claude API)
+    console.error(
       `[rate-limiter] falha ao somar tokens do tenant ${tenantId}: ${error.message}`,
     );
-    return 0; // fail open
+    throw new AppError(
+      'INTERNAL_ERROR',
+      'Servico de rate limiting temporariamente indisponivel. Tente novamente em instantes.',
+      503,
+      { reason: 'db_query_failed', query: 'tenant_tokens_today' },
+    );
   }
 
   if (!data || data.length === 0) return 0;
@@ -136,7 +159,7 @@ async function sumTenantTokensToday(
 /**
  * Verifica se o usuario/tenant esta dentro dos limites de rate limiting.
  * Lanca AppError com status 429 se qualquer limite for excedido.
- * Estrategia fail open: se as queries falharem, permite a requisicao.
+ * Lanca AppError com status 503 se as queries ao banco falharem (estrategia fail-closed).
  *
  * @param _client - SupabaseClient do usuario (nao usado diretamente, mantido por consistencia de API)
  * @param tenantId - ID do tenant

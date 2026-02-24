@@ -2,6 +2,8 @@
 // Mudancas no prompt = novo deploy da Edge Function.
 // Versao atual: v1
 
+import { sanitizeUserInput } from './_shared/claude-client.ts';
+
 export const BUDGET_ESTIMATE_SYSTEM_PROMPT = `Voce e um produtor executivo senior especializado em orcamentos de producao audiovisual no Brasil. Sua tarefa e analisar os dados de um novo job e, com base no historico de jobs similares da produtora, sugerir um orcamento detalhado.
 
 REGRAS:
@@ -74,7 +76,10 @@ export function buildBudgetUserPrompt(params: {
   if (params.briefingText) {
     lines.push('');
     lines.push('### Briefing');
-    lines.push(params.briefingText.slice(0, 2000));
+    const sanitizedBriefing = sanitizeUserInput(params.briefingText, 2000);
+    lines.push('<user-input>');
+    lines.push(sanitizedBriefing);
+    lines.push('</user-input>');
   }
 
   if (params.deliverables.length > 0) {
@@ -105,7 +110,7 @@ export function buildBudgetUserPrompt(params: {
     lines.push('');
     lines.push('### Contexto adicional do usuario');
     if (params.overrideContext.additional_requirements) {
-      lines.push(`- Requisitos adicionais: ${params.overrideContext.additional_requirements}`);
+      lines.push(`- Requisitos adicionais: <user-input>${sanitizeUserInput(params.overrideContext.additional_requirements ?? '')}</user-input>`);
     }
     if (params.overrideContext.budget_ceiling) {
       lines.push(`- **Teto maximo: R$ ${params.overrideContext.budget_ceiling.toLocaleString('pt-BR')}** (NAO ultrapasse este valor)`);
