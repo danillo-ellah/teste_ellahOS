@@ -140,3 +140,73 @@ export interface FinancialRecordMatch {
   due_date: string | null
   nf_status: 'sem_nf' | 'enviado' | 'confirmado'
 }
+
+// ---------------------------------------------------------------------------
+// NF Request (Fase 9.3) — Pedido de NF para fornecedores
+// ---------------------------------------------------------------------------
+
+export type NfRequestStatus = 'sem_nf' | 'enviado' | 'enviado_confirmado'
+
+export type NfRequestRecordType = 'servico' | 'diaria' | 'aluguel' | 'outros'
+
+export interface NfRequestRecord {
+  id: string
+  tenant_id: string
+  // Fornecedor
+  supplier_name: string | null
+  supplier_cnpj: string | null
+  supplier_email: string | null
+  // Job
+  job_id: string | null
+  job_code: string | null
+  job_title: string | null
+  // Lancamento
+  description: string
+  amount: number
+  due_date: string | null
+  record_type: NfRequestRecordType | null
+  // Status do pedido de NF
+  nf_request_status: NfRequestStatus
+  nf_request_sent_at: string | null
+  // Auditoria
+  created_at: string
+  updated_at: string
+}
+
+export interface NfRequestStats {
+  total_pending: number
+  sent_today: number
+  awaiting_response: number
+}
+
+export interface NfRequestFilters {
+  status?: NfRequestStatus | 'all'
+  job_id?: string
+  supplier_name?: string
+  record_type?: NfRequestRecordType | 'all'
+  search?: string
+  page?: number
+  per_page?: number
+}
+
+// Grupo de registros agrupados por fornecedor
+export interface NfRequestSupplierGroup {
+  supplier_name: string
+  supplier_email: string | null
+  supplier_cnpj: string | null
+  total_amount: number
+  records: NfRequestRecord[]
+}
+
+// Payload para envio de pedido de NF
+export interface SendNfRequestPayload {
+  financial_record_ids: string[]
+  message_template?: string
+}
+
+// Resultado do envio
+export interface SendNfRequestResult {
+  sent_count: number
+  failed_count: number
+  enqueued_events: number
+}
