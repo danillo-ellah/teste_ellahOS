@@ -76,7 +76,7 @@ export function useIntegrationLogs(filters: Record<string, string> = {}) {
     queryKey: settingsKeys.logsList(filters),
     queryFn: async () => {
       const res = await apiGet<IntegrationLog[]>('tenant-settings', filters, 'integration-logs')
-      return { data: res.data, meta: (res as any).meta }
+      return { data: res.data, meta: (res as unknown as { meta?: unknown }).meta }
     },
   })
 }

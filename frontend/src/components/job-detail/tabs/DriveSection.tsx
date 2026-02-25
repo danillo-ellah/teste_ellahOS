@@ -240,7 +240,7 @@ export function DriveSection({ job }: DriveSectionProps) {
                 <FolderWithChildren
                   key={folder.id}
                   folder={folder}
-                  children={children}
+                  subFolders={children}
                 />
               )
             }
@@ -289,10 +289,10 @@ function FolderItem({
 
 function FolderWithChildren({
   folder,
-  children,
+  subFolders,
 }: {
   folder: DriveFolderRow
-  children: DriveFolderRow[]
+  subFolders: DriveFolderRow[]
 }) {
   const [open, setOpen] = useState(false)
   const label = FOLDER_LABELS[folder.folder_key] || folder.folder_key
@@ -320,12 +320,12 @@ function FolderWithChildren({
           <span className="truncate">{label}</span>
         )}
         <span className="text-xs text-muted-foreground ml-auto">
-          {children.length}
+          {subFolders.length}
         </span>
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-0.5">
-          {children.map((child) => (
+          {subFolders.map((child) => (
             <FolderItem key={child.id} folder={child} indent />
           ))}
         </div>
