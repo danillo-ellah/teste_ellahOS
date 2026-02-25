@@ -252,7 +252,22 @@ export async function validateWebhookSignature(
       .map((b) => b.toString(16).padStart(2, '0'))
       .join('');
 
-    const valid = signature === expectedSig;
+    // Comparacao timing-safe para evitar timing attacks
+    const encoder2 = new TextEncoder();
+    const sigBytes = encoder2.encode(signature);
+    const expectedBytes = encoder2.encode(expectedSig);
+
+    if (sigBytes.length !== expectedBytes.length) {
+      console.warn('[docuseal] webhook signature invalida (tamanho diferente)');
+      return false;
+    }
+
+    // XOR constant-time comparison
+    let diff = 0;
+    for (let i = 0; i < sigBytes.length; i++) {
+      diff |= sigBytes[i] ^ expectedBytes[i];
+    }
+    const valid = diff === 0;
 
     if (!valid) {
       console.warn(

@@ -367,6 +367,7 @@ export default function IntegrationsPage() {
 
   const isSaving = updateIntegration.isPending
   const isTesting = testConnection.isPending
+  const testingName = testConnection.variables?.name ?? null
 
   // ---------------------------------------------------------------------------
   // Render
@@ -461,10 +462,10 @@ export default function IntegrationsPage() {
                     variant="outline"
                     size="sm"
                     className="flex-1 gap-1.5"
-                    disabled={isTesting}
+                    disabled={isTesting && testingName === 'google_drive'}
                     onClick={() => handleTest('google_drive')}
                   >
-                    {isTesting ? (
+                    {isTesting && testingName === 'google_drive' ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     ) : (
                       <Zap className="h-3.5 w-3.5" />
@@ -544,10 +545,10 @@ export default function IntegrationsPage() {
                     variant="outline"
                     size="sm"
                     className="flex-1 gap-1.5"
-                    disabled={isTesting}
+                    disabled={isTesting && testingName === 'whatsapp'}
                     onClick={() => handleTest('whatsapp')}
                   >
-                    {isTesting ? (
+                    {isTesting && testingName === 'whatsapp' ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     ) : (
                       <Zap className="h-3.5 w-3.5" />
@@ -677,10 +678,10 @@ export default function IntegrationsPage() {
                     variant="outline"
                     size="sm"
                     className="flex-1 gap-1.5"
-                    disabled={isTesting}
+                    disabled={isTesting && testingName === 'n8n'}
                     onClick={() => handleTest('n8n')}
                   >
-                    {isTesting ? (
+                    {isTesting && testingName === 'n8n' ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     ) : (
                       <Zap className="h-3.5 w-3.5" />

@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { apiGet, apiMutate } from '@/lib/api'
 import { nfRequestKeys } from '@/lib/query-keys'
 import type {
@@ -93,6 +94,10 @@ export function useSendNfRequest() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: nfRequestKeys.lists() })
       queryClient.invalidateQueries({ queryKey: nfRequestKeys.stats() })
+      toast.success('Pedido de NF enviado com sucesso!')
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Erro ao enviar pedido de NF')
     },
   })
 }

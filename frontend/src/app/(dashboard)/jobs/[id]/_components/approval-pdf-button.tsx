@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { createClient } from '@/lib/supabase/client'
 import { useGenerateApprovalPdf } from '@/hooks/useApprovalPdf'
+import { APPROVAL_PDF_ROLES } from '@/hooks/useUserRole'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 
@@ -23,11 +24,14 @@ interface ApprovalPdfButtonProps {
   userRole: string
 }
 
-const ALLOWED_ROLES = ['admin', 'ceo', 'produtor_executivo']
-
 async function fetchPreviewHtml(jobId: string): Promise<string> {
   const supabase = createClient()
 
+  // Validar JWT contra o servidor antes de usar o token
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user) {
+    throw new Error('Sessao expirada. Faca login novamente.')
+  }
   const { data: { session } } = await supabase.auth.getSession()
   if (!session?.access_token) {
     throw new Error('Sessao expirada. Faca login novamente.')
@@ -66,7 +70,7 @@ export function ApprovalPdfButton({ jobId, jobCode, userRole }: ApprovalPdfButto
   const { mutateAsync: generate, isPending: isGenerating } = useGenerateApprovalPdf()
 
   // Nao renderizar para roles sem permissao
-  if (!ALLOWED_ROLES.includes(userRole)) {
+  if (!APPROVAL_PDF_ROLES.includes(userRole as never)) {
     return null
   }
 
@@ -154,7 +158,7 @@ export function ApprovalPdfButton({ jobId, jobCode, userRole }: ApprovalPdfButto
                 srcDoc={previewHtml}
                 className="w-full h-[55vh] rounded-md"
                 title="Preview da aprovacao interna"
-                sandbox="allow-same-origin"
+                sandbox=""
               />
             )}
           </div>

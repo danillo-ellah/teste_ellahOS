@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { apiGet, apiMutate } from '@/lib/api'
 import { docusealKeys } from '@/lib/query-keys'
 import type {
@@ -60,10 +61,13 @@ export function useCreateDocuSeal() {
         'create',
       ),
     onSuccess: (_data, payload) => {
-      // Invalidar lista do job especifico
       queryClient.invalidateQueries({
         queryKey: docusealKeys.list(payload.job_id),
       })
+      toast.success('Contrato criado com sucesso!')
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Erro ao criar contrato')
     },
   })
 }
@@ -87,9 +91,12 @@ export function useResendDocuSeal() {
         'resend',
       ),
     onSuccess: (_data, { job_id, submission_id }) => {
-      // Invalidar lista e detalhe da submission
       queryClient.invalidateQueries({ queryKey: docusealKeys.list(job_id) })
       queryClient.invalidateQueries({ queryKey: docusealKeys.detail(submission_id) })
+      toast.success('Email de assinatura reenviado!')
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Erro ao reenviar email')
     },
   })
 }

@@ -7,12 +7,20 @@ import type { AuthContext } from '../../_shared/auth.ts';
 // Tipos de preview suportados
 const SUPPORTED_TYPES = ['aprovacao-interna'];
 
+// Roles com permissao de visualizar preview de aprovacao
+const ALLOWED_ROLES = ['admin', 'ceo', 'produtor_executivo'];
+
 export async function previewHandler(
   _req: Request,
   auth: AuthContext,
   previewType: string,
   jobId: string | null,
 ): Promise<Response> {
+  // Verificar permissao de role
+  if (!ALLOWED_ROLES.includes(auth.role)) {
+    throw new AppError('FORBIDDEN', 'Permissao insuficiente para visualizar preview', 403);
+  }
+
   if (!previewType || !SUPPORTED_TYPES.includes(previewType)) {
     throw new AppError(
       'VALIDATION_ERROR',
