@@ -75,7 +75,7 @@ export interface NfFilters {
   status?: NfStatus | 'all'
   job_id?: string
   search?: string
-  period?: 'today' | 'week' | 'month' | 'last_month' | 'custom'
+  period?: 'all' | 'today' | 'week' | 'month' | 'last_month' | 'custom'
   date_from?: string
   date_to?: string
   sort_by?: 'created_at' | 'nf_value' | 'extracted_value' | 'email_received_at'
