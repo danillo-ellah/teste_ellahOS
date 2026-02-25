@@ -178,3 +178,18 @@ export const nfKeys = {
   list: (filters: Record<string, string>) => [...nfKeys.lists(), filters] as const,
   stats: () => [...nfKeys.all, 'stats'] as const,
 }
+
+export const nfRequestKeys = {
+  all: ['nf-request'] as const,
+  lists: () => [...nfRequestKeys.all, 'list'] as const,
+  list: (filters: Record<string, string>) => [...nfRequestKeys.lists(), filters] as const,
+  stats: () => [...nfRequestKeys.all, 'stats'] as const,
+}
+
+export const docusealKeys = {
+  all: ['docuseal'] as const,
+  lists: () => [...docusealKeys.all, 'list'] as const,
+  list: (jobId: string) => [...docusealKeys.lists(), jobId] as const,
+  details: () => [...docusealKeys.all, 'detail'] as const,
+  detail: (id: string) => [...docusealKeys.details(), id] as const,
+}

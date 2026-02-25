@@ -11,6 +11,11 @@ import { createNotification } from './_shared/notification-helper.ts';
 import { processDriveEvent } from './handlers/drive-handler.ts';
 import { processN8nEvent } from './handlers/n8n-handler.ts';
 import { processWhatsappEvent } from './handlers/whatsapp-handler.ts';
+// Fase 9: novos handlers
+import { processDocuSealEvent } from './handlers/docuseal-handler.ts';
+import { processPdfEvent } from './handlers/pdf-handler.ts';
+import { processDriveCopyEvent } from './handlers/drive-copy-handler.ts';
+import { processNfEmailEvent } from './handlers/nf-email-handler.ts';
 
 // ========================================================
 // integration-processor — Processa fila de integration_events
@@ -107,6 +112,19 @@ Deno.serve(async (req: Request) => {
           break;
         case 'whatsapp_send':
           result = await processWhatsappEvent(serviceClient, event);
+          break;
+        // Fase 9: novos event_types
+        case 'nf_email_send':
+          result = await processNfEmailEvent(serviceClient, event);
+          break;
+        case 'docuseal_create_batch':
+          result = await processDocuSealEvent(serviceClient, event);
+          break;
+        case 'pdf_generate':
+          result = await processPdfEvent(serviceClient, event);
+          break;
+        case 'drive_copy_templates':
+          result = await processDriveCopyEvent(serviceClient, event);
           break;
         default:
           console.warn(`[integration-processor] tipo desconhecido: ${event.event_type}`);

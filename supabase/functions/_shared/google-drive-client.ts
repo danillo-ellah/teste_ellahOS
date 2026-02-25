@@ -282,6 +282,36 @@ export async function setPermission(
   }
 }
 
+// Copia um arquivo no Drive (files.copy API)
+// Util para copiar templates de documentos para pastas de jobs
+export async function copyDriveFile(
+  token: string,
+  sourceFileId: string,
+  newName: string,
+  targetFolderId: string,
+): Promise<{ id: string; webViewLink?: string }> {
+  const url = `${DRIVE_API}/files/${sourceFileId}/copy?supportsAllDrives=true&fields=id,webViewLink`;
+
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      name: newName,
+      parents: [targetFolderId],
+    }),
+  });
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Drive files.copy: HTTP ${resp.status} — ${text.slice(0, 300)}`);
+  }
+
+  return await resp.json();
+}
+
 // ========================================================
 // buildDriveStructure — Funcao principal: cria 26 pastas
 // ========================================================

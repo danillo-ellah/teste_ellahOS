@@ -187,6 +187,7 @@ export type JobDetailTabId =
   | 'financeiro'
   | 'diarias'
   | 'aprovacoes'
+  | 'contratos'
   | 'historico'
   | 'portal'
 
@@ -201,6 +202,7 @@ export const JOB_DETAIL_TABS: ReadonlyArray<{
   { id: 'financeiro', label: 'Financeiro', icon: 'DollarSign' },
   { id: 'diarias', label: 'Diarias', icon: 'Calendar' },
   { id: 'aprovacoes', label: 'Aprovacoes', icon: 'CheckSquare' },
+  { id: 'contratos', label: 'Contratos', icon: 'PenLine' },
   { id: 'historico', label: 'Historico', icon: 'Clock' },
   { id: 'portal', label: 'Portal', icon: 'Globe' },
 ] as const

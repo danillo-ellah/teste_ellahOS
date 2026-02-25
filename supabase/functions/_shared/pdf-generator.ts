@@ -445,8 +445,15 @@ export async function savePdfToDrive(
   // da Edge Function pdf-generator (Fase 9.6). Por ora, este helper documenta a interface
   // esperada e pode ser substituido pela implementacao real sem alterar o contrato.
   const { getGoogleAccessToken } = await import('./google-drive-client.ts');
+  const { getSecret } = await import('./vault.ts');
 
-  const accessToken = await getGoogleAccessToken(serviceClient, tenantId);
+  // Ler Service Account do Vault para obter access token
+  const saJson = await getSecret(serviceClient, `${tenantId}_gdrive_service_account`);
+  if (!saJson) {
+    throw new Error('[pdf-generator] Service Account do Google Drive nao encontrada no Vault');
+  }
+  const sa = JSON.parse(saJson);
+  const accessToken = await getGoogleAccessToken(sa);
 
   // Multipart upload: metadata + PDF bytes
   const boundary = `pdf_upload_${Date.now()}`;
