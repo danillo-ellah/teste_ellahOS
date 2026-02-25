@@ -1,0 +1,150 @@
+{
+  "name": "wf-nf-request",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wf-nf-request",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [0, 0],
+      "id": "webhook-trigger",
+      "name": "Webhook NF Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validar payload recebido do integration-processor\nconst body = $input.first().json.body || $input.first().json;\n\nconst required = ['supplier_email', 'email_html', 'email_subject'];\nconst missing = required.filter(f => !body[f]);\n\nif (missing.length > 0) {\n  return [{ json: { _valid: false, _error: `Campos obrigatorios ausentes: ${missing.join(', ')}`, ...body } }];\n}\n\n// Validar webhook secret\nconst webhookSecret = $env.ELLAHOS_WEBHOOK_SECRET || '';\nconst receivedSecret = $input.first().json.headers?.['x-webhook-secret'] || '';\n\nif (webhookSecret && receivedSecret !== webhookSecret) {\n  return [{ json: { _valid: false, _error: 'Webhook secret invalido' } }];\n}\n\nreturn [{ json: { _valid: true, ...body } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "id": "validate-payload",
+      "name": "Validate Payload"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json._valid }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 0],
+      "id": "is-valid",
+      "name": "Is Valid?"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.supplier_email }}",
+        "subject": "={{ $json.email_subject }}",
+        "emailType": "html",
+        "message": "={{ $json.email_html }}",
+        "options": {
+          "replyTo": "={{ $json.reply_to || '' }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [660, -80],
+      "id": "send-email",
+      "name": "Send Email via Gmail",
+      "credentials": {
+        "gmailOAuth2": { "id": "GMAIL_CREDENTIAL_ID", "name": "Gmail Financeiro OAuth2" }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ELLAHOS_BASE_URL }}/nf-processor/request-sent-callback",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "X-Cron-Secret", "value": "={{ $env.ELLAHOS_CRON_SECRET }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"tenant_id\": \"{{ $json.tenant_id }}\",\n  \"event_id\": \"{{ $json.event_id }}\",\n  \"supplier_email\": \"{{ $json.supplier_email }}\",\n  \"gmail_message_id\": \"{{ $('Send Email via Gmail').item.json.id }}\",\n  \"status\": \"sent\",\n  \"sent_at\": \"{{ new Date().toISOString() }}\"\n}",
+        "options": { "timeout": 15000 }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, -80],
+      "id": "success-callback",
+      "name": "Success Callback"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ELLAHOS_BASE_URL }}/nf-processor/request-sent-callback",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "X-Cron-Secret", "value": "={{ $env.ELLAHOS_CRON_SECRET }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"tenant_id\": \"{{ $json.tenant_id }}\",\n  \"event_id\": \"{{ $json.event_id }}\",\n  \"supplier_email\": \"{{ $json.supplier_email }}\",\n  \"status\": \"error\",\n  \"error_message\": \"{{ $json._error || 'Falha ao enviar email' }}\"\n}",
+        "options": { "timeout": 15000 }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 80],
+      "id": "error-callback",
+      "name": "Error Callback"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, supplier_email: $('Validate Payload').item.json.supplier_email }) }}"
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1100, -80],
+      "id": "respond-success",
+      "name": "Respond Success"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: $('Validate Payload').item.json._error }) }}",
+        "options": { "responseCode": 400 }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [660, 160],
+      "id": "respond-error",
+      "name": "Respond Error"
+    }
+  ],
+  "connections": {
+    "Webhook NF Request": { "main": [[{ "node": "Validate Payload", "type": "main", "index": 0 }]] },
+    "Validate Payload": { "main": [[{ "node": "Is Valid?", "type": "main", "index": 0 }]] },
+    "Is Valid?": {
+      "main": [
+        [{ "node": "Send Email via Gmail", "type": "main", "index": 0 }],
+        [{ "node": "Error Callback", "type": "main", "index": 0 }, { "node": "Respond Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send Email via Gmail": { "main": [[{ "node": "Success Callback", "type": "main", "index": 0 }]] },
+    "Success Callback": { "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]] },
+    "Error Callback": { "main": [[]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "tags": [{ "name": "ELLAHOS" }, { "name": "Fase9" }]
+}

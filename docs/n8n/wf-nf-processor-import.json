@@ -1,0 +1,194 @@
+{
+  "name": "wf-nf-processor",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "minutes", "minutesInterval": 5 }]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "id": "schedule-trigger",
+      "name": "Every 5 Minutes"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 10,
+        "filters": {
+          "q": "from:* has:attachment filename:pdf is:unread label:inbox",
+          "labelIds": ["INBOX"]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [220, 0],
+      "id": "gmail-read",
+      "name": "Read Unread Emails with PDF",
+      "credentials": {
+        "gmailOAuth2": { "id": "GMAIL_CREDENTIAL_ID", "name": "Gmail Financeiro OAuth2" }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.payload.parts }}",
+              "rightValue": "",
+              "operator": { "type": "array", "operation": "notEmpty" }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 0],
+      "id": "has-attachments",
+      "name": "Has Attachments?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extrair PDFs dos anexos do email\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const parts = item.json.payload?.parts || [];\n  \n  for (const part of parts) {\n    const filename = part.filename || '';\n    if (!filename.toLowerCase().endsWith('.pdf')) continue;\n    \n    results.push({\n      json: {\n        emailId: item.json.id,\n        threadId: item.json.threadId,\n        senderEmail: (item.json.payload?.headers?.find(h => h.name === 'From')?.value || '').match(/<(.+?)>/)?.[1] || item.json.payload?.headers?.find(h => h.name === 'From')?.value || '',\n        senderName: (item.json.payload?.headers?.find(h => h.name === 'From')?.value || '').replace(/<.*>/, '').trim(),\n        subject: item.json.payload?.headers?.find(h => h.name === 'Subject')?.value || '(sem assunto)',\n        receivedAt: item.json.internalDate ? new Date(parseInt(item.json.internalDate)).toISOString() : new Date().toISOString(),\n        fileName: filename,\n        attachmentId: part.body?.attachmentId,\n        mimeType: part.mimeType\n      }\n    });\n  }\n}\n\nif (results.length === 0) {\n  return [{ json: { _skip: true, reason: 'No PDF attachments found' } }];\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, -80],
+      "id": "extract-pdfs",
+      "name": "Extract PDF Attachments"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json._skip }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "notTrue" }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [880, -80],
+      "id": "has-pdfs",
+      "name": "Has PDFs?"
+    },
+    {
+      "parameters": {
+        "resource": "messageAttachment",
+        "operation": "get",
+        "messageId": "={{ $json.emailId }}",
+        "attachmentId": "={{ $json.attachmentId }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1100, -160],
+      "id": "download-pdf",
+      "name": "Download PDF",
+      "credentials": {
+        "gmailOAuth2": { "id": "GMAIL_CREDENTIAL_ID", "name": "Gmail Financeiro OAuth2" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calcular SHA-256 hash do PDF para deduplicacao\nconst crypto = require('crypto');\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const binaryData = item.binary?.data || item.binary?.attachment;\n  if (!binaryData) {\n    results.push({ json: { ...item.json, fileHash: 'no-binary-data', _error: true } });\n    continue;\n  }\n  \n  const buffer = Buffer.from(binaryData.data, 'base64');\n  const hash = crypto.createHash('sha256').update(buffer).digest('hex');\n  \n  results.push({\n    json: {\n      ...item.json,\n      fileHash: hash,\n      fileSizeBytes: buffer.length\n    },\n    binary: item.binary\n  });\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, -160],
+      "id": "calculate-hash",
+      "name": "Calculate SHA-256 Hash"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "operation": "upload",
+        "name": "={{ $json.fileName }}",
+        "parents": ["={{ $env.DRIVE_NF_FOLDER_ID }}"],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [1540, -160],
+      "id": "upload-drive",
+      "name": "Upload to Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": { "id": "DRIVE_CREDENTIAL_ID", "name": "Google Drive Service Account" }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ELLAHOS_BASE_URL }}/nf-processor/ingest",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "X-Cron-Secret", "value": "={{ $env.ELLAHOS_CRON_SECRET }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"tenant_id\": \"{{ $env.ELLAHOS_TENANT_ID }}\",\n  \"gmail_message_id\": \"{{ $('Extract PDF Attachments').item.json.emailId }}\",\n  \"sender_email\": \"{{ $('Extract PDF Attachments').item.json.senderEmail }}\",\n  \"sender_name\": \"{{ $('Extract PDF Attachments').item.json.senderName }}\",\n  \"subject\": \"{{ $('Extract PDF Attachments').item.json.subject }}\",\n  \"received_at\": \"{{ $('Extract PDF Attachments').item.json.receivedAt }}\",\n  \"file_name\": \"{{ $('Extract PDF Attachments').item.json.fileName }}\",\n  \"file_hash\": \"{{ $('Calculate SHA-256 Hash').item.json.fileHash }}\",\n  \"file_size_bytes\": {{ $('Calculate SHA-256 Hash').item.json.fileSizeBytes }},\n  \"drive_file_id\": \"{{ $('Upload to Drive').item.json.id }}\",\n  \"drive_file_url\": \"https://drive.google.com/file/d/{{ $('Upload to Drive').item.json.id }}/view\"\n}",
+        "options": { "timeout": 30000 }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1760, -160],
+      "id": "ingest-callback",
+      "name": "POST Ingest to ELLAHOS"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "addLabel",
+        "messageId": "={{ $('Extract PDF Attachments').item.json.emailId }}",
+        "labelIds": ["UNREAD"],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1980, -160],
+      "id": "mark-read",
+      "name": "Mark as Read",
+      "credentials": {
+        "gmailOAuth2": { "id": "GMAIL_CREDENTIAL_ID", "name": "Gmail Financeiro OAuth2" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log de erro - nao bloqueia o workflow\nconst error = $input.first().json;\nconsole.error('[wf-nf-processor] Error processing email:', JSON.stringify(error));\nreturn [{ json: { logged: true, error: error.message || 'unknown' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1760, 80],
+      "id": "error-handler",
+      "name": "Log Error"
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": { "main": [[{ "node": "Read Unread Emails with PDF", "type": "main", "index": 0 }]] },
+    "Read Unread Emails with PDF": { "main": [[{ "node": "Has Attachments?", "type": "main", "index": 0 }]] },
+    "Has Attachments?": { "main": [[{ "node": "Extract PDF Attachments", "type": "main", "index": 0 }], []] },
+    "Extract PDF Attachments": { "main": [[{ "node": "Has PDFs?", "type": "main", "index": 0 }]] },
+    "Has PDFs?": { "main": [[{ "node": "Download PDF", "type": "main", "index": 0 }], []] },
+    "Download PDF": { "main": [[{ "node": "Calculate SHA-256 Hash", "type": "main", "index": 0 }]] },
+    "Calculate SHA-256 Hash": { "main": [[{ "node": "Upload to Drive", "type": "main", "index": 0 }]] },
+    "Upload to Drive": { "main": [[{ "node": "POST Ingest to ELLAHOS", "type": "main", "index": 0 }]] },
+    "POST Ingest to ELLAHOS": { "main": [[{ "node": "Mark as Read", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "tags": [{ "name": "ELLAHOS" }, { "name": "Fase9" }]
+}

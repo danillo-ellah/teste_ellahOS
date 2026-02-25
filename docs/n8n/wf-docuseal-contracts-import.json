@@ -1,0 +1,176 @@
+{
+  "name": "wf-docuseal-contracts",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wf-docuseal-contracts",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [0, 0],
+      "id": "webhook-trigger",
+      "name": "Webhook DocuSeal"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validar payload do integration-processor\nconst body = $input.first().json.body || $input.first().json;\n\nif (!body.submissions || !Array.isArray(body.submissions) || body.submissions.length === 0) {\n  return [{ json: { _valid: false, _error: 'submissions array ausente ou vazio' } }];\n}\n\nif (!body.template_id) {\n  return [{ json: { _valid: false, _error: 'template_id ausente' } }];\n}\n\nreturn [{ json: { _valid: true, ...body } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "id": "validate-batch",
+      "name": "Validate Batch"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json._valid }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 0],
+      "id": "is-valid",
+      "name": "Is Valid?"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "submissions",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [660, -80],
+      "id": "split-submissions",
+      "name": "Split Submissions"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validar cada submission individualmente\nconst item = $input.first().json;\n\nif (!item.email || !item.name || !item.role) {\n  return [{ json: { ...item, _valid: false, _error: `Campos obrigatorios ausentes para submitter` } }];\n}\n\n// Montar payload para DocuSeal API\nreturn [{\n  json: {\n    ...item,\n    _valid: true,\n    _docusealPayload: {\n      template_id: $('Validate Batch').first().json.template_id,\n      send_email: item.send_email !== false,\n      submitters: [{\n        role: item.role,\n        email: item.email,\n        fields: (item.fields || []).map(f => ({ name: f.name, default_value: f.value }))\n      }]\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, -80],
+      "id": "validate-item",
+      "name": "Validate Submission Item"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json._valid }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1100, -80],
+      "id": "item-valid",
+      "name": "Item Valid?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DOCUSEAL_BASE_URL }}/api/submissions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "X-Auth-Token", "value": "={{ $env.DOCUSEAL_API_TOKEN }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json._docusealPayload) }}",
+        "options": { "timeout": 30000 }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, -160],
+      "id": "create-docuseal",
+      "name": "Create DocuSeal Submission"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ELLAHOS_BASE_URL }}/docuseal-integration/webhook",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "X-Webhook-Secret", "value": "={{ $env.DOCUSEAL_WEBHOOK_SECRET }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"event_type\": \"form.sent\",\n  \"data\": {\n    \"submission_id\": {{ $('Create DocuSeal Submission').item.json.id }},\n    \"submitters\": {{ JSON.stringify($('Create DocuSeal Submission').item.json.submitters || []) }}\n  }\n}",
+        "options": { "timeout": 15000 }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, -160],
+      "id": "success-callback",
+      "name": "Callback Success"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log erro de validacao ou DocuSeal API\nconst item = $input.first().json;\nconsole.error('[wf-docuseal-contracts] Error:', item._error || item.message || 'unknown');\nreturn [{ json: { status: 'error', error: item._error || 'unknown', email: item.email } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 80],
+      "id": "log-error",
+      "name": "Log Error"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, processed: $input.all().length }) }}"
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1760, 0],
+      "id": "respond",
+      "name": "Respond"
+    }
+  ],
+  "connections": {
+    "Webhook DocuSeal": { "main": [[{ "node": "Validate Batch", "type": "main", "index": 0 }]] },
+    "Validate Batch": { "main": [[{ "node": "Is Valid?", "type": "main", "index": 0 }]] },
+    "Is Valid?": {
+      "main": [
+        [{ "node": "Split Submissions", "type": "main", "index": 0 }],
+        [{ "node": "Respond", "type": "main", "index": 0 }]
+      ]
+    },
+    "Split Submissions": { "main": [[{ "node": "Validate Submission Item", "type": "main", "index": 0 }]] },
+    "Validate Submission Item": { "main": [[{ "node": "Item Valid?", "type": "main", "index": 0 }]] },
+    "Item Valid?": {
+      "main": [
+        [{ "node": "Create DocuSeal Submission", "type": "main", "index": 0 }],
+        [{ "node": "Log Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Create DocuSeal Submission": { "main": [[{ "node": "Callback Success", "type": "main", "index": 0 }]] },
+    "Callback Success": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] },
+    "Log Error": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "tags": [{ "name": "ELLAHOS" }, { "name": "Fase9" }]
+}
