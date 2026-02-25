@@ -26,24 +26,11 @@ import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { formatCurrency, formatDate } from '@/lib/format'
 import { toast } from 'sonner'
 import { NfReassignDialog } from './nf-reassign-dialog'
 import { useValidateNf, useRejectNf } from '@/hooks/useNf'
 import type { NfDocument, FinancialRecordMatch } from '@/types/nf'
-
-// --- Helpers ---
-
-function formatCurrency(value: number | null): string {
-  if (value === null || value === undefined) return '—'
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
-
-function formatDate(iso: string | null): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return '—'
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-}
 
 // --- PDF Preview ---
 

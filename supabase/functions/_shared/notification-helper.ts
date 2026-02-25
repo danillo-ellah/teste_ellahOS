@@ -13,6 +13,7 @@ export const NOTIFICATION_TYPES = [
   'portal_message_received',
   'approval_responded',
   'approval_requested',
+  'nf_received',
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];

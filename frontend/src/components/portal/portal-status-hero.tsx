@@ -22,6 +22,7 @@ const PIPELINE_STEPS: { status: JobStatus; label: string }[] = [
   { status: 'finalizado', label: 'Concluido' },
 ]
 
+// Formato especial para portal: "5 de fev, 14:30" (diferente do formatDate padrao)
 function formatDateBR(dateStr: string | null | undefined): string {
   if (!dateStr) return ''
   try {

@@ -52,24 +52,11 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { cn } from '@/lib/utils'
+import { formatCurrency, formatDate } from '@/lib/format'
 import { toast } from 'sonner'
 import { NfStatusBadge } from './nf-status-badge'
 import type { NfDocument, NfFilters } from '@/types/nf'
 import type { PaginationMeta } from '@/types/jobs'
-
-// --- Helpers ---
-
-function formatDate(iso: string | null): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return '—'
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-}
-
-function formatCurrency(value: number | null): string {
-  if (value === null || value === undefined) return '—'
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
 
 // --- Skeleton ---
 

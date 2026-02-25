@@ -11,13 +11,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
+import { formatCurrency } from '@/lib/format'
 import type { NfRequestRecord, NfRequestSupplierGroup } from '@/types/nf'
-
-// --- Helpers ---
-
-function formatCurrency(value: number): string {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
 
 // --- Summary card para 1 fornecedor ---
 

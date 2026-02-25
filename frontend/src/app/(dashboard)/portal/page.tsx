@@ -8,8 +8,6 @@ import {
   ExternalLink,
   AlertCircle,
 } from 'lucide-react'
-import { format, parseISO, isValid } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -30,6 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import { formatDate } from '@/lib/format'
 import { usePortalSessions } from '@/hooks/use-portal'
 import { CreateSessionDialog } from '@/components/portal/create-session-dialog'
 import type { PortalSession } from '@/types/portal'
@@ -65,17 +64,6 @@ function CopyLinkButton({ url }: { url: string }) {
       )}
     </Button>
   )
-}
-
-function formatDateBR(dateStr: string | null | undefined): string {
-  if (!dateStr) return '-'
-  try {
-    const parsed = parseISO(dateStr)
-    if (!isValid(parsed)) return '-'
-    return format(parsed, 'dd/MM/yyyy', { locale: ptBR })
-  } catch {
-    return '-'
-  }
 }
 
 type StatusFilter = 'all' | 'active' | 'inactive'
@@ -236,12 +224,12 @@ export default function PortalPage() {
 
                   {/* Criado em */}
                   <TableCell className="text-sm text-muted-foreground">
-                    {formatDateBR(session.created_at)}
+                    {formatDate(session.created_at)}
                   </TableCell>
 
                   {/* Expira em */}
                   <TableCell className="text-sm text-muted-foreground">
-                    {formatDateBR(session.expires_at)}
+                    {formatDate(session.expires_at)}
                   </TableCell>
 
                   {/* Acoes */}

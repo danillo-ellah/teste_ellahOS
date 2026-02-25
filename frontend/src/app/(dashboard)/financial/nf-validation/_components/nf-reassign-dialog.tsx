@@ -14,22 +14,9 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { formatCurrency, formatDate } from '@/lib/format'
 import { useFinancialRecordMatches } from '@/hooks/useNf'
 import type { FinancialRecordMatch } from '@/types/nf'
-
-// --- Helpers ---
-
-function formatCurrency(value: number | null): string {
-  if (value === null || value === undefined) return '—'
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
-
-function formatDate(iso: string | null): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return '—'
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
-}
 
 const NF_STATUS_LABEL: Record<FinancialRecordMatch['nf_status'], string> = {
   sem_nf: 'Sem NF',

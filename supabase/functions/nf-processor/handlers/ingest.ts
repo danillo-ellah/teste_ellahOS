@@ -261,7 +261,7 @@ export async function ingestNf(req: Request): Promise<Response> {
       await createNotification(serviceClient, {
         tenant_id: input.tenant_id,
         user_id: userId,
-        type: 'integration_failed', // tipo generico existente — reutilizado para NF alerts
+        type: 'nf_received',
         priority: docStatus === 'auto_matched' ? 'normal' : 'high',
         title: notifTitle,
         body: notifBody,

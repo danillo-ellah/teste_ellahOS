@@ -28,6 +28,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { formatCurrency } from '@/lib/format'
 import { NfRequestStatusBadge } from './nf-request-status-badge'
 import type {
   NfRequestRecord,
@@ -35,12 +36,6 @@ import type {
   NfRequestSupplierGroup,
   NfRequestRecordType,
 } from '@/types/nf'
-
-// --- Helpers ---
-
-function formatCurrency(value: number): string {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
 
 function groupBySupplier(records: NfRequestRecord[]): NfRequestSupplierGroup[] {
   const map = new Map<string, NfRequestSupplierGroup>()

@@ -264,37 +264,14 @@ DRIVE_NF_FOLDER_ID
 
 ---
 
-#### Node 7: Check Duplicate (HTTP Request)
+#### Node 7-8: Deduplicacao (REMOVIDO)
 
-- **Tipo:** `HTTP Request`
-- **Nome:** `Check Hash Duplicate`
-- **Configuracao:**
-  ```
-  Method: GET
-  URL: {{ $env.ELLAHOS_BASE_URL }}/nf-processor/check-hash
-  Query Parameters:
-    hash: {{ $json.fileHash }}
-  Headers:
-    X-Cron-Secret: {{ $env.ELLAHOS_CRON_SECRET }}
-  ```
-- **Output esperado:**
-  ```json
-  { "data": { "exists": false } }
-  { "data": { "exists": true, "nf_id": "uuid-do-nf-existente" } }
-  ```
-
----
-
-#### Node 8: IF Duplicate
-
-- **Tipo:** `IF`
-- **Nome:** `Is Duplicate?`
-- **Configuracao:**
-  ```
-  Condition: {{ $json.data.exists }} === true
-  ```
-- **Output (true):** vai para Node 9 (Mark Read + Skip)
-- **Output (false):** vai para Node 10 (Upload to Drive)
+> **NOTA:** O endpoint `check-hash` NAO existe como rota separada.
+> A deduplicacao por hash e feita internamente pelo endpoint `ingest` (Node 11).
+> Se o hash ja existir, `ingest` retorna `{ "data": { "is_duplicate": true } }` com status 200.
+> O workflow deve pular os Nodes 7-8 e ir direto do Node 6 (Calculate Hash)
+> para o Node 10 (Upload to Drive) e depois Node 11 (Ingest).
+> O `ingest` handler cuida da deduplicacao automaticamente.
 
 ---
 
@@ -1408,27 +1385,34 @@ DOCUSEAL_API_TOKEN
 
 #### Node 7: POST Success Callback
 
+> **NOTA:** O endpoint `submission-created-callback` NAO existe como rota separada.
+> O handler `create-submission` do ELLAHOS ja chama a DocuSeal API e persiste os dados
+> internamente (ver `docuseal-integration/handlers/create-submission.ts`).
+> Se o workflow n8n estiver criando submissions diretamente via DocuSeal API
+> (sem passar pelo ELLAHOS), use o endpoint `docuseal-integration/webhook`
+> que ja processa eventos de status (sent, opened, signed, etc).
+
 - **Tipo:** `HTTP Request`
 - **Nome:** `Callback - Submission Created`
 - **Configuracao:**
   ```
   Method: POST
-  URL: {{ $env.ELLAHOS_BASE_URL }}/docuseal-integration/submission-created-callback
+  URL: {{ $env.ELLAHOS_BASE_URL }}/docuseal-integration/webhook
   Headers:
     Content-Type: application/json
-    X-Cron-Secret: {{ $env.ELLAHOS_CRON_SECRET }}
+    X-Webhook-Secret: {{ $env.DOCUSEAL_WEBHOOK_SECRET }}
   Body (JSON):
   {
-    "ellahos_submission_id": "{{ $('Validate Submission Item').item.json.ellahos_submission_id }}",
-    "docuseal_submission_id": {{ $('Create DocuSeal Submission').item.json.id }},
-    "docuseal_slug": "{{ $('Create DocuSeal Submission').item.json.submitters[0].slug }}",
-    "status": "sent",
-    "sent_at": "{{ $('Create DocuSeal Submission').item.json.submitters[0].sent_at }}"
+    "event_type": "form.sent",
+    "data": {
+      "submission_id": {{ $('Create DocuSeal Submission').item.json.id }},
+      "submitters": {{ JSON.stringify($('Create DocuSeal Submission').item.json.submitters) }}
+    }
   }
   ```
 - **Output esperado:**
   ```json
-  { "data": { "updated": true } }
+  { "data": { "processed": true } }
   ```
 
 ---
@@ -1468,16 +1452,17 @@ DOCUSEAL_API_TOKEN
 - **Configuracao:**
   ```
   Method: POST
-  URL: {{ $env.ELLAHOS_BASE_URL }}/docuseal-integration/submission-created-callback
+  URL: {{ $env.ELLAHOS_BASE_URL }}/docuseal-integration/webhook
   Headers:
     Content-Type: application/json
-    X-Cron-Secret: {{ $env.ELLAHOS_CRON_SECRET }}
+    X-Webhook-Secret: {{ $env.DOCUSEAL_WEBHOOK_SECRET }}
   Body (JSON):
   {
-    "ellahos_submission_id": "{{ $json.ellahos_submission_id }}",
-    "docuseal_submission_id": null,
-    "status": "error",
-    "error_message": "{{ $json.error }}"
+    "event_type": "form.declined",
+    "data": {
+      "submission_id": {{ $json.docuseal_submission_id || 0 }},
+      "decline_reason": "{{ $json.error }}"
+    }
   }
   ```
 

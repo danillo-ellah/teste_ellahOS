@@ -5,24 +5,8 @@ import { Mail, Loader2 } from 'lucide-react'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import { formatCurrency, formatDate } from '@/lib/format'
 import type { NfRequestRecord, NfRequestSupplierGroup } from '@/types/nf'
-
-// --- Helpers ---
-
-function formatCurrency(value: number): string {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
-
-function formatDate(iso: string | null): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return '—'
-  return d.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  })
-}
 
 // Gera um HTML de preview do email localmente
 // Em producao o HTML viria do backend, mas para preview usamos um template local
