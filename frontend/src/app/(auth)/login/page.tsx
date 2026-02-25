@@ -22,7 +22,9 @@ function getAuthErrorMessage(message: string): string {
     'For security purposes': 'Aguarde alguns segundos antes de tentar novamente',
   }
   const key = Object.keys(map).find((k) => message.includes(k))
-  return key ? map[key] : 'Ocorreu um erro inesperado. Tente novamente'
+  if (key) return map[key]
+  console.error('[login] Auth error:', message)
+  return `Erro: ${message}`
 }
 
 function LoginForm() {

@@ -374,6 +374,11 @@ export const INTEGRATION_EVENT_TYPES = [
   'docuseal_submission_created',
   'docuseal_submission_signed',
   'docuseal_submission_failed',
+  // Fase 9: novos event_types para automacoes operacionais
+  'nf_email_send',
+  'docuseal_create_batch',
+  'pdf_generate',
+  'drive_copy_templates',
 ] as const;
 
 export const INTEGRATION_EVENT_STATUSES = [
@@ -542,3 +547,117 @@ export interface AiUsageLogRow {
 // Niveis de confianca para estimativas AI
 export const AI_CONFIDENCE_LEVELS = ['high', 'medium', 'low'] as const;
 export type AiConfidenceLevel = (typeof AI_CONFIDENCE_LEVELS)[number];
+
+// === Fase 9: Automacoes Operacionais ===
+
+// Status possiveis de um documento de NF na tabela nf_documents
+export const NF_DOCUMENT_STATUSES = [
+  'pending_review',
+  'auto_matched',
+  'confirmed',
+  'rejected',
+  'processing',
+] as const;
+
+export type NfDocumentStatus = (typeof NF_DOCUMENT_STATUSES)[number];
+
+// Metodos de match entre NF e financial_record/invoice
+export const NF_MATCH_METHODS = [
+  'auto_value_supplier',
+  'auto_nf_number',
+  'manual',
+  'ocr_ai',
+] as const;
+
+export type NfMatchMethod = (typeof NF_MATCH_METHODS)[number];
+
+// Origens possiveis de um documento de NF
+export const NF_DOCUMENT_SOURCES = [
+  'email',
+  'manual_upload',
+  'ocr',
+] as const;
+
+export type NfDocumentSource = (typeof NF_DOCUMENT_SOURCES)[number];
+
+// Registro de NF na tabela nf_documents
+export interface NfDocumentRow {
+  id: string;
+  tenant_id: string;
+  job_id: string | null;
+  // Origem
+  source: NfDocumentSource;
+  gmail_message_id: string | null;
+  sender_email: string | null;
+  sender_name: string | null;
+  subject: string | null;
+  received_at: string | null;
+  // Arquivo
+  file_hash: string;
+  file_name: string;
+  file_size_bytes: number | null;
+  drive_file_id: string | null;
+  drive_url: string | null;
+  storage_path: string | null;
+  // Dados extraidos (manual ou OCR)
+  nf_number: string | null;
+  nf_value: number | null;
+  nf_issuer_name: string | null;
+  nf_issuer_cnpj: string | null;
+  nf_issue_date: string | null;
+  extracted_data: Record<string, unknown>;
+  // Matching
+  status: NfDocumentStatus;
+  matched_financial_record_id: string | null;
+  matched_invoice_id: string | null;
+  match_confidence: number | null;
+  match_method: NfMatchMethod | null;
+  validated_by: string | null;
+  validated_at: string | null;
+  rejection_reason: string | null;
+  // Metadata
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+// Status possiveis de uma submission do DocuSeal
+export const DOCUSEAL_STATUSES = [
+  'pending',
+  'sent',
+  'opened',
+  'partially_signed',
+  'signed',
+  'declined',
+  'expired',
+  'error',
+] as const;
+
+export type DocuSealStatus = (typeof DOCUSEAL_STATUSES)[number];
+
+// Registro de submission do DocuSeal na tabela docuseal_submissions
+export interface DocuSealSubmissionRow {
+  id: string;
+  tenant_id: string;
+  job_id: string;
+  person_id: string | null;
+  person_name: string;
+  person_email: string;
+  person_cpf: string | null;
+  docuseal_submission_id: number | null;
+  docuseal_template_id: number;
+  docuseal_status: DocuSealStatus;
+  contract_data: Record<string, unknown>;
+  signed_pdf_url: string | null;
+  signed_pdf_drive_id: string | null;
+  sent_at: string | null;
+  opened_at: string | null;
+  signed_at: string | null;
+  created_by: string;
+  error_message: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}

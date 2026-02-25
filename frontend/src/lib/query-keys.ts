@@ -171,3 +171,10 @@ export const freelancerMatchKeys = {
   all: ['ai-freelancer-match'] as const,
   suggestions: (jobId: string, role: string) => [...freelancerMatchKeys.all, 'suggestions', jobId, role] as const,
 }
+
+export const nfKeys = {
+  all: ['nf-processor'] as const,
+  lists: () => [...nfKeys.all, 'list'] as const,
+  list: (filters: Record<string, string>) => [...nfKeys.lists(), filters] as const,
+  stats: () => [...nfKeys.all, 'stats'] as const,
+}

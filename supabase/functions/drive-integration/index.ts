@@ -7,13 +7,15 @@ import { listFolders } from './handlers/list-folders.ts';
 import { createStructure } from './handlers/create-structure.ts';
 import { recreateStructure } from './handlers/recreate.ts';
 import { syncUrls } from './handlers/sync-urls.ts';
+import { handleCopyTemplates } from './handlers/copy-templates.ts';
 
 // ========================================================
 // drive-integration — CRUD pastas Google Drive por job
-// POST /:jobId/create-structure — trigger manual (admin)
-// POST /:jobId/recreate — recriar pastas (admin)
-// POST /:jobId/sync-urls — callback do n8n
-// GET  /:jobId/folders — listar pastas do job
+// POST /:jobId/create-structure  — criar estrutura de pastas (admin/ceo)
+// POST /:jobId/recreate          — recriar pastas (admin/ceo)
+// POST /:jobId/sync-urls         — callback do n8n (webhook)
+// POST /:jobId/copy-templates    — copiar templates para pastas do job (admin/ceo/pe)
+// GET  /:jobId/folders           — listar pastas do job
 // ========================================================
 
 Deno.serve(async (req: Request) => {
@@ -63,6 +65,11 @@ Deno.serve(async (req: Request) => {
             throw new AppError('FORBIDDEN', 'Apenas admin/ceo podem recriar pastas', 403);
           }
           return await recreateStructure(req, auth, jobId);
+        }
+        if (segment2 === 'copy-templates') {
+          // Permitido para admin, ceo e produtor_executivo
+          // (verificacao de role granular feita dentro do handler)
+          return await handleCopyTemplates(req, auth, jobId);
         }
         break;
     }

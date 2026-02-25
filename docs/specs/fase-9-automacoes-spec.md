@@ -1,7 +1,7 @@
 # Fase 9: Automacoes Operacionais — Spec Completa
 
 **Data:** 24/02/2026
-**Status:** RASCUNHO — aguardando validacao
+**Status:** COMPLETO — 53 user stories (US-901 a US-983)
 **Autor:** Product Manager — ELLAHOS
 **Fase anterior:** Fase 8 (Inteligencia Artificial) — CONCLUIDA E AUDITADA
 
@@ -478,3 +478,450 @@ Criterios de aceite:
 - CA-938.5: Campo Email do signatario Produtora -- email que representa a produtora nos contratos (segundo signatario)
 
 ---
+### 5.5 F9.5 -- Copia de Templates do Drive (US-941 a US-945)
+
+**Contexto:** Na Fase 5, a funcao create-structure do drive-integration cria 26 pastas vazias no Drive ao criar um job. Porem, os templates operacionais (GG_, cronograma, formulario de equipe) precisam ser copiados manualmente para cada novo job. A Fase 9 expande o drive-integration para copiar automaticamente os templates configurados ao criar a estrutura de pastas.
+
+---
+
+**US-941 -- Configurar templates do Drive por tenant**
+Como admin, quero configurar quais templates do Google Drive devem ser copiados automaticamente para cada novo job, para que a equipe nao precise copiar manualmente.
+
+Criterios de aceite:
+- CA-941.1: Pagina /settings/integrations aba Drive exibe secao Templates de Job com lista de templates configurados
+- CA-941.2: Para cada template, usuario define: nome (com placeholders {JOB_ABA}, {JOB_CODE}, {CLIENT}), ID do arquivo fonte no Drive (source_id), pasta destino (folder_key da tabela drive_folders), tipo (spreadsheet/form/document)
+- CA-941.3: Botao Adicionar Template com modal para preencher os campos
+- CA-941.4: Templates salvos em tenant.settings.integrations.drive.templates (array JSON, nao Vault -- nao sao secrets)
+- CA-941.5: Botao Testar Template que verifica se o source_id existe e e acessivel pela Service Account (Drive API files.get)
+
+---
+
+**US-942 -- Copiar templates automaticamente ao criar estrutura de pastas**
+Como sistema, quero copiar os templates configurados automaticamente apos criar as pastas do job no Drive, para que a estrutura fique completa sem intervencao manual.
+
+Criterios de aceite:
+- CA-942.1: Ao final do fluxo create-structure do drive-integration, se tenant.settings.integrations.drive.templates estiver configurado, executar copia automatica dos templates
+- CA-942.2: Para cada template: Drive API files.copy com name substituindo placeholders ({JOB_ABA} -> jobs.job_aba, {JOB_CODE} -> jobs.code, {CLIENT} -> clients.name)
+- CA-942.3: Arquivo copiado movido para a pasta correta via Drive API files.update (parents) usando drive_folders do job
+- CA-942.4: Referencia do arquivo copiado salva em job_files com external_source = 'google_drive' e external_id = copied_file_id
+- CA-942.5: Se um template falhar na copia, os demais continuam (nao bloqueia o fluxo inteiro). Erro logado em integration_events
+- CA-942.6: Copia automatica pode ser desabilitada com toggle em tenant.settings.integrations.drive.auto_copy_templates (boolean, default true)
+
+---
+
+**US-943 -- Copiar templates manualmente para jobs existentes**
+Como coordenador, quero copiar templates para jobs que foram criados antes da configuracao de templates, para nao precisar copiar manualmente arquivos antigos.
+
+Criterios de aceite:
+- CA-943.1: Novo endpoint POST /drive-integration/:jobId/copy-templates na Edge Function existente
+- CA-943.2: Endpoint aceita payload opcional com lista de template IDs especificos. Se vazio, copia todos os configurados
+- CA-943.3: Verificacao de idempotencia: se um template ja foi copiado para aquele job (mesmo source_id em job_files), o arquivo nao e duplicado
+- CA-943.4: Botao Copiar Templates disponivel na secao Drive do job detail, visivel para roles admin, ceo, produtor
+- CA-943.5: Resposta exibe: X de Y templates copiados, lista de erros (se houver)
+
+---
+
+**US-944 -- Visualizar status dos templates copiados no job detail**
+Como coordenador, quero ver no job detail quais templates ja foram copiados para as pastas do job, para saber se a estrutura esta completa.
+
+Criterios de aceite:
+- CA-944.1: Secao Templates na aba Drive do job detail lista os templates configurados com status: Copiado (verde) / Nao copiado (cinza) / Erro (vermelho)
+- CA-944.2: Para cada template copiado, exibe link para o arquivo no Drive
+- CA-944.3: Badge no header da aba Drive indica X/Y templates copiados
+- CA-944.4: Se nenhum template configurado no tenant, secao exibe mensagem Configure templates em Configuracoes > Integracoes > Drive
+
+---
+
+**US-945 -- Log de copia de templates**
+Como admin, quero ver o historico de copias de templates, para diagnosticar falhas e auditar o processo.
+
+Criterios de aceite:
+- CA-945.1: Cada operacao de copia cria registro em integration_events com event_type = drive_copy_templates
+- CA-945.2: Payload inclui: job_id, templates_requested, templates_copied, templates_failed, duration_ms
+- CA-945.3: Logs visiveis na pagina /settings/integrations aba Drive com filtro de data
+- CA-945.4: Erros individuais (ex: source_id nao encontrado, permissao negada) logados com mensagem descritiva
+
+---
+### 5.6 F9.6 -- Geracao de Aprovacao Interna PDF (US-951 a US-956)
+
+**Contexto:** O documento de Aprovacao Interna e um PDF formal com todos os dados do job que e gerado para formalizar a aprovacao interna antes de iniciar a producao. Hoje e montado manualmente em Google Docs pelo PE. A Fase 9 automatiza a geracao desse PDF a partir dos dados ja cadastrados no ELLAHOS.
+
+---
+
+**US-951 -- Gerar PDF de aprovacao interna a partir dos dados do job**
+Como PE, quero gerar automaticamente o PDF de aprovacao interna com todos os dados do job, para nao ter que montar o documento manualmente no Google Docs.
+
+Criterios de aceite:
+- CA-951.1: Botao Gerar Aprovacao Interna no header do job detail (ao lado dos botoes de acao), visivel para roles PE, admin, ceo
+- CA-951.2: Ao clicar, chama POST /pdf-generator/aprovacao-interna com job_id
+- CA-951.3: Edge Function busca todos os dados do job no banco e gera PDF com layout formatado
+- CA-951.4: Dados incluidos no PDF: (1) dados do cliente (razao social, CNPJ, endereco), (2) dados do job (numero, nome, titulo do filme, campanha, produto), (3) diretor, produtora de som, (4) detalhes tecnicos (secundagem, pecas, diarias, datas de filmagem), (5) elenco (tipo, cache), (6) periodo de veiculacao e midias, (7) formato, legendagem, computacao grafica, (8) modelo de contrato
+- CA-951.5: PDF gerado com layout profissional: header com logo da produtora (configuravel), tabelas formatadas, tipografia limpa
+- CA-951.6: Loading state exibido durante a geracao (~2-5 segundos)
+
+---
+
+**US-952 -- Preview do PDF antes de salvar**
+Como PE, quero ver um preview do PDF gerado antes de salvar, para verificar se os dados estao corretos.
+
+Criterios de aceite:
+- CA-952.1: Modal de preview exibe o HTML renderizado do PDF (endpoint GET /pdf-generator/preview/aprovacao-interna/:jobId)
+- CA-952.2: Botoes no modal: Salvar no Drive (gera PDF final e salva), Baixar PDF (download direto), Fechar
+- CA-952.3: Se algum dado obrigatorio estiver faltando no job (ex: cliente sem CNPJ), preview exibe alerta com campos ausentes destacados em amarelo
+- CA-952.4: Preview renderizado em iframe sandbox para seguranca
+
+---
+
+**US-953 -- Salvar PDF no Drive e registrar no ELLAHOS**
+Como sistema, quero salvar o PDF de aprovacao interna no Drive e registrar no ELLAHOS, para manter historico e rastreabilidade.
+
+Criterios de aceite:
+- CA-953.1: PDF salvo na pasta de documentos do job no Drive (folder_key: documentos da tabela drive_folders)
+- CA-953.2: Nome do arquivo: Aprovacao_Interna_{JOB_ABA}_{YYYYMMDD}.pdf
+- CA-953.3: Referencia salva em job_files com file_type = 'approval_internal', external_source = 'google_drive', external_id = drive_file_id
+- CA-953.4: Se ja existe um PDF de aprovacao interna para o job, o novo sobrescreve o anterior (versionamento via job_files -- o anterior nao e deletado, apenas marcado com superseded_by)
+- CA-953.5: Registro criado em job_history com action = 'approval_internal_generated' e link para o PDF
+
+---
+
+**US-954 -- Acessar PDFs de aprovacao gerados anteriormente**
+Como PE, quero acessar os PDFs de aprovacao interna gerados anteriormente para um job, para consultar versoes passadas.
+
+Criterios de aceite:
+- CA-954.1: Secao Aprovacao Interna na aba Documentos do job detail lista todos os PDFs gerados com data e quem gerou
+- CA-954.2: Botao Abrir abre o PDF no Drive em nova aba
+- CA-954.3: Botao Baixar faz download direto do PDF
+- CA-954.4: Badge Ultima versao no PDF mais recente para diferenciar de versoes anteriores
+
+---
+
+**US-955 -- Configurar logo e dados da produtora no PDF**
+Como admin, quero configurar o logo e os dados da produtora que aparecem no PDF de aprovacao interna, para personalizar o documento.
+
+Criterios de aceite:
+- CA-955.1: Pagina /settings/integrations aba Documentos (nova aba) exibe: campo para upload do logo da produtora (PNG/JPG, max 500KB), campos para razao social, CNPJ, endereco, telefone, email
+- CA-955.2: Logo armazenado no Supabase Storage (bucket logos, path {tenant_id}/logo.png)
+- CA-955.3: Dados salvos em tenant.settings.company_info (JSON)
+- CA-955.4: Preview do PDF usa os dados configurados. Se nao configurados, usa valores padrao da Ellah Filmes
+
+---
+
+**US-956 -- Enviar PDF de aprovacao por email**
+Como PE, quero enviar o PDF de aprovacao interna por email para os aprovadores, para formalizar o processo de aprovacao.
+
+Criterios de aceite:
+- CA-956.1: Botao Enviar por Email no modal de preview do PDF
+- CA-956.2: Modal de envio com campos: destinatarios (email, multi-select com sugestao de CEO e socios do tenant), assunto (pre-preenchido: Aprovacao Interna - {JOB_ABA}), mensagem (editavel)
+- CA-956.3: Email enviado via n8n (mesmo fluxo do wf-nf-request, reutilizando a credencial Gmail)
+- CA-956.4: PDF anexado ao email (nao apenas link)
+- CA-956.5: Registro de envio criado em job_history com action = 'approval_internal_sent' e destinatarios
+
+---
+### 5.7 F9.7 -- OCR de NFs com IA (US-961 a US-965)
+
+**Contexto:** Quando uma NF e recebida (F9.1), os dados como numero da NF, valor, CNPJ do emissor e data de emissao precisam ser preenchidos manualmente. A Fase 9 usa Claude Vision para extrair esses dados automaticamente do PDF, apresentando como sugestao que requer validacao humana.
+
+---
+
+**US-961 -- Extrair dados de NF via Claude Vision**
+Como sistema, quero extrair automaticamente os dados estruturados de um PDF de NF usando IA, para preencher os campos sem digitacao manual.
+
+Criterios de aceite:
+- CA-961.1: Endpoint POST /nf-processor/ocr-analyze recebe nf_document_id e processa o PDF associado
+- CA-961.2: PDF convertido para imagem (PNG) antes de enviar para Claude -- conversao via n8n (ImageMagick/Ghostscript na VPS) ou via library no Deno
+- CA-961.3: Prompt estruturado enviado ao Claude Sonnet via Vision API solicitando: nf_number, nf_value (numerico), issuer_name (razao social), issuer_cnpj, issue_date (YYYY-MM-DD), service_description
+- CA-961.4: Resposta do Claude parseada e salva em nf_documents.extracted_data (JSONB)
+- CA-961.5: Campo match_confidence atualizado com base na qualidade da extracao (1.0 se todos os campos extraidos, proporcional se parcial)
+- CA-961.6: Status do nf_document NAO muda automaticamente -- dados extraidos sao apenas sugestao
+
+---
+
+**US-962 -- Exibir dados extraidos por OCR na UI de validacao**
+Como financeiro, quero ver os dados extraidos pela IA ao lado do PDF original, para validar rapidamente se a extracao esta correta.
+
+Criterios de aceite:
+- CA-962.1: Modal de validacao de NF (NfValidationDialog) exibe secao Dados Extraidos por IA com os campos: numero, valor, CNPJ, razao social, data emissao
+- CA-962.2: Campos pre-preenchidos com os valores extraidos (editaveis antes de confirmar)
+- CA-962.3: Indicador de confianca por campo: verde (alta), amarelo (media), vermelho (baixa/nao encontrado)
+- CA-962.4: Botao Aceitar Sugestao preenche todos os campos de uma vez
+- CA-962.5: Se OCR ainda nao foi executado para aquela NF, exibe botao Analisar com IA
+
+---
+
+**US-963 -- Configurar OCR automatico ou sob demanda**
+Como admin, quero configurar se o OCR deve rodar automaticamente ao receber NFs ou apenas sob demanda, para controlar custos com IA.
+
+Criterios de aceite:
+- CA-963.1: Toggle OCR automatico de NFs em /settings/integrations aba IA / NF
+- CA-963.2: Com toggle ativo, o endpoint ocr-analyze e chamado automaticamente apos cada ingest (via integration_events com event_type = nf_ocr_analyze)
+- CA-963.3: Com toggle desativado, OCR so e executado quando o usuario clica Analisar com IA no modal de validacao
+- CA-963.4: Exibir estimativa de custo mensal baseada no volume de NFs processadas (custo medio ~R$0,05 por NF)
+- CA-963.5: Configuracao salva em tenant.settings.nf_processor.auto_ocr (boolean, default false)
+
+---
+
+**US-964 -- Fallback para preenchimento manual**
+Como financeiro, quero preencher os dados da NF manualmente quando o OCR falhar ou nao estiver disponivel, para nao ficar bloqueado.
+
+Criterios de aceite:
+- CA-964.1: Modal de validacao sempre permite preenchimento manual dos campos (nf_number, nf_value, nf_issuer_cnpj, nf_issuer_name, nf_issue_date) independente do OCR
+- CA-964.2: Se Claude API estiver indisponivel, botao Analisar com IA exibe mensagem Servico de IA temporariamente indisponivel em vez de erro generico
+- CA-964.3: Campos preenchidos manualmente marcados com match_method = 'manual' para diferenciar de dados extraidos por OCR (match_method = 'ocr_ai')
+
+---
+
+**US-965 -- Rate limiting e controle de custo do OCR**
+Como admin, quero que o sistema limite o uso do OCR para evitar custos excessivos, para manter o orcamento sob controle.
+
+Criterios de aceite:
+- CA-965.1: Limite de 200 analises OCR por mes por tenant (configuravel em tenant.settings.nf_processor.ocr_monthly_limit)
+- CA-965.2: Cada analise registrada em ai_usage_logs (tabela existente da Fase 8) com feature = 'nf_ocr'
+- CA-965.3: Ao atingir 80% do limite, notificacao in-app para admin
+- CA-965.4: Ao atingir 100% do limite, OCR automatico desativado ate proximo mes. OCR manual ainda permitido com aviso Limite mensal atingido -- uso adicional sera cobrado
+- CA-965.5: Dashboard de uso em /settings/integrations aba IA / NF com grafico de consumo mensal
+
+---
+### 5.8 F9.8 -- Geracao de Claquete (US-971 a US-974)
+
+**Contexto:** A claquete e o documento visual usado no set de filmagem com os dados do job (titulo, duracao, produto, cliente, diretor, diaria). Hoje e gerada via Apps Script usando um template Google Slides. A Fase 9 automatiza essa geracao via n8n (wf-claquete) usando Google Slides API para substituir placeholders e exportar como PDF e PNG.
+
+---
+
+**US-971 -- Gerar claquete a partir dos dados do job**
+Como coordenador, quero gerar a claquete do job automaticamente a partir dos dados do ELLAHOS, para nao precisar preencher manualmente no Google Slides.
+
+Criterios de aceite:
+- CA-971.1: Botao Gerar Claquete na aba Geral do job detail, visivel para roles PE, coordenador, admin
+- CA-971.2: Ao clicar, chama endpoint que enfileira integration_event com event_type = claquete_generate e payload com job_id
+- CA-971.3: Workflow n8n wf-claquete recebe o webhook, copia o template de claquete do Slides, substitui placeholders ({TITULO}, {DURACAO}, {PRODUTO}, {CLIENTE}, {DIRETOR}, {DIARIA}, {DATA}, {PECAS})
+- CA-971.4: Slides exportado como PDF e PNG via Google Slides API
+- CA-971.5: Arquivos salvos na pasta de documentos do job no Drive
+- CA-971.6: Referencia salva em job_files com file_type = 'claquete'
+
+---
+
+**US-972 -- Configurar template de claquete**
+Como admin, quero configurar qual template de claquete usar, para personalizar o visual por tenant.
+
+Criterios de aceite:
+- CA-972.1: Campo ID do Template de Claquete em /settings/integrations aba Drive (ou aba Documentos)
+- CA-972.2: Template deve ser um Google Slides com placeholders no formato {CAMPO}
+- CA-972.3: Lista de placeholders suportados exibida na pagina de configuracao: {TITULO}, {DURACAO}, {PRODUTO}, {CLIENTE}, {AGENCIA}, {DIRETOR}, {PE}, {DIARIA}, {DATA}, {PECAS}, {JOB_CODE}
+- CA-972.4: Botao Testar Template que gera uma claquete de teste com dados ficticios
+- CA-972.5: Template ID salvo em tenant.settings.documents.claquete_template_id
+
+---
+
+**US-973 -- Visualizar e baixar claquete gerada**
+Como coordenador, quero visualizar e baixar a claquete gerada para enviar para o set de filmagem.
+
+Criterios de aceite:
+- CA-973.1: Apos geracao, modal exibe preview da claquete (PNG) e botoes: Baixar PDF, Baixar PNG, Abrir no Drive
+- CA-973.2: Claquetes anteriores do job listadas na secao Claquete da aba Documentos
+- CA-973.3: Se ja existe claquete para o job, botao muda para Regerar Claquete com aviso de que a anterior sera mantida como versao antiga
+- CA-973.4: PNG otimizado para compartilhamento via WhatsApp (resolucao adequada, tamanho < 2MB)
+
+---
+
+**US-974 -- Gerar claquete para diaria especifica**
+Como coordenador, quero gerar claquetes diferentes para cada diaria de filmagem quando o job tem multiplas diarias, para que cada diaria tenha sua propria claquete com data correta.
+
+Criterios de aceite:
+- CA-974.1: Se o job tem multiplas diarias em job_shooting_dates, o botao Gerar Claquete abre seletor de diaria
+- CA-974.2: Usuario pode selecionar uma diaria especifica ou todas
+- CA-974.3: Para cada diaria selecionada, uma claquete e gerada com o placeholder {DIARIA} substituido pelo numero da diaria e {DATA} pela data correspondente
+- CA-974.4: Claquetes de multiplas diarias geradas em batch (uma por diaria) com progress indicator
+
+---
+### 5.9 F9.9 -- Persistir Volume Docker Evolution API (US-981 a US-983)
+
+**Contexto:** A Evolution API roda em Docker na VPS Hetzner. Atualmente, o volume nao esta persistido, o que significa que ao reiniciar o container Docker, a sessao WhatsApp e perdida e o QR Code precisa ser reatrelado manualmente. Isso causa downtime nos workflows que dependem do WhatsApp (JOB_FECHADO_CRIACAO, notificacoes).
+
+---
+
+**US-981 -- Persistir volume Docker da Evolution API**
+Como admin, quero que a sessao WhatsApp da Evolution API persista entre reinicializacoes do Docker, para eliminar a necessidade de reatrelar o QR Code manualmente.
+
+Criterios de aceite:
+- CA-981.1: docker-compose.yml da Evolution API atualizado com volume bind mount para o diretorio de dados da instancia
+- CA-981.2: Diretorio do host: /opt/evolution-api/data (ou equivalente configurado na VPS)
+- CA-981.3: Apos reiniciar o container (docker compose restart), a sessao WhatsApp permanece ativa sem necessidade de re-escanear QR Code
+- CA-981.4: Backup do volume incluido no script de backup da VPS (se existir)
+- CA-981.5: Documentacao do procedimento em docs/infra/evolution-api-docker.md
+
+---
+
+**US-982 -- Healthcheck da Evolution API**
+Como admin, quero que o sistema monitore se a Evolution API esta ativa e a sessao WhatsApp conectada, para ser alertado antes que os workflows falhem.
+
+Criterios de aceite:
+- CA-982.1: Endpoint de healthcheck da Evolution API verificado a cada 5 minutos (via n8n schedule ou pg_cron)
+- CA-982.2: Verificar: (a) container rodando (HTTP 200 no /), (b) sessao WhatsApp conectada (API status endpoint)
+- CA-982.3: Se sessao desconectada, notificacao in-app para admin com acao rapida Verificar Evolution API
+- CA-982.4: Status da conexao visivel em /settings/integrations aba WhatsApp com ultimo check e historico de uptime
+
+---
+
+**US-983 -- Procedimento de recuperacao documentado**
+Como admin, quero ter documentacao clara do procedimento de recuperacao quando a sessao WhatsApp for perdida, para resolver rapidamente.
+
+Criterios de aceite:
+- CA-983.1: Documentacao em docs/infra/evolution-api-docker.md com: comandos para verificar status do container, procedimento para re-escanear QR Code, como verificar que a sessao esta ativa via API
+- CA-983.2: Pagina /settings/integrations aba WhatsApp exibe link para a documentacao de troubleshooting
+- CA-983.3: Botao Gerar novo QR Code (admin only) que chama Evolution API para iniciar nova sessao
+
+---
+
+## 6. Requisitos Nao-Funcionais
+
+### 6.1 Performance
+
+| Fluxo | Latencia maxima | Frequencia estimada |
+|-------|----------------|---------------------|
+| Email NF recebido -> aparece na UI | < 10 min (polling 5 min + processamento) | ~30-100 NFs/mes |
+| Pedido de NF -> email enviado | < 2 min | ~30-100/mes |
+| Contrato DocuSeal criado | < 30 seg | ~10-50/mes |
+| Webhook DocuSeal -> status atualizado | < 5 min | ~10-50/mes |
+| PDF aprovacao interna gerado | < 10 seg | ~20-50/mes |
+| Templates Drive copiados | < 30 seg | ~10-20/mes |
+| Claquete gerada (Slides -> PDF + PNG) | < 60 seg | ~10-30/mes |
+| OCR de NF (Claude Vision) | < 30 seg | ~30-100/mes |
+
+### 6.2 Disponibilidade e Resiliencia
+
+- Falha em integracao externa (Gmail, DocuSeal, Drive, Slides API) NAO bloqueia operacoes do ELLAHOS
+- Retry automatico com backoff exponencial para todas as integration_events (padrao ADR-003)
+- Max 5 tentativas por evento. Apos falha permanente, notificacao in-app para admin
+- Fallback manual disponivel para todos os fluxos automatizados (upload manual de NF, envio manual de email, preenchimento manual de dados)
+
+### 6.3 Seguranca
+
+- Webhooks autenticados: n8n via X-Cron-Secret, DocuSeal via HMAC signature
+- Dados sensiveis (CPF, CNPJ, dados bancarios) protegidos por RLS, nunca em logs
+- Tokens e secrets armazenados no Supabase Vault, nunca no frontend
+- Emails de fornecedores: validacao de formato antes de envio
+- Input sanitization: nomes de arquivos, HTML de emails, webhook payloads validados com Zod
+- Rate limiting: ingest 100/h, request-send 50/h, docuseal 20/h, webhook 200/h por IP
+
+### 6.4 Idempotencia
+
+| Operacao | Chave de deduplicacao | Comportamento |
+|----------|----------------------|---------------|
+| Ingest NF | file_hash (SHA-256) | Retorna registro existente |
+| Pedido NF | financial_record_id + data | Idempotency key no integration_events |
+| DocuSeal submission | job_id + person_id + template_id | Verifica se ja existe submission ativa |
+| Drive copy template | job_id + source_id | Verifica se arquivo ja existe na pasta |
+| PDF aprovacao | job_id + tipo | Sobrescreve anterior, versiona em job_files |
+
+### 6.5 Observabilidade
+
+- Todos os fluxos automatizados geram registro em integration_events (audit trail)
+- Metricas de sucesso/falha visiveis em /settings/integrations por aba
+- n8n: execucoes visiveis na UI do n8n com alertas para falhas
+- Admin notificado via app para falhas permanentes
+
+---
+
+## 7. Sub-fases de Implementacao
+
+A implementacao segue o plano detalhado em docs/architecture/fase-9-execution-plan.md.
+
+| Sub-fase | Escopo | Prioridade | Dependencias |
+|----------|--------|------------|-------------|
+| 9.1 | Schema + _shared modules | Foundation | Nenhuma |
+| 9.2 | Fluxo NF: recebimento (Edge Function + n8n + frontend) | P0 | 9.1 |
+| 9.3 | Pedido NF: envio email (Edge Function + n8n + frontend) | P0 | 9.1 |
+| 9.4 | Conectar wf-job-approved ao JOB_FECHADO_CRIACAO | P0 | Nenhuma |
+| 9.5 | DocuSeal Contracts (Edge Function + n8n + frontend) | P1 | 9.1 |
+| 9.6 | Drive Template Copy (Edge Function + frontend) | P1 | 9.1 |
+| 9.7 | Aprovacao Interna PDF (Edge Function + frontend) | P1 | 9.1 |
+| 9.8 | QA + Polish + Security Review | QA | 9.2-9.7 |
+| 9.9 | OCR NFs + Claquete + Docker Volume | P2 | 9.2 (OCR) |
+
+**Paralelismo:** Sub-fases 9.2, 9.3 e 9.4 sao independentes apos 9.1. Sub-fases 9.5, 9.6 e 9.7 tambem sao independentes. Com paralelismo maximo, o cronograma cai de ~37 para ~15-18 dias uteis.
+
+---
+
+## 8. Riscos e Mitigacoes
+
+| # | Risco | Prob. | Impacto | Mitigacao |
+|---|-------|-------|---------|-----------|
+| R1 | Gmail OAuth token expira sem aviso | Media | Alto (NFs param de ser processadas) | Refresh token automatico no n8n + notificacao se refresh falhar + healthcheck diario |
+| R2 | DocuSeal self-hosted cai | Baixa | Medio (contratos param) | Healthcheck periodico + retry automatico + botao reenviar manual |
+| R3 | Volume Docker Evolution API nao persistido (estado atual) | Alta | Alto (sessao WhatsApp perdida a cada restart) | Resolver na 9.9 como P2. Documentar procedimento de recuperacao |
+| R4 | Formato de NF varia entre fornecedores | Alta | Baixo (match automatico falha) | Match manual via UI sempre disponivel. OCR e sugestao, nao decisao final |
+| R5 | Z-API descontinua ou muda pricing | Baixa | Alto (JOB_FECHADO_CRIACAO para) | Interface abstrata IWhatsAppProvider ja existe (ADR-008). Migrar para Evolution API na Fase 10 |
+| R6 | Gmail rate limit (500 msgs/dia) | Baixa | Medio (pedidos NF bloqueados) | Agrupar itens por fornecedor em 1 email. Monitorar cota |
+| R7 | jspdf insuficiente para layout PDF | Media | Baixo (layout simples na v1) | Fallback: n8n + Puppeteer na VPS (ADR-020) |
+| R8 | n8n VPS fica sem espaco em disco | Baixa | Alto (tudo para) | PDFs armazenados no Drive, nao no n8n. Monitorar disco |
+| R9 | Emails de NF nao seguem padrao esperado | Alta | Medio (match automatico falha) | Fila de revisao manual. Treinar fornecedores com template padrao |
+| R10 | Claude Vision OCR impreciso para NFs escaneadas | Media | Baixo (OCR e sugestao) | Validacao humana sempre obrigatoria. Campo de confianca visivel |
+
+---
+
+## 9. Scope Exclusions (O que NAO faz parte da Fase 9)
+
+| Item excluido | Razao | Quando |
+|---------------|-------|--------|
+| Migracao de Z-API para Evolution API | Escopo grande, requer rewrite do JOB_FECHADO_CRIACAO | Fase 10 |
+| Multi-tenant real (dominio customizado, billing) | Escopo de plataforma, nao operacional | Fase 10 |
+| App mobile / PWA offline | Nao relacionado a automacoes operacionais | Fase 11+ |
+| Alterar workflows n8n existentes (JOB_FECHADO_CRIACAO, WORKFLOW_PRINCIPAL, TESTE2_JURIDICO) | Risco de quebrar fluxos em producao. Apenas chamar como sub-workflow | Nunca na Fase 9 |
+| Integracao com sistemas de contabilidade (Conta Azul, Omie) | Fora do escopo de automacoes operacionais | Fase 11+ |
+| Geracao de callsheet (PDF completo de producao) | Complexidade alta, layout rico. Avaliar apos v1 do pdf-generator | Fase 10+ |
+| Assinatura digital de contratos de equipe tecnica (template diferente) | Template DocuSeal nao existe ainda. Apenas elenco na v1 | Fase 9 P1 cobre apenas elenco. Equipe tecnica quando template estiver pronto |
+| Integracao com Pipefy, Monday ou ClickUp | ELLAHOS substitui essas ferramentas, nao integra com elas | Nunca |
+| Notificacoes via WhatsApp (mensagens automaticas de status) | Depende de Evolution API estavel + volume persistido | Fase 10 |
+| Relatorios automatizados por email (report semanal) | Nice-to-have, nao e automacao operacional critica | Fase 11+ |
+
+---
+
+## 10. Metricas de Sucesso
+
+### 10.1 Metricas Operacionais (medir apos 30 dias de uso)
+
+| Metrica | Baseline (atual) | Meta | Como medir |
+|---------|------------------|------|------------|
+| Tempo para processar NF recebida | ~2-4 horas (manual) | < 10 min (automatico) | Diferenca entre received_at e confirmed_at em nf_documents |
+| NFs processadas automaticamente (sem revisao manual) | 0% | > 60% | nf_documents com status auto_matched que foram confirmados sem alteracao |
+| Tempo para enviar pedido de NF | ~30 min (GG_ + email manual) | < 2 min (1 clique) | Tempo entre selecao e envio confirmado |
+| Contratos DocuSeal assinados | 0 (manual por email) | > 80% em 7 dias | docuseal_submissions com signed_at < 7 dias apos sent_at |
+| Templates copiados automaticamente | 0% | 100% dos novos jobs | job_files com file_type template / total de jobs criados |
+| PDFs de aprovacao gerados pelo sistema | 0 (manual) | 100% dos jobs aprovados | job_files com file_type approval_internal / jobs com status aprovado |
+| Grupos WhatsApp criados automaticamente | 0% (planilha) | 100% dos jobs aprovados | integration_events com type whatsapp_groups_created / transicoes para status aprovado |
+
+### 10.2 Metricas Tecnicas
+
+| Metrica | Meta |
+|---------|------|
+| Uptime dos workflows n8n | > 99% |
+| Taxa de sucesso do match automatico de NF | > 60% |
+| Tempo medio de geracao de PDF | < 5 seg |
+| Taxa de erro em webhooks DocuSeal | < 1% |
+| Falhas permanentes (apos 5 retries) por semana | < 2 |
+
+### 10.3 Criterio de Conclusao da Fase 9
+
+A Fase 9 e considerada concluida quando:
+1. **P0 completo:** Fluxo NF (recebimento + pedido) e wf-job-approved funcionando em producao
+2. **P1 completo:** DocuSeal, Drive templates e PDF aprovacao funcionando em producao
+3. **QA verde:** Zero bugs Blocker ou Critical abertos
+4. **Security review:** Nenhum finding critico aberto
+5. **Documentacao:** ADRs 018-021 escritos, CLAUDE.md e MEMORY.md atualizados
+6. **P2 entregues ou documentados:** OCR, claquete e Docker volume implementados ou com justificativa de adiamento
+
+---
+
+## 11. Perguntas Abertas
+
+| # | Pergunta | Status | Decisao |
+|---|----------|--------|---------|
+| 1 | Gmail: usar OAuth do usuario ou Service Account com domain-wide delegation? | DECIDIDO | OAuth via n8n (financeiro@ellahfilmes.com). Mais simples, n8n gerencia o token. |
+| 2 | DocuSeal: campo whatsapp_groups em jobs -- JSONB direto ou tabela separada? | ABERTO | Recomendar JSONB em jobs.metadata por simplicidade (4 grupos fixos). Se crescer, migrar para tabela. |
+| 3 | Templates Drive: manter files.copy ou usar Sheets API para duplicar planilhas com dados? | DECIDIDO | files.copy -- mais simples, funciona para Sheets e Docs. Dados especificos do job preenchidos depois manualmente. |
+| 4 | PDF: usar jspdf direto ou delegar para n8n + Puppeteer? | DECIDIDO | v1 com jspdf na Edge Function. Fallback para n8n se layout insuficiente (ADR-020). |
+| 5 | OCR: rodar na Edge Function ou no n8n? | DECIDIDO | Conversao PDF->PNG no n8n (Ghostscript). Chamada Claude na Edge Function (reutiliza claude-client existente). |
+
+---
+
+*Documento gerado pelo PM Agent -- ELLAHOS. Ultima atualizacao: 25/02/2026.*

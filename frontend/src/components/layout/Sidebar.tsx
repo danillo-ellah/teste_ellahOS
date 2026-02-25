@@ -17,6 +17,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   BarChart3,
+  FileCheck2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -42,6 +43,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Agencias', href: '/agencies', icon: Briefcase },
   { label: 'Equipe', href: '/people', icon: Users },
   { label: 'Financeiro', href: '/financial', icon: DollarSign },
+  { label: 'Validacao de NFs', href: '/financial/nf-validation', icon: FileCheck2 },
   { label: 'Calendario', href: '/team/calendar', icon: CalendarDays },
   { label: 'Aprovacoes', href: '/approvals', icon: ClipboardCheck },
   { label: 'Portal', href: '/portal', icon: Globe },

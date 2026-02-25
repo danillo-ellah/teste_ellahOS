@@ -11,6 +11,11 @@ export const EVENT_TYPES = [
   'docuseal_submission_created',
   'docuseal_submission_signed',
   'docuseal_submission_failed',
+  // Fase 9: novos event_types para automacoes operacionais
+  'nf_email_send',
+  'docuseal_create_batch',
+  'pdf_generate',
+  'drive_copy_templates',
 ] as const;
 
 export type IntegrationEventType = (typeof EVENT_TYPES)[number];
