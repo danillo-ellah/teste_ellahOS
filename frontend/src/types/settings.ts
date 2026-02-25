@@ -1,6 +1,13 @@
 // Tipos de integracao
 export type IntegrationName = 'google_drive' | 'whatsapp' | 'docuseal' | 'n8n'
 
+// Template de arquivo copiado automaticamente ao criar pastas no Drive
+export interface DriveTemplate {
+  source_id: string
+  name: string
+  target_folder_key: string
+}
+
 // Configuracao do Google Drive
 export interface GoogleDriveConfig {
   enabled: boolean
@@ -10,6 +17,7 @@ export interface GoogleDriveConfig {
   root_folder_id: string | null
   folder_template: FolderTemplateItem[] | null
   has_service_account: boolean
+  templates?: DriveTemplate[]
 }
 
 export interface FolderTemplateItem {
@@ -71,6 +79,7 @@ export interface GoogleDriveUpdatePayload {
   root_folder_id?: string | null
   folder_template?: FolderTemplateItem[] | null
   service_account_json?: string
+  templates?: DriveTemplate[]
 }
 
 export interface WhatsAppUpdatePayload {

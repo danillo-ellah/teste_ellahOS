@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -27,9 +28,19 @@ import { SyncIndicator } from '@/components/job-detail/SyncIndicator'
 import type { SyncState } from '@/components/job-detail/SyncIndicator'
 import { useUpdateJob } from '@/hooks/useUpdateJob'
 import { useArchiveJob } from '@/hooks/useArchiveJob'
+import { useUserRole } from '@/hooks/useUserRole'
 import { formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { JobDetail } from '@/types/jobs'
+
+// Dynamic import para evitar SSR do componente que usa supabase.auth no cliente
+const ApprovalPdfButton = dynamic(
+  () =>
+    import('@/app/(dashboard)/jobs/[id]/_components/approval-pdf-button').then(
+      (m) => m.ApprovalPdfButton,
+    ),
+  { ssr: false },
+)
 
 interface JobHeaderProps {
   job: JobDetail
@@ -44,6 +55,7 @@ export function JobHeader({ job }: JobHeaderProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const { mutateAsync: updateJob } = useUpdateJob()
   const { mutateAsync: archiveJob, isPending: isArchiving } = useArchiveJob()
+  const { role: userRole } = useUserRole()
 
   // Sync titulo se mudar externamente
   useEffect(() => {
@@ -207,6 +219,14 @@ export function JobHeader({ job }: JobHeaderProps) {
                   Drive
                 </a>
               </Button>
+            )}
+
+            {userRole && (
+              <ApprovalPdfButton
+                jobId={job.id}
+                jobCode={job.job_code}
+                userRole={userRole}
+              />
             )}
 
             <DropdownMenu>

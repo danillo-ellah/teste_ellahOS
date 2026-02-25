@@ -11,6 +11,8 @@ import {
   X,
   Settings2,
   Zap,
+  Plus,
+  Trash2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -49,7 +51,23 @@ import {
 } from '@/hooks/useSettings'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import type { IntegrationName } from '@/types/settings'
+import type { IntegrationName, DriveTemplate, GoogleDriveConfig } from '@/types/settings'
+
+// ---------------------------------------------------------------------------
+// Tipos auxiliares
+// ---------------------------------------------------------------------------
+
+// Estende GoogleDriveConfig para incluir templates (campo salvo em JSON livre)
+type GoogleDriveConfigWithTemplates = GoogleDriveConfig & { templates?: DriveTemplate[] }
+
+// Chaves validas de pasta destino para templates do Drive
+const DRIVE_FOLDER_KEYS = [
+  { value: 'documentos', label: 'Documentos' },
+  { value: 'contratos', label: 'Contratos' },
+  { value: 'orcamentos', label: 'Orcamentos' },
+  { value: 'referencias', label: 'Referencias' },
+  { value: 'entregaveis', label: 'Entregaveis' },
+] as const
 
 // ---------------------------------------------------------------------------
 // Tipos de estado local dos formularios
@@ -61,6 +79,7 @@ interface DriveFormState {
   shared_drive_id: string
   root_folder_id: string
   enabled: boolean
+  templates: DriveTemplate[]
 }
 
 interface WhatsAppFormState {
@@ -171,6 +190,7 @@ export default function IntegrationsPage() {
     shared_drive_id: '',
     root_folder_id: '',
     enabled: false,
+    templates: [],
   })
 
   const [whatsappForm, setWhatsappForm] = useState<WhatsAppFormState>({
@@ -197,6 +217,7 @@ export default function IntegrationsPage() {
       shared_drive_id: cfg?.shared_drive_id ?? '',
       root_folder_id: cfg?.root_folder_id ?? '',
       enabled: cfg?.enabled ?? false,
+      templates: (cfg as GoogleDriveConfigWithTemplates)?.templates ?? [],
     })
     setOpenDialog('google_drive')
   }
@@ -258,6 +279,7 @@ export default function IntegrationsPage() {
         driveForm.drive_type === 'shared_drive'
           ? driveForm.shared_drive_id || null
           : null,
+      templates: driveForm.templates.filter((t) => t.source_id.trim()),
     }
     if (driveForm.service_account_json.trim()) {
       payload.service_account_json = driveForm.service_account_json.trim()
@@ -269,6 +291,31 @@ export default function IntegrationsPage() {
     } catch {
       toast.error('Erro ao salvar configuracao do Google Drive')
     }
+  }
+
+  // Helpers para manipular lista de templates
+  function addTemplate() {
+    setDriveForm((prev) => ({
+      ...prev,
+      templates: [
+        ...prev.templates,
+        { source_id: '', name: '', target_folder_key: 'documentos' },
+      ],
+    }))
+  }
+
+  function removeTemplate(index: number) {
+    setDriveForm((prev) => ({
+      ...prev,
+      templates: prev.templates.filter((_, i) => i !== index),
+    }))
+  }
+
+  function updateTemplate(index: number, patch: Partial<DriveTemplate>) {
+    setDriveForm((prev) => ({
+      ...prev,
+      templates: prev.templates.map((t, i) => (i === index ? { ...t, ...patch } : t)),
+    }))
   }
 
   // Salvar WhatsApp
@@ -654,7 +701,7 @@ export default function IntegrationsPage() {
         open={openDialog === 'google_drive'}
         onOpenChange={(open) => { if (!open) setOpenDialog(null) }}
       >
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <HardDrive className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -768,6 +815,124 @@ export default function IntegrationsPage() {
                   setDriveForm((prev) => ({ ...prev, enabled: checked }))
                 }
               />
+            </div>
+
+            {/* Separador */}
+            <Separator />
+
+            {/* Templates de Arquivos */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Templates de Arquivos</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Copiados automaticamente ao criar pastas no Drive para novos jobs.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 shrink-0"
+                  onClick={addTemplate}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Adicionar
+                </Button>
+              </div>
+
+              {driveForm.templates.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-2 text-center">
+                  Nenhum template configurado.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {driveForm.templates.map((tpl, idx) => (
+                    <div
+                      key={idx}
+                      className="rounded-md border border-border bg-muted/30 p-3 space-y-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-medium text-muted-foreground">
+                          Template {idx + 1}
+                        </p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                          onClick={() => removeTemplate(idx)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span className="sr-only">Remover template</span>
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        {/* Source ID */}
+                        <div className="space-y-1">
+                          <Label className="text-xs">ID do Arquivo (Drive)</Label>
+                          <Input
+                            placeholder="Ex: 1BxiMVs0XRA5nFMdKvB..."
+                            className="h-8 text-xs font-mono"
+                            value={tpl.source_id}
+                            onChange={(e) =>
+                              updateTemplate(idx, { source_id: e.target.value })
+                            }
+                          />
+                        </div>
+
+                        {/* Pasta destino */}
+                        <div className="space-y-1">
+                          <Label className="text-xs">Pasta Destino</Label>
+                          <Select
+                            value={tpl.target_folder_key}
+                            onValueChange={(val) =>
+                              updateTemplate(idx, { target_folder_key: val })
+                            }
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {DRIVE_FOLDER_KEYS.map((opt) => (
+                                <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                                  {opt.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      {/* Nome do arquivo */}
+                      <div className="space-y-1">
+                        <Label className="text-xs">Nome do Arquivo</Label>
+                        <Input
+                          placeholder="Ex: {JOB_ABA} - Orcamento"
+                          className="h-8 text-xs"
+                          value={tpl.name}
+                          onChange={(e) =>
+                            updateTemplate(idx, { name: e.target.value })
+                          }
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Placeholders:{' '}
+                          <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
+                            {'{JOB_ABA}'}
+                          </code>{' '}
+                          <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
+                            {'{JOB_CODE}'}
+                          </code>{' '}
+                          <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
+                            {'{CLIENT}'}
+                          </code>
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
