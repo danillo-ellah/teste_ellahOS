@@ -1,8 +1,7 @@
 'use client'
 
-import { useRef, useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Mail, Loader2 } from 'lucide-react'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
@@ -126,15 +125,18 @@ export function NfEmailPreview({
   isMultipleSuppliers,
   supplierCount,
 }: NfEmailPreviewProps) {
-  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const [previewHtml, setPreviewHtml] = useState<string>('')
   const [previewLoading, setPreviewLoading] = useState(false)
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
 
   const hasSelection = selectedRecords.length > 0
 
-  // Atualiza iframe com debounce de 500ms quando selecao muda
+  // H8 fix: gera HTML com debounce e usa srcdoc (mais seguro que document.write)
   useEffect(() => {
-    if (!hasSelection || !selectedGroup) return
+    if (!hasSelection || !selectedGroup) {
+      setPreviewHtml('')
+      return
+    }
 
     setPreviewLoading(true)
 
@@ -142,12 +144,7 @@ export function NfEmailPreview({
 
     debounceRef.current = setTimeout(() => {
       const html = generateEmailHtml(selectedGroup, selectedRecords, customMessage)
-      const iframe = iframeRef.current
-      if (iframe?.contentDocument) {
-        iframe.contentDocument.open()
-        iframe.contentDocument.write(html)
-        iframe.contentDocument.close()
-      }
+      setPreviewHtml(html)
       setPreviewLoading(false)
     }, 500)
 
@@ -207,13 +204,13 @@ export function NfEmailPreview({
         ) : (
           <div className="relative h-full min-h-[300px]">
             <iframe
-              ref={iframeRef}
               title={
                 selectedGroup
                   ? `Preview do email para ${selectedGroup.supplier_name}`
                   : 'Preview do email'
               }
-              sandbox="allow-same-origin"
+              srcDoc={previewHtml}
+              sandbox=""
               className="h-full min-h-[300px] w-full rounded-md border border-zinc-200 bg-white dark:border-zinc-700"
               aria-label="Preview do conteudo do email"
             />

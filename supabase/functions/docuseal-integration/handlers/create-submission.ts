@@ -122,9 +122,11 @@ export async function createSubmissionHandler(req: Request, auth: AuthContext): 
 
   // 4. Persistir cada submitter como registro separado em docuseal_submissions
   const now = new Date().toISOString();
-  const rowsToInsert: Partial<DocuSealSubmissionRow>[] = input.submitters.map((submitter, idx) => {
-    // Cada submitter do DocuSeal tem seu proprio ID na resposta
-    const docusealSubmitter = docusealResponse.submitters[idx];
+  const rowsToInsert: Partial<DocuSealSubmissionRow>[] = input.submitters.map((submitter) => {
+    // C6 fix: mapear submitter por email (nao por index) para evitar associacao errada
+    const docusealSubmitter = (docusealResponse.submitters ?? []).find(
+      (s: Record<string, unknown>) => (s.email as string)?.toLowerCase() === submitter.email.toLowerCase(),
+    ) ?? null;
 
     return {
       tenant_id: auth.tenantId,
@@ -138,8 +140,8 @@ export async function createSubmissionHandler(req: Request, auth: AuthContext): 
       docuseal_template_id: input.template_id,
       docuseal_status: 'sent',
       contract_data: {
-        docuseal_submitter_id: docusealSubmitter?.id ?? null,
-        docuseal_submitter_status: docusealSubmitter?.status ?? null,
+        docuseal_submitter_id: (docusealSubmitter as Record<string, unknown>)?.id ?? null,
+        docuseal_submitter_status: (docusealSubmitter as Record<string, unknown>)?.status ?? null,
         role: submitter.role,
         fields: submitter.fields,
         job_code: job.code,

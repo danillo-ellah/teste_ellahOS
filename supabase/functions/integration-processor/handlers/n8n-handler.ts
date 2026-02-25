@@ -45,9 +45,16 @@ export async function processN8nEvent(
 
   console.log(`[n8n-handler] POST ${webhookKey} → ${webhookUrl}`);
 
+  // C3 fix: enviar auth header para prevenir SSRF e acesso nao autorizado
+  const webhookSecret = (n8nConfig.webhook_secret as string) ?? null;
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (webhookSecret) {
+    headers['X-Webhook-Secret'] = webhookSecret;
+  }
+
   const resp = await fetch(webhookUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({
       ...event.payload,
       tenant_id: event.tenant_id,

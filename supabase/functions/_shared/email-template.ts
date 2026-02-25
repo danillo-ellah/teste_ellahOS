@@ -22,225 +22,183 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#39;');
 }
 
-// Parametros para o email de pedido de NF enviado a fornecedores
+// ============================================================
+// Email de pedido de NF (usado por nf-processor/request-send.ts)
+// ============================================================
+
+export interface NfRequestItem {
+  description: string;
+  amount: number;
+  job_code: string;
+  job_title: string;
+  financial_record_id: string;
+}
+
+export interface CompanyInfo {
+  name: string;
+  cnpj?: string;
+  address?: string;
+  email?: string;
+  phone?: string;
+}
+
 export interface NfRequestEmailParams {
-  supplierName: string;
-  items: Array<{
-    description: string;
-    amount: number;
-    jobCode: string;
-  }>;
-  companyData: {
-    name: string;
-    cnpj: string;
-    address: string;
-    email: string;
-  };
-  customMessage?: string;
+  supplier_name: string;
+  supplier_email: string;
+  items: NfRequestItem[];
+  company_info: CompanyInfo;
+  custom_message?: string;
+  reply_to?: string;
 }
 
-// Resultado da montagem do email (assunto + corpo HTML)
-export interface NfRequestEmailResult {
+// Monta o HTML do email de pedido de NF
+// Retorna { subject, html, text }
+export function buildNfRequestEmail(params: NfRequestEmailParams): {
   subject: string;
-  htmlBody: string;
-}
-
-/**
- * Monta o email HTML de pedido de NF para um fornecedor.
- *
- * O HTML gerado e responsivo, com CSS inline, e inclui:
- * - Saudacao com nome do fornecedor
- * - Mensagem customizada (opcional)
- * - Tabela com os itens solicitados (descricao, job, valor)
- * - Total calculado automaticamente
- * - Dados da empresa emissora (razao social, CNPJ, endereco, email)
- * - Instrucao de envio da NF
- */
-export function buildNfRequestEmail(
-  params: NfRequestEmailParams,
-): NfRequestEmailResult {
-  const { supplierName, items, companyData, customMessage } = params;
+  html: string;
+  text: string;
+} {
+  const { supplier_name, items, company_info, custom_message } = params;
 
   const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
 
-  const subject = `Ellah Filmes - Pedido de Nota Fiscal`;
-
-  // Linhas da tabela de itens
-  const itemRows = items
+  // Montar linhas da tabela HTML
+  const tableRows = items
     .map(
-      (item) => `
-        <tr>
-          <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px; color: #374151;">
-            ${escapeHtml(item.description)}
-          </td>
-          <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px; color: #374151; white-space: nowrap;">
-            ${escapeHtml(item.jobCode)}
-          </td>
-          <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px; color: #374151; text-align: right; white-space: nowrap;">
-            ${escapeHtml(formatBrl(item.amount))}
-          </td>
+      (item, idx) => `
+        <tr style="background: ${idx % 2 === 0 ? '#f9f9f9' : '#ffffff'};">
+          <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(item.job_code)}</td>
+          <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(item.job_title)}</td>
+          <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(item.description)}</td>
+          <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600;">${escapeHtml(formatBrl(item.amount))}</td>
         </tr>`,
     )
     .join('');
 
-  // Bloco de mensagem customizada (exibido somente se fornecida)
-  const customMessageBlock = customMessage
-    ? `
-      <p style="margin: 0 0 16px 0; font-size: 14px; color: #374151; line-height: 1.6;">
-        ${escapeHtml(customMessage)}
-      </p>`
+  const companyBlock = `
+    <strong>${escapeHtml(company_info.name)}</strong><br/>
+    ${company_info.cnpj ? `CNPJ: ${escapeHtml(company_info.cnpj)}<br/>` : ''}
+    ${company_info.address ? `${escapeHtml(company_info.address)}<br/>` : ''}
+    ${company_info.email ? `E-mail: ${escapeHtml(company_info.email)}<br/>` : ''}
+    ${company_info.phone ? `Telefone: ${escapeHtml(company_info.phone)}` : ''}
+  `;
+
+  const customMessageBlock = custom_message
+    ? `<p style="margin: 16px 0; color: #374151;">${escapeHtml(custom_message)}</p>`
     : '';
 
-  const htmlBody = `<!DOCTYPE html>
+  const html = `
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${escapeHtml(subject)}</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pedido de Nota Fiscal</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; font-size: 14px; color: #111827; background: #f3f4f6;">
+  <div style="max-width: 680px; margin: 32px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
 
-  <!-- Container principal -->
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f9fafb; padding: 32px 16px;">
-    <tr>
-      <td align="center">
+    <!-- Header -->
+    <div style="background: #09090B; padding: 28px 32px;">
+      <h1 style="margin: 0; color: #ffffff; font-size: 20px; font-weight: 700; letter-spacing: -0.01em;">
+        ${escapeHtml(company_info.name)}
+      </h1>
+      <p style="margin: 4px 0 0; color: #9ca3af; font-size: 13px;">Pedido de Nota Fiscal</p>
+    </div>
 
-        <!-- Card central -->
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); overflow: hidden;">
+    <!-- Body -->
+    <div style="padding: 32px;">
+      <p style="margin: 0 0 16px; color: #374151;">
+        Ola <strong>${escapeHtml(supplier_name)}</strong>,
+      </p>
+      <p style="margin: 0 0 24px; color: #374151;">
+        Solicitamos o envio da(s) nota(s) fiscal(is) referente(s) ao(s) servico(s) abaixo:
+      </p>
 
-          <!-- Header -->
-          <tr>
-            <td style="background-color: #09090b; padding: 24px 32px;">
-              <p style="margin: 0; font-size: 20px; font-weight: 700; color: #ffffff; letter-spacing: -0.3px;">
-                Ellah Filmes
-              </p>
-              <p style="margin: 4px 0 0 0; font-size: 13px; color: #a1a1aa;">
-                Pedido de Nota Fiscal
-              </p>
-            </td>
+      ${customMessageBlock}
+
+      <!-- Tabela de itens -->
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+        <thead>
+          <tr style="background: #111827; color: #ffffff;">
+            <th style="padding: 10px 12px; text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Job</th>
+            <th style="padding: 10px 12px; text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Titulo</th>
+            <th style="padding: 10px 12px; text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Descricao</th>
+            <th style="padding: 10px 12px; text-align: right; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Valor</th>
           </tr>
-
-          <!-- Corpo -->
-          <tr>
-            <td style="padding: 32px;">
-
-              <!-- Saudacao -->
-              <p style="margin: 0 0 16px 0; font-size: 15px; color: #111827; font-weight: 600;">
-                Prezado(a) ${escapeHtml(supplierName)},
-              </p>
-
-              <p style="margin: 0 0 16px 0; font-size: 14px; color: #374151; line-height: 1.6;">
-                Solicitamos o envio da(s) Nota(s) Fiscal(is) referente(s) ao(s) servico(s) abaixo relacionado(s).
-                Por favor, emita a NF com os dados da nossa empresa e envie o arquivo PDF em resposta a este email.
-              </p>
-
-              ${customMessageBlock}
-
-              <!-- Tabela de itens -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; margin-bottom: 24px;">
-                <!-- Cabecalho da tabela -->
-                <tr style="background-color: #f3f4f6;">
-                  <th style="padding: 10px 12px; text-align: left; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e5e7eb;">
-                    Descricao do Servico
-                  </th>
-                  <th style="padding: 10px 12px; text-align: left; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e5e7eb; white-space: nowrap;">
-                    Job
-                  </th>
-                  <th style="padding: 10px 12px; text-align: right; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e5e7eb; white-space: nowrap;">
-                    Valor (R$)
-                  </th>
-                </tr>
-                ${itemRows}
-                <!-- Linha de total -->
-                <tr style="background-color: #f9fafb;">
-                  <td colspan="2" style="padding: 12px 12px; font-size: 14px; font-weight: 700; color: #111827; border-top: 2px solid #e5e7eb;">
-                    Total
-                  </td>
-                  <td style="padding: 12px 12px; font-size: 14px; font-weight: 700; color: #111827; text-align: right; border-top: 2px solid #e5e7eb; white-space: nowrap;">
-                    ${escapeHtml(formatBrl(totalAmount))}
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Dados para emissao da NF -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 0; margin-bottom: 24px;">
-                <tr>
-                  <td style="padding: 16px 20px;">
-                    <p style="margin: 0 0 10px 0; font-size: 13px; font-weight: 700; color: #0c4a6e; text-transform: uppercase; letter-spacing: 0.05em;">
-                      Dados para Emissao da Nota Fiscal
-                    </p>
-                    <table cellpadding="0" cellspacing="0" border="0" style="width: 100%;">
-                      <tr>
-                        <td style="padding: 3px 0; font-size: 13px; color: #374151; width: 110px; font-weight: 600; vertical-align: top;">
-                          Razao Social:
-                        </td>
-                        <td style="padding: 3px 0; font-size: 13px; color: #111827; vertical-align: top;">
-                          ${escapeHtml(companyData.name)}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 3px 0; font-size: 13px; color: #374151; font-weight: 600; vertical-align: top;">
-                          CNPJ:
-                        </td>
-                        <td style="padding: 3px 0; font-size: 13px; color: #111827; vertical-align: top;">
-                          ${escapeHtml(companyData.cnpj)}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 3px 0; font-size: 13px; color: #374151; font-weight: 600; vertical-align: top;">
-                          Endereco:
-                        </td>
-                        <td style="padding: 3px 0; font-size: 13px; color: #111827; vertical-align: top;">
-                          ${escapeHtml(companyData.address)}
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Instrucao de envio -->
-              <p style="margin: 0 0 8px 0; font-size: 14px; color: #374151; line-height: 1.6;">
-                Envie o arquivo PDF da Nota Fiscal para o email:
-              </p>
-              <p style="margin: 0 0 24px 0;">
-                <a href="mailto:${escapeHtml(companyData.email)}"
-                   style="font-size: 14px; color: #0284c7; font-weight: 600; text-decoration: none;">
-                  ${escapeHtml(companyData.email)}
-                </a>
-              </p>
-
-              <p style="margin: 0; font-size: 14px; color: #374151; line-height: 1.6;">
-                Em caso de duvidas, responda a este email. Agradecemos a parceria.
-              </p>
-
-            </td>
+        </thead>
+        <tbody>
+          ${tableRows}
+        </tbody>
+        <tfoot>
+          <tr style="background: #f9fafb;">
+            <td colspan="3" style="padding: 12px; text-align: right; font-weight: 700; color: #111827;">Total</td>
+            <td style="padding: 12px; text-align: right; font-weight: 700; color: #111827;">${escapeHtml(formatBrl(totalAmount))}</td>
           </tr>
+        </tfoot>
+      </table>
 
-          <!-- Footer -->
-          <tr>
-            <td style="background-color: #f9fafb; padding: 16px 32px; border-top: 1px solid #e5e7eb;">
-              <p style="margin: 0; font-size: 12px; color: #9ca3af; text-align: center;">
-                Este email foi gerado automaticamente pelo sistema ELLAHOS. Nao responda a enderecos de no-reply.
-              </p>
-            </td>
-          </tr>
+      <p style="margin: 0 0 8px; color: #374151; font-size: 13px;">
+        Por favor, encaminhe a(s) nota(s) fiscal(is) em resposta a este e-mail.
+      </p>
 
-        </table>
-        <!-- /Card central -->
+      <!-- Dados da empresa emissora -->
+      <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 24px;">
+        <p style="margin: 0 0 6px; color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;">Dados para emissao da NF</p>
+        <p style="margin: 0; color: #374151; font-size: 13px; line-height: 1.7;">
+          ${companyBlock}
+        </p>
+      </div>
+    </div>
 
-      </td>
-    </tr>
-  </table>
-  <!-- /Container principal -->
-
+    <!-- Footer -->
+    <div style="background: #f9fafb; padding: 16px 32px; border-top: 1px solid #e5e7eb;">
+      <p style="margin: 0; color: #9ca3af; font-size: 11px; text-align: center;">
+        Este e-mail foi enviado automaticamente pelo sistema ELLAHOS — ${escapeHtml(company_info.name)}
+      </p>
+    </div>
+  </div>
 </body>
-</html>`;
+</html>
+  `.trim();
 
-  return { subject, htmlBody };
+  // Versao texto puro para clientes sem suporte a HTML
+  const itemsText = items
+    .map(item => `  - [${item.job_code}] ${item.job_title}: ${item.description} — ${formatBrl(item.amount)}`)
+    .join('\n');
+
+  const text = `
+Ola ${supplier_name},
+
+Solicitamos o envio da(s) nota(s) fiscal(is) referente(s) ao(s) servico(s) abaixo:
+
+${custom_message ? custom_message + '\n\n' : ''}Itens:
+${itemsText}
+
+Total: ${formatBrl(totalAmount)}
+
+Por favor, encaminhe a(s) nota(s) fiscal(is) em resposta a este e-mail.
+
+---
+Dados para emissao da NF:
+${company_info.name}
+${company_info.cnpj ? 'CNPJ: ' + company_info.cnpj : ''}
+${company_info.address ?? ''}
+${company_info.email ?? ''}
+
+Este e-mail foi enviado automaticamente pelo sistema ELLAHOS.
+  `.trim();
+
+  const jobCodes = [...new Set(items.map(i => i.job_code))].join(', ');
+  const subject = `${company_info.name} - Pedido de NF - Job ${jobCodes}`;
+
+  return { subject, html, text };
 }
 
-// Parametros para email de notificacao generica
+// ============================================================
+// Email de notificacao generica
+// ============================================================
+
 export interface NotificationEmailParams {
   title: string;
   body: string;
@@ -255,7 +213,6 @@ export interface NotificationEmailParams {
 export function buildNotificationEmail(params: NotificationEmailParams): string {
   const { title, body, actionUrl, actionLabel } = params;
 
-  // Bloco do botao de acao (exibido somente se actionUrl for fornecido)
   const actionBlock =
     actionUrl
       ? `

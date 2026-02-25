@@ -58,11 +58,18 @@ export async function processNfEmailEvent(
     timestamp: new Date().toISOString(),
   };
 
+  // C3 fix: enviar auth header para prevenir SSRF e acesso nao autorizado
+  const webhookSecret = (n8nConfig.webhook_secret as string) ?? null;
+  const reqHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (webhookSecret) {
+    reqHeaders['X-Webhook-Secret'] = webhookSecret;
+  }
+
   console.log(`[nf-email-handler] POST nf_request → ${webhookUrl}`);
 
   const resp = await fetch(webhookUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: reqHeaders,
     body: JSON.stringify(n8nPayload),
     signal: AbortSignal.timeout(30000),
   });
