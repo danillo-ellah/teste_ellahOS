@@ -11,7 +11,8 @@ import type { AuthContext } from '../../_shared/auth.ts';
 const RequestSendSchema = z.object({
   financial_record_ids: z
     .array(z.string().uuid('Cada financial_record_id deve ser UUID valido'))
-    .min(1, 'Ao menos um financial_record_id e necessario'),
+    .min(1, 'Ao menos um financial_record_id e necessario')
+    .max(100, 'Maximo de 100 registros por envio'),
   custom_message: z.string().max(1000).optional().nullable(),
 });
 

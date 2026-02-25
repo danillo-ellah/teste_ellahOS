@@ -28,7 +28,7 @@ export async function processDriveCopyEvent(
 
   const settings = (tenant?.settings as Record<string, unknown>) ?? {};
   const integrations = (settings.integrations as Record<string, Record<string, unknown>>) ?? {};
-  const driveConfig = integrations['drive'] ?? {};
+  const driveConfig = integrations['google_drive'] ?? {};
 
   if (!driveConfig.enabled) {
     console.log(`[drive-copy-handler] Drive desabilitado para tenant ${tenantId}`);

@@ -44,16 +44,16 @@ export async function processNfEmailEvent(
   }
 
   // Preparar payload para o n8n
+  // Campos alinhados com request-send.ts (producer): email_html, email_subject, email_text
   const n8nPayload = {
     tenant_id: tenantId,
     event_id: event.id,
     supplier_email: supplierEmail,
     supplier_name: supplierName ?? '',
-    items: event.payload.items ?? [],
-    custom_message: event.payload.custom_message ?? '',
-    company_data: event.payload.company_data ?? {},
-    html_body: event.payload.html_body ?? '',
-    subject: event.payload.subject ?? 'Ellah Filmes - Pedido de Nota Fiscal',
+    email_html: event.payload.email_html ?? '',
+    email_subject: event.payload.email_subject ?? 'Ellah Filmes - Pedido de Nota Fiscal',
+    email_text: event.payload.email_text ?? '',
+    reply_to: event.payload.reply_to ?? null,
     financial_record_ids: event.payload.financial_record_ids ?? [],
     timestamp: new Date().toISOString(),
   };
@@ -74,32 +74,13 @@ export async function processNfEmailEvent(
 
   const responseBody = await resp.json().catch(() => ({}));
 
-  // Atualizar status dos financial_records enviados
-  const recordIds = (event.payload.financial_record_ids as string[]) ?? [];
-  if (recordIds.length > 0) {
-    const { error: updateError } = await serviceClient
-      .from('financial_records')
-      .update({
-        nf_request_status: 'enviado',
-        nf_request_sent_at: new Date().toISOString(),
-      })
-      .in('id', recordIds)
-      .eq('tenant_id', tenantId);
-
-    if (updateError) {
-      console.warn(`[nf-email-handler] falha ao atualizar financial_records: ${updateError.message}`);
-    } else {
-      console.log(`[nf-email-handler] ${recordIds.length} financial_records atualizados para 'enviado'`);
-    }
-  }
+  // Nota: nf_request_status ja foi atualizado para 'enviado' pelo request-send.ts
+  // Nao duplicar o update aqui para evitar race condition (H4 fix)
 
   console.log(`[nf-email-handler] email de NF enviado para ${supplierEmail}`);
 
   return {
     supplier_email: supplierEmail,
-    webhook_url: webhookUrl,
     http_status: resp.status,
-    records_updated: recordIds.length,
-    response: responseBody,
   };
 }

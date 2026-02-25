@@ -46,7 +46,13 @@ export async function previewHandler(
   const { data: job, error: jobError } = await supabase
     .from('jobs')
     .select(`
-      *,
+      id, code, job_aba, title, brand, project_type, format, segment,
+      total_duration_seconds, pieces_count, po_number, commercial_responsible,
+      approval_date, expected_delivery_date, post_start_date, post_deadline,
+      has_contracted_audio, has_computer_graphics, ancine_number, audio_company,
+      media_type, broadcast_period, approved_by_name, approved_by_email,
+      closed_value, production_cost, tax_value, gross_profit, margin_percentage,
+      payment_terms, agency_name, client_contact_name,
       clients (
         id, name, company_name, cnpj, address
       )

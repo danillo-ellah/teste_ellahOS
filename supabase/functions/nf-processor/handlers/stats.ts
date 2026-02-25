@@ -6,6 +6,32 @@ import type { AuthContext } from '../../_shared/auth.ts';
 // Roles permitidos para acessar estatisticas
 const ALLOWED_ROLES = ['admin', 'ceo', 'financeiro'];
 
+// Helper: count por status usando head:true (sem carregar rows)
+async function countByStatus(
+  supabase: ReturnType<typeof getSupabaseClient>,
+  tenantId: string,
+  status: string,
+  extraFilters?: { gte?: [string, string] },
+): Promise<number> {
+  let query = supabase
+    .from('nf_documents')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId)
+    .eq('status', status)
+    .is('deleted_at', null);
+
+  if (extraFilters?.gte) {
+    query = query.gte(extraFilters.gte[0], extraFilters.gte[1]);
+  }
+
+  const { count, error } = await query;
+  if (error) {
+    console.warn(`[stats] falha ao contar status=${status}:`, error.message);
+    return 0;
+  }
+  return count ?? 0;
+}
+
 export async function statsNfs(req: Request, auth: AuthContext): Promise<Response> {
   // Verificar role do usuario
   if (!ALLOWED_ROLES.includes(auth.role)) {
@@ -16,69 +42,31 @@ export async function statsNfs(req: Request, auth: AuthContext): Promise<Respons
 
   console.log(`[stats] tenant=${auth.tenantId} user=${auth.userId}`);
 
-  // Contar NFs por status (todos os status, exceto deletados)
-  const { data: statusCounts, error: statusError } = await supabase
-    .from('nf_documents')
-    .select('status')
-    .eq('tenant_id', auth.tenantId)
-    .is('deleted_at', null);
-
-  if (statusError) {
-    console.error('[stats] falha ao contar NFs por status:', statusError.message);
-    throw new AppError('INTERNAL_ERROR', 'Falha ao buscar estatisticas de NF', 500);
-  }
-
-  // Agrupar contagens por status em memoria
-  const counts: Record<string, number> = {
-    pending_review: 0,
-    auto_matched: 0,
-    confirmed: 0,
-    rejected: 0,
-    processing: 0,
-  };
-
-  for (const row of statusCounts ?? []) {
-    const s = row.status as string;
-    if (s in counts) {
-      counts[s]++;
-    }
-  }
-
-  // Contar confirmadas e rejeitadas no mes atual
   const now = new Date();
   const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
-  const { data: monthDocs, error: monthError } = await supabase
-    .from('nf_documents')
-    .select('status, validated_at')
-    .eq('tenant_id', auth.tenantId)
-    .in('status', ['confirmed', 'rejected'])
-    .gte('validated_at', firstDayOfMonth)
-    .is('deleted_at', null);
+  // Queries paralelas usando count (head:true — nao carrega rows em memoria)
+  const [pendingReview, autoMatched, confirmed, rejected, processing, confirmedMonth, rejectedMonth] =
+    await Promise.all([
+      countByStatus(supabase, auth.tenantId, 'pending_review'),
+      countByStatus(supabase, auth.tenantId, 'auto_matched'),
+      countByStatus(supabase, auth.tenantId, 'confirmed'),
+      countByStatus(supabase, auth.tenantId, 'rejected'),
+      countByStatus(supabase, auth.tenantId, 'processing'),
+      countByStatus(supabase, auth.tenantId, 'confirmed', { gte: ['validated_at', firstDayOfMonth] }),
+      countByStatus(supabase, auth.tenantId, 'rejected', { gte: ['validated_at', firstDayOfMonth] }),
+    ]);
 
-  if (monthError) {
-    console.error('[stats] falha ao contar NFs do mes:', monthError.message);
-    // Nao bloqueia — retorna zeros para o mes
-  }
+  const total = pendingReview + autoMatched + confirmed + rejected + processing;
 
-  let confirmedMonth = 0;
-  let rejectedMonth = 0;
-
-  for (const row of monthDocs ?? []) {
-    if (row.status === 'confirmed') confirmedMonth++;
-    if (row.status === 'rejected') rejectedMonth++;
-  }
-
-  const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
-
-  console.log(`[stats] total=${total} pending=${counts.pending_review} auto_matched=${counts.auto_matched} confirmed_month=${confirmedMonth}`);
+  console.log(`[stats] total=${total} pending=${pendingReview} auto_matched=${autoMatched} confirmed_month=${confirmedMonth}`);
 
   return success({
-    pending_review: counts.pending_review,
-    auto_matched: counts.auto_matched,
-    confirmed: counts.confirmed,
-    rejected: counts.rejected,
-    processing: counts.processing,
+    pending_review: pendingReview,
+    auto_matched: autoMatched,
+    confirmed,
+    rejected,
+    processing,
     confirmed_month: confirmedMonth,
     rejected_month: rejectedMonth,
     total,

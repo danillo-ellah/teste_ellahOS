@@ -21,6 +21,19 @@ const IngestSchema = z.object({
 
 type IngestInput = z.infer<typeof IngestSchema>;
 
+// Comparacao timing-safe para evitar timing attacks
+function timingSafeEqual(a: string, b: string): boolean {
+  const encoder = new TextEncoder();
+  const aBuf = encoder.encode(a);
+  const bBuf = encoder.encode(b);
+  if (aBuf.byteLength !== bBuf.byteLength) return false;
+  let diff = 0;
+  for (let i = 0; i < aBuf.byteLength; i++) {
+    diff |= aBuf[i] ^ bBuf[i];
+  }
+  return diff === 0;
+}
+
 // Verifica autenticacao via X-Cron-Secret header
 function verifyCronSecret(req: Request): void {
   const secret = req.headers.get('X-Cron-Secret');
@@ -31,7 +44,7 @@ function verifyCronSecret(req: Request): void {
     throw new AppError('INTERNAL_ERROR', 'Configuracao de seguranca ausente', 500);
   }
 
-  if (!secret || secret !== expected) {
+  if (!secret || !timingSafeEqual(secret, expected)) {
     throw new AppError('UNAUTHORIZED', 'Cron Secret invalido ou ausente', 401);
   }
 }

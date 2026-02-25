@@ -562,18 +562,12 @@ export default function IntegrationsPage() {
         )}
 
         {/* ----------------------------------------------------------------- */}
-        {/* DOCUSEAL — desabilitado (Fase 6) */}
+        {/* DOCUSEAL */}
         {/* ----------------------------------------------------------------- */}
         {isLoading ? (
           <IntegrationCardSkeleton />
         ) : (
-          <Card
-            className={cn(
-              'flex flex-col opacity-60',
-              'pointer-events-none select-none',
-            )}
-            aria-disabled="true"
-          >
+          <Card className="flex flex-col">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-center gap-3">
@@ -588,21 +582,29 @@ export default function IntegrationsPage() {
                   </div>
                 </div>
                 <Badge
-                  variant="secondary"
-                  className="gap-1 text-xs font-medium shrink-0"
+                  variant={docuseal?.configured ? 'default' : 'secondary'}
+                  className={cn(
+                    'gap-1 text-xs font-medium shrink-0',
+                    docuseal?.configured && 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400',
+                  )}
                 >
-                  Fase 6
+                  {docuseal?.configured ? (
+                    <><Check className="h-3 w-3" /> Conectado</>
+                  ) : (
+                    <><X className="h-3 w-3" /> Nao configurado</>
+                  )}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="flex flex-col gap-3 pt-0">
               <Separator />
               <p className="text-sm text-muted-foreground py-1">
-                Esta integracao estara disponivel na Fase 6 do projeto.
+                Configuracao gerenciada via Vault (DOCUSEAL_URL, DOCUSEAL_TOKEN).
+                Use a aba Contratos nos jobs para criar e gerenciar assinaturas.
               </p>
-              <Button variant="outline" size="sm" disabled className="gap-1.5">
+              <Button variant="outline" size="sm" className="gap-1.5" disabled>
                 <Settings2 className="h-3.5 w-3.5" />
-                Configurar
+                Via Vault
               </Button>
             </CardContent>
           </Card>

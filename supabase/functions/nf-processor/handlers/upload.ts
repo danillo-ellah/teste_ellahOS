@@ -4,6 +4,9 @@ import { created } from '../../_shared/response.ts';
 import { AppError } from '../../_shared/errors.ts';
 import type { AuthContext } from '../../_shared/auth.ts';
 
+// Roles permitidos para upload manual de NFs
+const ALLOWED_ROLES = ['admin', 'ceo', 'financeiro', 'produtor_executivo'];
+
 // Schema de validacao do payload
 const UploadSchema = z.object({
   job_id: z.string().uuid('job_id deve ser UUID valido').optional().nullable(),
@@ -61,6 +64,11 @@ async function tryAutoMatchByJob(
 }
 
 export async function uploadNf(req: Request, auth: AuthContext): Promise<Response> {
+  // Verificar role do usuario
+  if (!ALLOWED_ROLES.includes(auth.role)) {
+    throw new AppError('FORBIDDEN', 'Permissao insuficiente para upload de NFs', 403);
+  }
+
   // Validar payload
   let body: unknown;
   try {

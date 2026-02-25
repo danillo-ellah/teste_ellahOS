@@ -66,8 +66,6 @@ export async function processN8nEvent(
 
   return {
     webhook_key: webhookKey,
-    webhook_url: webhookUrl,
     http_status: resp.status,
-    response: responseBody,
   };
 }
