@@ -20,7 +20,7 @@ import { NfStatsCards } from './_components/nf-stats-cards'
 import { NfDocumentTable } from './_components/nf-document-table'
 import { NfValidationDialog } from './_components/nf-validation-dialog'
 import { NfReassignDialog } from './_components/nf-reassign-dialog'
-import { useNfList, useNfStats, useReassignNf } from '@/hooks/useNf'
+import { useNfList, useNfStats, useReassignNf, useRejectNf } from '@/hooks/useNf'
 import { toast } from 'sonner'
 import type { NfDocument, NfFilters, NfStatus, FinancialRecordMatch } from '@/types/nf'
 
@@ -81,6 +81,7 @@ export default function NfValidationPage() {
 
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
   const { mutateAsync: reassignNf } = useReassignNf()
+  const { mutateAsync: rejectNf } = useRejectNf()
 
   // Debounce busca 300ms
   useEffect(() => {
@@ -126,6 +127,22 @@ export default function NfValidationPage() {
   function handleReassign(nf: NfDocument) {
     setReassignTarget(nf)
     setReassignOpen(true)
+  }
+
+  async function handleBulkReject(ids: string[]) {
+    if (ids.length === 0) return
+    try {
+      await Promise.all(
+        ids.map((id) =>
+          rejectNf({ nf_document_id: id, rejection_reason: 'Rejeitado em lote' }),
+        ),
+      )
+      toast.success(`${ids.length} NF(s) rejeitada(s)`)
+      refetch()
+      refetchStats()
+    } catch {
+      toast.error('Erro ao rejeitar NFs em lote')
+    }
   }
 
   async function handleReassignSelect(record: FinancialRecordMatch) {
@@ -320,6 +337,7 @@ export default function NfValidationPage() {
           onValidate={handleValidate}
           onReassign={handleReassign}
           onRefetch={refetch}
+          onBulkReject={handleBulkReject}
         />
       </div>
 

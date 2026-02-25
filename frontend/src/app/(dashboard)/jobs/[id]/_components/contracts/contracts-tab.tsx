@@ -31,8 +31,8 @@ export function ContractsTab({ jobId }: ContractsTabProps) {
         </Button>
       </div>
 
-      {/* Lista */}
-      <ContractsList jobId={jobId} onCreateClick={() => setCreateOpen(true)} />
+      {/* Lista — passa submissions para evitar double fetch */}
+      <ContractsList jobId={jobId} onCreateClick={() => setCreateOpen(true)} prefetchedSubmissions={submissions} />
 
       {/* Dialog de criacao */}
       <CreateContractsDialog

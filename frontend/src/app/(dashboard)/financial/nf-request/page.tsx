@@ -2,9 +2,15 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { RefreshCw, HelpCircle } from 'lucide-react'
+import { RefreshCw, HelpCircle, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
 import {
   Tooltip,
   TooltipContent,
@@ -67,6 +73,9 @@ export default function NfRequestPage() {
   // Preview / email
   const [customMessage, setCustomMessage] = useState('')
   const [subject, setSubject] = useState('')
+
+  // Preview mobile (Sheet)
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   // Dialog de confirmacao
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -302,6 +311,37 @@ export default function NfRequestPage() {
           />
         </div>
       </div>
+
+      {/* Botao de preview mobile (visivel apenas abaixo de lg) */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center justify-center border-t p-3 lg:hidden">
+          <Button variant="outline" size="sm" onClick={() => setPreviewOpen(true)}>
+            <Eye className="size-4" />
+            Ver preview do email
+          </Button>
+        </div>
+      )}
+
+      {/* Sheet de preview mobile */}
+      <Sheet open={previewOpen} onOpenChange={setPreviewOpen}>
+        <SheetContent side="bottom" className="h-[85vh] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Preview do Email</SheetTitle>
+          </SheetHeader>
+          <div className="mt-4">
+            <NfEmailPreview
+              selectedGroup={previewGroup}
+              selectedRecords={selectedRecords}
+              customMessage={customMessage}
+              onCustomMessageChange={setCustomMessage}
+              subject={subject}
+              onSubjectChange={setSubject}
+              isMultipleSuppliers={isMultipleSuppliers}
+              supplierCount={selectedSuppliers.size}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Toolbar flutuante de selecao */}
       <NfRequestSelectionToolbar

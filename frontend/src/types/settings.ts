@@ -43,6 +43,7 @@ export interface DocuSealConfig {
   instance_url: string | null
   has_token: boolean
   status_message?: string
+  default_template_id?: number | null
 }
 
 // Configuracao do n8n

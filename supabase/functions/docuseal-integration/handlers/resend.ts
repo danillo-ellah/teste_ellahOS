@@ -46,7 +46,7 @@ export async function resendHandler(req: Request, auth: AuthContext): Promise<Re
   // 1. Buscar o registro local para validar existencia e status
   const { data: submission, error: fetchError } = await supabase
     .from('docuseal_submissions')
-    .select('id, person_email, person_name, docuseal_submission_id, docuseal_status, tenant_id')
+    .select('id, person_email, person_name, docuseal_submission_id, docuseal_status, tenant_id, sent_at')
     .eq('id', input.submission_id)
     .eq('tenant_id', auth.tenantId)
     .is('deleted_at', null)
@@ -66,7 +66,23 @@ export async function resendHandler(req: Request, auth: AuthContext): Promise<Re
     );
   }
 
-  // 3. Validar que existe um docuseal_submission_id para chamar a API
+  // 3. Validar cooldown de reenvio (minimo 5 minutos entre reenvios)
+  if (submission.sent_at) {
+    const lastSent = new Date(submission.sent_at).getTime();
+    const now = Date.now();
+    const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutos
+    if (now - lastSent < COOLDOWN_MS) {
+      const remainingSec = Math.ceil((COOLDOWN_MS - (now - lastSent)) / 1000);
+      throw new AppError(
+        'BUSINESS_RULE_VIOLATION',
+        `Aguarde ${remainingSec} segundos antes de reenviar novamente`,
+        429,
+        { retry_after_seconds: remainingSec },
+      );
+    }
+  }
+
+  // 4. Validar que existe um docuseal_submission_id para chamar a API
   if (!submission.docuseal_submission_id) {
     throw new AppError(
       'BUSINESS_RULE_VIOLATION',

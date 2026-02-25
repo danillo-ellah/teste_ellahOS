@@ -18,6 +18,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useJobTeam } from '@/hooks/useJobTeam'
 import { useDocuSealSubmissions, useCreateDocuSeal } from '@/hooks/useDocuSealSubmissions'
+import { useIntegrations } from '@/hooks/useSettings'
 import { ApiRequestError } from '@/lib/api'
 import { TEAM_ROLE_LABELS } from '@/lib/constants'
 import type { JobTeamMember } from '@/types/jobs'
@@ -37,11 +38,20 @@ export function CreateContractsDialog({
   const { data: teamMembers, isLoading: loadingTeam } = useJobTeam(jobId)
   const { data: existingSubmissions, isLoading: loadingSubmissions } = useDocuSealSubmissions(jobId)
   const { mutateAsync: createDocuSeal, isPending } = useCreateDocuSeal()
+  const { data: integrations } = useIntegrations()
+  const defaultTemplateId = integrations?.docuseal?.default_template_id
 
   // IDs dos membros selecionados para gerar contrato
   const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set())
-  // ID do template DocuSeal a usar
+  // ID do template DocuSeal a usar (pre-populado do tenant settings quando disponivel)
   const [templateId, setTemplateId] = useState('')
+  const [templateInitialized, setTemplateInitialized] = useState(false)
+
+  // Pre-popular template ID do tenant settings quando disponivel
+  if (defaultTemplateId && !templateInitialized && !templateId) {
+    setTemplateId(String(defaultTemplateId))
+    setTemplateInitialized(true)
+  }
 
   // Membros da equipe que ainda nao possuem contrato ativo (pending, sent, opened, signed)
   const availableMembers = useMemo(() => {
@@ -155,7 +165,9 @@ export function CreateContractsDialog({
               className="mt-1.5"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              ID do template configurado no DocuSeal.
+              {defaultTemplateId
+                ? 'Pre-preenchido das configuracoes do tenant. Altere se necessario.'
+                : 'ID do template configurado no DocuSeal.'}
             </p>
           </div>
 

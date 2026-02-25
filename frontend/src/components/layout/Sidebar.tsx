@@ -34,6 +34,8 @@ interface NavItem {
   href: string
   icon: React.ElementType
   disabled?: boolean
+  exact?: boolean
+  badge?: number
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -43,7 +45,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Clientes', href: '/clients', icon: Building2 },
   { label: 'Agencias', href: '/agencies', icon: Briefcase },
   { label: 'Equipe', href: '/people', icon: Users },
-  { label: 'Financeiro', href: '/financial', icon: DollarSign },
+  { label: 'Financeiro', href: '/financial', icon: DollarSign, exact: true },
   { label: 'Validacao de NFs', href: '/financial/nf-validation', icon: FileCheck2 },
   { label: 'Solicitar NFs', href: '/financial/nf-request', icon: MailPlus },
   { label: 'Calendario', href: '/team/calendar', icon: CalendarDays },
@@ -59,9 +61,10 @@ const BOTTOM_ITEMS: NavItem[] = [
 interface SidebarProps {
   collapsed: boolean
   onToggle: () => void
+  badges?: Record<string, number>
 }
 
-export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export function Sidebar({ collapsed, onToggle, badges }: SidebarProps) {
   const pathname = usePathname()
 
   return (
@@ -86,18 +89,23 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* Navegacao principal */}
       <nav className="flex-1 space-y-1 px-2 py-3">
-        {NAV_ITEMS.map((item) => (
-          <NavLink
-            key={item.href}
-            item={item}
-            active={
-              item.href === '/'
-                ? pathname === '/'
-                : pathname.startsWith(item.href)
-            }
-            collapsed={collapsed}
-          />
-        ))}
+        {NAV_ITEMS.map((item) => {
+          const itemWithBadge = badges?.[item.href]
+            ? { ...item, badge: badges[item.href] }
+            : item
+          return (
+            <NavLink
+              key={item.href}
+              item={itemWithBadge}
+              active={
+                item.href === '/' || item.exact
+                  ? pathname === item.href
+                  : pathname.startsWith(item.href)
+              }
+              collapsed={collapsed}
+            />
+          )
+        })}
       </nav>
 
       <Separator />
@@ -165,8 +173,24 @@ function NavLink({
       {active && !item.disabled && (
         <span className="absolute left-0 top-1.5 h-5 w-[3px] rounded-r-full bg-primary" />
       )}
-      <Icon className="h-[18px] w-[18px] shrink-0" />
-      {!collapsed && <span>{item.label}</span>}
+      <span className="relative">
+        <Icon className="h-[18px] w-[18px] shrink-0" />
+        {collapsed && item.badge != null && item.badge > 0 && (
+          <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground">
+            {item.badge > 99 ? '99+' : item.badge}
+          </span>
+        )}
+      </span>
+      {!collapsed && (
+        <span className="flex flex-1 items-center justify-between">
+          <span>{item.label}</span>
+          {item.badge != null && item.badge > 0 && (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-medium text-primary-foreground">
+              {item.badge > 99 ? '99+' : item.badge}
+            </span>
+          )}
+        </span>
+      )}
     </span>
   )
 

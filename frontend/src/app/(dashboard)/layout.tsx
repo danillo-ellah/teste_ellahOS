@@ -14,6 +14,7 @@ import {
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications'
+import { useNfStats } from '@/hooks/useNf'
 
 // Hook para evitar hydration mismatch de IDs Radix (SSR gera IDs diferentes do client)
 function useMounted() {
@@ -44,6 +45,13 @@ export default function DashboardLayout({
   // Realtime: atualiza badge de notificacoes sem refresh
   useRealtimeNotifications(userId)
 
+  // NF pending count para badge no sidebar
+  const { data: nfStats } = useNfStats()
+  const nfPendingCount = (nfStats?.pending_review ?? 0) + (nfStats?.auto_matched ?? 0)
+  const sidebarBadges = nfPendingCount > 0
+    ? { '/financial/nf-validation': nfPendingCount }
+    : undefined
+
   // SSR: renderizar shell minimo para evitar hydration mismatch dos IDs Radix
   if (!mounted) {
     return (
@@ -65,6 +73,7 @@ export default function DashboardLayout({
         <Sidebar
           collapsed={collapsed}
           onToggle={() => setCollapsed((prev) => !prev)}
+          badges={sidebarBadges}
         />
       )}
 
@@ -75,6 +84,7 @@ export default function DashboardLayout({
             <Sidebar
               collapsed={false}
               onToggle={() => setMobileOpen(false)}
+              badges={sidebarBadges}
             />
           </SheetContent>
         </Sheet>

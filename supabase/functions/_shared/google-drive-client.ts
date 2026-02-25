@@ -8,6 +8,47 @@ import { getServiceClient } from './supabase-client.ts';
 
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
 
+// Retry config para chamadas ao Drive API
+const DRIVE_RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+const DRIVE_MAX_RETRIES = 3;
+const DRIVE_BASE_DELAY_MS = 1000;
+const DRIVE_TIMEOUT_MS = 30000;
+
+async function driveFetchWithRetry(
+  url: string,
+  options: RequestInit,
+  label: string,
+): Promise<Response> {
+  for (let attempt = 0; attempt <= DRIVE_MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      const delay = DRIVE_BASE_DELAY_MS * Math.pow(2, attempt - 1);
+      console.log(`[google-drive] retry ${attempt}/${DRIVE_MAX_RETRIES} em ${delay}ms para ${label}`);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+
+    let resp: Response;
+    try {
+      resp = await fetch(url, {
+        ...options,
+        signal: options.signal ?? AbortSignal.timeout(DRIVE_TIMEOUT_MS),
+      });
+    } catch (err) {
+      if (attempt < DRIVE_MAX_RETRIES) continue;
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new Error(`Drive ${label}: network error — ${msg}`);
+    }
+
+    if (!resp.ok && DRIVE_RETRYABLE_STATUS.has(resp.status) && attempt < DRIVE_MAX_RETRIES) {
+      console.warn(`[google-drive] ${label} HTTP ${resp.status} — retrying...`);
+      continue;
+    }
+
+    return resp;
+  }
+
+  throw new Error(`Drive ${label}: max retries exceeded`);
+}
+
 // Opcoes para chamadas que suportam Shared Drive
 interface DriveOptions {
   driveType?: string | null;   // 'my_drive' | 'shared_drive'
@@ -201,14 +242,14 @@ export async function createFolder(
     url += '&supportsAllDrives=true';
   }
 
-  const resp = await fetch(url, {
+  const resp = await driveFetchWithRetry(url, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(metadata),
-  });
+  }, `createFolder "${safeName}"`);
 
   if (!resp.ok) {
     const text = await resp.text();
@@ -236,9 +277,9 @@ export async function listChildren(
     url += `&driveId=${opts.sharedDriveId}&corpora=drive`;
   }
 
-  const resp = await fetch(url, {
+  const resp = await driveFetchWithRetry(url, {
     headers: { Authorization: `Bearer ${token}` },
-  });
+  }, 'listChildren');
 
   if (!resp.ok) {
     const text = await resp.text();
@@ -262,7 +303,7 @@ export async function setPermission(
     url += '?supportsAllDrives=true';
   }
 
-  const resp = await fetch(url, {
+  const resp = await driveFetchWithRetry(url, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -273,7 +314,7 @@ export async function setPermission(
       role,
       emailAddress: email,
     }),
-  });
+  }, `setPermission ${role} ${email}`);
 
   if (!resp.ok) {
     const text = await resp.text();
@@ -292,7 +333,7 @@ export async function copyDriveFile(
 ): Promise<{ id: string; webViewLink?: string }> {
   const url = `${DRIVE_API}/files/${sourceFileId}/copy?supportsAllDrives=true&fields=id,webViewLink`;
 
-  const resp = await fetch(url, {
+  const resp = await driveFetchWithRetry(url, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -302,7 +343,7 @@ export async function copyDriveFile(
       name: newName,
       parents: [targetFolderId],
     }),
-  });
+  }, `files.copy "${newName}"`);
 
   if (!resp.ok) {
     const text = await resp.text();

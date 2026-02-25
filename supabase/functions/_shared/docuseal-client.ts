@@ -89,8 +89,12 @@ async function getDocuSealConfig(
 }
 
 // ========================================================
-// Helper — fetch com headers padrao e error handling
+// Helper — fetch com retry, backoff e error handling
 // ========================================================
+
+const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 1000;
 
 async function docusealFetch(
   config: DocuSealConfig,
@@ -98,33 +102,51 @@ async function docusealFetch(
   options: RequestInit = {},
 ): Promise<Response> {
   const url = `${config.url}/api${path}`;
+  const method = options.method ?? 'GET';
 
-  console.log(`[docuseal] ${options.method ?? 'GET'} ${url}`);
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      const delay = BASE_DELAY_MS * Math.pow(2, attempt - 1);
+      console.log(`[docuseal] retry ${attempt}/${MAX_RETRIES} em ${delay}ms para ${method} ${path}`);
+      await new Promise((r) => setTimeout(r, delay));
+    }
 
-  let resp: Response;
-  try {
-    resp = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Auth-Token': config.token,
-        ...options.headers,
-      },
-      signal: options.signal ?? AbortSignal.timeout(30000),
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    throw new Error(`[docuseal] network error em ${path}: ${msg}`);
+    console.log(`[docuseal] ${method} ${url}${attempt > 0 ? ` (attempt ${attempt + 1})` : ''}`);
+
+    let resp: Response;
+    try {
+      resp = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Auth-Token': config.token,
+          ...options.headers,
+        },
+        signal: options.signal ?? AbortSignal.timeout(30000),
+      });
+    } catch (err) {
+      if (attempt < MAX_RETRIES) continue;
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new Error(`[docuseal] network error em ${path}: ${msg}`);
+    }
+
+    if (!resp.ok && RETRYABLE_STATUS.has(resp.status) && attempt < MAX_RETRIES) {
+      console.warn(`[docuseal] HTTP ${resp.status} em ${path} — retrying...`);
+      continue;
+    }
+
+    if (!resp.ok) {
+      const body = await resp.text().catch(() => '');
+      throw new Error(
+        `[docuseal] HTTP ${resp.status} em ${path}: ${body.slice(0, 400)}`,
+      );
+    }
+
+    return resp;
   }
 
-  if (!resp.ok) {
-    const body = await resp.text().catch(() => '');
-    throw new Error(
-      `[docuseal] HTTP ${resp.status} em ${path}: ${body.slice(0, 400)}`,
-    );
-  }
-
-  return resp;
+  // TypeScript: unreachable, mas satisfaz o tipo
+  throw new Error(`[docuseal] max retries exceeded for ${path}`);
 }
 
 // ========================================================
@@ -326,30 +348,47 @@ export async function downloadSignedDocument(
 
   const url = `${config.url}/api/submissions/${submissionId}/documents/${documentId}/download`;
 
-  let resp: Response;
-  try {
-    resp = await fetch(url, {
-      headers: {
-        // Download nao usa Content-Type: application/json
-        'X-Auth-Token': config.token,
-      },
-      signal: AbortSignal.timeout(60000), // PDF pode ser grande: timeout maior
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    throw new Error(
-      `[docuseal] network error ao baixar documento submission=${submissionId} doc=${documentId}: ${msg}`,
-    );
+  let buffer: ArrayBuffer | null = null;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      const delay = BASE_DELAY_MS * Math.pow(2, attempt - 1);
+      console.log(`[docuseal] download retry ${attempt}/${MAX_RETRIES} em ${delay}ms`);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+
+    let resp: Response;
+    try {
+      resp = await fetch(url, {
+        headers: { 'X-Auth-Token': config.token },
+        signal: AbortSignal.timeout(60000),
+      });
+    } catch (err) {
+      if (attempt < MAX_RETRIES) continue;
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new Error(
+        `[docuseal] network error ao baixar documento submission=${submissionId} doc=${documentId}: ${msg}`,
+      );
+    }
+
+    if (!resp.ok && RETRYABLE_STATUS.has(resp.status) && attempt < MAX_RETRIES) {
+      console.warn(`[docuseal] download HTTP ${resp.status} — retrying...`);
+      continue;
+    }
+
+    if (!resp.ok) {
+      const body = await resp.text().catch(() => '');
+      throw new Error(
+        `[docuseal] HTTP ${resp.status} ao baixar documento submission=${submissionId} doc=${documentId}: ${body.slice(0, 300)}`,
+      );
+    }
+
+    buffer = await resp.arrayBuffer();
+    break;
   }
 
-  if (!resp.ok) {
-    const body = await resp.text().catch(() => '');
-    throw new Error(
-      `[docuseal] HTTP ${resp.status} ao baixar documento submission=${submissionId} doc=${documentId}: ${body.slice(0, 300)}`,
-    );
+  if (!buffer) {
+    throw new Error(`[docuseal] max retries exceeded downloading submission=${submissionId} doc=${documentId}`);
   }
-
-  const buffer = await resp.arrayBuffer();
 
   console.log(
     `[docuseal] PDF baixado com sucesso submission_id=${submissionId} document_id=${documentId} bytes=${buffer.byteLength}`,

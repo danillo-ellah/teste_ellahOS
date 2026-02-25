@@ -30,10 +30,13 @@ import type { DocuSealSubmission } from '@/types/docuseal'
 interface ContractsListProps {
   jobId: string
   onCreateClick: () => void
+  prefetchedSubmissions?: DocuSealSubmission[] | null
 }
 
-export function ContractsList({ jobId, onCreateClick }: ContractsListProps) {
-  const { data: submissions, isLoading, isError, refetch } = useDocuSealSubmissions(jobId)
+export function ContractsList({ jobId, onCreateClick, prefetchedSubmissions }: ContractsListProps) {
+  // Usa dados do parent quando disponivel (evita fetch duplicado)
+  const { data: fetchedSubmissions, isLoading, isError, refetch } = useDocuSealSubmissions(jobId)
+  const submissions = prefetchedSubmissions ?? fetchedSubmissions
   const { mutateAsync: resend } = useResendDocuSeal()
   const { mutateAsync: download } = useDownloadDocuSeal()
 
