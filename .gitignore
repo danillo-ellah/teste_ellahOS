@@ -33,8 +33,8 @@ write_spec7.py
 scripts/
 
 # Empty placeholder dirs (created by accident)
-Baseado
-Design
+/Baseado
+/Design
 
 # Logs
 *.log
@@ -46,3 +46,5 @@ frontend/tests/screenshots/
 frontend/tests/results.json
 frontend/test-results/
 test-results/
+
+.vercel
