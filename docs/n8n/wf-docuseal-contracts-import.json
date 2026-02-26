@@ -16,7 +16,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Validar payload do integration-processor\nconst body = $input.first().json.body || $input.first().json;\n\nif (!body.submissions || !Array.isArray(body.submissions) || body.submissions.length === 0) {\n  return [{ json: { _valid: false, _error: 'submissions array ausente ou vazio' } }];\n}\n\nif (!body.template_id) {\n  return [{ json: { _valid: false, _error: 'template_id ausente' } }];\n}\n\nreturn [{ json: { _valid: true, ...body } }];"
+        "jsCode": "// Validar payload do integration-processor\nconst body = $input.first().json.body || $input.first().json;\n\n// Validar webhook secret\nconst expectedSecret = '36ae7877b5deffcb006e94386fa212f4440c8d94fac580f32033c7ca3510cad6';\nconst receivedSecret = $input.first().json.headers?.['x-webhook-secret'] || '';\nif (expectedSecret && receivedSecret !== expectedSecret) {\n  return [{ json: { _valid: false, _error: 'Webhook secret invalido' } }];\n}\n\nif (!body.submissions || !Array.isArray(body.submissions) || body.submissions.length === 0) {\n  return [{ json: { _valid: false, _error: 'submissions array ausente ou vazio' } }];\n}\n\nif (!body.template_id) {\n  return [{ json: { _valid: false, _error: 'template_id ausente' } }];\n}\n\nreturn [{ json: { _valid: true, ...body } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -44,107 +44,36 @@
     },
     {
       "parameters": {
-        "fieldToSplitOut": "submissions",
-        "options": {}
+        "jsCode": "// Processar todas as submissions em sequencia dentro de 1 Code node\n// Isso evita o problema de SplitOut + multiplos Respond\nconst body = $input.first().json;\nconst submissions = body.submissions;\nconst templateId = body.template_id;\n\nconst DOCUSEAL_URL = 'https://assinaturas.ellahfilmes.com';\nconst DOCUSEAL_TOKEN = 'XKyx7mEGvXKQjFnRQEcfcUPq3Ty3LGwoDrNFj1qksn2';\nconst ELLAHOS_URL = 'https://etvapcxesaxhsvzgaane.supabase.co/functions/v1';\nconst WEBHOOK_SECRET = '111e6b1d3c6b4058c1c0a4a5663d8f6ca0a02a0cec685b6e3e7c086f2dfe5a1e';\n\nconst results = [];\n\nfor (const sub of submissions) {\n  try {\n    // Validar campos obrigatorios\n    if (!sub.email || !sub.name || !sub.role) {\n      results.push({ email: sub.email || 'unknown', status: 'error', error: 'Campos obrigatorios ausentes' });\n      continue;\n    }\n\n    // Criar submission no DocuSeal\n    const payload = {\n      template_id: templateId,\n      send_email: sub.send_email !== false,\n      submitters: [{\n        role: sub.role,\n        email: sub.email,\n        fields: (sub.fields || []).map(f => ({ name: f.name, default_value: f.value }))\n      }]\n    };\n\n    const docuRes = await fetch(`${DOCUSEAL_URL}/api/submissions`, {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json', 'X-Auth-Token': DOCUSEAL_TOKEN },\n      body: JSON.stringify(payload),\n      signal: AbortSignal.timeout(30000)\n    });\n\n    if (!docuRes.ok) {\n      const errText = await docuRes.text();\n      results.push({ email: sub.email, status: 'error', error: `DocuSeal ${docuRes.status}: ${errText}` });\n      continue;\n    }\n\n    const docuData = await docuRes.json();\n\n    // Callback para ELLAHOS\n    try {\n      await fetch(`${ELLAHOS_URL}/docuseal-integration/webhook`, {\n        method: 'POST',\n        headers: { 'Content-Type': 'application/json', 'X-Webhook-Secret': WEBHOOK_SECRET },\n        body: JSON.stringify({\n          event_type: 'form.sent',\n          data: {\n            submission_id: Array.isArray(docuData) ? docuData[0]?.id : docuData.id,\n            submitters: Array.isArray(docuData) ? docuData.map(d => d.submitters || []).flat() : (docuData.submitters || [])\n          }\n        }),\n        signal: AbortSignal.timeout(15000)\n      });\n    } catch (cbErr) {\n      console.error(`[wf-docuseal] Callback failed for ${sub.email}: ${cbErr.message}`);\n    }\n\n    results.push({ email: sub.email, status: 'success', submission_id: Array.isArray(docuData) ? docuData[0]?.id : docuData.id });\n\n  } catch (err) {\n    results.push({ email: sub.email || 'unknown', status: 'error', error: err.message });\n  }\n}\n\nconst successCount = results.filter(r => r.status === 'success').length;\nconst errorCount = results.filter(r => r.status === 'error').length;\n\nreturn [{\n  json: {\n    success: errorCount === 0,\n    processed: results.length,\n    succeeded: successCount,\n    failed: errorCount,\n    results\n  }\n}];"
       },
-      "type": "n8n-nodes-base.splitOut",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [660, -80],
-      "id": "split-submissions",
-      "name": "Split Submissions"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Validar cada submission individualmente\nconst item = $input.first().json;\n\nif (!item.email || !item.name || !item.role) {\n  return [{ json: { ...item, _valid: false, _error: `Campos obrigatorios ausentes para submitter` } }];\n}\n\n// Montar payload para DocuSeal API\nreturn [{\n  json: {\n    ...item,\n    _valid: true,\n    _docusealPayload: {\n      template_id: $('Validate Batch').first().json.template_id,\n      send_email: item.send_email !== false,\n      submitters: [{\n        role: item.role,\n        email: item.email,\n        fields: (item.fields || []).map(f => ({ name: f.name, default_value: f.value }))\n      }]\n    }\n  }\n}];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [880, -80],
-      "id": "validate-item",
-      "name": "Validate Submission Item"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "conditions": [
-            {
-              "leftValue": "={{ $json._valid }}",
-              "rightValue": true,
-              "operator": { "type": "boolean", "operation": "equals" }
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [1100, -80],
-      "id": "item-valid",
-      "name": "Item Valid?"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $env.DOCUSEAL_BASE_URL }}/api/submissions",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "Content-Type", "value": "application/json" },
-            { "name": "X-Auth-Token", "value": "={{ $env.DOCUSEAL_API_TOKEN }}" }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json._docusealPayload) }}",
-        "options": { "timeout": 30000 }
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1320, -160],
-      "id": "create-docuseal",
-      "name": "Create DocuSeal Submission"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $env.ELLAHOS_BASE_URL }}/docuseal-integration/webhook",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "Content-Type", "value": "application/json" },
-            { "name": "X-Webhook-Secret", "value": "={{ $env.DOCUSEAL_WEBHOOK_SECRET }}" }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"event_type\": \"form.sent\",\n  \"data\": {\n    \"submission_id\": {{ $('Create DocuSeal Submission').item.json.id }},\n    \"submitters\": {{ JSON.stringify($('Create DocuSeal Submission').item.json.submitters || []) }}\n  }\n}",
-        "options": { "timeout": 15000 }
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1540, -160],
-      "id": "success-callback",
-      "name": "Callback Success"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Log erro de validacao ou DocuSeal API\nconst item = $input.first().json;\nconsole.error('[wf-docuseal-contracts] Error:', item._error || item.message || 'unknown');\nreturn [{ json: { status: 'error', error: item._error || 'unknown', email: item.email } }];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1320, 80],
-      "id": "log-error",
-      "name": "Log Error"
+      "id": "process-submissions",
+      "name": "Process All Submissions"
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ success: true, processed: $input.all().length }) }}"
+        "responseBody": "={{ JSON.stringify($json) }}"
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1760, 0],
-      "id": "respond",
+      "position": [880, -80],
+      "id": "respond-success",
       "name": "Respond"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: $json._error || 'Validacao falhou' }) }}",
+        "options": { "responseCode": 400 }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [660, 80],
+      "id": "respond-error",
+      "name": "Respond Error"
     }
   ],
   "connections": {
@@ -152,25 +81,16 @@
     "Validate Batch": { "main": [[{ "node": "Is Valid?", "type": "main", "index": 0 }]] },
     "Is Valid?": {
       "main": [
-        [{ "node": "Split Submissions", "type": "main", "index": 0 }],
-        [{ "node": "Respond", "type": "main", "index": 0 }]
+        [{ "node": "Process All Submissions", "type": "main", "index": 0 }],
+        [{ "node": "Respond Error", "type": "main", "index": 0 }]
       ]
     },
-    "Split Submissions": { "main": [[{ "node": "Validate Submission Item", "type": "main", "index": 0 }]] },
-    "Validate Submission Item": { "main": [[{ "node": "Item Valid?", "type": "main", "index": 0 }]] },
-    "Item Valid?": {
-      "main": [
-        [{ "node": "Create DocuSeal Submission", "type": "main", "index": 0 }],
-        [{ "node": "Log Error", "type": "main", "index": 0 }]
-      ]
-    },
-    "Create DocuSeal Submission": { "main": [[{ "node": "Callback Success", "type": "main", "index": 0 }]] },
-    "Callback Success": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] },
-    "Log Error": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+    "Process All Submissions": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
   },
   "settings": {
     "executionOrder": "v1",
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "tags": [{ "name": "ELLAHOS" }, { "name": "Fase9" }]
+  "tags": [{ "name": "ELLAHOS" }, { "name": "Fase9" }],
+  "pinData": {}
 }
