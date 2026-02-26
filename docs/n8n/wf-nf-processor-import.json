@@ -54,7 +54,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Extrair PDFs dos anexos do email (percorre parts aninhados p/ multipart)\nconst items = $input.all();\nconst results = [];\n\nfunction extractParts(parts, depth) {\n  if (!parts || depth > 5) return [];\n  const found = [];\n  for (const part of parts) {\n    if (part.filename && part.filename.toLowerCase().endsWith('.pdf')) {\n      found.push(part);\n    }\n    if (part.parts) {\n      found.push(...extractParts(part.parts, depth + 1));\n    }\n  }\n  return found;\n}\n\nfor (const item of items) {\n  // Pular items com erro do Get Full Message\n  if (item.json.error) {\n    continue;\n  }\n\n  const topParts = item.json.payload?.parts || [];\n  const pdfParts = extractParts(topParts, 0);\n  \n  // Fallback: PDF direto no body (sem multipart)\n  if (pdfParts.length === 0 && item.json.payload?.body?.attachmentId) {\n    const fn = item.json.payload?.filename || 'attachment.pdf';\n    if (fn.toLowerCase().endsWith('.pdf')) {\n      pdfParts.push({ filename: fn, body: item.json.payload.body, mimeType: 'application/pdf' });\n    }\n  }\n  \n  const headers = item.json.payload?.headers || [];\n  const fromHeader = headers.find(h => h.name.toLowerCase() === 'from')?.value || '';\n  const subjectHeader = headers.find(h => h.name.toLowerCase() === 'subject')?.value || '(sem assunto)';\n  \n  for (const part of pdfParts) {\n    results.push({\n      json: {\n        emailId: item.json.id,\n        threadId: item.json.threadId,\n        senderEmail: fromHeader.match(/<(.+?)>/)?.[1] || fromHeader.replace(/\".*?\"\\s*/, '').trim(),\n        senderName: fromHeader.replace(/<.*>/, '').replace(/\"/g, '').trim(),\n        subject: subjectHeader,\n        receivedAt: item.json.internalDate ? new Date(parseInt(item.json.internalDate)).toISOString() : new Date().toISOString(),\n        fileName: part.filename,\n        attachmentId: part.body?.attachmentId,\n        mimeType: part.mimeType\n      }\n    });\n  }\n}\n\nif (results.length === 0) {\n  return [{ json: { _skip: true, reason: 'No PDF attachments found' } }];\n}\n\nreturn results;"
+        "jsCode": "// Extrair PDFs dos anexos do email (percorre parts aninhados p/ multipart)\nconst items = $input.all();\nconst results = [];\n\nfunction extractParts(parts, depth) {\n  if (!parts || depth > 5) return [];\n  const found = [];\n  for (const part of parts) {\n    if (part.filename && part.filename.toLowerCase().endsWith('.pdf')) {\n      found.push(part);\n    }\n    if (part.parts) {\n      found.push(...extractParts(part.parts, depth + 1));\n    }\n  }\n  return found;\n}\n\nfor (const item of items) {\n  if (item.json.error) {\n    continue;\n  }\n\n  const topParts = item.json.payload?.parts || [];\n  const pdfParts = extractParts(topParts, 0);\n  \n  if (pdfParts.length === 0 && item.json.payload?.body?.attachmentId) {\n    const fn = item.json.payload?.filename || 'attachment.pdf';\n    if (fn.toLowerCase().endsWith('.pdf')) {\n      pdfParts.push({ filename: fn, body: item.json.payload.body, mimeType: 'application/pdf' });\n    }\n  }\n  \n  const headers = item.json.payload?.headers || [];\n  const fromHeader = headers.find(h => h.name.toLowerCase() === 'from')?.value || '';\n  const subjectHeader = headers.find(h => h.name.toLowerCase() === 'subject')?.value || '(sem assunto)';\n  \n  for (const part of pdfParts) {\n    results.push({\n      json: {\n        emailId: item.json.id,\n        threadId: item.json.threadId,\n        senderEmail: fromHeader.match(/<(.+?)>/)?.[1] || fromHeader.replace(/\".*?\"\\s*/, '').trim(),\n        senderName: fromHeader.replace(/<.*>/, '').replace(/\"/g, '').trim(),\n        subject: subjectHeader,\n        receivedAt: item.json.internalDate ? new Date(parseInt(item.json.internalDate)).toISOString() : new Date().toISOString(),\n        fileName: part.filename,\n        attachmentId: part.body?.attachmentId,\n        mimeType: part.mimeType\n      }\n    });\n  }\n}\n\nif (results.length === 0) {\n  return [{ json: { _skip: true, reason: 'No PDF attachments found' } }];\n}\n\nreturn results;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -100,13 +100,83 @@
     },
     {
       "parameters": {
-        "jsCode": "// Calcular hash do PDF para deduplicacao (sem modulo crypto — bloqueado no sandbox n8n)\n// Usa DJB2 com multiplos passes para fingerprint deterministica\nconst items = $input.all();\nconst results = [];\n\nfunction computeHash(buffer) {\n  let h1 = 5381, h2 = 0x1505, h3 = 0xdeadbeef, h4 = 0xcafebabe;\n  for (let i = 0; i < buffer.length; i++) {\n    h1 = ((h1 << 5) + h1 + buffer[i]) >>> 0;\n    h2 = ((h2 << 5) + h2 + buffer[buffer.length - 1 - i]) >>> 0;\n    h3 = (h3 * 31 + buffer[i]) >>> 0;\n    h4 = (h4 * 37 + buffer[i]) >>> 0;\n  }\n  return h1.toString(16).padStart(8, '0') + h2.toString(16).padStart(8, '0') + h3.toString(16).padStart(8, '0') + h4.toString(16).padStart(8, '0');\n}\n\nfor (const item of items) {\n  const b64url = item.json.data;\n  if (!b64url) {\n    results.push({ json: { ...item.json, fileHash: 'no-attachment-data', _error: true } });\n    continue;\n  }\n  \n  const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');\n  const buffer = Buffer.from(b64, 'base64');\n  const hash = computeHash(buffer);\n  \n  const extractData = $('Extract PDF Attachments').item.json;\n  \n  results.push({\n    json: {\n      ...extractData,\n      fileHash: hash,\n      fileSizeBytes: buffer.length\n    },\n    binary: {\n      data: {\n        data: b64,\n        mimeType: 'application/pdf',\n        fileName: extractData.fileName,\n        fileExtension: 'pdf'\n      }\n    }\n  });\n}\n\nreturn results;"
+        "resource": "message",
+        "operation": "removeLabel",
+        "messageId": "={{ $('Extract PDF Attachments').item.json.emailId }}",
+        "labelIds": ["UNREAD"],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1320, -80],
+      "id": "mark-read",
+      "name": "Mark as Read",
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "gmailOAuth2": { "id": "GMAIL_CREDENTIAL_ID", "name": "Gmail Financeiro OAuth2" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calcular hash do PDF para deduplicacao (sem modulo crypto — bloqueado no sandbox n8n)\n// Usa DJB2 com multiplos passes para fingerprint deterministica\nconst items = $input.all();\nconst results = [];\n\nfunction computeHash(buffer) {\n  let h1 = 5381, h2 = 0x1505, h3 = 0xdeadbeef, h4 = 0xcafebabe;\n  for (let i = 0; i < buffer.length; i++) {\n    h1 = ((h1 << 5) + h1 + buffer[i]) >>> 0;\n    h2 = ((h2 << 5) + h2 + buffer[buffer.length - 1 - i]) >>> 0;\n    h3 = (h3 * 31 + buffer[i]) >>> 0;\n    h4 = (h4 * 37 + buffer[i]) >>> 0;\n  }\n  return h1.toString(16).padStart(8, '0') + h2.toString(16).padStart(8, '0') + h3.toString(16).padStart(8, '0') + h4.toString(16).padStart(8, '0');\n}\n\nfor (const item of items) {\n  // Pegar dados do Download PDF (item anterior via Mark as Read passthrough)\n  const downloadData = $('Download PDF Attachment').item.json;\n  const b64url = downloadData.data;\n  if (!b64url) {\n    results.push({ json: { ...item.json, fileHash: 'no-attachment-data', _error: true } });\n    continue;\n  }\n  \n  const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');\n  const buffer = Buffer.from(b64, 'base64');\n  const hash = computeHash(buffer);\n  \n  const extractData = $('Extract PDF Attachments').item.json;\n  \n  results.push({\n    json: {\n      ...extractData,\n      fileHash: hash,\n      fileSizeBytes: buffer.length\n    },\n    binary: {\n      data: {\n        data: b64,\n        mimeType: 'application/pdf',\n        fileName: extractData.fileName,\n        fileExtension: 'pdf'\n      }\n    }\n  });\n}\n\nreturn results;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1320, -80],
+      "position": [1540, -80],
       "id": "calculate-hash",
       "name": "Hash + Prepare Binary"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://etvapcxesaxhsvzgaane.supabase.co/rest/v1/rpc/check_nf_duplicate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"p_tenant_id\": \"11111111-1111-1111-1111-111111111111\",\n  \"p_file_hash\": \"{{ $json.fileHash }}\"\n}",
+        "options": { "timeout": 10000 }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1760, -80],
+      "id": "check-duplicate",
+      "name": "Check Duplicate in DB",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Verificar se o resultado da checagem de duplicata indica arquivo novo\nconst checkResult = $input.first().json;\n\n// Se a RPC retornou true ou um registro, e duplicata\n// Se retornou false/null/empty ou erro, considerar como novo (fail-open para nao perder NFs)\nconst isDuplicate = checkResult === true || checkResult?.is_duplicate === true;\n\nif (isDuplicate) {\n  console.log(`[wf-nf-processor] Duplicata detectada para hash ${$('Hash + Prepare Binary').item.json.fileHash} — pulando upload`);\n  return [{ json: { _skip: true, reason: 'duplicate', fileHash: $('Hash + Prepare Binary').item.json.fileHash } }];\n}\n\n// Nao e duplicata — passar dados do Hash + Prepare Binary adiante com o binary\nconst hashItem = $('Hash + Prepare Binary').item;\nreturn [{\n  json: hashItem.json,\n  binary: hashItem.binary\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1980, -80],
+      "id": "dedup-check",
+      "name": "Is New?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json._skip }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "notEquals" }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2200, -80],
+      "id": "is-new",
+      "name": "Not Duplicate?"
     },
     {
       "parameters": {
@@ -118,7 +188,7 @@
       },
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
-      "position": [1540, -80],
+      "position": [2420, -160],
       "id": "upload-drive",
       "name": "Upload to Drive",
       "onError": "continueErrorOutput",
@@ -144,28 +214,10 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1760, -80],
+      "position": [2640, -160],
       "id": "ingest-callback",
       "name": "POST Ingest to ELLAHOS",
       "onError": "continueErrorOutput"
-    },
-    {
-      "parameters": {
-        "resource": "message",
-        "operation": "removeLabel",
-        "messageId": "={{ $('Extract PDF Attachments').item.json.emailId }}",
-        "labelIds": ["UNREAD"],
-        "options": {}
-      },
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.1,
-      "position": [1980, -80],
-      "id": "mark-read",
-      "name": "Mark as Read",
-      "onError": "continueErrorOutput",
-      "credentials": {
-        "gmailOAuth2": { "id": "GMAIL_CREDENTIAL_ID", "name": "Gmail Financeiro OAuth2" }
-      }
     },
     {
       "parameters": {
@@ -173,7 +225,7 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1540, 120],
+      "position": [2200, 120],
       "id": "error-handler",
       "name": "Log Error"
     }
@@ -188,19 +240,28 @@
     "Extract PDF Attachments": { "main": [[{ "node": "Has PDFs?", "type": "main", "index": 0 }]] },
     "Has PDFs?": { "main": [[{ "node": "Download PDF Attachment", "type": "main", "index": 0 }], []] },
     "Download PDF Attachment": { "main": [
+      [{ "node": "Mark as Read", "type": "main", "index": 0 }],
+      [{ "node": "Log Error", "type": "main", "index": 0 }]
+    ]},
+    "Mark as Read": { "main": [
       [{ "node": "Hash + Prepare Binary", "type": "main", "index": 0 }],
       [{ "node": "Log Error", "type": "main", "index": 0 }]
     ]},
-    "Hash + Prepare Binary": { "main": [[{ "node": "Upload to Drive", "type": "main", "index": 0 }]] },
+    "Hash + Prepare Binary": { "main": [[{ "node": "Check Duplicate in DB", "type": "main", "index": 0 }]] },
+    "Check Duplicate in DB": { "main": [
+      [{ "node": "Is New?", "type": "main", "index": 0 }],
+      [{ "node": "Log Error", "type": "main", "index": 0 }]
+    ]},
+    "Is New?": { "main": [[{ "node": "Not Duplicate?", "type": "main", "index": 0 }]] },
+    "Not Duplicate?": { "main": [
+      [{ "node": "Upload to Drive", "type": "main", "index": 0 }],
+      []
+    ]},
     "Upload to Drive": { "main": [
       [{ "node": "POST Ingest to ELLAHOS", "type": "main", "index": 0 }],
       [{ "node": "Log Error", "type": "main", "index": 0 }]
     ]},
     "POST Ingest to ELLAHOS": { "main": [
-      [{ "node": "Mark as Read", "type": "main", "index": 0 }],
-      [{ "node": "Log Error", "type": "main", "index": 0 }]
-    ]},
-    "Mark as Read": { "main": [
       [],
       [{ "node": "Log Error", "type": "main", "index": 0 }]
     ]}
