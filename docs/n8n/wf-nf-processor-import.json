@@ -100,14 +100,17 @@
     },
     {
       "parameters": {
-        "resource": "message",
-        "operation": "removeLabel",
-        "messageId": "={{ $('Extract PDF Attachments').item.json.emailId }}",
-        "labelIds": ["UNREAD"],
+        "method": "POST",
+        "url": "=https://gmail.googleapis.com/gmail/v1/users/me/messages/{{ $('Extract PDF Attachments').item.json.emailId }}/modify",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"removeLabelIds\": [\"UNREAD\"] }",
         "options": {}
       },
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [1320, -80],
       "id": "mark-read",
       "name": "Mark as Read",
@@ -152,7 +155,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Verificar se o resultado da checagem de duplicata indica arquivo novo\nconst checkResult = $input.first().json;\n\n// Se a RPC retornou true ou um registro, e duplicata\n// Se retornou false/null/empty ou erro, considerar como novo (fail-open para nao perder NFs)\nconst isDuplicate = checkResult === true || checkResult?.is_duplicate === true;\n\nif (isDuplicate) {\n  console.log(`[wf-nf-processor] Duplicata detectada para hash ${$('Hash + Prepare Binary').item.json.fileHash} — pulando upload`);\n  return [{ json: { _skip: true, reason: 'duplicate', fileHash: $('Hash + Prepare Binary').item.json.fileHash } }];\n}\n\n// Nao e duplicata — passar dados do Hash + Prepare Binary adiante com o binary\nconst hashItem = $('Hash + Prepare Binary').item;\nreturn [{\n  json: hashItem.json,\n  binary: hashItem.binary\n}];"
+        "jsCode": "// Verificar se o resultado da checagem de duplicata indica arquivo novo\nconst checkResult = $input.first().json;\n\nconst isDuplicate = checkResult === true || checkResult?.is_duplicate === true;\n\nif (isDuplicate) {\n  console.log(`[wf-nf-processor] Duplicata detectada para hash ${$('Hash + Prepare Binary').item.json.fileHash} — pulando upload`);\n  return [{ json: { _skip: true, reason: 'duplicate', fileHash: $('Hash + Prepare Binary').item.json.fileHash }, pairedItem: { item: 0 } }];\n}\n\n// Nao e duplicata — passar dados adiante com pairedItem para manter chain\nconst hashItem = $('Hash + Prepare Binary').item;\nreturn [{\n  json: hashItem.json,\n  binary: hashItem.binary,\n  pairedItem: { item: 0 }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
