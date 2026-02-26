@@ -71,12 +71,13 @@ export async function processDocuSealEvent(
 
       // Montar payload para DocuSeal
       const fields = (member.fields as Array<{ name: string; value: string }>) ?? [];
+      const memberRole = (member.role as string) || 'Contratado';
       const submission: DocuSealCreateSubmission = {
         template_id: templateId,
         send_email: true,
         submitters: [
           {
-            role: 'Contratado',
+            role: memberRole,
             email,
             fields,
           },
