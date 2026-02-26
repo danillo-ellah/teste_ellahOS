@@ -22,6 +22,7 @@ interface FinancialRecordWithPeople {
   id: string;
   description: string;
   amount: number;
+  due_date: string | null;
   supplier_email: string | null;
   nf_request_status: string | null;
   job_id: string | null;
@@ -33,6 +34,9 @@ interface FinancialRecordWithPeople {
   jobs: {
     code: string;
     title: string;
+    clients: {
+      name: string;
+    } | null;
   } | null;
 }
 
@@ -71,6 +75,7 @@ export async function requestSendNf(req: Request, auth: AuthContext): Promise<Re
       id,
       description,
       amount,
+      due_date,
       supplier_email,
       nf_request_status,
       job_id,
@@ -81,7 +86,10 @@ export async function requestSendNf(req: Request, auth: AuthContext): Promise<Re
       ),
       jobs (
         code,
-        title
+        title,
+        clients (
+          name
+        )
       )
     `)
     .in('id', input.financial_record_ids)
@@ -166,7 +174,9 @@ export async function requestSendNf(req: Request, auth: AuthContext): Promise<Re
       amount: rec.amount ?? 0,
       job_code: job?.code ?? '—',
       job_title: job?.title ?? '—',
+      job_client_name: job?.clients?.name ?? '',
       financial_record_id: rec.id,
+      due_date: rec.due_date ?? null,
     });
     group.financial_record_ids.push(rec.id);
   }
