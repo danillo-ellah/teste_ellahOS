@@ -41,16 +41,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { cn } from '@/lib/utils'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { toast } from 'sonner'
@@ -288,7 +278,6 @@ export function NfDocumentTable({
   onBulkReject,
 }: NfDocumentTableProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [rejectTarget, setRejectTarget] = useState<NfDocument | null>(null)
 
   const sortBy = filters.sort_by ?? 'created_at'
   const sortOrder = filters.sort_order ?? 'desc'
@@ -565,7 +554,7 @@ export function NfDocumentTable({
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 className="flex items-center gap-2 text-destructive focus:text-destructive"
-                                onClick={() => setRejectTarget(nf)}
+                                onClick={() => onValidate(nf)}
                               >
                                 <XCircle className="h-4 w-4" />
                                 Rejeitar
@@ -600,7 +589,7 @@ export function NfDocumentTable({
                 key={nf.id}
                 nf={nf}
                 onValidate={onValidate}
-                onReject={(n) => setRejectTarget(n)}
+                onReject={(n) => onValidate(n)}
                 onReassign={onReassign}
               />
             ))}
@@ -682,38 +671,6 @@ export function NfDocumentTable({
         }}
       />
 
-      {/* Alert de confirmacao de rejeicao */}
-      <AlertDialog
-        open={rejectTarget !== null}
-        onOpenChange={(open) => {
-          if (!open) setRejectTarget(null)
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Rejeitar NF</AlertDialogTitle>
-            <AlertDialogDescription>
-              Deseja rejeitar a NF{' '}
-              <span className="font-medium">{rejectTarget?.file_name}</span>? Esta acao pode
-              ser revertida posteriormente.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                if (rejectTarget) {
-                  onValidate(rejectTarget)
-                  setRejectTarget(null)
-                }
-              }}
-            >
-              Rejeitar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
 }

@@ -17,20 +17,44 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
-import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { toast } from 'sonner'
 import { NfReassignDialog } from './nf-reassign-dialog'
+import { NfStatusBadge } from './nf-status-badge'
 import { useValidateNf, useRejectNf } from '@/hooks/useNf'
 import type { NfDocument, FinancialRecordMatch } from '@/types/nf'
+
+// --- Responsive hook (evita renderizar Dialog+Sheet simultaneamente) ---
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 767px)')
+    setIsMobile(mql.matches)
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    mql.addEventListener('change', handler)
+    return () => mql.removeEventListener('change', handler)
+  }, [])
+  return isMobile
+}
 
 // --- PDF Preview ---
 
@@ -83,7 +107,7 @@ function PdfPreview({ url, fileName }: PdfPreviewProps) {
       <div className="relative flex-1 bg-white">
         {loading && !error && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-zinc-50">
-            <Skeleton className="h-8 w-8 rounded-full" />
+            <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
             <p className="text-xs text-zinc-400">Carregando PDF...</p>
           </div>
         )}
@@ -187,7 +211,7 @@ function OcrField({
   )
 }
 
-// --- Main dialog (desktop) ---
+// --- Main content ---
 
 interface NfValidationDialogProps {
   nf: NfDocument | null
@@ -196,8 +220,6 @@ interface NfValidationDialogProps {
   onSuccess?: () => void
 }
 
-// NfValidationContent: flex-col, ocupa todo o espaco disponivel (flex-1 no container pai)
-// Estrutura: [split-body flex-1 overflow-hidden] + [footer shrink-0]
 function NfValidationContent({
   nf,
   onClose,
@@ -217,7 +239,7 @@ function NfValidationContent({
   const [competencia, setCompetencia] = useState(nf.extracted_competencia ?? '')
   const [selectedMatch, setSelectedMatch] = useState<FinancialRecordMatch | null>(null)
   const [reassignOpen, setReassignOpen] = useState(false)
-  const [rejectMode, setRejectMode] = useState(false)
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
   const [rejectionReason, setRejectionReason] = useState('')
 
   const { mutateAsync: validateNf, isPending: isValidating } = useValidateNf()
@@ -252,6 +274,12 @@ function NfValidationContent({
     nfValue.trim() &&
     matchFinancialRecordId
   )
+
+  const confirmDisabledReason = !matchFinancialRecordId
+    ? 'Selecione um lancamento financeiro'
+    : !nfValue.trim()
+      ? 'Informe o valor da NF'
+      : 'Preencha o fornecedor ou numero da NF'
 
   async function handleConfirm() {
     try {
@@ -302,9 +330,71 @@ function NfValidationContent({
 
         {/* Painel direito: dados */}
         <div className="flex-1 overflow-y-auto p-6 md:w-1/2">
-          {/* Dados extraidos */}
+          {/* Match com lancamento (ponto de decisao — vem primeiro) */}
           <p className="text-[11px] font-medium uppercase tracking-widest text-zinc-400">
-            Dados Extraidos
+            Match com Lancamento
+          </p>
+
+          {hasAutoMatch || selectedMatch ? (
+            <div className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-800 dark:bg-emerald-950">
+              <div className="flex items-center gap-1.5">
+                <Zap className="h-3.5 w-3.5 text-emerald-500" />
+                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                  {selectedMatch ? 'Selecionado manualmente' : 'Auto-matched'}
+                </span>
+              </div>
+              <div className="mt-1 flex items-center gap-2">
+                <p className="text-sm font-medium text-foreground">
+                  {selectedMatch?.description ?? nf.matched_record_description ?? '\u2014'}
+                </p>
+                {(selectedMatch?.job_code ?? nf.matched_job_code) && (
+                  <Badge variant="outline" className="text-xs">
+                    {selectedMatch?.job_code ?? nf.matched_job_code}
+                  </Badge>
+                )}
+              </div>
+              <p className="mt-1 text-xs text-zinc-500">
+                <span className="font-mono text-emerald-700 dark:text-emerald-300">
+                  {formatCurrency(
+                    selectedMatch?.amount ?? nf.matched_record_amount,
+                  )}
+                </span>
+                {' \u00b7 '}
+                {formatDate(selectedMatch?.due_date ?? nf.matched_record_date)}
+              </p>
+            </div>
+          ) : (
+            <div className="mt-2 flex flex-col items-center gap-2 rounded-md border border-dashed border-zinc-300 bg-zinc-50 p-4 dark:border-zinc-600 dark:bg-zinc-800">
+              <AlertCircle className="h-5 w-5 text-zinc-400" />
+              <p className="text-xs text-zinc-500">
+                Sem match automatico \u2014 selecione o lancamento
+              </p>
+              <Button
+                size="sm"
+                className="mt-1"
+                onClick={() => setReassignOpen(true)}
+              >
+                <Search className="h-3.5 w-3.5 mr-1.5" />
+                Buscar lancamento
+              </Button>
+            </div>
+          )}
+
+          {(hasAutoMatch || selectedMatch) && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3 w-full"
+              onClick={() => setReassignOpen(true)}
+            >
+              <Search className="h-3.5 w-3.5 mr-1.5" />
+              Reclassificar para outro lancamento
+            </Button>
+          )}
+
+          {/* Dados da NF */}
+          <p className="mt-6 text-[11px] font-medium uppercase tracking-widest text-zinc-400">
+            Dados da NF
           </p>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
@@ -361,146 +451,93 @@ function NfValidationContent({
               />
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Match sugerido */}
-          <p className="mt-6 text-[11px] font-medium uppercase tracking-widest text-zinc-400">
-            Match Sugerido
-          </p>
-
-          {hasAutoMatch || selectedMatch ? (
-            <div className="mt-2 rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950">
-              <div className="flex items-center gap-1.5">
-                <Zap className="h-3.5 w-3.5 text-blue-500" />
-                <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
-                  {selectedMatch ? 'Selecionado manualmente' : 'Auto-matched'}
-                </span>
-              </div>
-              <div className="mt-1 flex items-center gap-2">
-                <p className="text-sm font-medium text-foreground">
-                  {selectedMatch?.description ?? nf.matched_record_description ?? '—'}
-                </p>
-                {(selectedMatch?.job_code ?? nf.matched_job_code) && (
-                  <Badge variant="outline" className="text-xs">
-                    {selectedMatch?.job_code ?? nf.matched_job_code}
-                  </Badge>
-                )}
-              </div>
-              <p className="mt-1 text-xs text-zinc-500">
-                <span className="font-mono text-blue-700 dark:text-blue-300">
-                  {formatCurrency(
-                    selectedMatch?.amount ?? nf.matched_record_amount,
+      {/* Footer: [Cancelar ghost] ... [Rejeitar outline] [Confirmar primary] */}
+      <div className="flex items-center justify-between border-t border-border px-6 py-4">
+        <Button variant="ghost" onClick={onClose} disabled={isValidating || isRejecting}>
+          Cancelar
+        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="text-destructive border-destructive/30 hover:bg-destructive/10"
+            onClick={() => setRejectDialogOpen(true)}
+            disabled={isValidating || isRejecting}
+          >
+            <XCircle className="h-4 w-4 mr-1.5" />
+            Rejeitar NF
+          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span tabIndex={canConfirm ? undefined : 0} className="inline-flex">
+                <Button
+                  disabled={!canConfirm || isValidating}
+                  onClick={handleConfirm}
+                >
+                  {isValidating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+                      Confirmando...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                      Confirmar Match
+                    </>
                   )}
-                </span>
-                {' · '}
-                {formatDate(selectedMatch?.due_date ?? nf.matched_record_date)}
+                </Button>
+              </span>
+            </TooltipTrigger>
+            {!canConfirm && (
+              <TooltipContent>{confirmDisabledReason}</TooltipContent>
+            )}
+          </Tooltip>
+        </div>
+      </div>
+
+      {/* Rejeicao via AlertDialog overlay */}
+      <AlertDialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <AlertDialogContent>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold">Rejeitar NF</h3>
+              <p className="text-sm text-zinc-500 mt-1">
+                Informe o motivo da rejeicao para{' '}
+                <span className="font-medium">{nf.file_name}</span>.
               </p>
             </div>
-          ) : (
-            <div className="mt-2 flex flex-col items-center gap-2 rounded-md border border-dashed border-zinc-300 bg-zinc-50 p-4 dark:border-zinc-600 dark:bg-zinc-800">
-              <AlertCircle className="h-5 w-5 text-zinc-400" />
-              <p className="text-xs text-zinc-500">
-                Sem match automatico — selecione o lancamento
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-1"
-                onClick={() => setReassignOpen(true)}
-              >
-                <Search className="h-3.5 w-3.5 mr-1.5" />
-                Buscar lancamento
-              </Button>
-            </div>
-          )}
-
-          {(hasAutoMatch || selectedMatch) && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-3 w-full"
-              onClick={() => setReassignOpen(true)}
-            >
-              <Search className="h-3.5 w-3.5 mr-1.5" />
-              Reclassificar para outro lancamento
-            </Button>
-          )}
-
-          {/* Modo rejeicao */}
-          {rejectMode && (
-            <div className="mt-4 space-y-2 rounded-md border border-red-200 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950/30">
-              <Label className="text-xs text-red-700 dark:text-red-400">
-                Motivo da rejeicao (obrigatorio)
-              </Label>
+            <div className="space-y-2">
+              <Label className="text-sm">Motivo da rejeicao</Label>
               <Input
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
                 placeholder="Ex: NF duplicada, fornecedor incorreto..."
-                className="text-sm border-red-300 dark:border-red-800"
+                className="text-sm"
+                autoFocus
               />
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => {
-                    setRejectMode(false)
-                    setRejectionReason('')
-                  }}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="flex-1"
-                  disabled={isRejecting || !rejectionReason.trim()}
-                  onClick={handleReject}
-                >
-                  {isRejecting ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                  ) : (
-                    <XCircle className="h-4 w-4 mr-1" />
-                  )}
-                  Confirmar rejeicao
-                </Button>
-              </div>
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Footer */}
-      <DialogFooter className="flex flex-row items-center justify-between border-t border-border px-6 py-4">
-        <Button
-          variant="destructive"
-          onClick={() => setRejectMode((prev) => !prev)}
-          disabled={isValidating || isRejecting}
-        >
-          <XCircle className="h-4 w-4 mr-1.5" />
-          Rejeitar NF
-        </Button>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={onClose} disabled={isValidating || isRejecting}>
-            Cancelar
-          </Button>
-          <Button
-            disabled={!canConfirm || isValidating}
-            onClick={handleConfirm}
-          >
-            {isValidating ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
-                Confirmando...
-              </>
-            ) : (
-              <>
-                <CheckCircle2 className="h-4 w-4 mr-1.5" />
-                Confirmar Match
-              </>
-            )}
-          </Button>
-        </div>
-      </DialogFooter>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setRejectionReason('')}>
+              Cancelar
+            </AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={isRejecting || !rejectionReason.trim()}
+              onClick={handleReject}
+            >
+              {isRejecting ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              ) : (
+                <XCircle className="h-4 w-4 mr-1" />
+              )}
+              Confirmar rejeicao
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Dialog de reclassificacao */}
       <NfReassignDialog
@@ -516,7 +553,7 @@ function NfValidationContent({
   )
 }
 
-// --- Desktop Dialog ---
+// --- Desktop Dialog / Mobile Sheet (renderiza apenas um) ---
 
 export function NfValidationDialog({
   nf,
@@ -524,63 +561,65 @@ export function NfValidationDialog({
   onOpenChange,
   onSuccess,
 }: NfValidationDialogProps) {
-  return (
-    <>
-      {/* Desktop (md+): Dialog com layout split */}
-      <div className="hidden md:block">
-        <Dialog open={open} onOpenChange={onOpenChange}>
-          <DialogContent
-            className="max-w-4xl p-0 overflow-hidden"
-            style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
-            aria-labelledby="nf-validation-title"
-            aria-modal="true"
-          >
-            <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
-              <DialogTitle id="nf-validation-title">
-                Validar NF {nf ? `— ${nf.file_name}` : ''}
-              </DialogTitle>
-            </DialogHeader>
-            {nf && (
+  const isMobile = useIsMobile()
+
+  if (isMobile) {
+    return (
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent
+          side="bottom"
+          className="flex h-[95vh] flex-col p-0"
+        >
+          <div className="shrink-0 border-b border-border px-6 py-4 flex items-center gap-3">
+            <p className="text-lg font-semibold">
+              Validar NF {nf ? `\u2014 ${nf.file_name}` : ''}
+            </p>
+            {nf && <NfStatusBadge status={nf.status} />}
+          </div>
+          {/* Preview PDF mobile (45% altura) */}
+          {nf && (
+            <div className="h-[45%] shrink-0 border-b border-border">
+              <PdfPreview url={nf.drive_url} fileName={nf.file_name} />
+            </div>
+          )}
+          {nf && (
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
               <NfValidationContent
                 nf={nf}
                 onClose={() => onOpenChange(false)}
                 onSuccess={onSuccess}
               />
-            )}
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {/* Mobile: bottom sheet */}
-      <div className="md:hidden">
-        <Sheet open={open} onOpenChange={onOpenChange}>
-          <SheetContent
-            side="bottom"
-            className="flex h-[95vh] flex-col p-0"
-          >
-            <div className="shrink-0 border-b border-border px-6 py-4">
-              <p className="text-lg font-semibold">
-                Validar NF {nf ? `— ${nf.file_name}` : ''}
-              </p>
             </div>
-            {/* Preview PDF mobile (50% altura) */}
-            {nf && (
-              <div className="h-[45%] shrink-0 border-b border-border">
-                <PdfPreview url={nf.drive_url} fileName={nf.file_name} />
-              </div>
-            )}
-            {nf && (
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                <NfValidationContent
-                  nf={nf}
-                  onClose={() => onOpenChange(false)}
-                  onSuccess={onSuccess}
-                />
-              </div>
-            )}
-          </SheetContent>
-        </Sheet>
-      </div>
-    </>
+          )}
+        </SheetContent>
+      </Sheet>
+    )
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="max-w-4xl p-0 overflow-hidden"
+        style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
+        aria-labelledby="nf-validation-title"
+        aria-modal="true"
+      >
+        <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
+          <div className="flex items-center gap-3">
+            <DialogTitle id="nf-validation-title">
+              Validar NF {nf ? `\u2014 ${nf.file_name}` : ''}
+            </DialogTitle>
+            {nf && <NfStatusBadge status={nf.status} />}
+          </div>
+        </DialogHeader>
+        {nf && (
+          <NfValidationContent
+            nf={nf}
+            onClose={() => onOpenChange(false)}
+            onSuccess={onSuccess}
+          />
+        )}
+      </DialogContent>
+    </Dialog>
   )
 }
