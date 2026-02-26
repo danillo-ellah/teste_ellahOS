@@ -3,7 +3,10 @@ import { getSupabaseClient, getServiceClient } from '../../_shared/supabase-clie
 import { success } from '../../_shared/response.ts';
 import { AppError } from '../../_shared/errors.ts';
 import { insertHistory } from '../../_shared/history.ts';
+import { copyDriveFile, getGoogleAccessToken } from '../../_shared/google-drive-client.ts';
+import { getSecret } from '../../_shared/vault.ts';
 import type { AuthContext } from '../../_shared/auth.ts';
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 // Roles permitidos para validar NFs
 const ALLOWED_ROLES = ['admin', 'ceo', 'financeiro'];
@@ -50,7 +53,7 @@ export async function validateNf(req: Request, auth: AuthContext): Promise<Respo
   // 1. Buscar documento atual para verificar existencia e obter dados anteriores
   const { data: doc, error: fetchError } = await supabase
     .from('nf_documents')
-    .select('id, status, job_id, matched_financial_record_id, file_name, sender_email, tenant_id')
+    .select('id, status, job_id, matched_financial_record_id, file_name, sender_email, tenant_id, drive_file_id')
     .eq('id', input.nf_document_id)
     .eq('tenant_id', auth.tenantId)
     .is('deleted_at', null)
@@ -193,6 +196,27 @@ export async function validateNf(req: Request, auth: AuthContext): Promise<Respo
     }
   }
 
+  // 7. Fire-and-forget: copiar NF para pasta do job no Drive
+  const resolvedJobId = updatedDoc.job_id ?? doc.job_id;
+  if (doc.drive_file_id && resolvedJobId) {
+    copyNfToJobFolder(getServiceClient(), auth.tenantId, {
+      driveFileId: doc.drive_file_id,
+      jobId: resolvedJobId,
+      nfNumber: input.nf_number ?? null,
+      issuerName: input.nf_issuer_name ?? null,
+      issueDate: input.nf_issue_date ?? null,
+      fileName: doc.file_name,
+      nfDocumentId: doc.id,
+      validatedAt: now,
+    }).catch(err => console.error('[validate] falha ao copiar NF para pasta do job:', err));
+  } else if (!resolvedJobId) {
+    // Tentar resolver job_id via financial_record
+    if (financialRecordId) {
+      resolveJobAndCopy(getServiceClient(), auth.tenantId, financialRecordId, doc, input, now)
+        .catch(err => console.error('[validate] falha ao resolver job e copiar:', err));
+    }
+  }
+
   console.log(`[validate] NF confirmada: id=${updatedDoc.id} invoice_id=${invoiceId}`);
 
   return success({
@@ -200,5 +224,169 @@ export async function validateNf(req: Request, auth: AuthContext): Promise<Respo
     status: 'confirmed',
     invoice_id: invoiceId,
     financial_record_updated: financialRecordId != null,
+  });
+}
+
+// --- Helpers para copia de NF ao Drive do job ---
+
+function sanitizeForFilename(str: string): string {
+  return str
+    .replace(/[/\\*?<>|"':]/g, '')
+    .replace(/\s+/g, '-')
+    .slice(0, 30)
+    .replace(/-+$/, '');
+}
+
+function buildNfFileName(opts: {
+  jobCode: string;
+  nfNumber: string | null;
+  issuerName: string | null;
+  issueDate: string | null;
+  validatedAt: string;
+  originalFileName: string;
+}): string {
+  // Data: usa issue_date se disponivel, senao validated_at
+  const dateStr = opts.issueDate
+    ? opts.issueDate.replace(/-/g, '')
+    : opts.validatedAt.slice(0, 10).replace(/-/g, '');
+
+  const parts = [`NF_${dateStr}`, `J${opts.jobCode}`];
+
+  if (opts.nfNumber) {
+    parts.push(`NF${opts.nfNumber}`);
+  }
+
+  if (opts.issuerName) {
+    const sanitized = sanitizeForFilename(opts.issuerName);
+    if (sanitized) parts.push(sanitized);
+  }
+
+  const name = parts.join('_');
+
+  // Manter extensao do arquivo original
+  const ext = opts.originalFileName.includes('.')
+    ? '.' + opts.originalFileName.split('.').pop()
+    : '.pdf';
+
+  return name + ext;
+}
+
+interface CopyNfParams {
+  driveFileId: string;
+  jobId: string;
+  nfNumber: string | null;
+  issuerName: string | null;
+  issueDate: string | null;
+  fileName: string;
+  nfDocumentId: string;
+  validatedAt: string;
+}
+
+async function copyNfToJobFolder(
+  serviceClient: SupabaseClient,
+  tenantId: string,
+  params: CopyNfParams,
+): Promise<void> {
+  // Buscar codigo do job
+  const { data: job } = await serviceClient
+    .from('jobs')
+    .select('code')
+    .eq('id', params.jobId)
+    .single();
+
+  if (!job?.code) {
+    console.warn(`[validate/copy] job ${params.jobId} sem code — pulando copia`);
+    return;
+  }
+
+  // Buscar pasta fin_nf_recebimento do job
+  const { data: folder } = await serviceClient
+    .from('drive_folders')
+    .select('google_drive_id')
+    .eq('job_id', params.jobId)
+    .eq('folder_key', 'fin_nf_recebimento')
+    .eq('tenant_id', tenantId)
+    .single();
+
+  if (!folder?.google_drive_id) {
+    console.warn(`[validate/copy] pasta fin_nf_recebimento nao encontrada para job ${params.jobId} — pulando copia`);
+    return;
+  }
+
+  // Obter token do Drive via Service Account
+  const saJson = await getSecret(serviceClient, `${tenantId}_gdrive_service_account`);
+  if (!saJson) {
+    console.error(`[validate/copy] service account nao encontrada no Vault: ${tenantId}_gdrive_service_account`);
+    return;
+  }
+
+  const sa = JSON.parse(saJson);
+  const token = await getGoogleAccessToken(sa);
+  if (!token) {
+    console.error('[validate/copy] falha ao obter access token do Google Drive');
+    return;
+  }
+
+  // Gerar nome do arquivo
+  const newName = buildNfFileName({
+    jobCode: job.code,
+    nfNumber: params.nfNumber,
+    issuerName: params.issuerName,
+    issueDate: params.issueDate,
+    validatedAt: params.validatedAt,
+    originalFileName: params.fileName,
+  });
+
+  console.log(`[validate/copy] copiando ${params.driveFileId} → "${newName}" em ${folder.google_drive_id}`);
+
+  // Copiar arquivo no Drive
+  const copied = await copyDriveFile(token, params.driveFileId, newName, folder.google_drive_id);
+
+  console.log(`[validate/copy] copia OK: id=${copied.id} url=${copied.webViewLink}`);
+
+  // Salvar referencia no metadata do nf_document
+  await serviceClient
+    .from('nf_documents')
+    .update({
+      metadata: {
+        job_copy: {
+          drive_file_id: copied.id,
+          url: copied.webViewLink ?? null,
+          file_name: newName,
+          copied_at: new Date().toISOString(),
+        },
+      },
+    })
+    .eq('id', params.nfDocumentId);
+}
+
+async function resolveJobAndCopy(
+  serviceClient: SupabaseClient,
+  tenantId: string,
+  financialRecordId: string,
+  doc: { drive_file_id: string | null; file_name: string; id: string },
+  input: { nf_number?: string | null; nf_issuer_name?: string | null; nf_issue_date?: string | null },
+  validatedAt: string,
+): Promise<void> {
+  if (!doc.drive_file_id) return;
+
+  const { data: fr } = await serviceClient
+    .from('financial_records')
+    .select('job_id')
+    .eq('id', financialRecordId)
+    .eq('tenant_id', tenantId)
+    .single();
+
+  if (!fr?.job_id) return;
+
+  await copyNfToJobFolder(serviceClient, tenantId, {
+    driveFileId: doc.drive_file_id,
+    jobId: fr.job_id,
+    nfNumber: input.nf_number ?? null,
+    issuerName: input.nf_issuer_name ?? null,
+    issueDate: input.nf_issue_date ?? null,
+    fileName: doc.file_name,
+    nfDocumentId: doc.id,
+    validatedAt,
   });
 }
