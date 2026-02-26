@@ -330,9 +330,9 @@ function NfValidationContent({
 
         {/* Painel direito: dados */}
         <div className="flex-1 overflow-y-auto p-6 md:w-2/5">
-          {/* Match com lancamento (ponto de decisao — vem primeiro) */}
+          {/* Lancamento financeiro vinculado (ponto de decisao — vem primeiro) */}
           <p className="text-[11px] font-medium uppercase tracking-widest text-zinc-400">
-            Match com Lancamento
+            Lancamento Financeiro Vinculado
           </p>
 
           {hasAutoMatch || selectedMatch ? (
@@ -340,7 +340,7 @@ function NfValidationContent({
               <div className="flex items-center gap-1.5">
                 <Zap className="h-3.5 w-3.5 text-emerald-500" />
                 <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                  {selectedMatch ? 'Selecionado manualmente' : 'Auto-matched'}
+                  {selectedMatch ? 'Vinculado manualmente' : 'Vinculado automaticamente'}
                 </span>
               </div>
               <div className="mt-1 flex items-center gap-2">
@@ -364,10 +364,12 @@ function NfValidationContent({
               </p>
             </div>
           ) : (
-            <div className="mt-2 flex flex-col items-center gap-2 rounded-md border border-dashed border-zinc-300 bg-zinc-50 p-4 dark:border-zinc-600 dark:bg-zinc-800">
-              <AlertCircle className="h-5 w-5 text-zinc-400" />
-              <p className="text-xs text-zinc-500">
-                Sem match automatico \u2014 selecione o lancamento
+            <div className="mt-2 flex flex-col items-center gap-2 rounded-md border border-dashed border-amber-300 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-950/30">
+              <AlertCircle className="h-5 w-5 text-amber-500" />
+              <p className="text-xs text-zinc-600 dark:text-zinc-400 text-center">
+                Esta NF ainda nao esta vinculada a nenhuma despesa.
+                <br />
+                Vincule a um lancamento financeiro para poder confirmar.
               </p>
               <Button
                 size="sm"
@@ -375,7 +377,7 @@ function NfValidationContent({
                 onClick={() => setReassignOpen(true)}
               >
                 <Search className="h-3.5 w-3.5 mr-1.5" />
-                Buscar lancamento
+                Vincular a um lancamento
               </Button>
             </div>
           )}
@@ -388,7 +390,7 @@ function NfValidationContent({
               onClick={() => setReassignOpen(true)}
             >
               <Search className="h-3.5 w-3.5 mr-1.5" />
-              Reclassificar para outro lancamento
+              Alterar lancamento vinculado
             </Button>
           )}
 
