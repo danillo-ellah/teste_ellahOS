@@ -324,12 +324,12 @@ function NfValidationContent({
       {/* Corpo split */}
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* Painel esquerdo: PDF */}
-        <div className="hidden w-1/2 border-r border-border md:flex md:flex-col">
+        <div className="hidden w-3/5 border-r border-border md:flex md:flex-col">
           <PdfPreview url={nf.drive_url} fileName={nf.file_name} />
         </div>
 
         {/* Painel direito: dados */}
-        <div className="flex-1 overflow-y-auto p-6 md:w-1/2">
+        <div className="flex-1 overflow-y-auto p-6 md:w-2/5">
           {/* Match com lancamento (ponto de decisao — vem primeiro) */}
           <p className="text-[11px] font-medium uppercase tracking-widest text-zinc-400">
             Match com Lancamento
@@ -599,8 +599,8 @@ export function NfValidationDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-4xl p-0 overflow-hidden"
-        style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
+        className="max-w-[95vw] w-[95vw] p-0 overflow-hidden xl:max-w-7xl"
+        style={{ height: '92vh', display: 'flex', flexDirection: 'column' }}
         aria-labelledby="nf-validation-title"
         aria-modal="true"
       >
