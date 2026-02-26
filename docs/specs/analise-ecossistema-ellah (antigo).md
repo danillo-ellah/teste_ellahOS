@@ -216,51 +216,34 @@ Contrato formal completo (8 páginas) com:
 
 ---
 
-## 7. ESTRUTURA DE PASTAS NO DRIVE (Real — extraída do Shared Drive)
+## 7. ESTRUTURA DE PASTAS NO DRIVE (Inferida)
 
-Mapeada diretamente do Google Drive da Ellah, job 038 como referência:
+Com base nas URLs da planilha de controle e nos Apps Scripts:
 
 ```
-038_Quer Fazer? Senac!_SENAC SP/              ← pasta raiz do job
-├── 01_DOCUMENTOS/                             ← aprovação interna, briefing, roteiro
-├── 02_FINANCEIRO/                             ← ⭐ MEGA PASTA com 8 subpastas
-│   ├── 01_CARTAORCAMENTO/
-│   ├── 02_DECUPADO/
-│   ├── 03_GASTOS GERAIS/
-│   ├── 04_NOTAFISCAL_RECEBIMENTO/             ← NFs recebidas de fornecedores
-│   ├── 05_COMPROVANTES_PG/                    ← comprovantes de pagamento
-│   ├── 06_NOTINHAS_EM_PRODUCAO/               ← notas do set
-│   ├── 07_NOTAFISCAL_FINAL_PRODUCAO/          ← NF que a Ellah emite
-│   └── 08_FECHAMENTO_LUCRO_PREJUIZO/          ← resultado final do job
-├── 03_MONSTRO_PESQUISA_ARTES/                 ← pesquisa visual, referências
-├── 04_CRONOGRAMA/
-├── 05_CONTRATOS/                              ← contratos de elenco (PDFs gerados)
-├── 06_FORNECEDORES/
-├── 07_CLIENTES/
-├── 08_POS_PRODUCAO/                           ← ⭐ 8 subpastas de pós
-│   ├── 01_MATERIAL BRUTO/
-│   ├── 02_MATERIAL LIMPO/
-│   ├── 03_PESQUISA/
-│   ├── 04_STORYBOARD/
-│   ├── 05_MONTAGEM/
-│   ├── 06_COLOR/
-│   ├── 07_FINALIZACAO/
-│   └── 08_COPIAS/
-├── 09_ATENDIMENTO/                            ← comunicação com agência/cliente
-└── 10_VENDAS/PRODUTOR_EXECUTIVO/              ← propostas, negociação
+{JOB_CODE} - {TITULO}/
+├── Roteiro/
+├── Cadastro Elenco/        (planilha + contratos PDF)
+├── Cadastro Equipe/        (form respostas)
+├── PPM/
+├── Pré-Produção/
+│   ├── PD/
+│   ├── Arte/
+│   └── Figurino/
+├── Fechamento/
+│   ├── PD/
+│   ├── Arte/
+│   └── Figurino/
+├── Cronograma/
+├── Material Bruto/
+├── Entregas Finais/
+├── Carta Orçamento/
+├── Contratos/              (PDFs gerados)
+├── Notas Fiscais/          (PDFs recebidos)
+└── Claquetes/              (PDFs/PNGs gerados)
 ```
 
-**Total: 10 pastas de nível 1 + 16 subpastas de nível 2 = 26 pastas por job**
-
-**⚠️ MUITO DIFERENTE das 9 subpastas planejadas na Fase 5!** A estrutura real é mais granular e organizada por departamento, não por fase de produção. Os 3 agentes concordam: o template deve ser configurável via `tenant.settings.drive.folder_template` como array de objetos com `name`, `key`, `children[]`.
-
-**Observações:**
-- Naming convention: `{NN}_{NOME}` (numerado para ordenação)
-- Pasta raiz: `{JOB_CODE}_{TITULO}_{CLIENTE}` (ex: 038_Quer Fazer? Senac!_SENAC SP)
-- FINANCEIRO e POS_PRODUCAO têm sub-hierarquia profunda
-- Subpastas de pré-produção (PD/Arte/Figurino) ficam DENTRO do FINANCEIRO, não separadas
-- Owner: danillo@ellahfilmes.com (Shared Drive corporativo)
-- Criadas em Nov/2025, atualizadas até Fev/2026 (ativas)
+**⚠️ IMPORTANTE:** A estrutura real tem MAIS subpastas que as 9 planejadas na Fase 5. São pelo menos 15 subpastas/docs referenciados na planilha de controle.
 
 ---
 
@@ -393,20 +376,6 @@ Mapeada diretamente do Google Drive da Ellah, job 038 como referência:
 
 ## 10. INSTRUÇÕES PARA AGENTES ESPECIALIZADOS
 
-### ✅ Respostas às 7 Perguntas Bloqueantes
-
-| # | Pergunta | Resposta | Impacto |
-|---|----------|----------|---------|
-| 1 | My Drive ou Shared Drive? | **Shared Drive (corporativo)** | Usar `supportsAllDrives: true` em todas as chamadas da API |
-| 2 | Google Workspace pago ou Gmail? | **Workspace pago** | Domain-wide delegation disponível para Service Account |
-| 3 | Z-API tem custo mensal? | **Sim, pago** | Reforça migração gradual para Evolution API (gratuita) |
-| 4 | Service Account tem acesso ao Drive? | **Sim, cria pastas, mas permissões são manuais** | Automatizar `permissions.create` após criar pastas (dar acesso à equipe do job) |
-| 5 | Volume Docker da Evolution/Z-API persistido? | **Não — QR Code precisa ser reescaneado ao reiniciar** | ⚠️ Persistir volume Docker é pré-requisito. Documentar no setup |
-| 6 | "Valor W" = gross_profit? | **Não — Valor W e um buffer de risco (chuva, imprevistos). Entra no calculo do gross_profit quando presente.** | Criar `risk_buffer NUMERIC(12,2)`. Formula: `gross_profit = closed_value - production_cost - tax_value - other_costs - risk_buffer` |
-| 7 | Subpastas Pré-Produção ficam onde? | **Dentro do FINANCEIRO (02_FINANCEIRO/)** | Estrutura real mapeada acima (seção 7) — 26 pastas total, não 9 |
-
----
-
 > **PM, Tech Lead, Integrations Engineer:** Este documento mapeia o ecossistema real da Ellah Filmes (Google Sheets, Apps Script, Forms, Drive, n8n). Antes de iniciar a implementação da Fase 5, cada agente deve:
 >
 > 1. **Ler este documento completo** para entender o que já existe e funciona
@@ -420,209 +389,76 @@ Mapeada diretamente do Google Drive da Ellah, job 038 como referência:
 ### 📝 Espaço para Contribuições dos Agentes
 
 #### PM — Product Manager
+<!-- PM: Analise os fluxos de usuário mapeados acima. Considere:
+- Há algo que muda a priorização das sub-fases?
+- O formulário de equipe que "buga" é um pain point crítico — antecipar para Fase 5?
+- A estrutura de 9 subpastas planejada precisa virar ~15 (baseado na realidade)?
+- O fluxo de pedido de NF é usado diariamente — vale automatizar via n8n agora?
+- Google Calendar → notificações ELLAHOS: migrar na Fase 5 ou manter em paralelo?
+- O n8n já faz MUITA coisa (95 nodes no workflow principal!) — risco de duplicar lógica?
+- Os alertas de prazo/pagamento são um quick win de alto valor?
+-->
 
-**1. Priorizacao das sub-fases:** Sequencia atual (5.1→5.2/5.3→5.4/5.5→5.6) se mantem. Porem, Sub-fase 5.5 deve ser dividida internamente: "notificacoes WhatsApp por eventos do job" (Fase 5) vs "criacao automatica de 4 grupos WhatsApp" (deferir Fase 6 — risco de bloqueio de conta pelo WhatsApp).
-
-**2. Form de equipe bugado:** Deferir frontend para Fase 6. Na Fase 5, apenas preparar o terreno: padronizar a estrutura do JSONB `bank_info` em `people` e documentar a interface `BankInfo` nos types compartilhados. O form substituto requer autocomplete de profiles + campos bancarios no frontend — escopo grande demais para esta fase.
-
-**3. Estrutura de pastas:** Expandir de 9 para **26 pastas** (10 nivel-1 + 16 nivel-2), replicando a estrutura real mapeada na secao 7. Template configuravel via `tenant.settings.drive.folder_template` como array de objetos com `name`, `key`, `children[]`. Naming convention: `{NN}_{NOME}` numerado para ordenacao.
-
-**4. Fluxo de NF:** Deferir para Fase 6. Prerequisito e migrar dados financeiros do CUSTOS_REAIS para `financial_records`. Na Fase 5, apenas garantir que a pasta `04_NOTAFISCAL_RECEBIMENTO/` seja criada no template de pastas.
-
-**5. Google Calendar → notificacoes:** Implementar notificacoes ELLAHOS na Fase 5 (alertas de prazo/pagamento). Manter Calendar em paralelo — desligar e decisao operacional da equipe, nao tecnica.
-
-**6. Risco de duplicar logica n8n:** Protocolo claro — criar 4 workflows NOVOS no n8n, NAO alterar os 3 existentes. O `wf-job-approved` pode chamar o `JOB_FECHADO_CRIACAO` existente como ultimo passo para manter a criacao de grupos funcionando.
-
-**7. Quick wins — promover para scope obrigatorio da Fase 5:**
-- Pagamento se aproximando (7d, 3d, 1d antes de `due_date`) → pg_cron diario
-- Diaria de filmagem em 3 dias (`job_shooting_dates.date`) → pg_cron diario
-- Entregavel atrasado (`job_deliverables.delivery_date` passou) → pg_cron diario
-- Custo: 1 pg_cron job, ~30 linhas SQL, alto valor imediato
-
-**8. Campos novos para Fase 5:**
-- `audio_company TEXT` na tabela `jobs` — presente em quase todo job audiovisual
-- `risk_buffer NUMERIC(12,2)` na tabela `jobs` — o "Valor W" que inclui analise de risco (chuva, imprevistos), confirmado como diferente de `gross_profit`
-- `external_id TEXT` + `external_source TEXT` em `job_files` — para mapear IDs do Google Drive/DocuSeal
-
-**9. Z-API vs Evolution API:** Evolution API para fluxos novos do ELLAHOS (gratuita, self-hosted). Manter Z-API nos workflows existentes do n8n. Migrar gradualmente para Evolution API na Fase 6+ para eliminar custo mensal.
-
-**10. Postgres separado do n8n:** Manter separado. Documentar no ADR-006 como banco auxiliar do assistente IA. Consolidacao na Fase 8 quando redesenhar o assistente.
+_Pendente: PM deve revisar e adicionar suas recomendações aqui._
 
 #### Tech Lead
+<!-- Tech Lead: Revise a arquitetura considerando:
+- A planilha CUSTOS_REAIS tem 34 colunas de dados financeiros que eventualmente migrarão — isso impacta o schema atual?
+- O fluxo de NF (Gmail → PDF → Drive → planilha) é complexo — vale um ADR sobre como/quando migrar?
+- Dados bancários nos profiles: implicações de segurança (PIX, conta bancária) — guardar no Vault ou na tabela?
+- O CODIGO_ROBO usa IDs de pastas/docs do Google como referência cruzada — como mapear no ELLAHOS?
+- A aba DOCUSEAL_LOG indica que já testaram DocuSeal — há schema/infra a reaproveitar?
+- O n8n já tem 3 workflows rodando (126 nodes total) — a Fase 5 deve estender esses workflows ou criar novos?
+- O workflow principal usa Supabase nodes nativos — confirmar que as tabelas/RLS do ELLAHOS são compatíveis
+- Rate limiting da Evolution API (1msg/s) com ~286 contatos potenciais — precisa de queue no ELLAHOS?
+-->
 
-**1. Schema impact (CUSTOS_REAIS):** NAO alterar schema financeiro na Fase 5. As tabelas `financial_records`, `budget_items`, `invoices`, `payment_history` cobrem ~70% do caso. Os 30% restantes (horas extras, sub_item granular, comprovante_url) entram na Fase 6 como migration incremental. Campos futuros documentados: `work_hours JSONB`, `receipt_url TEXT`, `sub_category TEXT`.
-
-**2. Fluxo de NF — ADR-007 (proposto para Fase 6):** Registrar como ADR mas NAO implementar na Fase 5. Esboço: n8n monitora Gmail (IMAP/poll) → extrai PDF → salva Drive → cria registro em `invoices` → UI de validacao no ELLAHOS. Na Fase 5, apenas adicionar event_types futuros ao ENUM de `integration_events`: `nf_request_sent`, `nf_received`, `nf_validated`.
-
-**3. Dados bancarios:** Manter em `people.bank_info JSONB` (opcao C). RLS protege por tenant, Supabase encripta at-rest. Controles compensatorios: nunca expor service_role_key no frontend, Column-Level Security na Fase 6. LGPD: base legal = execucao de contrato. Padronizar interface `BankInfo`: `{ bank_name, bank_code, agency, account, account_type, pix_key, pix_key_type, holder_name, holder_document }`.
-
-**4. CODIGO_ROBO → drive_folders:** A tabela `drive_folders` (Fase 5.1) cobre o mapeamento. Usar **TEXT** (nao ENUM) para `folder_type` — permite flexibilidade sem migrations. Para documentos individuais, adicionar `external_id TEXT` + `external_source TEXT` em `job_files`. IDs de templates ficam em `tenant.settings.drive.templates`.
-
-**5. DocuSeal prep:** Na migration 5.1, adicionar event_types futuros (`docuseal_submission_created/signed/failed`). Na Sub-fase 5.3, adicionar `docuseal_token` e `docuseal_url` ao Vault/Settings como campos opcionais desabilitados. NAO criar tabela `docuseal_submissions` — Fase 6.
-
-**6. Workflows n8n:** Criar 4 novos, NAO alterar os 3 existentes. `JOB_FECHADO_CRIACAO` pode ser chamado pelo `wf-job-approved` como sub-workflow. `WORKFLOW_PRINCIPAL` intocavel — escopo completamente diferente. `TESTE2_JURIDICO` manter inativo ate Fase 6.
-
-**7. Supabase nodes no n8n:** Novos workflows usam `service_role_key` com filtro explicito por `tenant_id` em toda query. service_role_key armazenada no Vault. Documentar que e aceitavel porque n8n roda em VPS privada.
-
-**8. Rate limiting:** `integration_events` JA E a queue. Processar em FIFO, batch de 20 msgs por execucao do pg_cron (1min / 3s delay = ~20 msgs). Se exceder, proximo ciclo processa o restante. Alarme se fila pendente > 100 registros.
-
-**9. Z-API vs Evolution API — ADR-008:** Evolution API como primario, interface abstrata `IWhatsAppProvider` com duas implementacoes (`EvolutionApiClient`, `ZApiClient`). Feature flag em `tenant.settings` decide qual usar. Migrar JOB_FECHADO_CRIACAO para Evolution API na Fase 6.
-
-**10. Postgres separado:** Manter. Nenhuma acao na Fase 5. Documentar no diagrama de infra.
-
-**11. Campos novos confirmados para migration 5.1:**
-- `audio_company TEXT` em `jobs` (unico campo realmente faltando)
-- `risk_buffer NUMERIC(12,2)` em `jobs` ("Valor W" — buffer de risco, NAO e gross_profit)
-- `external_id TEXT` + `external_source TEXT` em `job_files`
-- CHECK constraint em `people.bank_info` (validacao basica)
-- `ancine_number` ja existe, `agency_contact_email` coberto por `contacts` FK
-
-**12. Shared Drive confirmado:** `supportsAllDrives: true` + `includeItemsFromAllDrives: true` em toda chamada. `driveId` e `corpora: 'drive'` nos list. Automatizar `permissions.create` apos criar pastas para dar acesso a equipe do job.
-
-**13. Volume Docker — PRE-REQUISITO BLOQUEANTE:** Evolution API perde sessao QR Code ao reiniciar. Persistir volume Docker (`evolution_data`) e tarefa de infra obrigatoria ANTES da Sub-fase 5.5.
-
-**ADRs propostos:**
-| ADR | Titulo | Fase |
-|-----|--------|------|
-| ADR-007 | Migracao do Fluxo de NF (Gmail→n8n→ELLAHOS) | 6 |
-| ADR-008 | Z-API vs Evolution API (WhatsApp Provider) | 5.5 |
-| ADR-009 | Dados Sensiveis e LGPD (bank_info, CPF) | 6 |
+_Pendente: Tech Lead deve revisar e adicionar suas recomendações aqui._
 
 #### Integrations Engineer
+<!-- Integrations Engineer: Foque em:
+- Os Apps Scripts fazem chamadas a: Gmail API, Drive API, Slides API, Docs API, Calendar API, OCR.space API — quais precisam de service account vs OAuth?
+- O fluxo de NF usa busca no Gmail por assunto E por email de fornecedor — é viável replicar via n8n?
+- O n8n já orquestra: criação de pastas Drive, cópia de planilhas, webhook Supabase, envio WhatsApp — a Fase 5 deve ESTENDER esses workflows, não recriar do zero
+- O workflow DocuSeal já existe no n8n — quando for hora, é só ativar
+- Google Calendar: os eventos de pagamento poderiam ser notificações no ELLAHOS em vez de eventos no Calendar?
+- Shared Drive vs My Drive: impacta parâmetros da API (supportsAllDrives) — confirmar com Ellah
+- A pasta temporária de NFs pendentes (ID fixo no CONFIG) — como mapear no ELLAHOS?
+- Evolution API: webhook já configurado no n8n para receber status de mensagem — reaproveitar
+- O workflow principal cria subpastas com IDs fixos de templates — a Fase 5 precisa ser compatível com essa lógica
+-->
 
-**1. APIs e autenticacao para Fase 5:**
-| API | Tipo | Motivo | Fase 5? |
-|-----|------|--------|---------|
-| Drive API | Service Account | Pastas criadas em nome da Ellah. Shared Drive exige SA como "Content manager". | SIM (5.4) |
-| Gmail API | OAuth (user) ou SA + domain-wide delegation | NF monitoring precisa ler caixa especifica. Workspace pago habilita delegation. | NAO (Fase 6+) |
-| Calendar API | SA + delegation | Calendario compartilhado "ELLAHOS Financeiro" via SA. | NAO (substituido por notificacoes) |
-| Slides/Docs API | Service Account | Templates. SA com acesso de leitura. | NAO (Fase 7+) |
-| OCR.space | API Key (Vault) | SaaS externo. | NAO (Fase 7+) |
-
-**2. Fluxo de NF via n8n:** Viavel tecnicamente (n8n tem node Gmail com `q` query string). Porem: requer OAuth/delegation, pasta temporaria mapeada, interface de revisao. Deferir para Fase 6.
-
-**3. Workflows n8n — estrategia NOVOS ao lado:**
-```
-ELLAHOS aprovar job
-  → integration_events (fila)
-    → integration-processor Edge Function
-      → n8n wf-job-approved (NOVO)
-        → Drive API (cria 26 pastas)
-        → Evolution API (msg individual PE + Diretor)
-        → [opcional] dispara JOB_FECHADO_CRIACAO (existente, Z-API, grupos)
-        → callback /sync-urls (salva links no ELLAHOS)
-```
-Principio: cada workflow novo recebe dados via webhook do `integration-processor` e faz callback de conclusao. Falhas nao afetam o ELLAHOS (ADR-006).
-
-**4. DocuSeal prep:** Adicionar `docuseal_token` + `docuseal_url` ao Vault na Sub-fase 5.3 (campos opcionais, toggle desabilitado). DocuSeal ja funciona em `assinaturas.ellahfilmes.com`, template id:3 pronto. Quando Fase 6 chegar, e so ativar o workflow TESTE2_JURIDICO adaptado.
-
-**5. Google Calendar → notificacoes ELLAHOS:** Implementar pg_cron diario (08h) que verifica `financial_records.due_date` e `job_shooting_dates.date` com vencimento em 1, 3, 7 dias → cria `notifications` + `integration_events` (WhatsApp). Manter Calendar em paralelo ate equipe confirmar confianca no ELLAHOS.
-
-**6. Shared Drive — impacto confirmado:** Todos os endpoints precisam de `supportsAllDrives: true`, `includeItemsFromAllDrives: true`. List precisa de `driveId` + `corpora: 'drive'`. Adicionar `drive_type` (enum: `my_drive`|`shared_drive`) e `shared_drive_id` em `tenant.settings`. Botao "Testar Conexao" deve validar esse parametro.
-
-**7. Pasta NFs pendentes:** Adicionar `nf_pending_folder_id` em `tenant.settings` (config, nao secret). Campo preenchido manualmente pelo admin em Settings. Usado na Fase 6 quando fluxo NF for implementado.
-
-**8. Evolution API webhook como relay via n8n:**
-```
-Evolution API → webhook → n8n (normaliza) → POST /whatsapp/webhook (ELLAHOS)
-  → payload normalizado: { message_id, status, timestamp }
-  → atualiza whatsapp_messages.status
-```
-Beneficio: se Evolution API mudar formato do webhook, so n8n precisa ajustar.
-
-**9. Z-API vs Evolution API:** Evolution API para fluxos novos (gratuita, self-hosted, controle total). Manter Z-API nos existentes. Interface abstrata `IWhatsAppProvider` garante troca transparente. **Persistir volume Docker e bloqueante** — sem isso, mensagens automaticas sao inviaveis.
-
-**10. Templates no Drive — dois estagios:**
-- **Fase 5 (minimo viavel):** Criar 26 pastas vazias com nomes corretos. Retornar links para o ELLAHOS.
-- **Fase 6 (completo):** Copiar templates (GG_, cronograma, form equipe) para dentro das pastas. IDs dos templates em `tenant.settings.drive.templates`.
-- O `drive-integration` na Fase 5 ja deve aceitar template IDs como campo opcional: se presentes, chama `files.copy`; se vazios, cria pastas vazias (graceful degradation).
-
-**11. Grupos WhatsApp (4 por job):** Deferir para Fase 6. Criacao de grupos via API e fragil (WhatsApp bloqueia contas). O `wf-job-approved` pode chamar `JOB_FECHADO_CRIACAO` (existente, Z-API) como ultimo passo para manter a funcionalidade.
-
-**12. Estrutura de pastas real (26 pastas) — mapeamento para `drive_folders`:**
-Cada pasta criada = 1 registro em `drive_folders` com `folder_key` (TEXT, nao ENUM). Keys sugeridas:
-```
-root, documentos, financeiro, fin_carta_orcamento, fin_decupado,
-fin_gastos_gerais, fin_nf_recebimento, fin_comprovantes_pg,
-fin_notinhas_producao, fin_nf_final, fin_fechamento,
-monstro_pesquisa, cronograma, contratos, fornecedores, clientes,
-pos_producao, pos_material_bruto, pos_material_limpo, pos_pesquisa,
-pos_storyboard, pos_montagem, pos_color, pos_finalizacao, pos_copias,
-atendimento, vendas
-```
-
-**7 confirmacoes obtidas — status:**
-| # | Item | Status |
-|---|------|--------|
-| 1 | Shared Drive | ✅ Confirmado — `supportsAllDrives: true` |
-| 2 | Workspace pago | ✅ Confirmado — delegation disponivel |
-| 3 | Z-API pago | ✅ Confirmado — migrar gradualmente |
-| 4 | SA tem acesso ao Drive | ✅ Confirmado — permissoes manuais, automatizar |
-| 5 | Volume Docker NAO persiste | ⚠️ BLOQUEANTE — resolver antes de 5.5 |
-| 6 | Valor W ≠ gross_profit | ✅ Confirmado — criar `risk_buffer` |
-| 7 | Estrutura real = 26 pastas | ✅ Mapeado na secao 7 |
+_Pendente: Integrations Engineer deve revisar e adicionar suas recomendações aqui._
 
 ---
 
-## 11. RECOMENDACOES CONSOLIDADAS PARA A FASE 5
+## 11. RECOMENDAÇÕES PARA A FASE 5
 
-> Consolidado apos revisao dos 3 agentes (PM, Tech Lead, Integrations Engineer) + respostas do Danillo as 7 perguntas bloqueantes.
+### Ajustes no plano original:
 
-### Ajustes confirmados no plano original:
+1. **Estrutura de pastas:** Expandir de 9 para ~15 subpastas, baseado na estrutura real. Ou melhor: tornar o template configurável pelo tenant (já planejado, mas reforçar).
 
-**A. Estrutura de pastas: 9 → 26 pastas**
-Expandir para a estrutura real (secao 7): 10 pastas nivel-1 + 16 nivel-2. Template configuravel via `tenant.settings.drive.folder_template`. Fase 5 cria pastas vazias; Fase 6 copia templates (GG_, cronograma, etc.) via `files.copy`.
+2. **Campos novos no ELLAHOS a considerar:**
+   - `audio_company` (produtora de áudio)
+   - `ancine_number` (CRT da ANCINE)
+   - `agency_contact_email` (email do atendimento)
+   - Dados bancários nos profiles (banco, agência, conta, PIX) — essencial para o fluxo financeiro
 
-**B. Campos novos na migration 5.1:**
-- `audio_company TEXT` em `jobs` — presente em quase todo job audiovisual
-- `risk_buffer NUMERIC(12,2)` em `jobs` — "Valor W", buffer de risco (chuva, imprevistos), NAO e gross_profit
-- `external_id TEXT` + `external_source TEXT` em `job_files` — mapear IDs do Google Drive/DocuSeal
-- CHECK constraint em `people.bank_info` (validacao basica do JSONB)
-- Event types futuros em `integration_events`: `nf_request_sent`, `nf_received`, `nf_validated`, `docuseal_*`
-- Campos ja existentes confirmados: `ancine_number`, `agency_contact_email` (via contacts FK), `bank_info` JSONB
+3. **Fluxos que podem entrar na Fase 5:**
+   - ✅ Criar pastas Drive ao aprovar job (já planejado)
+   - ✅ Notificar equipe via WhatsApp (já planejado)
+   - 🆕 Notificação de prazos de pagamento (dados existem no CALENDARIO)
+   - 🆕 Alerta de diárias próximas (shooting_date)
 
-**C. Alertas automaticos — promovidos para scope obrigatorio:**
-- Pagamento se aproximando (7d, 3d, 1d) → pg_cron diario 08h
-- Diaria de filmagem em 3 dias → pg_cron diario 08h
-- Entregavel atrasado → pg_cron diario 08h
-- Custo: 1 pg_cron job, ~30 linhas SQL
+4. **Fluxos para fases futuras:**
+   - Geração de contratos (DocuSeal — já deferido)
+   - OCR de NFs
+   - Pedido/processamento de NF automatizado
+   - Geração de claquete
+   - Geração de Aprovação Interna (PDF)
+   - Cadastro de equipe via form integrado
 
-**D. Shared Drive confirmado:**
-- `supportsAllDrives: true` em toda chamada Drive API
-- `drive_type` + `shared_drive_id` em `tenant.settings`
-- Automatizar `permissions.create` apos criar pastas
-- Service Account ja tem acesso (permissoes manuais hoje)
-
-**E. WhatsApp — interface abstrata + bloqueante Docker:**
-- `IWhatsAppProvider` com `EvolutionApiClient` + `ZApiClient` (ADR-008)
-- Evolution API para fluxos novos, Z-API nos existentes
-- **BLOQUEANTE:** Persistir volume Docker da Evolution API antes de 5.5
-
-**F. DocuSeal prep na Sub-fase 5.3:**
-- Adicionar `docuseal_token` + `docuseal_url` ao Vault (campos opcionais, toggle off)
-- DocuSeal ja funciona em `assinaturas.ellahfilmes.com`, template id:3 pronto
-
-**G. Workflows n8n — 4 NOVOS, 0 alterados:**
-- `wf-job-approved`, `wf-margin-alert`, `wf-status-change`, `wf-budget-sent`
-- `wf-job-approved` pode chamar `JOB_FECHADO_CRIACAO` (existente) como sub-workflow para grupos
-
-**H. ADRs novos:**
-| ADR | Titulo | Fase |
-|-----|--------|------|
-| ADR-007 | Migracao do Fluxo de NF | 6 |
-| ADR-008 | Z-API vs Evolution API | 5.5 |
-| ADR-009 | Dados Sensiveis e LGPD | 6 |
-
-### Fluxos DEFERIDOS (fases futuras):
-- Geracao de contratos (DocuSeal) — Fase 6
-- OCR de NFs — Fase 7+
-- Pedido/processamento de NF automatizado — Fase 6
-- Geracao de claquete — Fase 7+
-- Geracao de Aprovacao Interna (PDF) — Fase 7+
-- Cadastro de equipe via form integrado — Fase 6
-- Criacao automatica de 4 grupos WhatsApp por job — Fase 6
-- Copia de templates Google Docs/Sheets — Fase 6
-- Migrar Postgres separado do n8n para Supabase — Fase 8
+5. **Shared Drive vs My Drive:** Confirmar com a Ellah qual tipo usam. O parâmetro `supportsAllDrives` é obrigatório para Shared Drives.
 
 ---
 
