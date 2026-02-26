@@ -39,16 +39,22 @@ interface PdfPreviewProps {
   fileName: string
 }
 
+function toEmbedUrl(driveUrl: string): string {
+  // Converte /view para /preview (Google Drive bloqueia /view em iframes)
+  return driveUrl.replace(/\/view(\?.*)?$/, '/preview')
+}
+
 function PdfPreview({ url, fileName }: PdfPreviewProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const embedUrl = url ? toEmbedUrl(url) : null
 
   useEffect(() => {
     setLoading(true)
     setError(false)
   }, [url])
 
-  if (!url) {
+  if (!url || !embedUrl) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 text-zinc-400">
         <FileText className="h-10 w-10" />
@@ -97,7 +103,7 @@ function PdfPreview({ url, fileName }: PdfPreviewProps) {
         )}
         {!error && (
           <iframe
-            src={url}
+            src={embedUrl!}
             title={`Preview do PDF: ${fileName}`}
             className="h-full w-full border-none"
             sandbox="allow-same-origin allow-scripts"
