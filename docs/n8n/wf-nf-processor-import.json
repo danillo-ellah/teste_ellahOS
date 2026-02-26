@@ -64,17 +64,17 @@
     },
     {
       "parameters": {
-        "resource": "messageAttachment",
-        "operation": "get",
-        "messageId": "={{ $json.emailId }}",
-        "attachmentId": "={{ $json.attachmentId }}",
+        "method": "GET",
+        "url": "=https://gmail.googleapis.com/gmail/v1/users/me/messages/{{ $json.emailId }}/attachments/{{ $json.attachmentId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
         "options": {}
       },
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [880, -80],
       "id": "download-pdf",
-      "name": "Download PDF",
+      "name": "Download PDF Attachment",
       "onError": "continueErrorOutput",
       "credentials": {
         "gmailOAuth2": { "id": "GMAIL_CREDENTIAL_ID", "name": "Gmail Financeiro OAuth2" }
@@ -82,13 +82,13 @@
     },
     {
       "parameters": {
-        "jsCode": "// Calcular SHA-256 hash do PDF para deduplicacao\nconst crypto = require('crypto');\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const binaryData = item.binary?.data || item.binary?.attachment;\n  if (!binaryData) {\n    results.push({ json: { ...item.json, fileHash: 'no-binary-data', _error: true } });\n    continue;\n  }\n  \n  const buffer = Buffer.from(binaryData.data, 'base64');\n  const hash = crypto.createHash('sha256').update(buffer).digest('hex');\n  \n  results.push({\n    json: {\n      ...item.json,\n      fileHash: hash,\n      fileSizeBytes: buffer.length\n    },\n    binary: item.binary\n  });\n}\n\nreturn results;"
+        "jsCode": "// Gmail API retorna attachment em base64url no campo 'data'\n// Converter para base64 padrao, calcular hash, e criar binary p/ Drive upload\nconst crypto = require('crypto');\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const b64url = item.json.data;\n  if (!b64url) {\n    results.push({ json: { ...item.json, fileHash: 'no-attachment-data', _error: true } });\n    continue;\n  }\n  \n  // base64url → base64 padrao\n  const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');\n  const buffer = Buffer.from(b64, 'base64');\n  const hash = crypto.createHash('sha256').update(buffer).digest('hex');\n  \n  // Recuperar metadata do node Extract PDF Attachments\n  const extractData = $('Extract PDF Attachments').item.json;\n  \n  results.push({\n    json: {\n      ...extractData,\n      fileHash: hash,\n      fileSizeBytes: buffer.length\n    },\n    binary: {\n      data: {\n        data: b64,\n        mimeType: 'application/pdf',\n        fileName: extractData.fileName,\n        fileExtension: 'pdf'\n      }\n    }\n  });\n}\n\nreturn results;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [1100, -80],
       "id": "calculate-hash",
-      "name": "Calculate SHA-256 Hash"
+      "name": "Hash + Prepare Binary"
     },
     {
       "parameters": {
