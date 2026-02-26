@@ -323,6 +323,38 @@ export async function setPermission(
   }
 }
 
+// Define permissao "qualquer pessoa com o link pode visualizar" em um arquivo
+// Usado para NF PDFs que precisam ser visualizados no iframe do frontend
+export async function setPublicReadPermission(
+  token: string,
+  fileId: string,
+  opts?: DriveOptions,
+): Promise<void> {
+  let url = `${DRIVE_API}/files/${fileId}/permissions`;
+  if (opts?.driveType === 'shared_drive') {
+    url += '?supportsAllDrives=true';
+  }
+
+  const resp = await driveFetchWithRetry(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      type: 'anyone',
+      role: 'reader',
+    }),
+  }, `setPublicReadPermission ${fileId}`);
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    console.error(`[google-drive] permissao publica reader em ${fileId}: HTTP ${resp.status} — ${text.slice(0, 200)}`);
+  } else {
+    console.log(`[google-drive] permissao publica reader definida em ${fileId}`);
+  }
+}
+
 // Copia um arquivo no Drive (files.copy API)
 // Util para copiar templates de documentos para pastas de jobs
 export async function copyDriveFile(

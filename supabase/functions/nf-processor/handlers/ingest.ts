@@ -3,6 +3,8 @@ import { getServiceClient } from '../../_shared/supabase-client.ts';
 import { success, created } from '../../_shared/response.ts';
 import { AppError } from '../../_shared/errors.ts';
 import { createNotification } from '../../_shared/notification-helper.ts';
+import { getGoogleAccessToken, setPublicReadPermission } from '../../_shared/google-drive-client.ts';
+import { getSecret } from '../../_shared/vault.ts';
 
 // Schema de validacao do payload do n8n
 const IngestSchema = z.object({
@@ -249,7 +251,22 @@ export async function ingestNf(req: Request): Promise<Response> {
 
   console.log(`[ingest] NF criada: id=${newDoc.id} status=${newDoc.status}`);
 
-  // 7. Criar notificacoes para roles financeiro/admin/ceo (fire-and-forget)
+  // 7. Tornar arquivo acessivel via link (fire-and-forget)
+  try {
+    const saJson = await getSecret(serviceClient, `${input.tenant_id}_gdrive_service_account`);
+    if (saJson) {
+      const sa = JSON.parse(saJson);
+      const token = await getGoogleAccessToken(sa);
+      if (token) {
+        await setPublicReadPermission(token, input.drive_file_id);
+      }
+    }
+  } catch (permErr) {
+    console.error('[ingest] falha ao definir permissao publica no Drive:', permErr);
+    // Nao bloqueia a operacao principal
+  }
+
+  // 8. Criar notificacoes para roles financeiro/admin/ceo (fire-and-forget)
   try {
     const userIds = await getUsersToNotify(serviceClient, input.tenant_id);
     const notifTitle = docStatus === 'auto_matched'
