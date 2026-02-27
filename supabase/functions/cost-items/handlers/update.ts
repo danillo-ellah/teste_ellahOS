@@ -194,6 +194,21 @@ export async function handleUpdate(req: Request, auth: AuthContext, id: string):
     }
   }
 
+  // Resolver cost_category_id se item_number mudou
+  let categoryUpdate: Record<string, string | null> = {};
+  if ('item_number' in updates && updates.item_number !== current.item_number) {
+    const { data: matchedCategory } = await client
+      .from('cost_categories')
+      .select('id')
+      .eq('tenant_id', auth.tenantId)
+      .eq('item_number', updates.item_number!)
+      .is('deleted_at', null)
+      .limit(1)
+      .maybeSingle();
+
+    categoryUpdate = { cost_category_id: matchedCategory?.id ?? null };
+  }
+
   // Atualizar snapshots se vendor_id mudou
   let vendorSnapshot: Record<string, string | null> = {};
   if ('vendor_id' in updates && updates.vendor_id !== current.vendor_id) {
@@ -213,7 +228,7 @@ export async function handleUpdate(req: Request, auth: AuthContext, id: string):
 
   const { data: updated, error: updateError } = await client
     .from('cost_items')
-    .update({ ...updates, ...vendorSnapshot })
+    .update({ ...updates, ...vendorSnapshot, ...categoryUpdate })
     .eq('id', id)
     .eq('tenant_id', auth.tenantId)
     .select('*')

@@ -115,6 +115,21 @@ export async function handleCreate(req: Request, auth: AuthContext): Promise<Res
 
   const client = getSupabaseClient(auth.token);
 
+  // Resolver cost_category_id a partir de item_number
+  let costCategoryId: string | null = null;
+  const { data: matchedCategory } = await client
+    .from('cost_categories')
+    .select('id')
+    .eq('tenant_id', auth.tenantId)
+    .eq('item_number', data.item_number)
+    .is('deleted_at', null)
+    .limit(1)
+    .maybeSingle();
+
+  if (matchedCategory) {
+    costCategoryId = matchedCategory.id;
+  }
+
   // Montar snapshot do vendor se fornecido
   let vendorSnapshot = {
     vendor_name_snapshot: null as string | null,
@@ -144,6 +159,7 @@ export async function handleCreate(req: Request, auth: AuthContext): Promise<Res
     payment_due_date: data.payment_due_date ?? null,
     payment_method: data.payment_method ?? null,
     vendor_id: data.vendor_id ?? null,
+    cost_category_id: costCategoryId,
     ...vendorSnapshot,
     notes: data.notes ?? null,
     item_status: data.item_status ?? 'orcado',

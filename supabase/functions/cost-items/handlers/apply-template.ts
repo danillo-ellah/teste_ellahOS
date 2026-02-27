@@ -108,6 +108,14 @@ export async function handleApplyTemplate(
     return created({ created: 0, items: [], message: 'Todas as categorias ja estao presentes no job' });
   }
 
+  // Buscar IDs das categorias para FK cost_category_id
+  const categoryIdMap = new Map<number, string>();
+  for (const cat of categories) {
+    if (!categoryIdMap.has(cat.item_number as number)) {
+      categoryIdMap.set(cat.item_number as number, cat.id as string);
+    }
+  }
+
   // Criar headers (sub_item_number = 0) para cada categoria
   const insertData = categoriesToCreate.map((cat) => ({
     tenant_id: auth.tenantId,
@@ -116,6 +124,7 @@ export async function handleApplyTemplate(
     sub_item_number: 0,
     service_description: cat.display_name,
     sort_order: cat.sort_order,
+    cost_category_id: categoryIdMap.get(cat.item_number) ?? null,
     item_status: 'orcado',
     nf_request_status: 'pendente',
     payment_status: 'pendente',
