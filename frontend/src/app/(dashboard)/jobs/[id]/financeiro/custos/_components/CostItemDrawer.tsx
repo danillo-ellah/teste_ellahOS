@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronsUpDown, Check, X } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -59,7 +59,7 @@ const COST_CATEGORIES: { value: number; label: string }[] = [
   { value: 20, label: '20 - Outros' },
 ]
 
-// ---- VendorAutocomplete ----
+// ---- VendorAutocomplete (combobox style — clica e abre lista, digita e filtra) ----
 
 interface VendorAutocompleteProps {
   selectedName: string
@@ -68,53 +68,112 @@ interface VendorAutocompleteProps {
 }
 
 function VendorAutocomplete({ selectedName, onSelect, disabled }: VendorAutocompleteProps) {
-  const [search, setSearch] = useState(selectedName)
+  const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
-  const { data: suggestions } = useVendorSuggest(search)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
-  // Sincronizar quando o item for trocado (modo editar)
+  // Busca fornecedores: quando aberto, busca com o termo digitado (ou vazio = lista todos)
+  const { data: suggestions } = useVendorSuggest(search, open)
+
+  // Fechar dropdown ao clicar fora
   useEffect(() => {
-    setSearch(selectedName)
-  }, [selectedName])
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    if (open) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [open])
+
+  const vendors = suggestions?.data ?? []
+
+  function handleClear() {
+    onSelect(undefined, '')
+    setSearch('')
+  }
 
   return (
-    <div className="relative">
-      <Input
-        value={search}
-        onChange={e => {
-          setSearch(e.target.value)
-          setOpen(true)
-        }}
-        onBlur={() => {
-          // Pequeno delay para permitir clique nos itens
-          setTimeout(() => setOpen(false), 150)
-        }}
-        onFocus={() => {
-          if (search.length >= 2) setOpen(true)
-        }}
-        placeholder="Buscar fornecedor..."
-        autoComplete="off"
-        disabled={disabled}
-      />
-      {open && suggestions?.data && suggestions.data.length > 0 && (
-        <div className="absolute z-50 mt-1 w-full bg-popover border border-border rounded-md shadow-md max-h-48 overflow-y-auto">
-          {suggestions.data.map((s: VendorSuggestion) => (
-            <button
-              key={s.id}
-              type="button"
-              className="w-full px-3 py-2 text-left text-sm hover:bg-accent flex items-center justify-between gap-2"
-              onMouseDown={() => {
-                onSelect(s.id, s.full_name)
-                setSearch(s.full_name)
-                setOpen(false)
-              }}
-            >
-              <span>{s.full_name}</span>
-              {s.email && (
-                <span className="text-xs text-muted-foreground truncate">{s.email}</span>
-              )}
-            </button>
-          ))}
+    <div className="relative" ref={containerRef}>
+      {/* Botao trigger (mostra nome selecionado ou placeholder) */}
+      {!open ? (
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => {
+            setOpen(true)
+            setSearch('')
+            setTimeout(() => inputRef.current?.focus(), 50)
+          }}
+          className={cn(
+            'flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors',
+            'hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+            disabled && 'cursor-not-allowed opacity-50',
+            selectedName ? 'text-foreground' : 'text-muted-foreground',
+          )}
+        >
+          <span className="truncate">{selectedName || 'Selecionar fornecedor...'}</span>
+          <div className="flex items-center gap-1 shrink-0">
+            {selectedName && !disabled && (
+              <span
+                role="button"
+                onClick={e => { e.stopPropagation(); handleClear() }}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3 w-3" />
+              </span>
+            )}
+            <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+        </button>
+      ) : (
+        /* Input de busca quando aberto */
+        <Input
+          ref={inputRef}
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Digitar para filtrar..."
+          autoComplete="off"
+          className="pr-8"
+        />
+      )}
+
+      {/* Dropdown com lista de fornecedores */}
+      {open && (
+        <div className="absolute z-50 mt-1 w-full bg-popover border border-border rounded-md shadow-md max-h-60 overflow-y-auto">
+          {vendors.length === 0 ? (
+            <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+              Nenhum fornecedor encontrado
+            </div>
+          ) : (
+            vendors.map((s: VendorSuggestion) => {
+              const isSelected = s.full_name === selectedName
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  className={cn(
+                    'w-full px-3 py-2 text-left text-sm hover:bg-accent flex items-center gap-2',
+                    isSelected && 'bg-accent/50',
+                  )}
+                  onMouseDown={() => {
+                    onSelect(s.id, s.full_name)
+                    setOpen(false)
+                    setSearch('')
+                  }}
+                >
+                  <Check className={cn('h-3.5 w-3.5 shrink-0', isSelected ? 'opacity-100' : 'opacity-0')} />
+                  <span className="flex-1 truncate">{s.full_name}</span>
+                  {s.email && (
+                    <span className="text-xs text-muted-foreground truncate max-w-[140px]">{s.email}</span>
+                  )}
+                </button>
+              )
+            })
+          )}
         </div>
       )}
     </div>

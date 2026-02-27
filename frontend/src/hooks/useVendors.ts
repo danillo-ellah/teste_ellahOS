@@ -50,11 +50,11 @@ export function useVendor(id: string) {
   })
 }
 
-export function useVendorSuggest(q: string) {
+export function useVendorSuggest(q: string, enabled = true) {
   return useQuery({
     queryKey: vendorKeys.suggest(q),
     queryFn: () => apiGet<VendorSuggestion[]>('vendors', { q }, 'suggest'),
-    enabled: q.length >= 2,
+    enabled,
     staleTime: 10_000,
   })
 }

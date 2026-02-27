@@ -16,27 +16,24 @@ export async function suggestVendors(
     tenantId: auth.tenantId,
   });
 
-  // Termo de busca deve ter ao menos 2 caracteres
-  if (q.length < 2) {
-    throw new AppError(
-      'VALIDATION_ERROR',
-      'Parametro q deve ter ao menos 2 caracteres',
-      400,
-    );
-  }
-
   const safeQ = q.replace(/[%_]/g, '').slice(0, 100);
   const supabase = getSupabaseClient(auth.token);
 
-  const { data: vendors, error: dbError } = await supabase
+  let query = supabase
     .from('vendors')
     .select('id, full_name, entity_type, email, cpf, cnpj')
     .eq('tenant_id', auth.tenantId)
     .is('deleted_at', null)
     .eq('is_active', true)
-    .ilike('full_name', `%${safeQ}%`)
     .order('full_name', { ascending: true })
-    .limit(5);
+    .limit(30);
+
+  // Se tem termo de busca, filtrar por nome
+  if (safeQ.length >= 1) {
+    query = query.ilike('full_name', `%${safeQ}%`);
+  }
+
+  const { data: vendors, error: dbError } = await query;
 
   if (dbError) {
     console.error('[vendors/suggest] erro na query:', dbError);
