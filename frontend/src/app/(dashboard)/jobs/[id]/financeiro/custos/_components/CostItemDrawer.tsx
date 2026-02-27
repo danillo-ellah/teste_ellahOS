@@ -32,6 +32,7 @@ import {
 } from '@/types/cost-management'
 import { parseBRNumber, formatBRNumber } from '@/lib/format'
 import { safeErrorMessage } from '@/lib/api'
+import { AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 // Categorias fixas do sistema (item_number 1-20, conforme planilha)
@@ -63,9 +64,10 @@ const COST_CATEGORIES: { value: number; label: string }[] = [
 interface VendorAutocompleteProps {
   selectedName: string
   onSelect: (vendorId: string | undefined, name: string) => void
+  disabled?: boolean
 }
 
-function VendorAutocomplete({ selectedName, onSelect }: VendorAutocompleteProps) {
+function VendorAutocomplete({ selectedName, onSelect, disabled }: VendorAutocompleteProps) {
   const [search, setSearch] = useState(selectedName)
   const [open, setOpen] = useState(false)
   const { data: suggestions } = useVendorSuggest(search)
@@ -92,6 +94,7 @@ function VendorAutocomplete({ selectedName, onSelect }: VendorAutocompleteProps)
         }}
         placeholder="Buscar fornecedor..."
         autoComplete="off"
+        disabled={disabled}
       />
       {open && suggestions?.data && suggestions.data.length > 0 && (
         <div className="absolute z-50 mt-1 w-full bg-popover border border-border rounded-md shadow-md max-h-48 overflow-y-auto">
@@ -193,6 +196,9 @@ export function CostItemDrawer({
   const { mutateAsync: updateItem, isPending: isUpdating } = useUpdateCostItem()
   const isPending = isCreating || isUpdating
 
+  // Item pago = campos financeiros read-only (backend tambem bloqueia)
+  const isPaid = editingItem?.payment_status === 'pago'
+
   // Resetar form quando o drawer abre/fecha ou o item muda
   useEffect(() => {
     if (open) {
@@ -264,12 +270,23 @@ export function CostItemDrawer({
         </SheetHeader>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+          {/* Alerta item pago */}
+          {isPaid && (
+            <div className="flex items-start gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              <span>
+                Este item ja foi pago. Apenas observacoes podem ser editadas. Para alterar valores, cancele o pagamento primeiro.
+              </span>
+            </div>
+          )}
+
           {/* Categoria */}
           <div className="space-y-2">
             <Label htmlFor="item-number">Categoria</Label>
             <Select
               value={String(form.item_number)}
               onValueChange={v => setField('item_number', parseInt(v))}
+              disabled={isPaid}
             >
               <SelectTrigger id="item-number">
                 <SelectValue placeholder="Selecionar categoria" />
@@ -297,6 +314,7 @@ export function CostItemDrawer({
               placeholder="Ex: 1"
               value={form.sub_item_number}
               onChange={e => setField('sub_item_number', e.target.value)}
+              disabled={isPaid}
             />
           </div>
 
@@ -309,6 +327,7 @@ export function CostItemDrawer({
               value={form.service_description}
               onChange={e => setField('service_description', e.target.value)}
               required
+              disabled={isPaid}
             />
           </div>
 
@@ -322,6 +341,7 @@ export function CostItemDrawer({
                 placeholder="Ex: 1.500,00"
                 value={form.unit_value}
                 onChange={e => setField('unit_value', e.target.value)}
+                disabled={isPaid}
               />
             </div>
             <div className="space-y-2">
@@ -334,6 +354,7 @@ export function CostItemDrawer({
                 placeholder="1"
                 value={form.quantity}
                 onChange={e => setField('quantity', e.target.value)}
+                disabled={isPaid}
               />
             </div>
           </div>
@@ -364,6 +385,7 @@ export function CostItemDrawer({
                     placeholder="0"
                     value={form.overtime_hours}
                     onChange={e => setField('overtime_hours', e.target.value)}
+                    disabled={isPaid}
                   />
                 </div>
                 <div className="space-y-2">
@@ -374,6 +396,7 @@ export function CostItemDrawer({
                     placeholder="Ex: 200,00"
                     value={form.overtime_rate}
                     onChange={e => setField('overtime_rate', e.target.value)}
+                    disabled={isPaid}
                   />
                 </div>
               </div>
@@ -386,6 +409,7 @@ export function CostItemDrawer({
             <Select
               value={form.payment_condition || 'none'}
               onValueChange={v => setField('payment_condition', v === 'none' ? '' : (v as PaymentCondition))}
+              disabled={isPaid}
             >
               <SelectTrigger id="payment-condition">
                 <SelectValue placeholder="Selecionar condicao" />
@@ -409,6 +433,7 @@ export function CostItemDrawer({
               type="date"
               value={form.payment_due_date}
               onChange={e => setField('payment_due_date', e.target.value)}
+              disabled={isPaid}
             />
           </div>
 
@@ -418,6 +443,7 @@ export function CostItemDrawer({
             <Select
               value={form.payment_method || 'none'}
               onValueChange={v => setField('payment_method', v === 'none' ? '' : (v as PaymentMethod))}
+              disabled={isPaid}
             >
               <SelectTrigger id="payment-method-form">
                 <SelectValue placeholder="Selecionar metodo" />
@@ -442,6 +468,7 @@ export function CostItemDrawer({
                 setField('vendor_id', vendorId)
                 setField('vendor_name', name)
               }}
+              disabled={isPaid}
             />
           </div>
 

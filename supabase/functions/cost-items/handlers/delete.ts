@@ -28,7 +28,7 @@ export async function handleDelete(_req: Request, auth: AuthContext, id: string)
   // Buscar item atual antes de deletar (para historico)
   const { data: current, error: fetchError } = await client
     .from('cost_items')
-    .select('id, job_id, service_description, item_number, sub_item_number')
+    .select('id, job_id, service_description, item_number, sub_item_number, payment_status')
     .eq('id', id)
     .eq('tenant_id', auth.tenantId)
     .is('deleted_at', null)
@@ -36,6 +36,15 @@ export async function handleDelete(_req: Request, auth: AuthContext, id: string)
 
   if (fetchError || !current) {
     throw new AppError('NOT_FOUND', 'Item de custo nao encontrado', 404);
+  }
+
+  // Bloquear delete de item ja pago
+  if (current.payment_status === 'pago') {
+    throw new AppError(
+      'BUSINESS_RULE_VIOLATION',
+      'Nao e possivel excluir um item ja pago. Cancele o pagamento antes de excluir.',
+      422,
+    );
   }
 
   // Soft delete: atualizar deleted_at

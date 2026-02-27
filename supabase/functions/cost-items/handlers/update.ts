@@ -179,6 +179,21 @@ export async function handleUpdate(req: Request, auth: AuthContext, id: string):
     }
   }
 
+  // Bloquear edicao de campos financeiros em item ja pago
+  // Apenas item_status (para cancelar) e notes sao permitidos
+  if (current.payment_status === 'pago') {
+    const ALLOWED_FIELDS_WHEN_PAID = new Set(['item_status', 'status_note', 'notes']);
+    const blockedFields = Object.keys(updates).filter(f => !ALLOWED_FIELDS_WHEN_PAID.has(f));
+    if (blockedFields.length > 0) {
+      throw new AppError(
+        'BUSINESS_RULE_VIOLATION',
+        `Item ja pago. Apenas status e observacoes podem ser alterados. Campos bloqueados: ${blockedFields.join(', ')}`,
+        422,
+        { blocked_fields: blockedFields },
+      );
+    }
+  }
+
   // Atualizar snapshots se vendor_id mudou
   let vendorSnapshot: Record<string, string | null> = {};
   if ('vendor_id' in updates && updates.vendor_id !== current.vendor_id) {
