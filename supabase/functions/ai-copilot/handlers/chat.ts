@@ -2,20 +2,19 @@
 // POST /chat-sync   — Chat sincrono (resposta completa em JSON)
 //
 // Handler do Copilot ELLA: recebe mensagem do usuario, monta contexto
-// (job, metricas do tenant), decide modelo (Haiku vs Sonnet via escalacao),
-// chama a Claude API e retorna a resposta com persistencia de conversa.
+// (job, metricas do tenant), chama a Groq API (Llama 3.3 70B, gratuito)
+// e retorna a resposta com persistencia de conversa.
 
 import { getSupabaseClient, getServiceClient } from '../_shared/supabase-client.ts';
 import { success } from '../_shared/response.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { AppError } from '../_shared/errors.ts';
 import type { AuthContext } from '../_shared/auth.ts';
-import { callClaude, callClaudeStream, estimateCost, sanitizeUserInput } from '../_shared/claude-client.ts';
-import type { ClaudeModel, ClaudeMessage } from '../_shared/claude-client.ts';
+import { callGroq, callGroqStream, estimateGroqCost, GROQ_MODEL } from '../_shared/groq-client.ts';
+import { sanitizeUserInput } from '../_shared/claude-client.ts';
 import { getJobFullContext, getTenantMetrics } from '../_shared/ai-context.ts';
 import { checkRateLimit, logAiUsage } from '../_shared/ai-rate-limiter.ts';
 import {
-  shouldEscalateToSonnet,
   buildCopilotSystemPrompt,
   buildDynamicContext,
   COPILOT_PROMPT_VERSION,
@@ -25,10 +24,7 @@ import {
 // Constantes
 // ---------------------------------------------------------------------------
 
-const HAIKU_MODEL: ClaudeModel = 'claude-haiku-4-20250514';
-const SONNET_MODEL: ClaudeModel = 'claude-sonnet-4-20250514';
-const MAX_OUTPUT_TOKENS_HAIKU = 1000;
-const MAX_OUTPUT_TOKENS_SONNET = 3000;
+const MAX_OUTPUT_TOKENS = 1500;
 const MAX_HISTORY_MESSAGES = 20;
 const MAX_MESSAGE_LENGTH = 2000;
 
@@ -109,7 +105,7 @@ async function loadConversationHistory(
   supabase: ReturnType<typeof getSupabaseClient>,
   conversationId: string,
   tenantId: string,
-): Promise<ClaudeMessage[]> {
+): Promise<Array<{ role: 'user' | 'assistant'; content: string }>> {
   // Verificar existencia da conversa (RLS filtra por tenant + user)
   const { data: conv, error: convError } = await supabase
     .from('ai_conversations')
@@ -153,7 +149,7 @@ async function createConversation(
   userId: string,
   title: string,
   jobId: string | undefined,
-  modelUsed: ClaudeModel,
+  modelUsed: string,
 ): Promise<string> {
   const conversationTitle = title.length > 50 ? title.substring(0, 50) : title;
 
@@ -187,7 +183,7 @@ async function persistMessages(
     conversationId: string;
     userMessage: string;
     assistantMessage: string;
-    modelUsed: ClaudeModel;
+    modelUsed: string;
     inputTokens: number;
     outputTokens: number;
     durationMs: number;
@@ -261,18 +257,15 @@ async function prepareContext(
   // 1. Rate limiting
   await checkRateLimit(supabase, auth.tenantId, auth.userId, 'copilot');
 
-  // 2. Decidir modelo (Haiku default, Sonnet para perguntas complexas)
-  const escalateToSonnet = shouldEscalateToSonnet(payload.message);
-  const model: ClaudeModel = escalateToSonnet ? SONNET_MODEL : HAIKU_MODEL;
-  const maxTokens = escalateToSonnet ? MAX_OUTPUT_TOKENS_SONNET : MAX_OUTPUT_TOKENS_HAIKU;
+  // 2. Modelo unico: Groq Llama 3.3 70B (gratuito)
+  const model = GROQ_MODEL;
+  const maxTokens = MAX_OUTPUT_TOKENS;
 
-  console.log(
-    `[ai-copilot/chat] modelo=${model} escalado=${escalateToSonnet}`,
-  );
+  console.log(`[ai-copilot/chat] modelo=${model}`);
 
   // 3. Gerenciar conversa (carregar historico ou criar nova)
   let conversationId = payload.conversation_id ?? null;
-  let history: ClaudeMessage[] = [];
+  let history: Array<{ role: 'user' | 'assistant'; content: string }> = [];
 
   if (conversationId) {
     // Carregar historico de conversa existente
@@ -373,7 +366,7 @@ async function prepareContext(
   });
 
   // 9. Montar array de mensagens: historico + nova mensagem
-  const messages: ClaudeMessage[] = [
+  const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [
     ...history,
     { role: 'user', content: `<user-input>${sanitizeUserInput(payload.message)}</user-input>` },
   ];
@@ -432,9 +425,9 @@ export async function handleChat(
   // 10. Chamar Claude com streaming
   const startTime = Date.now();
 
-  let claudeStreamResult;
+  let streamResult;
   try {
-    claudeStreamResult = await callClaudeStream(supabase, {
+    streamResult = await callGroqStream(supabase, {
       model,
       system: systemPrompt,
       messages,
@@ -459,14 +452,13 @@ export async function handleChat(
       metadata: {
         conversation_id: conversationId,
         prompt_version: COPILOT_PROMPT_VERSION,
-        escalated_to_sonnet: model === SONNET_MODEL,
         job_id: payload.context?.job_id ?? null,
       },
     });
     throw err;
   }
 
-  const { stream: claudeStream, getUsage } = claudeStreamResult;
+  const { stream: llmStream, getUsage } = streamResult;
 
   // 11. Criar wrapper TransformStream que:
   //   a. Emite evento 'start' com conversation_id e message_id
@@ -554,7 +546,7 @@ export async function handleChat(
 
       // Registrar uso de IA (sempre, com status correto)
       try {
-        const costUsd = estimateCost(model, usage.input_tokens, usage.output_tokens);
+        const costUsd = estimateGroqCost(usage.input_tokens, usage.output_tokens);
 
         await logAiUsage(serviceClient, {
           tenantId: auth.tenantId,
@@ -571,7 +563,6 @@ export async function handleChat(
             conversation_id: conversationId,
             message_id: messageId,
             prompt_version: COPILOT_PROMPT_VERSION,
-            escalated_to_sonnet: model === SONNET_MODEL,
             job_id: payload.context?.job_id ?? null,
           },
         });
@@ -581,8 +572,8 @@ export async function handleChat(
     },
   });
 
-  // Conectar o stream do Claude ao wrapper
-  const outputStream = claudeStream.pipeThrough(wrapperStream);
+  // Conectar o stream do LLM ao wrapper
+  const outputStream = llmStream.pipeThrough(wrapperStream);
 
   // 12. Retornar SSE Response
   return new Response(outputStream, {
@@ -634,14 +625,14 @@ export async function handleChatSync(
     conversationId,
   } = await prepareContext(payload, auth);
 
-  // 10. Chamar Claude (batch, sem streaming)
+  // 10. Chamar Groq (batch, sem streaming)
   const startTime = Date.now();
-  let claudeResponse;
+  let llmResponse;
   let status: 'success' | 'error' | 'timeout' = 'success';
   let errorMessage: string | undefined;
 
   try {
-    claudeResponse = await callClaude(supabase, {
+    llmResponse = await callGroq(supabase, {
       model,
       system: systemPrompt,
       messages,
@@ -668,7 +659,6 @@ export async function handleChatSync(
       metadata: {
         conversation_id: conversationId,
         prompt_version: COPILOT_PROMPT_VERSION,
-        escalated_to_sonnet: model === SONNET_MODEL,
         job_id: payload.context?.job_id ?? null,
       },
     });
@@ -684,23 +674,23 @@ export async function handleChatSync(
     userId: auth.userId,
     conversationId: conversationId!,
     userMessage: payload.message,
-    assistantMessage: claudeResponse.content,
+    assistantMessage: llmResponse.content,
     modelUsed: model,
-    inputTokens: claudeResponse.input_tokens,
-    outputTokens: claudeResponse.output_tokens,
+    inputTokens: llmResponse.input_tokens,
+    outputTokens: llmResponse.output_tokens,
     durationMs,
   });
 
   // 12. Registrar uso de IA
-  const costUsd = estimateCost(model, claudeResponse.input_tokens, claudeResponse.output_tokens);
+  const costUsd = estimateGroqCost(llmResponse.input_tokens, llmResponse.output_tokens);
 
   await logAiUsage(serviceClient, {
     tenantId: auth.tenantId,
     userId: auth.userId,
     feature: 'copilot',
     modelUsed: model,
-    inputTokens: claudeResponse.input_tokens,
-    outputTokens: claudeResponse.output_tokens,
+    inputTokens: llmResponse.input_tokens,
+    outputTokens: llmResponse.output_tokens,
     estimatedCostUsd: costUsd,
     durationMs,
     status: 'success',
@@ -708,7 +698,6 @@ export async function handleChatSync(
       conversation_id: conversationId,
       message_id: messageId,
       prompt_version: COPILOT_PROMPT_VERSION,
-      escalated_to_sonnet: model === SONNET_MODEL,
       job_id: payload.context?.job_id ?? null,
     },
   });
@@ -717,11 +706,11 @@ export async function handleChatSync(
   return success({
     conversation_id: conversationId,
     message_id: messageId,
-    response: claudeResponse.content,
+    response: llmResponse.content,
     sources: [],
     tokens_used: {
-      input: claudeResponse.input_tokens,
-      output: claudeResponse.output_tokens,
+      input: llmResponse.input_tokens,
+      output: llmResponse.output_tokens,
     },
   });
 }
