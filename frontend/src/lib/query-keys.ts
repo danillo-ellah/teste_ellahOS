@@ -193,3 +193,42 @@ export const docusealKeys = {
   details: () => [...docusealKeys.all, 'detail'] as const,
   detail: (id: string) => [...docusealKeys.details(), id] as const,
 }
+
+export const vendorKeys = {
+  all: ['vendors'] as const,
+  lists: () => [...vendorKeys.all, 'list'] as const,
+  list: (filters: Record<string, string>) => [...vendorKeys.lists(), filters] as const,
+  details: () => [...vendorKeys.all, 'detail'] as const,
+  detail: (id: string) => [...vendorKeys.details(), id] as const,
+  suggest: (q: string) => [...vendorKeys.all, 'suggest', q] as const,
+  banks: () => [...vendorKeys.all, 'banks'] as const,
+}
+
+export const costItemKeys = {
+  all: ['cost-items'] as const,
+  lists: () => [...costItemKeys.all, 'list'] as const,
+  list: (filters: Record<string, string>) => [...costItemKeys.lists(), filters] as const,
+  details: () => [...costItemKeys.all, 'detail'] as const,
+  detail: (id: string) => [...costItemKeys.details(), id] as const,
+  budgetSummary: (jobId: string) => [...costItemKeys.all, 'budget-summary', jobId] as const,
+  referenceJobs: (jobId: string) => [...costItemKeys.all, 'reference-jobs', jobId] as const,
+}
+
+export const paymentKeys = {
+  all: ['payment-manager'] as const,
+  batchPreview: (ids: string[]) => [...paymentKeys.all, 'batch-preview', ids] as const,
+}
+
+export const finDashboardKeys = {
+  all: ['financial-dashboard'] as const,
+  job: (jobId: string) => [...finDashboardKeys.all, 'job', jobId] as const,
+  tenant: () => [...finDashboardKeys.all, 'tenant'] as const,
+}
+
+export const cashAdvanceKeys = {
+  all: ['cash-advances'] as const,
+  lists: () => [...cashAdvanceKeys.all, 'list'] as const,
+  list: (jobId: string) => [...cashAdvanceKeys.lists(), jobId] as const,
+  details: () => [...cashAdvanceKeys.all, 'detail'] as const,
+  detail: (id: string) => [...cashAdvanceKeys.details(), id] as const,
+}

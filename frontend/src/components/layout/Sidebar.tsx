@@ -19,6 +19,8 @@ import {
   BarChart3,
   FileCheck2,
   MailPlus,
+  UserRoundSearch,
+  CalendarClock,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -46,6 +48,8 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Agencias', href: '/agencies', icon: Briefcase },
   { label: 'Equipe', href: '/people', icon: Users },
   { label: 'Financeiro', href: '/financial', icon: DollarSign, exact: true },
+  { label: 'Fornecedores', href: '/financeiro/vendors', icon: UserRoundSearch },
+  { label: 'Calendario Pgtos', href: '/financeiro/calendario', icon: CalendarClock },
   { label: 'Validacao de NFs', href: '/financial/nf-validation', icon: FileCheck2 },
   { label: 'Solicitar NFs', href: '/financial/nf-request', icon: MailPlus },
   { label: 'Calendario', href: '/team/calendar', icon: CalendarDays },
