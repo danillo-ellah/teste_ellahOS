@@ -49,7 +49,7 @@ export default function DashboardLayout({
   const { data: nfStats } = useNfStats()
   const nfPendingCount = (nfStats?.pending_review ?? 0) + (nfStats?.auto_matched ?? 0)
   const sidebarBadges = nfPendingCount > 0
-    ? { '/financial/nf-validation': nfPendingCount }
+    ? { '/financeiro/nf-validation': nfPendingCount }
     : undefined
 
   // SSR: renderizar shell minimo para evitar hydration mismatch dos IDs Radix

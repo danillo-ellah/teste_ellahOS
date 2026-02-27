@@ -43,8 +43,15 @@ function getDefaultBreadcrumb(pathname: string) {
     items.push({ label: 'Agencias', href: '/agencies' })
   } else if (pathname.startsWith('/people')) {
     items.push({ label: 'Equipe', href: '/people' })
-  } else if (pathname.startsWith('/financial')) {
-    items.push({ label: 'Financeiro', href: '/financial' })
+  } else if (pathname.startsWith('/financeiro')) {
+    items.push({ label: 'Financeiro', href: '/financeiro' })
+    if (pathname.includes('/vendors')) items.push({ label: 'Fornecedores' })
+    else if (pathname.includes('/calendario')) items.push({ label: 'Calendario de Pagamentos' })
+    else if (pathname.includes('/nf-validation')) items.push({ label: 'Validacao de NFs' })
+    else if (pathname.includes('/nf-request')) items.push({ label: 'Solicitar NFs' })
+  } else if (pathname.startsWith('/admin/financeiro')) {
+    items.push({ label: 'Financeiro', href: '/financeiro' })
+    items.push({ label: 'Categorias de Custo' })
   } else if (pathname.startsWith('/notifications')) {
     items.push({ label: 'Notificacoes' })
   }

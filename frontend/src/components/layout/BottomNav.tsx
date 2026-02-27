@@ -16,7 +16,7 @@ const NAV_ITEMS = [
   { label: 'Jobs', href: '/jobs', icon: Clapperboard },
   { label: 'Clientes', href: '/clients', icon: Building2 },
   { label: 'Equipe', href: '/people', icon: Users },
-  { label: 'Financeiro', href: '/financial', icon: DollarSign },
+  { label: 'Financeiro', href: '/financeiro', icon: DollarSign },
 ]
 
 export function BottomNav() {
@@ -28,10 +28,13 @@ export function BottomNav() {
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon
           // Dashboard precisa de correspondencia exata
+          // Financeiro cobre /financeiro/* e /admin/financeiro/*
           const active =
             item.href === '/'
               ? pathname === '/'
-              : pathname.startsWith(item.href)
+              : item.href === '/financeiro'
+                ? pathname.startsWith('/financeiro') || pathname.startsWith('/admin/financeiro')
+                : pathname.startsWith(item.href)
 
           return (
             <Link

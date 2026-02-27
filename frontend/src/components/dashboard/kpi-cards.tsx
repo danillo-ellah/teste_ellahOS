@@ -235,7 +235,7 @@ export function KpiCards({ data, isLoading }: KpiCardsProps) {
         iconColor="text-amber-500"
         label="Faturamento do Mes"
         value={formatCurrency(revenueMes)}
-        href="/financial"
+        href="/financeiro"
         trendDirection="neutral"
       />
 
@@ -245,7 +245,7 @@ export function KpiCards({ data, isLoading }: KpiCardsProps) {
         iconColor="text-emerald-500"
         label="Margem Media"
         value={formatPercent(avgMargin)}
-        href="/financial"
+        href="/financeiro"
         trendDirection={marginTrend}
         comparison={
           avgMargin < 20

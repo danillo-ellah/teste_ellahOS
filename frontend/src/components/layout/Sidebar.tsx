@@ -21,6 +21,7 @@ import {
   MailPlus,
   UserRoundSearch,
   CalendarClock,
+  ListTree,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -30,6 +31,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { Separator } from '@/components/ui/separator'
+import { useUserRole } from '@/hooks/useUserRole'
 
 interface NavItem {
   label: string
@@ -38,6 +40,7 @@ interface NavItem {
   disabled?: boolean
   exact?: boolean
   badge?: number
+  indent?: boolean
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -47,16 +50,20 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Clientes', href: '/clients', icon: Building2 },
   { label: 'Agencias', href: '/agencies', icon: Briefcase },
   { label: 'Equipe', href: '/people', icon: Users },
-  { label: 'Financeiro', href: '/financial', icon: DollarSign, exact: true },
-  { label: 'Fornecedores', href: '/financeiro/vendors', icon: UserRoundSearch },
-  { label: 'Calendario Pgtos', href: '/financeiro/calendario', icon: CalendarClock },
-  { label: 'Validacao de NFs', href: '/financial/nf-validation', icon: FileCheck2 },
-  { label: 'Solicitar NFs', href: '/financial/nf-request', icon: MailPlus },
+  { label: 'Financeiro', href: '/financeiro', icon: DollarSign, exact: true },
+  { label: 'Fornecedores', href: '/financeiro/vendors', icon: UserRoundSearch, indent: true },
+  { label: 'Calendario Pgtos', href: '/financeiro/calendario', icon: CalendarClock, indent: true },
+  { label: 'Validacao de NFs', href: '/financeiro/nf-validation', icon: FileCheck2, indent: true },
+  { label: 'Solicitar NFs', href: '/financeiro/nf-request', icon: MailPlus, indent: true },
   { label: 'Calendario', href: '/team/calendar', icon: CalendarDays },
   { label: 'Aprovacoes', href: '/approvals', icon: ClipboardCheck },
   { label: 'Portal', href: '/portal', icon: Globe },
   { label: 'Arquivos', href: '/files', icon: FolderOpen, disabled: true },
 ]
+
+const ADMIN_NAV_ITEM: NavItem = {
+  label: 'Categorias Custo', href: '/admin/financeiro/categorias', icon: ListTree, indent: true,
+}
 
 const BOTTOM_ITEMS: NavItem[] = [
   { label: 'Configuracoes', href: '/settings', icon: Settings },
@@ -70,6 +77,17 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, onToggle, badges }: SidebarProps) {
   const pathname = usePathname()
+  const { role } = useUserRole()
+  const isAdmin = role === 'admin' || role === 'ceo'
+
+  // Monta lista de itens incluindo admin se aplicavel
+  const allItems = isAdmin
+    ? [
+        ...NAV_ITEMS.slice(0, 12), // ate "Solicitar NFs"
+        ADMIN_NAV_ITEM,
+        ...NAV_ITEMS.slice(12), // "Calendario", "Aprovacoes", etc
+      ]
+    : NAV_ITEMS
 
   return (
     <aside
@@ -93,19 +111,24 @@ export function Sidebar({ collapsed, onToggle, badges }: SidebarProps) {
 
       {/* Navegacao principal */}
       <nav className="flex-1 space-y-1 px-2 py-3">
-        {NAV_ITEMS.map((item) => {
+        {allItems.map((item) => {
           const itemWithBadge = badges?.[item.href]
             ? { ...item, badge: badges[item.href] }
             : item
+          // Financeiro parent: ativo quando qualquer sub-rota /financeiro/* esta ativa
+          const isFinanceiroParent = item.href === '/financeiro' && item.exact
+          const active = item.href === '/'
+            ? pathname === '/'
+            : isFinanceiroParent
+              ? pathname === '/financeiro' || (pathname.startsWith('/financeiro/') && !NAV_ITEMS.some(n => n.indent && pathname.startsWith(n.href)))
+              : item.exact
+                ? pathname === item.href
+                : pathname.startsWith(item.href)
           return (
             <NavLink
               key={item.href}
               item={itemWithBadge}
-              active={
-                item.href === '/' || item.exact
-                  ? pathname === item.href
-                  : pathname.startsWith(item.href)
-              }
+              active={active}
               collapsed={collapsed}
             />
           )
@@ -166,6 +189,7 @@ function NavLink({
       className={cn(
         'relative flex h-9 items-center gap-3 rounded-md px-3 text-sm transition-colors',
         collapsed && 'justify-center px-0',
+        !collapsed && item.indent && 'ml-3 pl-3',
         active && !item.disabled
           ? 'bg-accent font-medium text-foreground'
           : 'text-muted-foreground',

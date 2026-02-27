@@ -293,7 +293,7 @@ export default function NfRequestPage() {
             onToggleSupplierGroup={handleToggleSupplierGroup}
             onSelectAll={handleSelectAll}
             onDeselectAll={handleDeselectAll}
-            onViewFinancial={() => router.push('/financial')}
+            onViewFinancial={() => router.push('/financeiro')}
           />
         </div>
 

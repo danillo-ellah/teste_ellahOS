@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
-import { DollarSign, TrendingUp, Percent, Receipt } from 'lucide-react'
+import { DollarSign, TrendingUp, Percent, Receipt, ArrowRight, TableProperties, BarChart3, Wallet } from 'lucide-react'
+import Link from 'next/link'
 import { Input } from '@/components/ui/input'
 import { SyncIndicator } from '@/components/job-detail/SyncIndicator'
 import type { SyncState } from '@/components/job-detail/SyncIndicator'
@@ -79,6 +80,34 @@ export function TabFinanceiro({ job }: TabFinanceiroProps) {
           label="Impostos"
           value={formatCurrency(job.tax_value)}
           className="text-muted-foreground"
+        />
+      </div>
+
+      {/* Acesso rapido as paginas financeiras do job */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <QuickLink
+          href={`/jobs/${job.id}/financeiro/custos`}
+          icon={TableProperties}
+          label="Custos do Job"
+          description="Tabela detalhada de custos (planilha)"
+        />
+        <QuickLink
+          href={`/jobs/${job.id}/financeiro/dashboard`}
+          icon={BarChart3}
+          label="Dashboard Financeiro"
+          description="KPIs, alertas e breakdown por categoria"
+        />
+        <QuickLink
+          href={`/jobs/${job.id}/financeiro/orcamento`}
+          icon={DollarSign}
+          label="Orcamento"
+          description="Gestao de orcamento e templates"
+        />
+        <QuickLink
+          href={`/jobs/${job.id}/financeiro/verbas`}
+          icon={Wallet}
+          label="Verbas"
+          description="Adiantamentos e prestacao de contas"
         />
       </div>
 
@@ -177,6 +206,34 @@ function SummaryCard({
       </div>
       <p className={cn('text-xl font-semibold', className)}>{value}</p>
     </div>
+  )
+}
+
+function QuickLink({
+  href,
+  icon: Icon,
+  label,
+  description,
+}: {
+  href: string
+  icon: typeof DollarSign
+  label: string
+  description: string
+}) {
+  return (
+    <Link
+      href={href}
+      className="group flex items-center gap-3 rounded-lg border border-border p-4 transition-colors hover:bg-muted/50 hover:border-primary/30"
+    >
+      <div className="rounded-md bg-primary/10 p-2">
+        <Icon className="size-5 text-primary" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium group-hover:text-primary transition-colors">{label}</p>
+        <p className="text-xs text-muted-foreground truncate">{description}</p>
+      </div>
+      <ArrowRight className="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
+    </Link>
   )
 }
 
