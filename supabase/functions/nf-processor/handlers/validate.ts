@@ -196,8 +196,69 @@ export async function validateNf(req: Request, auth: AuthContext): Promise<Respo
     }
   }
 
-  // 7. Fire-and-forget: copiar NF para pasta do job no Drive
+  // 6.5. Sincronizar com cost_items (SECUNDARIO — nao bloqueia se falhar)
   const resolvedJobId = updatedDoc.job_id ?? doc.job_id;
+  if (doc.sender_email && resolvedJobId) {
+    try {
+      const { data: matchedCostItems } = await supabase
+        .from('cost_items')
+        .select('id')
+        .eq('vendor_email_snapshot', doc.sender_email)
+        .eq('job_id', resolvedJobId)
+        .eq('tenant_id', auth.tenantId)
+        .is('deleted_at', null)
+        .is('nf_document_id', null)
+        .order('created_at', { ascending: true })
+        .limit(10);
+
+      const found = matchedCostItems?.length ?? 0;
+
+      if (found > 0) {
+        const targetItem = matchedCostItems![0];
+
+        const costItemUpdate: Record<string, unknown> = {
+          nf_document_id: input.nf_document_id,
+          nf_request_status: 'aprovado',
+          nf_validation_ok: true,
+        };
+
+        // Usar drive_url do doc atualizado (pode estar em drive_url ou metadata)
+        const { data: docWithDriveUrl } = await supabase
+          .from('nf_documents')
+          .select('drive_url')
+          .eq('id', input.nf_document_id)
+          .single();
+
+        if (docWithDriveUrl?.drive_url) {
+          costItemUpdate.nf_drive_url = docWithDriveUrl.drive_url;
+        }
+
+        if (input.nf_value != null) {
+          costItemUpdate.nf_extracted_value = input.nf_value;
+        }
+
+        const { error: costSyncError } = await supabase
+          .from('cost_items')
+          .update(costItemUpdate)
+          .eq('id', targetItem.id)
+          .eq('tenant_id', auth.tenantId);
+
+        const updated = costSyncError ? 0 : 1;
+
+        if (costSyncError) {
+          console.error('[validate] cost_item sync erro:', costSyncError.message);
+        }
+
+        console.log(`[validate] cost_item sync: found=${found}, updated=${updated}`);
+      } else {
+        console.log(`[validate] cost_item sync: found=0, updated=0`);
+      }
+    } catch (costSyncErr) {
+      console.error('[validate] cost_item sync excecao (nao bloqueia):', costSyncErr);
+    }
+  }
+
+  // 7. Fire-and-forget: copiar NF para pasta do job no Drive
   if (doc.drive_file_id && resolvedJobId) {
     copyNfToJobFolder(getServiceClient(), auth.tenantId, {
       driveFileId: doc.drive_file_id,

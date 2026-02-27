@@ -231,6 +231,45 @@ export async function requestSendNf(req: Request, auth: AuthContext): Promise<Re
       if (updateError) {
         console.error('[request-send] falha ao atualizar nf_request_status:', updateError.message);
       }
+
+      // 6.5. Sincronizar cost_items — marcar como 'pedido' se houver match por email
+      try {
+        const { data: matchedCostItems, error: costFetchError } = await supabase
+          .from('cost_items')
+          .select('id')
+          .eq('vendor_email_snapshot', group.supplier_email)
+          .eq('tenant_id', auth.tenantId)
+          .is('deleted_at', null)
+          .in('nf_request_status', ['pendente', 'nao_aplicavel']);
+
+        if (costFetchError) {
+          console.error('[request-send] cost_items fetch erro:', costFetchError.message);
+        } else if (matchedCostItems && matchedCostItems.length > 0) {
+          const costItemIds = matchedCostItems.map((ci: { id: string }) => ci.id);
+
+          const { error: costUpdateError } = await supabase
+            .from('cost_items')
+            .update({
+              nf_request_status: 'pedido',
+              nf_requested_at: new Date().toISOString(),
+              nf_requested_by: auth.userId,
+            })
+            .in('id', costItemIds)
+            .eq('tenant_id', auth.tenantId);
+
+          const updated = costUpdateError ? 0 : matchedCostItems.length;
+
+          if (costUpdateError) {
+            console.error('[request-send] cost_items update erro:', costUpdateError.message);
+          }
+
+          console.log(`[request-send] cost_items sync: email=${group.supplier_email} updated=${updated}`);
+        } else {
+          console.log(`[request-send] cost_items sync: email=${group.supplier_email} updated=0`);
+        }
+      } catch (costSyncErr) {
+        console.error('[request-send] cost_items sync excecao (nao bloqueia):', costSyncErr);
+      }
     } catch (enqueueErr) {
       console.error(`[request-send] falha ao enfileirar evento para ${group.supplier_email}:`, enqueueErr);
       for (const recordId of group.financial_record_ids) {

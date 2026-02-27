@@ -251,6 +251,52 @@ export async function ingestNf(req: Request): Promise<Response> {
 
   console.log(`[ingest] NF criada: id=${newDoc.id} status=${newDoc.status}`);
 
+  // 6.5. Match secundario com cost_items
+  try {
+    const { data: matchedCostItems, error: costFetchError } = await serviceClient
+      .from('cost_items')
+      .select('id')
+      .eq('vendor_email_snapshot', input.sender_email)
+      .eq('tenant_id', input.tenant_id)
+      .is('deleted_at', null)
+      .is('nf_document_id', null)
+      .in('nf_request_status', ['pedido', 'pendente'])
+      .order('created_at', { ascending: true })
+      .limit(10);
+
+    if (costFetchError) {
+      console.error('[ingest] cost_items fetch erro:', costFetchError.message);
+    } else {
+      const found = matchedCostItems?.length ?? 0;
+
+      if (found > 0) {
+        const targetItem = matchedCostItems![0];
+
+        const { error: costUpdateError } = await serviceClient
+          .from('cost_items')
+          .update({
+            nf_document_id: newDoc.id,
+            nf_request_status: 'recebido',
+            nf_drive_url: input.drive_url,
+          })
+          .eq('id', targetItem.id)
+          .eq('tenant_id', input.tenant_id);
+
+        const updated = costUpdateError ? 0 : 1;
+
+        if (costUpdateError) {
+          console.error('[ingest] cost_items update erro:', costUpdateError.message);
+        }
+
+        console.log(`[ingest] cost_items sync: email=${input.sender_email} found=${found} updated=${updated}`);
+      } else {
+        console.log(`[ingest] cost_items sync: email=${input.sender_email} found=0 updated=0`);
+      }
+    }
+  } catch (costSyncErr) {
+    console.error('[ingest] cost_items sync excecao (nao bloqueia):', costSyncErr);
+  }
+
   // 7. Tornar arquivo acessivel via link (fire-and-forget)
   try {
     const saJson = await getSecret(serviceClient, `${input.tenant_id}_gdrive_service_account`);
