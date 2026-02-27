@@ -1,0 +1,163 @@
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,TITULO: ,Quer fazer? Senac!,CLIENTE:,Senac,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,NUMER JOB:,38,AGÊNCIA:,Não tem,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,SECUNDAGEM/ QTDADE DE VERSÕES/ REDUÇÕES: ,,ATENDIMENTO:,"Renata, Arthur",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,START DO JOB,25/01/2026,DIRETOR:,Sergio,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,QTDADE DE DIÁRIAS:,3,VENCIMENTO:,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,RESPONSÁVEL ORÇAMENTO: ,Marcello/Danillo,FATURAMENTO:,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,PRODUTORA P.J.: ,,START PÓS,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,COORDENADOR DE PRODUÇÃO:,,BUDGET:,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,"EXCLUSIVIDADE: (SE SIM, ESPEC. SEGMENTO)",,ELENCO -18:,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,FOTO STILL:,,AÉREOS:,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,MAKING OF:,,veiculação,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,"EDITOR/ PÓS NO SET (SE SIM, ESPEC. QTDE):",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+ID,JOB ID,Item,Sub Item,Destino da Verba,Valor UNITARIO,Qtde,Valor Total s/ HE,Valor TOTAL,Fornecedor,C/NF ou S/NF,Hora de Entrada,Hora de Saida,Total de Horas,Horas extras,Valor HE,OBSERVAÇÕES,DATA PAGAMENTO,TELEFONE,E-MAIL,Razão Social,Titular / Favorecido,CNPJ / CPF,Banco,Agência,Conta,C/P ou C/C,PIX,PEDIDO NF,FORNECEU NF?,NF,PAGO?,Quando?,COMPROVANTE PAGAMENTO,,,,
+1,38,1,0,DESEMBOLSOS DE VERBAS À VISTA,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID1_I1S0,NF_18991230_J38_ID1_I1S0,,TRUE
+2,38,1,1,Uber equipe," R$  1.000,00 ",2," R$  2.000,00 "," R$  2.000,00 ",,,PAGO,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,PAGO,,,PGTO_18991230_J38_ID2_I1S1,NF_18991230_J38_ID2_I1S1,,FALSE
+3,38,1,2,Verba de Produção," R$  1.000,00 ",2," R$  2.000,00 "," R$  2.000,00 ",,,PAGO,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,PAGO,,,PGTO_18991230_J38_ID3_I1S2,NF_18991230_J38_ID3_I1S2,,FALSE
+4,38,1,3,Verba de Arte," R$  16.500,00 ",1," R$  16.500,00 "," R$  16.500,00 ",,À vista,PAGO,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,PAGO,,,PGTO_18991230_J_ID3_I1S2,NF_18991230_J_ID3_I1S2,,FALSE
+5,38,1,4,Verba de Figurino," R$  6.000,00 ",1," R$  6.000,00 "," R$  6.000,00 ",,À vista,PAGO,,,,,,25/01/2026,,,,,,,,,,,,,,PAGO,,,PGTO_18991230_J38_ID5_I1S4,NF_18991230_J38_ID5_I1S4,,FALSE
+6,38,1,5,Reembolso - Equipe," R$  2.000,00 ",2," R$  4.000,00 "," R$  4.000,00 ",,,PAGO,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,PAGO,,,PGTO_18991230_J38_ID6_I1S5,NF_18991230_J38_ID6_I1S5,,FALSE
+7,38,1,5,Compras Emergenciais de Set," R$  500,00 ",2," R$  1.000,00 "," R$  1.000,00 ",,,PAGO,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,PAGO,,,PGTO_18991230_J38_ID7_I1S5,NF_18991230_J38_ID7_I1S5,,FALSE
+8,38,1,5,Impressões / Autorizações,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,PAGO,,,PGTO_18991230_J38_ID8_I1S5,NF_18991230_J38_ID8_I1S5,,TRUE
+9,38,1,5,Verba de visita de locação," R$  2.000,00 ",1," R$  2.000,00 "," R$  2.000,00 ",,,PAGO,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,PAGO,,,PGTO_18991230_J38_ID9_I1S5,NF_18991230_J38_ID9_I1S5,,FALSE
+10,38,2,0,ESTÚDIO,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID10_I2S0,NF_18991230_J38_ID10_I2S0,,TRUE
+11,38,2,1,Estúdio,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID11_I2S1,NF_18991230_J38_ID11_I2S1,,TRUE
+12,38,3,0,LOCAÇÃO,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID12_I3S0,NF_18991230_J38_ID12_I3S0,,TRUE
+13,38,3,1,Diretor de Locação," R$  10.000,00 ",1," R$  10.000,00 "," R$  10.000,00 ",,C/NF 45 dias,,TRUE,,18/12/2025,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID13_I3S1,NF_18991230_J38_ID13_I3S1,,FALSE
+14,38,3,2,Locação," R$  18.000,00 ",1," R$  18.000,00 "," R$  18.000,00 ",,À vista,PAGO," R$  19.500,00 ",,,,,25/01/2026,,,,,,,,,,,,,,PAGO,,,PGTO_18991230_J38_ID14_I3S2,NF_18991230_J38_ID14_I3S2,,FALSE
+15,38,4,0,DIREÇÃO DE ARTE/ FIGURINISTA/ EFEITOS,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID15_I4S0,NF_18991230_J38_ID15_I4S0,,TRUE
+16,38,4,1,Diretor(a) de arte," R$  18.000,00 ",1," R$  18.000,00 "," R$  18.000,00 ",Joan Josep ibars Pallas,C/NF 45 dias,,,,,,,11/03/2026,,j2i4p@yahoo.com.br,,,,Nubank,,,,j2i4p@icloud.com,,,,,,,PGTO_18991230_J38_ID16_I4S1,NF_18991230_J38_ID16_I4S1,,FALSE
+17,38,4,2,Arte para Fotos no Set,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID17_I4S2,NF_18991230_J38_ID17_I4S2,,TRUE
+18,38,4,3,Assistente de Arte," R$  5.000,00 ",1," R$  5.000,00 "," R$  5.000,00 ",,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID18_I4S3,NF_18991230_J38_ID18_I4S3,,FALSE
+19,38,4,4,Pesquisa e Layouts,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID19_I4S4,NF_18991230_J38_ID19_I4S4,,TRUE
+20,38,4,5,Produtor de Objetos," R$  5.000,00 ",1," R$  5.000,00 "," R$  5.000,00 ",,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID20_I4S5,NF_18991230_J38_ID20_I4S5,,FALSE
+21,38,4,6,Assistente de Objetos,,, R$  -   , R$  -   ,Kevin derek Caitano ,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,Derekevin@outlook.com.br,,,,,,,,31749539000171,,,,,,,PGTO_18991230_J38_ID21_I4S6,NF_18991230_J38_ID21_I4S6,,TRUE
+22,38,4,7,Contra Regra," R$  1.218,00 ",3," R$  3.654,00 "," R$  3.654,00 ",Michael William Caitano Coelho ,C/NF 45 dias,,,,,,,11/03/2026,,michael_mwc@hotmail.com,,,,,,,,54486779000126,,,,,,,PGTO_18991230_J38_ID22_I4S7,NF_18991230_J38_ID22_I4S7,,FALSE
+23,38,4,8,Assistente Contra Rega,,, R$  -   , R$  -   ,Sergio dos Santos Souza,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,ssouza.sergio93@gmail.com,,,,,,,,349802850001-96,,,,,,,PGTO_18991230_J38_ID23_I4S8,NF_18991230_J38_ID23_I4S8,,TRUE
+24,38,4,9,Ajudante Arte I," R$  700,00 ",3," R$  2.100,00 "," R$  2.100,00 ",Vinicius Trigo Pereira dos santos,C/NF 45 dias,,,,,,,11/03/2026,,Viniciustrigoproducao@gmail.com,,,,,,,,11932311387,,,,,,,PGTO_18991230_J38_ID24_I4S9,NF_18991230_J38_ID24_I4S9,,FALSE
+25,38,4,9,Ajudante Arte II," R$  700,00 ",3," R$  2.100,00 "," R$  2.100,00 ",Ricardo Nunes da Costa ,C/NF 45 dias,,,,,,,11/03/2026,,ricardoedge.al@gmail.com,,,,,,,,46.481.465/0001-02,,,,,,,PGTO_18991230_J38_ID25_I4S9,NF_18991230_J38_ID25_I4S9,,FALSE
+26,38,4,9,Ajudante Arte III," R$  700,00 ",3," R$  2.100,00 "," R$  2.100,00 ",Francisco Mutarelli ,C/NF 45 dias,,,,,,,11/03/2026,,Mutarellifrancisco@gmail.com,,,,,,,,236.120.468-10,,,,,,,PGTO_18991230_J38_ID26_I4S9,NF_18991230_J38_ID26_I4S9,,FALSE
+27,38,4,9,Ajudante Arte IV," R$  500,00 ",3," R$  1.500,00 "," R$  1.500,00 ",Jonathan ritter Caitano Coelho ,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,jonathanrittercaitano@gmail.com,,,,,,,,25033732000109,,,,,,,PGTO_18991230_J38_ID27_I4S9,NF_18991230_J38_ID27_I4S9,,FALSE
+28,38,4,10,Retirada de arte," R$  500,00 ",3," R$  1.500,00 "," R$  1.500,00 ",Arthur Caio Marau da Cruz ,C/NF 45 dias,,,,,,,11/03/2026,,kboficial@gmail.com,,,,,,,,36.660.560/0001-10,,,,,,,PGTO_18991230_J38_ID28_I4S10,NF_18991230_J38_ID28_I4S10,,FALSE
+29,38,4,10,Devolução de arte,,, R$  -   , R$  -   ,,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID29_I4S10,NF_18991230_J38_ID29_I4S10,,TRUE
+30,38,4,12,Produtor(a) de Figurino ," R$  5.000,00 ",1," R$  5.000,00 "," R$  5.000,00 ",Gabriela clara da Fonseca ,C/NF 45 dias,,,,,,,11/03/2026,,Gabrielaclara87@gmail.com,,,,,,,,341.110.548-89 ,,,,,,,PGTO_18991230_J38_ID30_I4S12,NF_18991230_J38_ID30_I4S12,,FALSE
+31,38,4,13,Assistente de figurino I,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID31_I4S13,NF_18991230_J38_ID31_I4S13,,TRUE
+32,38,4,13,Assistente de figurino II,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID32_I4S13,NF_18991230_J38_ID32_I4S13,,TRUE
+33,38,4,14,Camareira 1," R$  700,00 ",3," R$  2.100,00 "," R$  2.100,00 ",Claudia Batalha Moreno,C/NF 45 dias,,,,,,,11/03/2026,,claudia_moreno2008@hotmail.com,,,,,,,,31917111000190,,,,,,,PGTO_18991230_J38_ID33_I4S14,NF_18991230_J38_ID33_I4S14,,FALSE
+34,38,4,15,Assistente de Make,"833,33",3," R$  2.499,99 "," R$  2.499,99 ",Daiane Miranda da Silva,C/NF 45 dias,,,,,,,11/03/2026,,Daiane_mdf@hotmail.com,,,,,,,,44.749.436/0001-53 ,,,,,,,PGTO_18991230_J38_ID34_I4S15,NF_18991230_J38_ID34_I4S15,,FALSE
+35,38,4,16,Make/hair," R$  1.500,00 ",3," R$  4.500,00 "," R$  4.500,00 ",,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID35_I4S16,NF_18991230_J38_ID35_I4S16,,FALSE
+36,38,4,17,Assistente de Make," R$  500,00 ",3," R$  1.500,00 "," R$  1.500,00 ",Claudenice do Nascimento Vilas Boas,C/NF 45 dias,,,,,,,11/03/2026,,mere.vilasboas72@gmail.com,,,,,,,,11999486014,PEDIDO,SIM,https://drive.google.com/file/d/1FYw_4vYIHL551F6iLOnK8vsMyR7ayI5j/view?usp=drivesdk,,,,PGTO_18991230_J38_ID36_I4S17,NF_18991230_J38_ID36_I4S17,,FALSE
+37,38,5,0,DIREÇÃO DE CENA / DIREÇÃO DE FOTOGRAFIA/ SOM,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID37_I5S0,NF_18991230_J38_ID37_I5S0,,TRUE
+38,38,5,1,Shooting Board, R$  -   ,0, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID38_I5S1,NF_18991230_J38_ID38_I5S1,,TRUE
+39,38,5,2,Diretor de cena,"$50.000,00",1," R$  50.000,00 "," R$  50.000,00 ",,C/NF 45 dias,PAGO 25K,,,,,,11/03/2026,,Kiko.lomba@me.com,,,,,,,,,,,,,,,PGTO_18991230_J38_ID39_I5S2,NF_18991230_J38_ID39_I5S2,,FALSE
+40,38,5,3,Assistente de direção I," R$  15.000,00 ",1," R$  15.000,00 "," R$  15.000,00 ",Ana Claudia Laforga,C/NF 45 dias,,,,,,,13/02/2026,,analaforga@gmail.com,,,,001 - Banco do Brasil ,,,,17457239000198,PEDIDO,SIM,https://drive.google.com/file/d/1PmOLitFhPq0Lo07cdygcq8kwo_JZgVO1/view?usp=drivesdk,PAGO,10/02/2026,PGTO_20260210_J38_ID40_I5S3.pdf,PGTO_20260210_J38_ID40_I5S3,NF_20260210_J38_ID40_I5S3,,FALSE
+41,38,5,3,Assistente de direção II," R$  7.000,00 ",1," R$  7.000,00 "," R$  7.000,00 ",Hanna Beatriz Queiroz Carli,C/NF 45 dias,,,,,,,13/02/2026,,hannaq98@gmail.com,,,,260 (nubank),,,,37624732000162,PEDIDO,SIM,https://drive.google.com/file/d/1yc_vcOR7xAaWIGcgtCrKncnl5DOojewM/view?usp=drivesdk,PAGO,10/02/2026,PGTO_20260210_J38_ID41_I5S3.pdf,PGTO_20260210_J38_ID41_I5S3,NF_20260210_J38_ID41_I5S3,,FALSE
+42,38,5,4,Logger / Script," R$  2.400,00 ",3," R$  7.200,00 "," R$  7.200,00 ",José Luiz Lerma ,C/NF 45 dias,,,,,,,11/03/2026,,Joseluizlerma@hotmail.com,,,,A,,,,18549941000144,,,,,,,PGTO_18991230_J38_ID42_I5S4,NF_18991230_J38_ID42_I5S4,,FALSE
+43,38,5,5,Diretor de fotografia ," R$  22.000,00 ",1," R$  22.000,00 "," R$  22.000,00 ",,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID43_I5S5,NF_18991230_J38_ID43_I5S5,,FALSE
+44,38,5,5,Operador de Câmera,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID44_I5S5,NF_18991230_J38_ID44_I5S5,,TRUE
+45,38,5,5,Assistente de Câmera I ," R$  3.000,00 ",3," R$  9.000,00 "," R$  9.000,00 ",Willian de Oliveira Alves ,C/NF 45 dias,,,,,,,11/03/2026,,Wsfilmsbr@gmail.com,,,,C6 bank,,,,61.263.819/0001-36,,,,,,,PGTO_18991230_J38_ID45_I5S5,NF_18991230_J38_ID45_I5S5,,FALSE
+46,38,5,6,Assistente de Câmera II," R$  1.500,00 ",3," R$  4.500,00 "," R$  4.500,00 ",Paul Christian Carbone ,C/NF 45 dias,,,,,,,11/03/2026,,paulcbfilmes@gmail.com ,,,,Nu bank ,,,,44.229.215/0001-54 ,,,,,,,PGTO_18991230_J38_ID46_I5S6,NF_18991230_J38_ID46_I5S6,,FALSE
+47,38,5,6,DIT (Digital Imaging Technician),,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID47_I5S6,NF_18991230_J38_ID47_I5S6,,TRUE
+48,38,5,7,Video assist / Playback," R$  1.000,00 ",1," R$  1.000,00 "," R$  1.000,00 ",João Vitor Eltz,C/NF 45 dias,,,,,,,11/03/2026,,joaovitoreltz@gmail.com,,,,Nubank 0260,,,,joaovitoreltz@gmail.com,,,,,,,PGTO_18991230_J38_ID48_I5S7,NF_18991230_J38_ID48_I5S7,,FALSE
+49,38,5,7,Video assist / Playback," R$  1.000,00 ",2," R$  2.000,00 "," R$  2.000,00 ",,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+50,38,5,8,Making Off," R$  1.500,00 ",4," R$  6.000,00 "," R$  6.000,00 ",Rogério Engelhardt dos Santos,C/NF 45 dias,,,,,,,11/03/2026,,rogerio.reds2@gmail.com,,,,336 - Banco C6 S.A.,,,,40.175.024/0001-04,PEDIDO,NÃO,,,,,PGTO_18991230_J38_ID50_I5S8,NF_18991230_J38_ID50_I5S8,,FALSE
+51,38,5,9,Chefe de elétrica," R$  11.000,00 ",1," R$  11.000,00 "," R$  11.000,00 ",Cristian Zinngraf,C/NF 45 dias,,,,,,,11/03/2026,,cristianeletrica@hotmail.com,,,,Inter,,,,07.232.953/0001-24,,,,,,,PGTO_18991230_J38_ID51_I5S9,NF_18991230_J38_ID51_I5S9,,FALSE
+52,38,5,10,Assistente de elétrica I," R$  3.100,00 ",1," R$  3.100,00 "," R$  3.100,00 ",Tiago Barbosa de Oliveira ,C/NF 45 dias,,,,,,,11/03/2026,,Tikobmx@hotmail.com,,,,Nubank,,,,47838445000109,,,,,,,PGTO_18991230_J38_ID52_I5S10,NF_18991230_J38_ID52_I5S10,,FALSE
+53,38,5,10,Assistente de elétrica II," R$  4.100,00 ",1," R$  4.100,00 "," R$  4.100,00 ",Helio de Jesus Dantas ,C/NF 45 dias,,,,,,,11/03/2026,,heliodantas@live.com,,,,Caixa econômica ,,,,11963870153,,,,,,,PGTO_18991230_J38_ID53_I5S10,NF_18991230_J38_ID53_I5S10,,FALSE
+54,38,5,10,Assistente de elétrica III," R$  3.100,00 ",1," R$  3.100,00 "," R$  3.100,00 ",Genivaldo Barreto santos ,C/NF 45 dias,,,,,,,11/03/2026,,genivaldobarreto53@gmail.com,,,,Itaú ,,,,24 916 969 0001 75,,,,,,,PGTO_18991230_J38_ID54_I5S10,NF_18991230_J38_ID54_I5S10,,FALSE
+55,38,5,10,Assistente de elétrica IV," R$  1.600,00 ",3," R$  4.800,00 "," R$  4.800,00 ",Wellington Robson da Silva Paes de Souza ,C/NF 45 dias,,,,,,,11/03/2026,,welcineservices@gmail.com.br,,,,336,,,,60.344.054/0001-04,,,,,,,PGTO_18991230_J38_ID55_I5S10,NF_18991230_J38_ID55_I5S10,,FALSE
+56,38,5,10,Assistente de eletrica ," R$  2.050,00 ",1," R$  2.050,00 "," R$  2.050,00 ",Edwilson Damião Guedes ,C/NF 45 dias,,,,,,,,,,,,,,,,,,,,,,,,,,,
+57,38,5,11,Chefe de maquinária ," R$  2.400,00 ",3," R$  7.200,00 "," R$  7.200,00 ",Rosivaldo jesus de almeida,C/NF 45 dias,,,,,,,11/03/2026,,rosivaldo.almeida@hotmail.com,,,,Banco Itaú  Empresa,,,,Ele E Maq Filmagens Lta Me,,,,,,,PGTO_18991230_J38_ID57_I5S11,NF_18991230_J38_ID57_I5S11,,FALSE
+58,38,5,12,Assistente de maquinária I," R$  1.300,00 ",3," R$  3.900,00 "," R$  3.900,00 ",Joelson Teodoro dos Santos ,C/NF 45 dias,,,,,,,11/03/2026,,joelsonsp_2006@hotmail.com,,,,Caixa ,,,,55626259000134,,,,,,,PGTO_18991230_J38_ID58_I5S12,NF_18991230_J38_ID58_I5S12,,FALSE
+59,38,5,12,Assistente de maquinária II," R$  1.300,00 ",3," R$  3.900,00 "," R$  3.900,00 ",Valdomiro Santos Lima ,C/NF 45 dias,,,,,,,11/03/2026,,valdomiro73@gmail.com,,,,Inter,,,,53.047.644/0001-00,,,,,,,PGTO_18991230_J38_ID59_I5S12,NF_18991230_J38_ID59_I5S12,,FALSE
+60,38,5,12,Assistente de maquinária III," R$  3.100,00 ",3," R$  9.300,00 "," R$  9.300,00 ",José Warlen Alves Brito ,C/NF 45 dias,,,,,,,11/03/2026,,miajwb@icloud.com,,,,Itau,,,,44773116000139,,,,,,,PGTO_18991230_J38_ID60_I5S12,NF_18991230_J38_ID60_I5S12,,FALSE
+61,38,5,13,Carga e Devolução de Elétrica," R$  500,00 ",, R$  -   , R$  -   ,,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID61_I5S13,NF_18991230_J38_ID61_I5S13,,TRUE
+62,38,5,14,Carga e Devolução de Maquinária," R$  500,00 ",, R$  -   , R$  -   ,,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID62_I5S14,NF_18991230_J38_ID62_I5S14,,TRUE
+63,38,5,15,Operador de Drone,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID63_I5S15,NF_18991230_J38_ID63_I5S15,,TRUE
+64,38,5,16,Operador de Ronin / Steadicam,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID64_I5S16,NF_18991230_J38_ID64_I5S16,,TRUE
+65,38,5,17,Técnico de Som Direto,,, R$  -   , R$  -   ,,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID65_I5S17,NF_18991230_J38_ID65_I5S17,,TRUE
+66,38,5,16,Microfonista,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID66_I5S16,NF_18991230_J38_ID66_I5S16,,TRUE
+67,38,5,16,Assistente de Som,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID67_I5S16,NF_18991230_J38_ID67_I5S16,,TRUE
+68,38,6,0,PRODUÇÃO,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID68_I6S0,NF_18991230_J38_ID68_I6S0,,TRUE
+69,38,6,1,Produtor Executivo,,, R$  -   , R$  -   ,,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID69_I6S1,NF_18991230_J38_ID69_I6S1,,TRUE
+70,38,6,1,Diretor de Produção," R$  20.000,00 ",1," R$  20.000,00 "," R$  20.000,00 ",Marcello Luiz Garofalo Avian ,C/NF 45 dias,,,,,,,11/03/2026,,marcelloavian@gmail.com,,,,NU Bank,,,,marcelloavian@gmail.com ,,,,,,,PGTO_18991230_J38_ID70_I6S1,NF_18991230_J38_ID70_I6S1,,FALSE
+71,38,6,2,Coordenador de Produção,,, R$  -   , R$  -   ,,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID71_I6S2,NF_18991230_J38_ID71_I6S2,,TRUE
+72,38,6,3,Produtor," R$  5.000,00 ",1," R$  5.000,00 "," R$  5.000,00 ",,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID72_I6S3,NF_18991230_J38_ID72_I6S3,,FALSE
+73,38,6,4,Ajudante de produção I,,, R$  -   , R$  -   ,,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID73_I6S4,NF_18991230_J38_ID73_I6S4,,TRUE
+74,38,6,5,Ajudante de produção II ," R$  1.500,00 ",3," R$  4.500,00 "," R$  4.500,00 ",Eduardo Santiago ,C/NF 45 dias,,,,,,,11/03/2026,,eduardomcsantiago@gmail.com,,,,323 Mercado Pago,,,,11957570512,,,,,,,PGTO_18991230_J38_ID74_I6S5,NF_18991230_J38_ID74_I6S5,,FALSE
+75,38,6,6,Ajudante de produção III," R$  900,00 ",3," R$  2.700,00 "," R$  2.700,00 ",Alexandre Luiz da silva,C/NF 45 dias,,,,,,,11/03/2026,,ale.gda92@gmail.com,,,,Cora,,,,11 98945-5749,,,,,,,PGTO_18991230_J38_ID75_I6S6,NF_18991230_J38_ID75_I6S6,,FALSE
+76,38,6,7,Ajudante de produção IV," R$  900,00 ",3," R$  2.700,00 "," R$  2.700,00 ",Ivan Carlos Viana de Oliveira ,C/NF 45 dias,,,,,,,11/03/2026,,Ivancarlos.voliveira@gmail.com,,,,Neon ,,,,9bbab0c5-2d48-44d1-9c01-57c3ca6e0bdb,,,,,,,PGTO_18991230_J38_ID76_I6S7,NF_18991230_J38_ID76_I6S7,,FALSE
+77,38,6,8,Carga e Devolução de Produção," R$  900,00 ",3," R$  2.700,00 "," R$  2.700,00 ",Fernando Luiz de Souza Oliveira ,C/NF 45 dias,,,,,,,11/03/2026,,floliveira3210@gmail.com,,,,0260 Nu Pagamentos S.A. - Instituição de Pagamento,,,,132.159.318.00,,,,,,,PGTO_18991230_J38_ID77_I6S8,NF_18991230_J38_ID77_I6S8,,FALSE
+78,38,6,9,Efeitista,,, R$  -   , R$  -   ,,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID78_I6S9,NF_18991230_J38_ID78_I6S9,,TRUE
+79,38,6,10,Segurança de Set,,, R$  -   , R$  -   ,,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID79_I6S10,NF_18991230_J38_ID79_I6S10,,TRUE
+80,38,6,11,Seguro,,, R$  -   , R$  -   ,,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID80_I6S11,NF_18991230_J38_ID80_I6S11,,TRUE
+81,38,6,12,Bombeiro/ Socorrista,,, R$  -   , R$  -   ,,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID81_I6S12,NF_18991230_J38_ID81_I6S12,,TRUE
+82,38,6,12,Taxa Administrativa (Contrato e Alvará),,, R$  -   , R$  -   ,,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID82_I6S12,NF_18991230_J38_ID82_I6S12,,TRUE
+83,38,6,13,Previsão do Tempo,,, R$  -   , R$  -   ,,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID83_I6S13,NF_18991230_J38_ID83_I6S13,,TRUE
+84,38,7,0,VEÍCULOS,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID84_I7S0,NF_18991230_J38_ID84_I7S0,,TRUE
+85,38,7,1,Veículo - Pacote veículos job ," R$  8.500,00 ",3," R$  25.500,00 "," R$  25.500,00 ",,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID85_I7S1,NF_18991230_J38_ID85_I7S1,,FALSE
+86,38,7,2,Transporte - Robo," R$  1.813,50 ",1," R$  1.813,50 "," R$  1.813,50 ",TRANSKINDERR LOCADORA DE VEÍCULOS,C/NF 45 dias,,,,,,,11/03/2026,,paulokinderr@uol.com.br,,,,237 - BRADESCO,,,,07.163.326/0001-89 ,PEDIDO,NÃO,,,,,PGTO_18991230_J38_ID86_I7S2,NF_18991230_J38_ID86_I7S2,,FALSE
+87,38,7,3,Tranporte Cliente," R$  150,00 ",1," R$  150,00 "," R$  150,00 ",,À vista,Clovis,,,,,,,,,,,,,,,,,,,,PAGO,PAGO,,,,,
+88,38,7,3,,,, R$  -   , R$  -   ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+89,38,7,3,,,, R$  -   , R$  -   ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+90,38,8,0,"PASSEGEM, HOSPEDAGEM e ALIMENTAÇÃO",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID90_I8S0,NF_18991230_J38_ID90_I8S0,,TRUE
+91,38,8,1,Alimentação equipe ," R$  33.900,00 ",1," R$  33.900,00 "," R$  33.900,00 ",,C/NF 45 dias,,,,,,,11/03/2026,,financeiro@arcaeventos.com.br,,,,,,,,,PEDIDO,SIM,https://drive.google.com/file/d/1BwhVKqRILlctymqzevV3RtCYC3f6-VVS/view?usp=drivesdk,,,,PGTO_18991230_J38_ID91_I8S1,NF_18991230_J38_ID91_I8S1,,FALSE
+92,38,8,2,Transporte catering,,, R$  -   , R$  -   ,,C/NF 45 dias,kiko visita tecnica,KIKO PPM,ARTHUR,KIKO GRAVACAO,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID92_I8S2,NF_18991230_J38_ID92_I8S2,,TRUE
+93,38,8,3,Hotel," R$  6.228,00 ",1," R$  6.228,00 "," R$  6.228,00 ",,C/NF 45 dias,608,1920,2500,"1.200,00",,,11/03/2026,,,,,,,,,,,,,,PAGO,,,PGTO_18991230_J38_ID93_I8S3,NF_18991230_J38_ID93_I8S3,,FALSE
+94,38,8,4,Passagens ," R$  21.728,06 ",1," R$  21.728,06 "," R$  21.728,06 ",,C/NF 45 dias,3400,4100,"2.828,06",4700,,,11/03/2026,,,,,,,,,,,,,,PAGO,,,PGTO_18991230_J38_ID94_I8S4,NF_18991230_J38_ID94_I8S4,,FALSE
+95,38,9,1,"CÂMERA. LUZ, MAQUINÁRIA, MOVIMENTO, GERADOR e INFRA DE PRODUÇÃO",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID95_I9S1,NF_18991230_J38_ID95_I9S1,,TRUE
+96,38,9,2,Câmera/Acessorio/Lente ," R$  22.000,00 ",1," R$  22.000,00 "," R$  22.000,00 ",,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID96_I9S2,NF_18991230_J38_ID96_I9S2,,FALSE
+97,38,9,3,Luz e Maquinária," R$  34.000,00 ",1," R$  34.000,00 "," R$  34.000,00 ",Fullcine,C/NF 45 dias,,,,,,,11/03/2026,,financeiro@fullcine.com.br,,,,Itaú Unibanco,,,,02.513.238/0002-27,,,,,,,PGTO_18991230_J38_ID97_I9S3,NF_18991230_J38_ID97_I9S3,,FALSE
+98,38,9,4,Kambo - Gravacao Diaria 1," R$  31.000,00 ",1," R$  31.000,00 "," R$  31.000,00 ",,À vista,,,,,,,22/01/2026,,edu@kambo-t.com.br,,,,,,,,,PEDIDO,SIM,https://drive.google.com/file/d/1Sc3xXH7leUYkkwiR1VAC4dVXOX_QG7Dm/view?usp=drivesdk,PAGO,,,PGTO_18991230_J38_ID98_I9S4,NF_18991230_J38_ID98_I9S4,,FALSE
+99,38,9,5,Rádios,,1, R$  -   , R$  -   ,Lafayette Martins Ferreira,C/NF 45 dias,,,,,,,11/03/2026,,eliteradioslocacao@gmail.com,,,,237,,,,51720930000150,,,,,,,PGTO_18991230_J38_ID99_I9S5,NF_18991230_J38_ID99_I9S5,,TRUE
+100,38,9,6,Consumíveis + Rat pack / kit Luminair ,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID100_I9S6,NF_18991230_J38_ID100_I9S6,,TRUE
+101,38,9,7,Adaptadores + Dimmer,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID101_I9S7,NF_18991230_J38_ID101_I9S7,,TRUE
+102,38,9,8,Infraestrutura de Produção," R$  1.500,00 ",3," R$  4.500,00 "," R$  4.500,00 ",,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID102_I9S8,NF_18991230_J38_ID102_I9S8,,FALSE
+103,38,9,9,HD externo 4 TB ,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID103_I9S9,NF_18991230_J38_ID103_I9S9,,TRUE
+104,38,9,10,Gerador," R$  1.000,00 ",3," R$  3.000,00 "," R$  3.000,00 ",ALBERTO MARIANO DE OLIVEIRA ,C/NF 45 dias,,,,,,,11/03/2026,,Betogerador@gmail.com,,,,Santander,,,,20.289.874/0001-18,,,,,,,PGTO_18991230_J38_ID104_I9S10,NF_18991230_J38_ID104_I9S10,,FALSE
+105,38,9,14,SteadyCam," R$  6.000,00 ",3," R$  18.000,00 "," R$  18.000,00 ",,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID105_I9S14,NF_18991230_J38_ID105_I9S14,,FALSE
+106,38,9,15,Drone," R$  2.300,00 ",1," R$  2.300,00 "," R$  2.300,00 ",Emerson Pena,C/NF 45 dias,,,,,,,11/03/2026,,coptercam@me.com,,,,Itau 341,,,,28.757.944/0001-27,PEDIDO,SIM,https://drive.google.com/file/d/1cBjQfC_N_RKtZUOFCUmFRYCqx5JHBQXj/view?usp=drivesdk,,,,PGTO_18991230_J38_ID106_I9S15,NF_18991230_J38_ID106_I9S15,,FALSE
+107,38,10,0,PRODUÇÃO DE CASTING,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID107_I10S0,NF_18991230_J38_ID107_I10S0,,TRUE
+108,38,10,1,Produtor de casting," R$  4.000,00 ",1," R$  4.000,00 "," R$  4.000,00 ",Vanessa Bruel de Carvalho Albernás,C/NF 45 dias,,,,,,,11/03/2026,,vanessaalbernas.casting@gmail.com,,,,336 C6 S.A,,,,15766214000140,,,,,,,PGTO_18991230_J38_ID108_I10S1,NF_18991230_J38_ID108_I10S1,,FALSE
+109,38,10,1,Elenco - Produtor (Com hora extra),,, R$  -   , R$  -   ,,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID109_I10S1,NF_18991230_J38_ID109_I10S1,,TRUE
+110,38,10,2,Elenco - Produtor(a) agencia + Reembolso UBER," R$  39.399,36 ",1," R$  39.399,36 "," R$  39.399,36 ",Vanessa Bruel de Carvalho Albernás,,,,,,,,25/02/2026,,vanessaalbernas.casting@gmail.com,,,,336 C6 S.A,,,,15766214000140,PEDIDO,SIM,https://drive.google.com/file/d/11amNnPv8HWq8ttuFqfNgZRdjL6dGc9kN/view?usp=drivesdk,,,,PGTO_18991230_J38_ID110_I10S2,NF_18991230_J38_ID110_I10S2,,FALSE
+111,38,10,2,Elenco Telma," R$  9.000,00 ",1," R$  9.000,00 "," R$  9.000,00 ",,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID111_I10S2,NF_18991230_J38_ID111_I10S2,,FALSE
+112,38,10,3,Reembolso elenco,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID112_I10S3,NF_18991230_J38_ID112_I10S3,,TRUE
+113,38,11,0,OBJETOS DE CENA,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID113_I11S0,NF_18991230_J38_ID113_I11S0,,TRUE
+114,38,11,1,Itens Cenográficos," R$  20.100,00 ",1," R$  20.100,00 "," R$  20.100,00 ",,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID114_I11S1,NF_18991230_J38_ID114_I11S1,,FALSE
+115,38,12,0,Still / Bastidores,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID115_I12S0,NF_18991230_J38_ID115_I12S0,,TRUE
+116,38,12,1,Fotógrafo Still,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID116_I12S1,NF_18991230_J38_ID116_I12S1,,TRUE
+117,38,12,1,Assistente de Fotógrafo,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID117_I12S1,NF_18991230_J38_ID117_I12S1,,TRUE
+118,38,13,0,PÓS PRODUÇÃO / TRILHA / ROTEIRISTA / CONDECINE,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID118_I13S0,NF_18991230_J38_ID118_I13S0,,TRUE
+119,38,13,1,Coordenador de Pós," R$  99.000,00 ",1," R$  99.000,00 "," R$  99.000,00 ",,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID119_I13S1,NF_18991230_J38_ID119_I13S1,,FALSE
+120,38,13,2,Montador,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID120_I13S2,NF_18991230_J38_ID120_I13S2,,TRUE
+121,38,13,3,Finalizador/VFX,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID121_I13S3,NF_18991230_J38_ID121_I13S3,,TRUE
+122,38,13,4,Motion Design,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID122_I13S4,NF_18991230_J38_ID122_I13S4,,TRUE
+123,38,13,3,Designer Gráfico,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID123_I13S3,NF_18991230_J38_ID123_I13S3,,TRUE
+124,38,13,3,Técnico de Áudio,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID124_I13S3,NF_18991230_J38_ID124_I13S3,,TRUE
+125,38,13,3,Mixador,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID125_I13S3,NF_18991230_J38_ID125_I13S3,,TRUE
+126,38,13,3,Finalizador/VFX,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID126_I13S3,NF_18991230_J38_ID126_I13S3,,TRUE
+127,38,13,3,Compositor Musical/Trilha," R$  30.000,00 ",1," R$  30.000,00 "," R$  30.000,00 ",,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID127_I13S3,NF_18991230_J38_ID127_I13S3,,FALSE
+128,38,13,3,Roteirista,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID128_I13S3,NF_18991230_J38_ID128_I13S3,,TRUE
+129,38,13,3,Locutor,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID129_I13S3,NF_18991230_J38_ID129_I13S3,,TRUE
+130,38,13,3,Condecine," R$  4.500,00 ",1," R$  4.500,00 "," R$  4.500,00 ",,C/NF 60 dias,,,,,,,26/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID130_I13S3,NF_18991230_J38_ID130_I13S3,,FALSE
+131,38,13,3,Responsável por Condecine," R$  400,00 ",1," R$  400,00 "," R$  400,00 ",,C/NF 60 dias,,,,,,,26/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID131_I13S3,NF_18991230_J38_ID131_I13S3,,FALSE
+132,38,14,0,ADMINISTRATIVO LEGAL / FINANCEIRO,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID132_I14S0,NF_18991230_J38_ID132_I14S0,,TRUE
+133,38,14,1,Atendimento," R$  15.000,00 ",1," R$  15.000,00 "," R$  15.000,00 ",,C/NF 45 dias,,,,,,,13/02/2026,,renata@mareposproducao.com,,,,,,,,,PEDIDO,SIM,https://drive.google.com/file/d/1xfK7LEp4C_r9m15jd5IZxhAqYl3_Uy0P/view?usp=drivesdk,PAGO,13/02/2026,,PGTO_20260213_J38_ID133_I14S1,NF_20260213_J38_ID133_I14S1,,FALSE
+134,38,14,2,Assistente de Atendimento," R$  5.000,00 ",1," R$  5.000,00 "," R$  5.000,00 ",,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,PAGO,,,PGTO_18991230_J38_ID134_I14S2,NF_18991230_J38_ID134_I14S2,,FALSE
+135,38,14,2,Seguro Equipe," R$  2.500,00 ",1," R$  2.500,00 "," R$  2.500,00 ",,C/NF 45 dias,,,,,,,11/03/2026,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID135_I14S2,NF_18991230_J38_ID135_I14S2,,FALSE
+136,38,14,2,Advogado," R$  1.068,04 ",1," R$  1.068,04 "," R$  1.068,04 ",,À vista,,,,,,,25/01/2026,,,,,,,,,,,,,,PAGO,,,PGTO_18991230_J38_ID136_I14S2,NF_18991230_J38_ID136_I14S2,,FALSE
+137,38,15,0,MONSTRO,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID137_I15S0,NF_18991230_J38_ID137_I15S0,,TRUE
+138,38,15,1,Monstro para o Job,,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID138_I15S1,NF_18991230_J38_ID138_I15S1,,TRUE
+139,38,99,0,MAO DE OBRA INTERNA,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID139_I99S0,NF_18991230_J38_ID139_I99S0,,TRUE
+140,38,15,1,"Equipe Fixa (produtora, escritório, etc)",,, R$  -   , R$  -   ,,,,,,,,,COLUNA NOTA ZERADO E/OU START DO JOB ZERADO,,,,,,,,,,,,,,,,,PGTO_18991230_J38_ID140_I15S1,NF_18991230_J38_ID140_I15S1,,TRUE
+,4598,,,TOTAL,,," R$  765.890,95 "," R$  765.890,95 ",,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,698000,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,," R$  (67.890,95)",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
