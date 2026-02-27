@@ -42,6 +42,28 @@ export async function deleteVendor(
     throw new AppError('NOT_FOUND', 'Vendor nao encontrado', 404);
   }
 
+  // Verificar se vendor tem cost_items associados (nao deletados)
+  const { count: costItemsCount, error: countErr } = await supabase
+    .from('cost_items')
+    .select('id', { count: 'exact', head: true })
+    .eq('vendor_id', vendorId)
+    .eq('tenant_id', auth.tenantId)
+    .is('deleted_at', null);
+
+  if (countErr) {
+    console.error('[vendors/delete] erro ao verificar cost_items:', countErr.message);
+    throw new AppError('INTERNAL_ERROR', 'Erro ao verificar dependencias', 500);
+  }
+
+  if (costItemsCount && costItemsCount > 0) {
+    throw new AppError(
+      'CONFLICT',
+      `Vendor possui ${costItemsCount} item(ns) de custo associado(s). Remova ou reatribua antes de deletar.`,
+      409,
+      { cost_items_count: costItemsCount },
+    );
+  }
+
   // Soft delete: setar deleted_at com timestamp atual
   const { error: deleteErr } = await supabase
     .from('vendors')

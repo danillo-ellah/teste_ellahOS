@@ -33,6 +33,11 @@ const EXCLUDED_FIELDS = new Set([
   'payment_proof_filename',
   'actual_paid_value',
   'suggested_status',
+  // GENERATED columns — PostgreSQL nao permite INSERT em colunas GENERATED ALWAYS
+  'is_category_header',
+  'total_value',
+  'overtime_value',
+  'total_with_overtime',
 ]);
 
 export async function handleCopy(req: Request, auth: AuthContext, id: string): Promise<Response> {

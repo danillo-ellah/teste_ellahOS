@@ -88,7 +88,9 @@ export async function handlePay(req: Request, auth: AuthContext): Promise<Respon
     updatePayload.payment_proof_url = input.payment_proof_url;
   }
 
-  if (input.actual_paid_value != null) {
+  // actual_paid_value so aplica se houver um unico item no lote
+  // Para lotes com multiplos itens, o valor pago individual deve ser definido por item
+  if (input.actual_paid_value != null && input.cost_item_ids.length === 1) {
     updatePayload.actual_paid_value = input.actual_paid_value;
   }
 

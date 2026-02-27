@@ -43,7 +43,14 @@ export async function suggestVendors(
     throw new AppError('INTERNAL_ERROR', dbError.message, 500);
   }
 
-  console.log('[vendors/suggest] retornando', vendors?.length ?? 0, 'sugestoes');
+  // Mascarar CPF/CNPJ para seguranca (mostra apenas ultimos 4 digitos)
+  const maskedVendors = (vendors ?? []).map((v: Record<string, unknown>) => ({
+    ...v,
+    cpf: v.cpf ? `***.***.${String(v.cpf).slice(-6, -2)}-${String(v.cpf).slice(-2)}` : null,
+    cnpj: v.cnpj ? `**.***.***/${String(v.cnpj).slice(-6, -2)}-${String(v.cnpj).slice(-2)}` : null,
+  }));
 
-  return success(vendors ?? []);
+  console.log('[vendors/suggest] retornando', maskedVendors.length, 'sugestoes');
+
+  return success(maskedVendors);
 }

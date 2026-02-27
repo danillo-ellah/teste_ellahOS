@@ -64,7 +64,11 @@ export async function handleBudgetSummary(
   );
   const totalPaid = allItems
     .filter((item) => item.payment_status === 'pago')
-    .reduce((sum, item) => sum + Number(item.actual_paid_value ?? 0), 0);
+    .reduce(
+      (sum, item) =>
+        sum + Number(item.actual_paid_value ?? item.total_with_overtime ?? 0),
+      0,
+    );
 
   // Agrupar por categoria (item_number)
   const categoryMap = new Map<
@@ -101,7 +105,7 @@ export async function handleBudgetSummary(
     cat.items_total += 1;
 
     if (item.payment_status === 'pago') {
-      cat.total_paid += Number(item.actual_paid_value ?? 0);
+      cat.total_paid += Number(item.actual_paid_value ?? item.total_with_overtime ?? 0);
       cat.items_paid += 1;
     }
   }

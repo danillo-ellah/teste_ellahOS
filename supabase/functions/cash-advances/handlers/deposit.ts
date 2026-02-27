@@ -71,20 +71,37 @@ export async function handleDeposit(
 
   const newAmountDeposited = (advance.amount_deposited ?? 0) + amount;
 
-  // Atualizar amount_deposited (acumulando)
+  // Atualizar amount_deposited com lock otimista (verifica valor anterior para evitar race condition)
   const { data: updatedAdvance, error: updateError } = await client
     .from('cash_advances')
     .update({ amount_deposited: newAmountDeposited })
     .eq('id', id)
     .eq('tenant_id', auth.tenantId)
+    .eq('amount_deposited', advance.amount_deposited ?? 0)
     .select('*')
     .single();
 
   if (updateError) {
     console.error('[cash-advances/deposit] erro ao atualizar:', updateError.message);
+    // Se o update nao encontrou a row, houve conflito (outro deposito simultaneo)
+    if (updateError.code === 'PGRST116') {
+      throw new AppError(
+        'CONFLICT',
+        'Conflito de atualizacao — outro deposito foi registrado simultaneamente. Tente novamente.',
+        409,
+      );
+    }
     throw new AppError('INTERNAL_ERROR', 'Erro ao registrar deposito', 500, {
       detail: updateError.message,
     });
+  }
+
+  if (!updatedAdvance) {
+    throw new AppError(
+      'CONFLICT',
+      'Conflito de atualizacao — outro deposito foi registrado simultaneamente. Tente novamente.',
+      409,
+    );
   }
 
   // Inserir historico no job

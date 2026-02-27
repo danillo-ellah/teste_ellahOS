@@ -15,6 +15,9 @@ const CALENDAR_LOOKAHEAD_DAYS = 30;
 // Janela para alerta de NF estagnada: pedido ha mais de 7 dias
 const NF_STALE_DAYS = 7;
 
+// Roles autorizados para ver dashboard financeiro do job
+const ALLOWED_ROLES = ['financeiro', 'produtor_executivo', 'admin', 'ceo'];
+
 interface Alert {
   type: 'overdue' | 'nf_stale' | 'value_divergence';
   cost_item_id: string;
@@ -31,7 +34,13 @@ export async function handleJobDashboard(
     userId: auth.userId,
     tenantId: auth.tenantId,
     jobId,
+    role: auth.role,
   });
+
+  // Validacao de role
+  if (!ALLOWED_ROLES.includes(auth.role)) {
+    throw new AppError('FORBIDDEN', 'Permissao insuficiente para acessar dashboard financeiro', 403);
+  }
 
   const client = getSupabaseClient(auth.token);
 
