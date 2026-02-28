@@ -40,43 +40,13 @@ function ResetPasswordContent() {
 
     const supabase = createClient()
 
-    // Verificar se ja ha sessao ativa (estabelecida pelo /auth/callback via PKCE)
+    // PKCE flow: sessao ja foi estabelecida pelo /auth/callback antes de chegar aqui
+    // Basta verificar se o usuario esta autenticado
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
         setIsRecoverySession(true)
-        setChecking(false)
-        return
       }
-
-      // Fallback: verificar se ha hash na URL (fluxo implicit legado)
-      const hasHash = typeof window !== 'undefined' && window.location.hash.length > 1
-      if (!hasHash) {
-        setChecking(false)
-        return
-      }
-
-      // Escutar evento PASSWORD_RECOVERY do Supabase (vem do hash fragment)
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        (event) => {
-          if (event === 'PASSWORD_RECOVERY') {
-            setIsRecoverySession(true)
-            setChecking(false)
-          }
-        },
-      )
-
-      // Timeout: se apos 3s nao recebeu evento, parar de verificar
-      const timeout = setTimeout(() => {
-        setChecking((prev) => {
-          if (prev) return false
-          return prev
-        })
-      }, 3000)
-
-      return () => {
-        subscription.unsubscribe()
-        clearTimeout(timeout)
-      }
+      setChecking(false)
     }).catch(() => {
       setChecking(false)
     })
