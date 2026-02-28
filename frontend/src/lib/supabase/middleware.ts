@@ -46,7 +46,8 @@ export async function updateSession(request: NextRequest) {
       !user &&
       !request.nextUrl.pathname.startsWith('/login') &&
       !request.nextUrl.pathname.startsWith('/forgot-password') &&
-      !request.nextUrl.pathname.startsWith('/reset-password')
+      !request.nextUrl.pathname.startsWith('/reset-password') &&
+      !request.nextUrl.pathname.startsWith('/auth/callback')
     ) {
       // Rotas publicas: portal do cliente e aprovacoes externas nao requerem autenticacao
       const isPublicRoute =

@@ -1,12 +1,29 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
 export default function ResetPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="rounded-lg border bg-card p-6 shadow-sm">
+          <div className="text-center text-sm text-muted-foreground">
+            Verificando link de recuperacao...
+          </div>
+        </div>
+      }
+    >
+      <ResetPasswordContent />
+    </Suspense>
+  )
+}
+
+function ResetPasswordContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -15,46 +32,55 @@ export default function ResetPasswordPage() {
   const [checking, setChecking] = useState(true)
 
   useEffect(() => {
-    const supabase = createClient()
-
-    // Se nao ha hash na URL, nao ha token de recovery — mostrar erro imediatamente
-    const hasHash = typeof window !== 'undefined' && window.location.hash.length > 1
-    if (!hasHash) {
+    // Se veio com ?error=invalid_link do callback, mostrar erro imediatamente
+    if (searchParams.get('error') === 'invalid_link') {
       setChecking(false)
       return
     }
 
-    // Escutar evento PASSWORD_RECOVERY do Supabase (vem do magic link)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event) => {
-        if (event === 'PASSWORD_RECOVERY') {
-          setIsRecoverySession(true)
-          setChecking(false)
-        }
-      },
-    )
+    const supabase = createClient()
 
-    // Fallback: verificar se ja ha sessao ativa (link processado antes do mount)
+    // Verificar se ja ha sessao ativa (estabelecida pelo /auth/callback via PKCE)
     supabase.auth.getUser().then(({ data: { user } }) => {
-      setTimeout(() => {
-        setChecking((prev) => {
-          if (prev) {
-            if (!user) {
-              return false // Mostrar "Link invalido"
-            }
+      if (user) {
+        setIsRecoverySession(true)
+        setChecking(false)
+        return
+      }
+
+      // Fallback: verificar se ha hash na URL (fluxo implicit legado)
+      const hasHash = typeof window !== 'undefined' && window.location.hash.length > 1
+      if (!hasHash) {
+        setChecking(false)
+        return
+      }
+
+      // Escutar evento PASSWORD_RECOVERY do Supabase (vem do hash fragment)
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        (event) => {
+          if (event === 'PASSWORD_RECOVERY') {
             setIsRecoverySession(true)
-            return false
+            setChecking(false)
           }
+        },
+      )
+
+      // Timeout: se apos 3s nao recebeu evento, parar de verificar
+      const timeout = setTimeout(() => {
+        setChecking((prev) => {
+          if (prev) return false
           return prev
         })
-      }, 1000)
+      }, 3000)
+
+      return () => {
+        subscription.unsubscribe()
+        clearTimeout(timeout)
+      }
     }).catch(() => {
-      // Se getUser falhar, parar de verificar
       setChecking(false)
     })
-
-    return () => subscription.unsubscribe()
-  }, [router])
+  }, [searchParams])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
