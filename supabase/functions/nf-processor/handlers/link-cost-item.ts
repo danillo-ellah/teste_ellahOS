@@ -43,7 +43,7 @@ export async function linkCostItem(req: Request, auth: AuthContext): Promise<Res
   // 1. Buscar nf_document por id (verificar tenant_id, deleted_at is null)
   const { data: doc, error: docError } = await supabase
     .from('nf_documents')
-    .select('id, status, drive_url, nf_value')
+    .select('id, status, drive_url, nf_value, file_name')
     .eq('id', input.nf_document_id)
     .eq('tenant_id', auth.tenantId)
     .is('deleted_at', null)
@@ -75,6 +75,10 @@ export async function linkCostItem(req: Request, auth: AuthContext): Promise<Res
     nf_validation_ok: isConfirmed,
   };
 
+  if (doc.file_name) {
+    updateData.nf_filename = doc.file_name;
+  }
+
   if (doc.drive_url) {
     updateData.nf_drive_url = doc.drive_url;
   }
@@ -89,7 +93,7 @@ export async function linkCostItem(req: Request, auth: AuthContext): Promise<Res
     .update(updateData)
     .eq('id', input.cost_item_id)
     .eq('tenant_id', auth.tenantId)
-    .select('id, nf_document_id, nf_request_status, nf_drive_url, nf_extracted_value, nf_validation_ok')
+    .select('id, nf_document_id, nf_request_status, nf_drive_url, nf_filename, nf_extracted_value, nf_validation_ok')
     .single();
 
   if (updateError || !updatedCostItem) {
@@ -104,6 +108,7 @@ export async function linkCostItem(req: Request, auth: AuthContext): Promise<Res
     nf_document_id: updatedCostItem.nf_document_id,
     nf_request_status: updatedCostItem.nf_request_status,
     nf_drive_url: updatedCostItem.nf_drive_url,
+    nf_filename: updatedCostItem.nf_filename,
     nf_extracted_value: updatedCostItem.nf_extracted_value,
     nf_validation_ok: updatedCostItem.nf_validation_ok,
   });

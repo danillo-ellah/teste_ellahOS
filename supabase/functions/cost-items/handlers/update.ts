@@ -179,6 +179,22 @@ export async function handleUpdate(req: Request, auth: AuthContext, id: string):
     }
   }
 
+  // Campos NF restritos a admin/ceo/financeiro (produtor_executivo nao pode alterar NF)
+  const NF_RESTRICTED_FIELDS = new Set([
+    'nf_request_status', 'nf_requested_at', 'nf_requested_by',
+    'nf_document_id', 'nf_drive_url', 'nf_filename',
+    'nf_extracted_value', 'nf_validation_ok',
+  ]);
+  const NF_ALLOWED_ROLES = ['admin', 'ceo', 'financeiro'];
+  const nfFieldsInPayload = Object.keys(updates).filter(f => NF_RESTRICTED_FIELDS.has(f));
+  if (nfFieldsInPayload.length > 0 && !NF_ALLOWED_ROLES.includes(auth.role)) {
+    throw new AppError(
+      'FORBIDDEN',
+      `Permissao insuficiente para alterar campos NF: ${nfFieldsInPayload.join(', ')}`,
+      403,
+    );
+  }
+
   // Bloquear edicao de campos financeiros em item ja pago
   // Apenas item_status (para cancelar) e notes sao permitidos
   if (current.payment_status === 'pago') {
