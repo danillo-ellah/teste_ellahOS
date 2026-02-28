@@ -47,8 +47,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useDeleteCostItem } from '@/hooks/useCostItems'
 import { toast } from 'sonner'
 import { formatCurrency, formatDate } from '@/lib/format'
-import { PAYMENT_CONDITION_LABELS } from '@/types/cost-management'
-import type { CostItem } from '@/types/cost-management'
+import { PAYMENT_CONDITION_LABELS, NF_REQUEST_STATUS_CONFIG } from '@/types/cost-management'
+import type { CostItem, NfRequestStatus } from '@/types/cost-management'
 import { CostItemStatusBadge } from './CostItemStatusBadge'
 import { safeErrorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -181,6 +181,65 @@ function StatusCell({ item }: { item: CostItem }) {
   )
 }
 
+// ---- NfCell ----
+
+function NfCell({ item }: { item: CostItem }) {
+  const status = item.nf_request_status
+  if (status === 'nao_aplicavel') {
+    return <span className="text-muted-foreground">-</span>
+  }
+
+  // C1: guard against unknown status values
+  const config = NF_REQUEST_STATUS_CONFIG[status]
+  if (!config) {
+    return <span className="text-muted-foreground text-xs">{status}</span>
+  }
+
+  const dot = (
+    <span
+      role="img"
+      aria-label={`Status NF: ${config.label}`}
+      className={cn('inline-block h-2.5 w-2.5 rounded-full', config.dotClass)}
+    />
+  )
+
+  const tooltipLines: string[] = [`Status NF: ${config.label}`]
+  if (item.nf_filename) tooltipLines.push(item.nf_filename)
+  if (item.nf_extracted_value != null) tooltipLines.push(`Valor: ${formatCurrency(item.nf_extracted_value)}`)
+
+  // m4: larger touch target for mobile
+  const content = item.nf_drive_url ? (
+    <a
+      href={item.nf_drive_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center justify-center h-8 w-8 hover:opacity-70 rounded"
+      onClick={e => e.stopPropagation()}
+      aria-label={`Abrir NF ${item.nf_filename ?? ''} no Drive`}
+    >
+      {dot}
+    </a>
+  ) : (
+    <span className="inline-flex items-center justify-center h-8 w-8">{dot}</span>
+  )
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {content}
+        </TooltipTrigger>
+        <TooltipContent side="top" className="text-xs space-y-0.5">
+          {tooltipLines.map((line, i) => (
+            <p key={i}>{line}</p>
+          ))}
+          {item.nf_drive_url && <p className="text-muted-foreground">Clique para abrir no Drive</p>}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
+}
+
 // ---- CategoryHeaderRow ----
 
 interface CategoryHeaderRowProps {
@@ -201,7 +260,7 @@ function CategoryHeaderRow({ items, isExpanded, onToggle }: CategoryHeaderRowPro
       onClick={onToggle}
     >
       <TableCell className="w-8" />
-      <TableCell colSpan={12}>
+      <TableCell colSpan={13}>
         <div className="flex items-center gap-2">
           {isExpanded ? (
             <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -331,15 +390,20 @@ function ItemRow({
         {!item.is_category_header && <StatusCell item={item} />}
       </TableCell>
 
+      {/* NF */}
+      <TableCell className="w-10 text-center">
+        {!item.is_category_header && <NfCell item={item} />}
+      </TableCell>
+
       {/* Pgto */}
       <TableCell className="text-xs">
         {!item.is_category_header && (
           <span
             className={cn(
               'capitalize',
-              item.payment_status === 'pago' && 'text-green-700',
+              item.payment_status === 'pago' && 'text-green-700 dark:text-green-400',
               item.payment_status === 'cancelado' && 'text-muted-foreground',
-              item.payment_status === 'pendente' && 'text-amber-700',
+              item.payment_status === 'pendente' && 'text-amber-700 dark:text-amber-400',
             )}
           >
             {item.payment_status === 'pago'
@@ -476,6 +540,18 @@ export function CostItemsTable({
               <TableHead>Cond. Pgto</TableHead>
               <TableHead>Vencimento</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="w-10 text-center">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-help underline decoration-dotted">NF</span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">
+                      Status da Nota Fiscal vinculada ao item
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </TableHead>
               <TableHead>Pgto</TableHead>
               <TableHead className="w-10" />
             </TableRow>

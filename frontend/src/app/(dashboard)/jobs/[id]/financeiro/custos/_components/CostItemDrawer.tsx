@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
-import { ChevronDown, ChevronRight, ChevronsUpDown, Check, X } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronsUpDown, Check, X, ExternalLink, Unlink, Link2 } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -21,19 +21,25 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useCreateCostItem, useUpdateCostItem } from '@/hooks/useCostItems'
+import { useQueryClient } from '@tanstack/react-query'
+import { nfKeys } from '@/lib/query-keys'
 import { useVendorSuggest } from '@/hooks/useVendors'
 import {
   PAYMENT_CONDITION_LABELS,
   PAYMENT_METHOD_LABELS,
+  NF_REQUEST_STATUS_CONFIG,
   type CostItem,
   type PaymentCondition,
   type PaymentMethod,
+  type NfRequestStatus,
   type VendorSuggestion,
 } from '@/types/cost-management'
-import { parseBRNumber, formatBRNumber } from '@/lib/format'
+import { parseBRNumber, formatBRNumber, formatCurrency } from '@/lib/format'
 import { safeErrorMessage } from '@/lib/api'
 import { AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useUserRole } from '@/hooks/useUserRole'
+import { LinkNfDialog } from './LinkNfDialog'
 
 // Categorias fixas do sistema (item_number 1-20, conforme planilha)
 const COST_CATEGORIES: { value: number; label: string }[] = [
@@ -250,13 +256,20 @@ export function CostItemDrawer({
 }: CostItemDrawerProps) {
   const [form, setForm] = useState<FormState>(() => defaultForm(jobId, editingItem))
   const [overtimeExpanded, setOvertimeExpanded] = useState(false)
+  const [nfExpanded, setNfExpanded] = useState(false)
+  const [linkNfOpen, setLinkNfOpen] = useState(false)
 
   const { mutateAsync: createItem, isPending: isCreating } = useCreateCostItem()
   const { mutateAsync: updateItem, isPending: isUpdating } = useUpdateCostItem()
   const isPending = isCreating || isUpdating
+  const queryClient = useQueryClient()
+
+  const { role } = useUserRole()
 
   // Item pago = campos financeiros read-only (backend tambem bloqueia)
   const isPaid = editingItem?.payment_status === 'pago'
+  const canManageNf = !!role && ['admin', 'ceo', 'financeiro'].includes(role) && !isPaid
+  const hasLinkedNf = !!editingItem?.nf_document_id
 
   // Resetar form quando o drawer abre/fecha ou o item muda
   useEffect(() => {
@@ -269,6 +282,8 @@ export function CostItemDrawer({
       setOvertimeExpanded(
         !!(editingItem?.overtime_hours || editingItem?.overtime_rate),
       )
+      setNfExpanded(false)
+      setLinkNfOpen(false)
     }
   }, [open, editingItem, jobId, defaultItemNumber])
 
@@ -462,6 +477,134 @@ export function CostItemDrawer({
             )}
           </div>
 
+          {/* Secao Nota Fiscal colapsavel (so no modo edicao) */}
+          {editingItem && (
+            <div className="border border-border rounded-md">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between px-3 py-2 text-sm font-medium hover:bg-accent/50 rounded-md"
+                onClick={() => setNfExpanded(v => !v)}
+              >
+                <span className="flex items-center gap-2">
+                  Nota Fiscal
+                  {hasLinkedNf && (() => {
+                    const nfStatus = editingItem.nf_request_status
+                    const cfg = NF_REQUEST_STATUS_CONFIG[nfStatus]
+                    return cfg ? <span className={cn('h-2 w-2 rounded-full', cfg.dotClass)} /> : null
+                  })()}
+                </span>
+                {nfExpanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
+              {nfExpanded && (
+                <div className="px-3 pb-3 space-y-3">
+                  {hasLinkedNf ? (
+                    <>
+                      {/* NF vinculada — mostrar detalhes */}
+                      <div className="space-y-2 text-sm">
+                        {editingItem.nf_filename && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Arquivo:</span>
+                            {editingItem.nf_drive_url ? (
+                              <a
+                                href={editingItem.nf_drive_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline flex items-center gap-1"
+                              >
+                                {editingItem.nf_filename}
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            ) : (
+                              <span>{editingItem.nf_filename}</span>
+                            )}
+                          </div>
+                        )}
+                        {editingItem.nf_extracted_value != null && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Valor NF:</span>
+                            <span>{formatCurrency(editingItem.nf_extracted_value)}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">Status NF:</span>
+                          {(() => {
+                            const nfStatus = editingItem.nf_request_status
+                            const cfg = NF_REQUEST_STATUS_CONFIG[nfStatus]
+                            if (!cfg) return <span className="text-muted-foreground">{nfStatus}</span>
+                            return (
+                              <span className={cn('flex items-center gap-1.5', cfg.textClass)}>
+                                <span className={cn('h-2.5 w-2.5 rounded-full', cfg.dotClass)} />
+                                {cfg.label}
+                              </span>
+                            )
+                          })()}
+                        </div>
+                        {editingItem.nf_validation_ok != null && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Validacao:</span>
+                            <span className={editingItem.nf_validation_ok ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}>
+                              {editingItem.nf_validation_ok ? 'OK' : 'Divergente'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      {canManageNf && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={async () => {
+                            try {
+                              await updateItem({
+                                id: editingItem.id,
+                                nf_document_id: null,
+                                nf_drive_url: null,
+                                nf_filename: null,
+                                nf_extracted_value: null,
+                                nf_validation_ok: null,
+                                nf_request_status: 'nao_aplicavel',
+                              } as Record<string, unknown> & { id: string })
+                              queryClient.invalidateQueries({ queryKey: nfKeys.lists() })
+                              toast.success('NF desvinculada do item')
+                            } catch (err) {
+                              toast.error(safeErrorMessage(err))
+                            }
+                          }}
+                        >
+                          <Unlink className="h-3.5 w-3.5 mr-1.5" />
+                          Desvincular NF
+                        </Button>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {/* Sem NF vinculada */}
+                      <p className="text-sm text-muted-foreground">
+                        Nenhuma NF vinculada a este item.
+                      </p>
+                      {canManageNf && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setLinkNfOpen(true)}
+                        >
+                          <Link2 className="h-3.5 w-3.5 mr-1.5" />
+                          Vincular NF
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Condicao de Pagamento */}
           <div className="space-y-2">
             <Label htmlFor="payment-condition">Condicao de Pagamento</Label>
@@ -560,6 +703,15 @@ export function CostItemDrawer({
           </div>
         </form>
       </SheetContent>
+
+      {linkNfOpen && editingItem && (
+        <LinkNfDialog
+          open={linkNfOpen}
+          onOpenChange={setLinkNfOpen}
+          jobId={jobId}
+          costItemId={editingItem.id}
+        />
+      )}
     </Sheet>
   )
 }

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiGet, apiMutate } from '@/lib/api'
-import { costItemKeys, finDashboardKeys } from '@/lib/query-keys'
+import { costItemKeys, finDashboardKeys, nfKeys } from '@/lib/query-keys'
 import type {
   CostItem,
   CostItemFilters,
@@ -152,6 +152,22 @@ export function useUpdateBudgetMode() {
       apiMutate('cost-items', 'PATCH', { budget_mode }, `budget-mode/${jobId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: costItemKeys.all })
+      queryClient.invalidateQueries({ queryKey: finDashboardKeys.all })
+    },
+  })
+}
+
+// ============ NF Link hooks ============
+
+export function useLinkNfToCostItem() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: { nf_document_id: string; cost_item_id: string }) =>
+      apiMutate<CostItem>('nf-processor', 'POST', payload as unknown as Record<string, unknown>, 'link-cost-item'),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: costItemKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: costItemKeys.detail(variables.cost_item_id) })
+      queryClient.invalidateQueries({ queryKey: nfKeys.lists() })
       queryClient.invalidateQueries({ queryKey: finDashboardKeys.all })
     },
   })

@@ -439,3 +439,39 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   credito: 'Credito',
   outro: 'Outro',
 }
+
+export const NF_REQUEST_STATUS_CONFIG: Record<
+  NfRequestStatus,
+  { label: string; dotClass: string; textClass: string }
+> = {
+  nao_aplicavel: {
+    label: 'N/A',
+    dotClass: 'bg-zinc-400',
+    textClass: 'text-zinc-600 dark:text-zinc-400',
+  },
+  pendente: {
+    label: 'Pendente',
+    dotClass: 'bg-amber-500',
+    textClass: 'text-amber-700 dark:text-amber-400',
+  },
+  pedido: {
+    label: 'Pedido',
+    dotClass: 'bg-blue-500',
+    textClass: 'text-blue-700 dark:text-blue-400',
+  },
+  recebido: {
+    label: 'Recebido',
+    dotClass: 'bg-indigo-500',
+    textClass: 'text-indigo-700 dark:text-indigo-400',
+  },
+  rejeitado: {
+    label: 'Rejeitado',
+    dotClass: 'bg-red-500',
+    textClass: 'text-red-700 dark:text-red-400',
+  },
+  aprovado: {
+    label: 'Aprovado',
+    dotClass: 'bg-green-500',
+    textClass: 'text-green-700 dark:text-green-400',
+  },
+}
