@@ -91,6 +91,13 @@ export function buildDynamicContext(params: {
     total_revenue: number | null;
     team_size: number;
   };
+  jobsList?: Array<{
+    code: string;
+    title: string;
+    status: string;
+    client_name: string | null;
+    project_type: string;
+  }>;
   currentPage?: string;
 }): string {
   const sections: string[] = [];
@@ -103,6 +110,14 @@ export function buildDynamicContext(params: {
 - Equipe total: ${m.team_size} pessoas
 ${m.avg_margin !== null ? `- Margem media: ${m.avg_margin.toFixed(1)}%` : ''}
 ${m.total_revenue !== null ? `- Receita total (finalizados): R$ ${m.total_revenue.toLocaleString('pt-BR')}` : ''}`);
+  }
+
+  if (params.jobsList && params.jobsList.length > 0) {
+    let listSection = `## Jobs cadastrados (${params.jobsList.length})`;
+    for (const j of params.jobsList) {
+      listSection += `\n- ${j.code} — ${j.title} [${j.status}]${j.client_name ? ` (cliente: ${j.client_name})` : ''} (${j.project_type})`;
+    }
+    sections.push(listSection);
   }
 
   if (params.jobContext) {

@@ -864,7 +864,126 @@ export async function getFreelancerCandidates(
 }
 
 // ---------------------------------------------------------------------------
-// 5. truncateContext — Trunca texto para caber no limite de tokens
+// 5. getJobsList — Lista resumida de todos os jobs do tenant
+// ---------------------------------------------------------------------------
+
+/** Resumo de um job para listagem no contexto do copilot */
+export interface JobSummary {
+  id: string;
+  code: string;
+  title: string;
+  status: string;
+  client_name: string | null;
+  project_type: string;
+}
+
+/**
+ * Busca lista resumida de todos os jobs do tenant (max 50).
+ * Usada para dar ao copilot visibilidade de quais jobs existem.
+ */
+export async function getJobsList(
+  client: SupabaseClient,
+  tenantId: string,
+): Promise<JobSummary[]> {
+  const { data, error } = await client
+    .from('jobs')
+    .select('id, code, title, status, project_type, clients!jobs_client_id_fkey ( name )')
+    .eq('tenant_id', tenantId)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  if (error) {
+    console.error('[ai-context] falha ao buscar lista de jobs:', error.message);
+    return [];
+  }
+
+  const result = (data ?? []).map((j: any) => ({
+    id: j.id,
+    code: j.code,
+    title: j.title,
+    status: j.status,
+    project_type: j.project_type,
+    client_name: j.clients?.name ?? null,
+  }));
+
+  console.log(`[ai-context] getJobsList: ${result.length} jobs`);
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// 6. searchJobByKeyword — Busca job por keyword na mensagem do usuario
+// ---------------------------------------------------------------------------
+
+/**
+ * Busca um job que corresponda a keywords na mensagem do usuario.
+ * Faz match por titulo, codigo ou nome do cliente (case-insensitive).
+ * Retorna o ID do melhor match ou null.
+ */
+export async function searchJobByKeyword(
+  client: SupabaseClient,
+  tenantId: string,
+  userMessage: string,
+): Promise<string | null> {
+  // Buscar todos os jobs do tenant com info basica para matching
+  const { data, error } = await client
+    .from('jobs')
+    .select('id, code, title, clients!jobs_client_id_fkey ( name )')
+    .eq('tenant_id', tenantId)
+    .is('deleted_at', null);
+
+  if (error || !data || data.length === 0) {
+    return null;
+  }
+
+  const messageLower = userMessage.toLowerCase();
+
+  // Scoring: match por titulo, codigo ou nome do cliente
+  let bestMatch: { id: string; score: number } | null = null;
+
+  for (const j of data as any[]) {
+    let score = 0;
+    const title = (j.title ?? '').toLowerCase();
+    const code = (j.code ?? '').toLowerCase();
+    const clientName = (j.clients?.name ?? '').toLowerCase();
+
+    // Match exato no codigo (ex: "JOB_ELH_001")
+    if (code && messageLower.includes(code)) {
+      score += 100;
+    }
+
+    // Match por palavras do titulo
+    const titleWords = title.split(/[\s\-_]+/).filter((w: string) => w.length >= 3);
+    for (const word of titleWords) {
+      if (messageLower.includes(word)) {
+        score += 30;
+      }
+    }
+
+    // Match por nome do cliente
+    const clientWords = clientName.split(/[\s\-_]+/).filter((w: string) => w.length >= 3);
+    for (const word of clientWords) {
+      if (messageLower.includes(word)) {
+        score += 25;
+      }
+    }
+
+    if (score > 0 && (!bestMatch || score > bestMatch.score)) {
+      bestMatch = { id: j.id, score };
+    }
+  }
+
+  if (bestMatch) {
+    console.log(`[ai-context] searchJobByKeyword: match encontrado id=${bestMatch.id} score=${bestMatch.score}`);
+  } else {
+    console.log('[ai-context] searchJobByKeyword: nenhum match');
+  }
+
+  return bestMatch?.id ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// 7. truncateContext — Trunca texto para caber no limite de tokens
 // ---------------------------------------------------------------------------
 
 /**

@@ -11,14 +11,29 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { AppError } from '../_shared/errors.ts';
 import type { AuthContext } from '../_shared/auth.ts';
 import { callGroq, callGroqStream, estimateGroqCost, GROQ_MODEL } from '../_shared/groq-client.ts';
-import { sanitizeUserInput } from '../_shared/claude-client.ts';
-import { getJobFullContext, getTenantMetrics } from '../_shared/ai-context.ts';
+import { getJobFullContext, getTenantMetrics, getJobsList, searchJobByKeyword } from '../_shared/ai-context.ts';
 import { checkRateLimit, logAiUsage } from '../_shared/ai-rate-limiter.ts';
 import {
   buildCopilotSystemPrompt,
   buildDynamicContext,
   COPILOT_PROMPT_VERSION,
 } from '../prompts.ts';
+
+// ---------------------------------------------------------------------------
+// sanitizeUserInput (inlined from claude-client to reduce bundle size)
+// ---------------------------------------------------------------------------
+
+function sanitizeUserInput(input: string, maxLength = 10_000): string {
+  if (!input || typeof input !== 'string') return '';
+  const truncated = input.length > maxLength ? input.slice(0, maxLength) : input;
+  const noControl = truncated.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+  return noControl
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 // ---------------------------------------------------------------------------
 // Constantes
@@ -282,38 +297,57 @@ async function prepareContext(
     );
   }
 
-  // 4. Carregar contexto do job (se informado)
+  // 4. Determinar job_id: do payload ou busca por keyword na mensagem
+  let targetJobId = payload.context?.job_id ?? null;
+
+  if (!targetJobId) {
+    try {
+      targetJobId = await searchJobByKeyword(supabase, auth.tenantId, payload.message);
+      if (targetJobId) {
+        console.log(`[ai-copilot/chat] job encontrado por keyword: ${targetJobId}`);
+      }
+    } catch (err) {
+      console.warn(`[ai-copilot/chat] falha na busca por keyword: ${err}`);
+    }
+  }
+
+  // 5. Carregar contexto do job (se temos um job_id)
   let jobContext: Awaited<ReturnType<typeof getJobFullContext>> | undefined;
 
-  if (payload.context?.job_id) {
+  if (targetJobId) {
     const includeFinancials = FINANCIAL_ROLES.includes(auth.role);
 
     try {
       jobContext = await getJobFullContext(
         supabase,
         auth.tenantId,
-        payload.context.job_id,
+        targetJobId,
         includeFinancials,
       );
     } catch (err) {
       console.warn(`[ai-copilot/chat] falha ao carregar contexto do job: ${err}`);
-      // Continua sem contexto de job — nao bloqueia o chat
     }
   }
 
-  // 5. Carregar metricas do tenant
+  // 6. Carregar metricas do tenant + lista de jobs em paralelo
   let tenantMetrics: Awaited<ReturnType<typeof getTenantMetrics>> | undefined;
+  let jobsList: Awaited<ReturnType<typeof getJobsList>> = [];
 
   try {
-    tenantMetrics = await getTenantMetrics(supabase, auth.tenantId);
+    const [metricsResult, jobsListResult] = await Promise.all([
+      getTenantMetrics(supabase, auth.tenantId),
+      getJobsList(supabase, auth.tenantId),
+    ]);
+    tenantMetrics = metricsResult;
+    jobsList = jobsListResult;
   } catch (err) {
-    console.warn(`[ai-copilot/chat] falha ao carregar metricas do tenant: ${err}`);
+    console.warn(`[ai-copilot/chat] falha ao carregar metricas/lista: ${err}`);
   }
 
-  // 6. Buscar nome do tenant
+  // 7. Buscar nome do tenant
   const tenantName = await getTenantName(serviceClient, auth.tenantId);
 
-  // 7. Montar dynamic context
+  // 8. Montar dynamic context
   const dynamicContext = buildDynamicContext({
     jobContext: jobContext?.job
       ? {
@@ -355,6 +389,13 @@ async function prepareContext(
           team_size: tenantMetrics.team_size,
         }
       : undefined,
+    jobsList: jobsList.map((j) => ({
+      code: j.code,
+      title: j.title,
+      status: j.status,
+      client_name: j.client_name,
+      project_type: j.project_type,
+    })),
     currentPage: payload.context?.page,
   });
 
