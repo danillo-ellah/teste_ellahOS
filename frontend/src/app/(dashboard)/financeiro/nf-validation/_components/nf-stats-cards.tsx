@@ -21,7 +21,7 @@ const CARDS: CardConfig[] = [
   {
     key: 'pending_review',
     label: 'PENDENTES',
-    description: 'Aguardando validacao',
+    description: 'Necessitam revisao manual',
     icon: Clock,
     filterStatus: 'pending_review',
     borderClass: 'border-l-amber-500',
@@ -31,12 +31,12 @@ const CARDS: CardConfig[] = [
   {
     key: 'auto_matched',
     label: 'AUTO-MATCHED',
-    description: 'Match automatico sugerido',
+    description: 'Prontas para confirmar',
     icon: Zap,
     filterStatus: 'auto_matched',
-    borderClass: 'border-l-blue-500',
-    iconClass: 'text-blue-500 dark:text-blue-400',
-    numberClass: 'text-blue-700 dark:text-blue-300',
+    borderClass: 'border-l-emerald-500',
+    iconClass: 'text-emerald-500 dark:text-emerald-400',
+    numberClass: 'text-emerald-700 dark:text-emerald-300',
   },
   {
     key: 'confirmed_month',
@@ -110,8 +110,8 @@ export function NfStatsCards({
                   : 'hover:ring-amber-300 dark:hover:ring-amber-700'),
               card.filterStatus === 'auto_matched' &&
                 (isActive
-                  ? 'ring-blue-300 dark:ring-blue-700'
-                  : 'hover:ring-blue-300 dark:hover:ring-blue-700'),
+                  ? 'ring-emerald-300 dark:ring-emerald-700'
+                  : 'hover:ring-emerald-300 dark:hover:ring-emerald-700'),
               card.filterStatus === 'confirmed' &&
                 (isActive
                   ? 'ring-green-300 dark:ring-green-700'
@@ -129,7 +129,7 @@ export function NfStatsCards({
                 </p>
                 <Icon className={cn('h-5 w-5 shrink-0', card.iconClass)} />
               </div>
-              <p className={cn('mt-2 text-3xl font-bold', card.numberClass)}>
+              <p className={cn('mt-2 text-3xl font-bold tabular-nums', card.numberClass)}>
                 {value}
               </p>
               <p className="mt-1 text-xs text-zinc-500">{card.description}</p>

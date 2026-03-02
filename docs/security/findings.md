@@ -22,10 +22,11 @@ O achado mais grave e uma policy RLS com bug de auto-referencia que concede aces
 
 ### [CRITICO-001] Policy "Admins manage profiles" com bug de auto-referencia - cross-tenant privilege escalation
 
-**Tabela:** profiles  
-**Policy:** "Admins manage profiles" (comando ALL)  
-**Classificacao:** CRITICO  
-**OWASP:** A01 - Broken Access Control  
+**Tabela:** profiles
+**Policy:** "Admins manage profiles" (comando ALL)
+**Classificacao:** CRITICO
+**OWASP:** A01 - Broken Access Control
+**Status:** CORRIGIDO (2026-02-18) — 3 migrations: fix_rls_infinite_recursion (get_tenant_id helper), fix_profiles_admin_rls_recursion (get_user_role do JWT), consolidate_profiles_policies (clean slate)
 
 **Descricao do problema:**
 
@@ -94,6 +95,8 @@ Foram identificados **0 CRITICOS**, **2 ALTOS**, **4 MEDIOS** e **4 BAIXOS** nes
 **OWASP:** A01 - Broken Access Control
 **Tabelas afetadas:** approval_requests, approval_logs, allocations
 
+**Status:** CORRIGIDO — Migration `20260219225641_fase6_allocations_approvals_tables.sql` existe com RLS habilitado, policies de tenant isolation, indices e triggers para todas as 3 tabelas.
+
 O repositorio contem apenas 2 migrations (fase5_1 e fase5_2). As tabelas usadas pelas Edge Functions da Fase 6 nao possuem migration versionada, impossibilitando auditoria do RLS via codigo-fonte. A funcao approvals usa getSupabaseClient(auth.token) para operacoes autenticadas, tornando o RLS a ultima defesa de isolamento multi-tenant. Se o RLS estiver ausente ou incorreto, usuario de tenant A pode ler ou modificar aprovacoes de tenant B passando um approval_id valido.
 
 SQL de verificacao imediata (Supabase SQL Editor):
@@ -160,6 +163,7 @@ Adicionada validacao UUID com regex em todos os 4 handlers autenticados. Retorna
 **Classificacao:** MEDIA
 **OWASP:** A05 - Security Misconfiguration
 **Arquivo:** supabase/functions/_shared/cors.ts (linha 3)
+**Status:** CORRIGIDO (2026-03-02) — `getCorsHeaders(req)` com origin dinamico, `Vary: Origin`, lista ALLOWED_ORIGINS. `corsHeaders` wildcard mantido apenas para endpoints publicos.
 
 "Access-Control-Allow-Origin": "*" aplicado a todas as funcoes, incluindo allocations e approvals que retornam dados de negocio do tenant. Pratica inadequada mesmo com Authorization header obrigatorio.
 
@@ -228,6 +232,7 @@ Adicionada validacao de dominio em file_url com ALLOWED_FILE_DOMAINS whitelist: 
 
 **Classificacao:** BAIXA
 **Arquivos:** supabase/functions/allocations/handlers/soft-delete.ts, update.ts
+**Status:** CORRIGIDO — UUID_REGEX com validacao ja implementada em ambos os handlers (soft-delete.ts linha 7/15-17, update.ts linha 20/28-30)
 
 Mesmo problema do FASE6-MEDIO-001. Impacto menor por ser rota exclusivamente autenticada sem superficie publica.
 
@@ -241,6 +246,23 @@ Mesmo problema do FASE6-MEDIO-001. Impacto menor por ser rota exclusivamente aut
 **Arquivo:** supabase/functions/approvals/handlers/get-logs.ts (linha 29)
 
 GET /approvals/:id/logs retorna full_name de usuarios internos via join actor:actor_id(id, full_name). Rota e autenticada (correto), mas deve ser documentada explicitamente como somente interna para evitar exposicao acidental em manutencao futura.
+
+---
+
+## FINDINGS ADICIONAIS — Sprint Pre-Production (2026-03-02)
+
+### [SEC-001] Open redirect em /auth/callback via parametro `next`
+
+**Classificacao:** ALTA
+**OWASP:** A01 - Broken Access Control
+**Arquivo:** frontend/src/app/auth/callback/route.ts
+**Status:** CORRIGIDO (2026-03-02) — Validacao de `next` parameter: so aceita paths relativos (`/xxx`), rejeita `//evil.com` e URLs absolutas.
+
+### [AUTH-001] Sessao mantida apos password reset
+
+**Classificacao:** MEDIA
+**Arquivo:** frontend/src/app/(auth)/reset-password/page.tsx
+**Status:** CORRIGIDO (2026-03-02) — Apos `updateUser()` sucesso, faz `signOut()` e redireciona para `/login?message=password_reset_success` com toast de confirmacao.
 
 ---
 
@@ -263,15 +285,15 @@ GET /approvals/:id/logs retorna full_name de usuarios internos via join actor:ac
 
 | ID | Severidade | Descricao | Status |
 |---|---|---|---|
-| FASE6-ALTO-001 | ALTA | Migrations ausentes para approval_requests/logs/allocations | Aberto |
+| FASE6-ALTO-001 | ALTA | Migrations ausentes para approval_requests/logs/allocations | CORRIGIDO (migration 20260219225641 existe com RLS completo) |
 | FASE6-ALTO-002 | ALTA | POST /respond sem verificacao de Origin | CORRIGIDO (2026-02-24) |
 | FASE6-MEDIO-001 | MEDIA | approvalId sem validacao UUID em 4 handlers | CORRIGIDO (2026-02-24) |
-| FASE6-MEDIO-002 | MEDIA | CORS wildcard em endpoints autenticados | Aberto (deferred) |
+| FASE6-MEDIO-002 | MEDIA | CORS wildcard em endpoints autenticados | CORRIGIDO (2026-03-02) — getCorsHeaders() com origin dinamico em _shared/cors.ts |
 | FASE6-MEDIO-003 | MEDIA | Token de aprovacao 30 dias independente do tipo | CORRIGIDO (2026-02-24) |
-| FASE6-MEDIO-004 | MEDIA | pg_cron sem X-Cron-Secret | CORRIGIDO (2026-02-24) |
+| FASE6-MEDIO-004 | MEDIA | pg_cron sem X-Cron-Secret | CORRIGIDO (migration security_hardening_revoke_anon_cron_secret) |
 | FASE6-BAIXO-001 | BAIXA | staleTime 60s na pagina publica | CORRIGIDO (2026-02-24) |
 | FASE6-BAIXO-002 | BAIXA | file_url sem restricao de dominio | CORRIGIDO (2026-02-24) |
-| FASE6-BAIXO-003 | BAIXA | allocationId sem validacao UUID em allocations | Aberto |
+| FASE6-BAIXO-003 | BAIXA | allocationId sem validacao UUID em allocations | CORRIGIDO — UUID_REGEX validacao ja presente em soft-delete.ts e update.ts |
 | FASE6-BAIXO-004 | BAIXA | actor full_name exposto em logs | Aberto |
 
 

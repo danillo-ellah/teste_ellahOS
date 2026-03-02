@@ -32,6 +32,7 @@ function LoginForm() {
   const searchParams = useSearchParams()
   const returnUrl = sanitizeReturnUrl(searchParams.get('returnUrl'))
   const sessionExpired = searchParams.get('session_expired')
+  const passwordResetSuccess = searchParams.get('message') === 'password_reset_success'
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -71,6 +72,12 @@ function LoginForm() {
       {sessionExpired && (
         <div className="mt-4 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
           Sua sessao expirou. Faca login novamente.
+        </div>
+      )}
+
+      {passwordResetSuccess && (
+        <div className="mt-4 rounded-md bg-emerald-500/10 px-3 py-2 text-sm text-emerald-600 dark:text-emerald-400">
+          Senha redefinida com sucesso. Faca login com a nova senha.
         </div>
       )}
 

@@ -11,6 +11,8 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import {
   Dialog,
@@ -27,8 +29,14 @@ import {
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import {
   Tooltip,
   TooltipContent,
@@ -90,7 +98,7 @@ function PdfPreview({ url, fileName }: PdfPreviewProps) {
   return (
     <div className="relative flex h-full flex-col">
       {/* Toolbar */}
-      <div className="flex h-9 shrink-0 items-center justify-between border-b border-border bg-zinc-100 px-3 dark:bg-zinc-900">
+      <div className="flex h-9 shrink-0 items-center justify-between border-b border-border border-l-4 border-l-zinc-300 bg-zinc-100 px-3 dark:border-l-zinc-600 dark:bg-zinc-900">
         <span className="truncate text-xs text-zinc-500 max-w-[200px]">{fileName}</span>
         <a
           href={url}
@@ -168,7 +176,26 @@ function OcrField({
 }: OcrFieldProps) {
   return (
     <div className="space-y-1">
-      <Label className="text-xs text-zinc-500">{label}</Label>
+      <div className="flex items-center gap-0">
+        <Label className="text-xs text-zinc-500">{label}</Label>
+        {isOcr && !isEdited && (
+          <Badge
+            variant="outline"
+            className="ml-1.5 text-[10px] px-1.5 py-0 h-4 border-blue-300 text-blue-600 dark:border-blue-700 dark:text-blue-400"
+            title="Extraido automaticamente — verifique antes de confirmar"
+          >
+            OCR
+          </Badge>
+        )}
+        {isEdited && (
+          <Badge
+            variant="outline"
+            className="ml-1.5 text-[10px] px-1.5 py-0 h-4 border-amber-400 text-amber-600 dark:border-amber-600 dark:text-amber-400"
+          >
+            Editado
+          </Badge>
+        )}
+      </div>
       <div className="relative">
         {prefix && (
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400">
@@ -189,23 +216,6 @@ function OcrField({
             isEdited && 'border-solid border-amber-500 dark:border-amber-400',
           )}
         />
-        {isOcr && !isEdited && (
-          <Badge
-            variant="secondary"
-            className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0 h-4 dark:bg-blue-500/10 dark:text-blue-400"
-            title="Extraido automaticamente — verifique antes de confirmar"
-          >
-            OCR
-          </Badge>
-        )}
-        {isEdited && (
-          <Badge
-            variant="secondary"
-            className="absolute right-2 top-1/2 -translate-y-1/2 bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0 h-4 dark:bg-amber-500/10 dark:text-amber-400"
-          >
-            Editado
-          </Badge>
-        )}
       </div>
     </div>
   )
@@ -265,9 +275,8 @@ function NfValidationContent({
   // Usa match existente da NF ou o selecionado manualmente
   const hasAutoMatch =
     nf.status === 'auto_matched' && nf.matched_financial_record_id
-  const effectiveMatch = selectedMatch
   const matchFinancialRecordId =
-    effectiveMatch?.id ?? (hasAutoMatch ? nf.matched_financial_record_id : null)
+    selectedMatch?.id ?? (hasAutoMatch ? nf.matched_financial_record_id : null)
 
   const canConfirm = !!(
     (issuerName.trim() || nfNumber.trim()) &&
@@ -319,6 +328,14 @@ function NfValidationContent({
     }
   }
 
+  // Estado inicial da secao colapsavel: expandido se houver algum dado OCR nos campos complementares
+  const hasComplementaryOcrData = !!(
+    nf.extracted_issuer_cnpj ||
+    nf.extracted_issue_date ||
+    nf.extracted_competencia
+  )
+  const [complementaryOpen, setComplementaryOpen] = useState(hasComplementaryOcrData)
+
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
       {/* Corpo split */}
@@ -330,31 +347,48 @@ function NfValidationContent({
 
         {/* Painel direito: dados */}
         <div className="flex-1 overflow-y-auto p-6 md:w-2/5">
-          {/* Lancamento financeiro vinculado (ponto de decisao — vem primeiro) */}
+
+          {/* ZONA A — Match Sugerido (ponto de decisao — vem primeiro) */}
           <p className="text-[11px] font-medium uppercase tracking-widest text-zinc-400">
-            Lancamento Financeiro Vinculado
+            Match Sugerido
           </p>
 
           {hasAutoMatch || selectedMatch ? (
-            <div className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-800 dark:bg-emerald-950">
+            <div
+              className={cn(
+                'mt-2 rounded-lg border p-4',
+                'border-l-4',
+                selectedMatch
+                  ? 'border-amber-200 border-l-amber-500 bg-amber-50/50 dark:border-amber-800 dark:border-l-amber-500 dark:bg-amber-950/20'
+                  : 'border-emerald-200 border-l-emerald-500 bg-emerald-50 dark:border-emerald-800 dark:border-l-emerald-500 dark:bg-emerald-950/40',
+              )}
+            >
               <div className="flex items-center gap-1.5">
                 <Zap className="h-3.5 w-3.5 text-emerald-500" />
-                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                  {selectedMatch ? 'Vinculado manualmente' : 'Vinculado automaticamente'}
+                <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                  {selectedMatch ? 'Vinculado manualmente' : 'Auto-matched'}
                 </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="ml-auto h-7 text-xs text-zinc-500 hover:text-foreground"
+                  onClick={() => setReassignOpen(true)}
+                >
+                  Trocar
+                </Button>
               </div>
-              <div className="mt-1 flex items-center gap-2">
-                <p className="text-sm font-medium text-foreground">
+              <div className="mt-2 flex items-center gap-2">
+                <p className="text-sm font-semibold text-foreground">
                   {selectedMatch?.description ?? nf.matched_record_description ?? '\u2014'}
                 </p>
                 {(selectedMatch?.job_code ?? nf.matched_job_code) && (
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="secondary" className="text-xs">
                     {selectedMatch?.job_code ?? nf.matched_job_code}
                   </Badge>
                 )}
               </div>
-              <p className="mt-1 text-xs text-zinc-500">
-                <span className="font-mono text-emerald-700 dark:text-emerald-300">
+              <p className="mt-1 text-sm text-zinc-500">
+                <span className="font-mono text-zinc-700 dark:text-zinc-300">
                   {formatCurrency(
                     selectedMatch?.amount ?? nf.matched_record_amount,
                   )}
@@ -364,39 +398,30 @@ function NfValidationContent({
               </p>
             </div>
           ) : (
-            <div className="mt-2 flex flex-col items-center gap-2 rounded-md border border-dashed border-amber-300 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-950/30">
-              <AlertCircle className="h-5 w-5 text-amber-500" />
-              <p className="text-xs text-zinc-600 dark:text-zinc-400 text-center">
-                Esta NF ainda nao esta vinculada a nenhuma despesa.
-                <br />
-                Vincule a um lancamento financeiro para poder confirmar.
-              </p>
-              <Button
-                size="sm"
-                className="mt-1"
-                onClick={() => setReassignOpen(true)}
-              >
-                <Search className="h-3.5 w-3.5 mr-1.5" />
-                Vincular a um lancamento
-              </Button>
+            <div className="mt-2 rounded-lg border-2 border-dashed border-zinc-300 bg-transparent p-4 dark:border-zinc-600">
+              <div className="flex flex-col items-center gap-2 text-center">
+                <AlertCircle className="h-5 w-5 text-amber-500" />
+                <p className="text-sm font-medium text-foreground">
+                  Lancamento nao encontrado automaticamente
+                </p>
+                <p className="text-xs text-zinc-500">
+                  Vincule manualmente ao lancamento correto para confirmar esta NF.
+                </p>
+                <Button
+                  size="sm"
+                  className="mt-1"
+                  onClick={() => setReassignOpen(true)}
+                >
+                  <Search className="h-3.5 w-3.5 mr-1.5" />
+                  Buscar lancamento financeiro
+                </Button>
+              </div>
             </div>
           )}
 
-          {(hasAutoMatch || selectedMatch) && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-3 w-full"
-              onClick={() => setReassignOpen(true)}
-            >
-              <Search className="h-3.5 w-3.5 mr-1.5" />
-              Alterar lancamento vinculado
-            </Button>
-          )}
-
-          {/* Dados da NF */}
+          {/* ZONA B — Dados Principais */}
           <p className="mt-6 text-[11px] font-medium uppercase tracking-widest text-zinc-400">
-            Dados da NF
+            Dados da Nota Fiscal
           </p>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
@@ -410,22 +435,6 @@ function NfValidationContent({
               />
             </div>
             <OcrField
-              label="CNPJ"
-              value={issuerCnpj}
-              onChange={setIssuerCnpj}
-              isOcr={!!nf.extracted_issuer_cnpj}
-              isEdited={isEdited.issuerCnpj}
-              placeholder="00.000.000/0000-00"
-            />
-            <OcrField
-              label="Numero NF"
-              value={nfNumber}
-              onChange={setNfNumber}
-              isOcr={!!nf.extracted_nf_number}
-              isEdited={isEdited.nfNumber}
-              placeholder="000000"
-            />
-            <OcrField
               label="Valor"
               value={nfValue}
               onChange={setNfValue}
@@ -435,67 +444,106 @@ function NfValidationContent({
               placeholder="0,00"
             />
             <OcrField
-              label="Data de emissao"
-              value={issueDate}
-              onChange={setIssueDate}
-              isOcr={!!nf.extracted_issue_date}
-              isEdited={isEdited.issueDate}
-              type="date"
+              label="Numero NF"
+              value={nfNumber}
+              onChange={setNfNumber}
+              isOcr={!!nf.extracted_nf_number}
+              isEdited={isEdited.nfNumber}
+              placeholder="000000"
             />
-            <div className="space-y-1">
-              <Label className="text-xs text-zinc-500">Competencia</Label>
-              <Input
-                type="month"
-                value={competencia}
-                onChange={(e) => setCompetencia(e.target.value)}
-                className="text-sm"
-                placeholder="MM/AAAA"
-              />
-            </div>
           </div>
+
+          {/* ZONA C — Informacoes Adicionais (colapsavel) */}
+          <Collapsible
+            open={complementaryOpen}
+            onOpenChange={setComplementaryOpen}
+            className="mt-4 pt-4 border-t border-border/50"
+          >
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="flex w-full items-center justify-between text-[11px] font-medium uppercase tracking-widest text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+              >
+                <span>Informacoes Adicionais</span>
+                {complementaryOpen ? (
+                  <ChevronUp className="h-3.5 w-3.5" />
+                ) : (
+                  <ChevronDown className="h-3.5 w-3.5" />
+                )}
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <OcrField
+                  label="Data de emissao"
+                  value={issueDate}
+                  onChange={setIssueDate}
+                  isOcr={!!nf.extracted_issue_date}
+                  isEdited={isEdited.issueDate}
+                  type="date"
+                />
+                <div className="space-y-1">
+                  <Label className="text-xs text-zinc-500">Competencia</Label>
+                  <Input
+                    type="month"
+                    value={competencia}
+                    onChange={(e) => setCompetencia(e.target.value)}
+                    className="text-sm"
+                    placeholder="MM/AAAA"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <OcrField
+                    label="CNPJ"
+                    value={issuerCnpj}
+                    onChange={setIssuerCnpj}
+                    isOcr={!!nf.extracted_issuer_cnpj}
+                    isEdited={isEdited.issuerCnpj}
+                    placeholder="00.000.000/0000-00"
+                  />
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
       </div>
 
-      {/* Footer: [Cancelar ghost] ... [Rejeitar outline] [Confirmar primary] */}
+      {/* Footer: [Cancelar ghost] [hint] [Rejeitar outline] [Confirmar NF primary] */}
       <div className="flex items-center justify-between border-t border-border px-6 py-4">
         <Button variant="ghost" onClick={onClose} disabled={isValidating || isRejecting}>
           Cancelar
         </Button>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
+          {!canConfirm && (
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              Falta: {confirmDisabledReason.toLowerCase()}
+            </p>
+          )}
           <Button
             variant="outline"
-            className="text-destructive border-destructive/30 hover:bg-destructive/10"
+            className="border-zinc-300 text-zinc-600 hover:border-red-300 hover:text-red-600 dark:border-zinc-600 dark:text-zinc-400 dark:hover:border-red-700 dark:hover:text-red-400"
             onClick={() => setRejectDialogOpen(true)}
             disabled={isValidating || isRejecting}
           >
             <XCircle className="h-4 w-4 mr-1.5" />
-            Rejeitar NF
+            Rejeitar
           </Button>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span tabIndex={canConfirm ? undefined : 0} className="inline-flex">
-                <Button
-                  disabled={!canConfirm || isValidating}
-                  onClick={handleConfirm}
-                >
-                  {isValidating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
-                      Confirmando...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="h-4 w-4 mr-1.5" />
-                      Confirmar Match
-                    </>
-                  )}
-                </Button>
-              </span>
-            </TooltipTrigger>
-            {!canConfirm && (
-              <TooltipContent>{confirmDisabledReason}</TooltipContent>
+          <Button
+            disabled={!canConfirm || isValidating}
+            onClick={handleConfirm}
+          >
+            {isValidating ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+                Confirmando...
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                Confirmar NF
+              </>
             )}
-          </Tooltip>
+          </Button>
         </div>
       </div>
 
@@ -504,21 +552,26 @@ function NfValidationContent({
         <AlertDialogContent>
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold">Rejeitar NF</h3>
+              <h3 className="text-lg font-semibold">Rejeitar Nota Fiscal</h3>
               <p className="text-sm text-zinc-500 mt-1">
-                Informe o motivo da rejeicao para{' '}
-                <span className="font-medium">{nf.file_name}</span>.
+                Voce esta rejeitando:{' '}
+                <span className="font-medium">{nf.file_name}</span>
               </p>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm">Motivo da rejeicao</Label>
-              <Input
+              <Label className="text-sm">
+                Motivo da rejeicao <span className="text-red-500">*</span>
+              </Label>
+              <Textarea
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="Ex: NF duplicada, fornecedor incorreto..."
-                className="text-sm"
+                placeholder="Ex: NF duplicada, fornecedor incorreto, NF cancelada pelo emitente..."
+                className="min-h-[80px] text-sm resize-none"
                 autoFocus
               />
+              <p className="text-xs text-zinc-500">
+                Exemplos: duplicada, fornecedor incorreto, NF cancelada pelo emitente.
+              </p>
             </div>
           </div>
           <AlertDialogFooter>
@@ -535,7 +588,7 @@ function NfValidationContent({
               ) : (
                 <XCircle className="h-4 w-4 mr-1" />
               )}
-              Confirmar rejeicao
+              Rejeitar NF
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -572,11 +625,16 @@ export function NfValidationDialog({
           side="bottom"
           className="flex h-[95vh] flex-col p-0"
         >
-          <div className="shrink-0 border-b border-border px-6 py-4 flex items-center gap-3">
-            <p className="text-lg font-semibold">
-              Validar NF {nf ? `\u2014 ${nf.file_name}` : ''}
-            </p>
-            {nf && <NfStatusBadge status={nf.status} />}
+          <div className="shrink-0 border-b border-border px-6 py-4">
+            <p className="text-base font-semibold">Validar Nota Fiscal</p>
+            {nf && (
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-xs text-zinc-500 truncate max-w-[280px]">
+                  {nf.file_name}
+                </span>
+                <NfStatusBadge status={nf.status} />
+              </div>
+            )}
           </div>
           {/* Preview PDF mobile (45% altura) */}
           {nf && (
@@ -607,12 +665,17 @@ export function NfValidationDialog({
         aria-modal="true"
       >
         <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
-          <div className="flex items-center gap-3">
-            <DialogTitle id="nf-validation-title">
-              Validar NF {nf ? `\u2014 ${nf.file_name}` : ''}
-            </DialogTitle>
-            {nf && <NfStatusBadge status={nf.status} />}
-          </div>
+          <DialogTitle id="nf-validation-title" className="text-base font-semibold">
+            Validar Nota Fiscal
+          </DialogTitle>
+          {nf && (
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-xs text-zinc-500 truncate max-w-[360px]">
+                {nf.file_name}
+              </span>
+              <NfStatusBadge status={nf.status} />
+            </div>
+          )}
         </DialogHeader>
         {nf && (
           <NfValidationContent

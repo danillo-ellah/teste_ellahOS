@@ -28,7 +28,7 @@ function ResetPasswordContent() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [isRecoverySession, setIsRecoverySession] = useState(false)
+  const [hasValidSession, setHasValidSession] = useState(false)
   const [checking, setChecking] = useState(true)
 
   useEffect(() => {
@@ -44,7 +44,7 @@ function ResetPasswordContent() {
     // Basta verificar se o usuario esta autenticado
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
-        setIsRecoverySession(true)
+        setHasValidSession(true)
       }
       setChecking(false)
     }).catch(() => {
@@ -81,7 +81,9 @@ function ResetPasswordContent() {
       return
     }
 
-    router.push('/jobs')
+    // Sign out para forcar login fresh com a nova senha
+    await supabase.auth.signOut()
+    router.push('/login?message=password_reset_success')
     router.refresh()
   }
 
@@ -97,7 +99,7 @@ function ResetPasswordContent() {
   }
 
   // Sessao invalida
-  if (!isRecoverySession) {
+  if (!hasValidSession) {
     return (
       <div className="rounded-lg border bg-card p-6 shadow-sm">
         <div className="space-y-2 text-center">

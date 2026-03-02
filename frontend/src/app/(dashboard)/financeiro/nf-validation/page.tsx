@@ -180,7 +180,7 @@ export default function NfValidationPage() {
           <p className="text-xs text-zinc-500">
             Financeiro{' '}
             <span className="mx-1 text-zinc-400">/</span>
-            NFs
+            Notas Fiscais
           </p>
           <h1 className="mt-0.5 text-2xl font-semibold tracking-tight">
             Validacao de NFs
@@ -227,7 +227,7 @@ export default function NfValidationPage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
             <Input
-              placeholder="Buscar por fornecedor..."
+              placeholder="Buscar por fornecedor ou arquivo..."
               className="pl-9"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
@@ -284,7 +284,7 @@ export default function NfValidationPage() {
               variant="ghost"
               size="sm"
               onClick={clearFilters}
-              className="gap-1.5 text-zinc-500 hover:text-foreground"
+              className="gap-1.5 text-rose-500 hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-300"
             >
               <FilterX className="h-4 w-4" />
               Limpar filtros

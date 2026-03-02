@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import {
   FileText,
-  CheckSquare,
+  ClipboardCheck,
   MoreHorizontal,
   ExternalLink,
   RotateCcw,
@@ -248,6 +248,41 @@ function BulkActionsBar({ count, onConfirmBulk, onRejectBulk, onClear }: BulkBar
   )
 }
 
+// --- Utilitario de urgencia ---
+
+function getDaysSince(dateStr: string | null | undefined): number | null {
+  if (!dateStr) return null
+  const diff = Date.now() - new Date(dateStr).getTime()
+  return Math.floor(diff / (1000 * 60 * 60 * 24))
+}
+
+function UrgencyBadge({ receivedAt }: { receivedAt: string | null | undefined }) {
+  const days = getDaysSince(receivedAt)
+  if (days === null || days < 7) return null
+
+  const isHighUrgency = days > 14
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Badge
+          variant="outline"
+          className={cn(
+            'ml-2 text-[10px] px-1.5 py-0 h-4 shrink-0',
+            isHighUrgency
+              ? 'border-red-400 text-red-600 dark:border-red-600 dark:text-red-400'
+              : 'border-amber-400 text-amber-600 dark:border-amber-600 dark:text-amber-400',
+          )}
+        >
+          {days}d
+        </Badge>
+      </TooltipTrigger>
+      <TooltipContent>
+        Recebida ha {days} dias — revisao pendente
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
 // --- Main component ---
 
 interface NfDocumentTableProps {
@@ -425,24 +460,20 @@ export function NfDocumentTable({
 
                       {/* Arquivo */}
                       <TableCell>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex items-center gap-2 min-w-0">
-                              <FileText className="h-4 w-4 shrink-0 text-zinc-400" />
-                              <div className="min-w-0">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-2 min-w-0">
+                                <FileText className="h-4 w-4 shrink-0 text-zinc-400" />
                                 <span className="block truncate max-w-[160px] text-sm text-zinc-700 dark:text-zinc-300">
                                   {nf.file_name}
                                 </span>
-                                {nf.file_hash && (
-                                  <span className="hidden text-xs text-zinc-400 group-hover:block">
-                                    SHA: {nf.file_hash.slice(0, 8)}...
-                                  </span>
-                                )}
                               </div>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent side="top">{nf.file_name}</TooltipContent>
-                        </Tooltip>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">{nf.file_name}</TooltipContent>
+                          </Tooltip>
+                          <UrgencyBadge receivedAt={nf.email_received_at ?? nf.created_at} />
+                        </div>
                       </TableCell>
 
                       {/* Fornecedor */}
@@ -506,17 +537,21 @@ export function NfDocumentTable({
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
-                                className="h-7 px-2 text-xs"
+                                className={cn(
+                                  'h-8 px-3 text-xs',
+                                  nf.status === 'auto_matched' &&
+                                    'hover:border-emerald-500 hover:text-emerald-600 dark:hover:border-emerald-500 dark:hover:text-emerald-400',
+                                )}
                                 onClick={() => onValidate(nf)}
-                                aria-label={`Validar NF: ${nf.file_name}`}
+                                aria-label={`Revisar NF: ${nf.file_name}`}
                               >
-                                <CheckSquare className="h-3.5 w-3.5 mr-1" />
-                                Validar
+                                <ClipboardCheck className="h-3.5 w-3.5 mr-1" />
+                                Revisar
                               </Button>
                             </TooltipTrigger>
-                            <TooltipContent>Abrir validacao</TooltipContent>
+                            <TooltipContent>Abrir revisao</TooltipContent>
                           </Tooltip>
 
                           <DropdownMenu>
