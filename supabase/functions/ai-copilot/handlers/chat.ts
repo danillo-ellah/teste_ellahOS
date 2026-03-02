@@ -5,14 +5,14 @@
 // (job, metricas do tenant), chama a Groq API (Llama 3.3 70B, gratuito)
 // e retorna a resposta com persistencia de conversa.
 
-import { getSupabaseClient, getServiceClient } from '../_shared/supabase-client.ts';
-import { success } from '../_shared/response.ts';
-import { getCorsHeaders } from '../_shared/cors.ts';
-import { AppError } from '../_shared/errors.ts';
-import type { AuthContext } from '../_shared/auth.ts';
-import { callGroq, callGroqStream, estimateGroqCost, GROQ_MODEL } from '../_shared/groq-client.ts';
-import { getJobFullContext, getTenantMetrics, getJobsList, searchJobByKeyword } from '../_shared/ai-context.ts';
-import { checkRateLimit, logAiUsage } from '../_shared/ai-rate-limiter.ts';
+import { getSupabaseClient, getServiceClient } from '../../_shared/supabase-client.ts';
+import { success } from '../../_shared/response.ts';
+import { getCorsHeaders } from '../../_shared/cors.ts';
+import { AppError } from '../../_shared/errors.ts';
+import type { AuthContext } from '../../_shared/auth.ts';
+import { callGroq, callGroqStream, estimateGroqCost, GROQ_MODEL } from '../../_shared/groq-client.ts';
+import { getJobFullContext, getTenantMetrics, getJobsList, searchJobByKeyword } from '../../_shared/ai-context.ts';
+import { checkRateLimit, logAiUsage } from '../../_shared/ai-rate-limiter.ts';
 import {
   buildCopilotSystemPrompt,
   buildDynamicContext,

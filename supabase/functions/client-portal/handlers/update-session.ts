@@ -1,8 +1,8 @@
-import { getSupabaseClient } from '../_shared/supabase-client.ts';
-import { success } from '../_shared/response.ts';
-import { AppError } from '../_shared/errors.ts';
-import { validate, z } from '../_shared/validation.ts';
-import type { AuthContext } from '../_shared/auth.ts';
+import { getSupabaseClient } from '../../_shared/supabase-client.ts';
+import { success } from '../../_shared/response.ts';
+import { AppError } from '../../_shared/errors.ts';
+import { validate, z } from '../../_shared/validation.ts';
+import type { AuthContext } from '../../_shared/auth.ts';
 
 const PermissionsSchema = z.object({
   timeline: z.boolean(),

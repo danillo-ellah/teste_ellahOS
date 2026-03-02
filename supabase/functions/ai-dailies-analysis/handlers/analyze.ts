@@ -2,14 +2,14 @@
 // Recebe dados textuais de diarias de filmagem, busca contexto do job,
 // chama Claude Haiku e retorna analise estruturada (progresso, riscos, recomendacoes).
 
-import { getSupabaseClient, getServiceClient } from '../_shared/supabase-client.ts';
-import { success } from '../_shared/response.ts';
-import { AppError } from '../_shared/errors.ts';
-import type { AuthContext } from '../_shared/auth.ts';
-import { callClaude, estimateCost } from '../_shared/claude-client.ts';
-import type { ClaudeModel } from '../_shared/claude-client.ts';
-import { getJobFullContext } from '../_shared/ai-context.ts';
-import { checkRateLimit, logAiUsage } from '../_shared/ai-rate-limiter.ts';
+import { getSupabaseClient, getServiceClient } from '../../_shared/supabase-client.ts';
+import { success } from '../../_shared/response.ts';
+import { AppError } from '../../_shared/errors.ts';
+import type { AuthContext } from '../../_shared/auth.ts';
+import { callClaude, estimateCost } from '../../_shared/claude-client.ts';
+import type { ClaudeModel } from '../../_shared/claude-client.ts';
+import { getJobFullContext } from '../../_shared/ai-context.ts';
+import { checkRateLimit, logAiUsage } from '../../_shared/ai-rate-limiter.ts';
 import {
   DAILIES_SYSTEM_PROMPT,
   DAILIES_PROMPT_VERSION,

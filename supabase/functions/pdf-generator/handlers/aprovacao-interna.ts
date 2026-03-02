@@ -127,7 +127,13 @@ export async function generateApprovalHandler(
   console.log(`[aprovacao-interna] HTML gerado (${html.length} chars) para job ${jobId}`);
 
   // 6. Salvar no Drive e em job_files (se configurado)
-  let driveResult: { driveFileId: string; driveUrl: string; jobFileId: string } | null = null;
+  let driveResult: {
+    driveFileId: string;
+    driveUrl: string;
+    jobFileId: string;
+    version: number;
+    previousFileId: string | null;
+  } | null = null;
 
   if (saveToDrive || saveToFiles) {
     const jobCode = (job.code as string) ?? (job.job_aba as string) ?? jobId.slice(0, 8);
@@ -146,9 +152,12 @@ export async function generateApprovalHandler(
         fileName,
         folderKey: 'documentos',
         fileType: 'aprovacao_interna',
+        uploadedBy: auth.userId,
       });
 
-      console.log(`[aprovacao-interna] salvo no Drive: ${driveResult.driveUrl}`);
+      console.log(
+        `[aprovacao-interna] salvo no Drive: ${driveResult.driveUrl} (version=${driveResult.version}${driveResult.previousFileId ? `, substitui ${driveResult.previousFileId}` : ''})`,
+      );
     } catch (driveErr) {
       const msg = driveErr instanceof Error ? driveErr.message : String(driveErr);
       console.error(`[aprovacao-interna] falha ao salvar no Drive: ${msg}`);
@@ -156,18 +165,22 @@ export async function generateApprovalHandler(
     }
   }
 
-  // 7. Registrar no historico do job
+  // 7. Registrar no historico do job (inclui info de versionamento)
   try {
     await insertHistory(supabase, {
       tenantId: auth.tenantId,
       jobId,
       eventType: 'field_update',
       userId: auth.userId,
-      description: 'Aprovacao interna gerada',
+      description: driveResult && driveResult.version > 1
+        ? `Aprovacao interna regenerada (v${driveResult.version})`
+        : 'Aprovacao interna gerada',
       dataAfter: {
         action: 'approval_internal_generated',
         drive_url: driveResult?.driveUrl ?? null,
         generated_by: auth.userId,
+        version: driveResult?.version ?? 1,
+        previous_file_id: driveResult?.previousFileId ?? null,
       },
     });
   } catch (histErr) {
@@ -180,6 +193,8 @@ export async function generateApprovalHandler(
     drive_file_id: driveResult?.driveFileId ?? null,
     drive_url: driveResult?.driveUrl ?? null,
     job_file_id: driveResult?.jobFileId ?? null,
+    version: driveResult?.version ?? 1,
+    previous_file_id: driveResult?.previousFileId ?? null,
     generated_at: new Date().toISOString(),
   });
 }

@@ -1,10 +1,10 @@
-import { getSupabaseClient, getServiceClient } from '../_shared/supabase-client.ts';
-import { created } from '../_shared/response.ts';
-import { AppError } from '../_shared/errors.ts';
-import { validate, z } from '../_shared/validation.ts';
-import { createNotification } from '../_shared/notification-helper.ts';
-import { enqueueEvent } from '../_shared/integration-client.ts';
-import type { AuthContext } from '../_shared/auth.ts';
+import { getSupabaseClient, getServiceClient } from '../../_shared/supabase-client.ts';
+import { created } from '../../_shared/response.ts';
+import { AppError } from '../../_shared/errors.ts';
+import { validate, z } from '../../_shared/validation.ts';
+import { createNotification } from '../../_shared/notification-helper.ts';
+import { enqueueEvent } from '../../_shared/integration-client.ts';
+import type { AuthContext } from '../../_shared/auth.ts';
 
 const APPROVAL_TYPES = ['briefing', 'orcamento_detalhado', 'corte', 'finalizacao', 'entrega'] as const;
 

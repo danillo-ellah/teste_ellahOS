@@ -377,6 +377,10 @@ export interface SavePdfResult {
   driveFileId: string;
   driveUrl: string;
   jobFileId: string;
+  /** Numero da versao do arquivo criado */
+  version: number;
+  /** ID do registro anterior que foi substituido (null se primeira versao) */
+  previousFileId: string | null;
 }
 
 // Parametros para salvar PDF no Drive e registrar em job_files
@@ -387,30 +391,41 @@ export interface SavePdfParams {
   fileName: string;
   /** Chave da pasta no Drive. Ex: 'documentos', 'contratos' */
   folderKey: string;
-  /** Tipo do arquivo para o registro em job_files. Ex: 'aprovacao_interna', 'claquete' */
+  /** Categoria do documento para job_files.category. Ex: 'aprovacao_interna', 'contrato', 'orcamento' */
   fileType?: string;
+  /** ID do usuario que gerou o arquivo (para uploaded_by) */
+  uploadedBy?: string;
 }
 
 /**
  * Salva um PDF (Uint8Array) no Google Drive na pasta correta do job
  * e cria um registro em job_files com a URL de acesso.
  *
+ * Implementa versionamento automatico:
+ *   - Busca versao anterior ativa (mesmo job_id + category, sem superseded_by)
+ *   - Marca versao anterior com superseded_by = novo registro
+ *   - Incrementa version number (anterior.version + 1)
+ *   - Versao anterior NAO e deletada (preserva historico completo)
+ *
  * Fluxo:
  *   1. Busca o drive_folder_id da pasta via drive_folders table
  *   2. Faz upload do PDF para o Drive via google-drive-client
- *   3. Insere registro em job_files com a URL e metadados
- *   4. Atualiza jobs.internal_approval_doc_url se fileType = 'aprovacao_interna'
+ *   3. Busca versao anterior ativa em job_files (para versionamento)
+ *   4. Insere novo registro em job_files com version incrementado
+ *   5. Marca versao anterior com superseded_by = novo registro
+ *   6. Atualiza jobs.internal_approval_doc_url se category = 'aprovacao_interna'
  *
- * Retorna driveFileId, driveUrl e jobFileId do registro criado.
+ * Retorna driveFileId, driveUrl, jobFileId, version e previousFileId.
  */
 export async function savePdfToDrive(
   serviceClient: SupabaseClient,
   params: SavePdfParams,
 ): Promise<SavePdfResult> {
-  const { tenantId, jobId, pdfBytes, fileName, folderKey, fileType } = params;
+  const { tenantId, jobId, pdfBytes, fileName, folderKey, fileType, uploadedBy } = params;
+  const category = fileType ?? 'document';
 
   console.log(
-    `[pdf-generator] salvando PDF "${fileName}" (${pdfBytes.byteLength} bytes) no Drive, job ${jobId}, pasta "${folderKey}"`,
+    `[pdf-generator] salvando PDF "${fileName}" (${pdfBytes.byteLength} bytes) no Drive, job ${jobId}, pasta "${folderKey}", category "${category}"`,
   );
 
   // 1. Busca o ID da pasta no Drive
@@ -438,12 +453,6 @@ export async function savePdfToDrive(
   }
 
   // 2. Upload do PDF para o Drive via Google Drive API (multipart upload)
-  // Requer que o DRIVE_SERVICE_ACCOUNT_JSON esteja configurado no Vault do tenant.
-  // Documentacao: https://developers.google.com/drive/api/guides/manage-uploads
-  //
-  // NOTA: uploadFileToDrive sera adicionado a google-drive-client.ts na implementacao
-  // da Edge Function pdf-generator (Fase 9.6). Por ora, este helper documenta a interface
-  // esperada e pode ser substituido pela implementacao real sem alterar o contrato.
   const { getGoogleAccessToken } = await import('./google-drive-client.ts');
   const { getSecret } = await import('./vault.ts');
 
@@ -502,17 +511,60 @@ export async function savePdfToDrive(
     `[pdf-generator] PDF carregado no Drive: id=${driveFileId}, url=${driveUrl}`,
   );
 
-  // 3. Registra em job_files
+  // 3. Busca versao anterior ativa em job_files (mesmo job + category, sem superseded_by)
+  // Usa o indice idx_job_files_job_category_active para performance
+  let previousVersion = 0;
+  let previousFileId: string | null = null;
+
+  const { data: previousFile, error: prevError } = await serviceClient
+    .from('job_files')
+    .select('id, version')
+    .eq('job_id', jobId)
+    .eq('tenant_id', tenantId)
+    .eq('category', category)
+    .is('superseded_by', null)
+    .is('deleted_at', null)
+    .order('version', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (prevError) {
+    // Nao e fatal — apenas loga e continua sem versionamento
+    console.warn(
+      `[pdf-generator] aviso: falha ao buscar versao anterior: ${prevError.message}. Continuando com version=1.`,
+    );
+  } else if (previousFile) {
+    previousVersion = (previousFile.version as number) ?? 0;
+    previousFileId = previousFile.id as string;
+    console.log(
+      `[pdf-generator] versao anterior encontrada: id=${previousFileId}, version=${previousVersion}`,
+    );
+  }
+
+  const newVersion = previousVersion + 1;
+
+  // 4. Insere novo registro em job_files com version incrementado
+  // Colunas mapeadas para o schema real de job_files:
+  //   external_id = ID do arquivo no Drive
+  //   external_source = 'google_drive'
+  //   file_url = URL de acesso ao arquivo no Drive
+  //   category = tipo do documento (aprovacao_interna, contrato, etc.)
+  //   file_type = MIME type do conteudo
+  //   metadata = dados extras (folder_key, etc.)
   const { data: jobFile, error: jobFileError } = await serviceClient
     .from('job_files')
     .insert({
       tenant_id: tenantId,
       job_id: jobId,
       file_name: fileName,
-      file_type: fileType ?? 'document',
-      drive_file_id: driveFileId,
-      drive_url: driveUrl,
+      file_url: driveUrl,
+      file_type: fileName.endsWith('.html') ? 'text/html' : 'application/pdf',
+      category,
+      external_id: driveFileId,
+      external_source: 'google_drive',
       file_size_bytes: pdfBytes.byteLength,
+      version: newVersion,
+      uploaded_by: uploadedBy ?? null,
       metadata: { folder_key: folderKey },
     })
     .select('id')
@@ -523,12 +575,36 @@ export async function savePdfToDrive(
     console.error(
       `[pdf-generator] aviso: falha ao registrar PDF em job_files: ${jobFileError?.message}`,
     );
+    return { driveFileId, driveUrl, jobFileId: '', version: newVersion, previousFileId };
   }
 
   const jobFileId = (jobFile?.id as string) ?? '';
 
-  // 4. Atualiza campo especifico no job se for aprovacao interna
-  if (fileType === 'aprovacao_interna') {
+  console.log(
+    `[pdf-generator] novo registro job_files criado: id=${jobFileId}, version=${newVersion}`,
+  );
+
+  // 5. Marca versao anterior com superseded_by = novo registro
+  if (previousFileId && jobFileId) {
+    const { error: supersedeError } = await serviceClient
+      .from('job_files')
+      .update({ superseded_by: jobFileId })
+      .eq('id', previousFileId)
+      .eq('tenant_id', tenantId);
+
+    if (supersedeError) {
+      console.error(
+        `[pdf-generator] aviso: falha ao marcar versao anterior (${previousFileId}) como superseded: ${supersedeError.message}`,
+      );
+    } else {
+      console.log(
+        `[pdf-generator] versao anterior ${previousFileId} marcada com superseded_by=${jobFileId}`,
+      );
+    }
+  }
+
+  // 6. Atualiza campo especifico no job se for aprovacao interna
+  if (category === 'aprovacao_interna') {
     const { error: updateError } = await serviceClient
       .from('jobs')
       .update({ internal_approval_doc_url: driveUrl })
@@ -544,5 +620,5 @@ export async function savePdfToDrive(
     }
   }
 
-  return { driveFileId, driveUrl, jobFileId };
+  return { driveFileId, driveUrl, jobFileId, version: newVersion, previousFileId };
 }

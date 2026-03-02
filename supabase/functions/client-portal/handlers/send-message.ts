@@ -1,8 +1,8 @@
-import { getServiceClient } from '../_shared/supabase-client.ts';
-import { success, error } from '../_shared/response.ts';
-import { AppError } from '../_shared/errors.ts';
-import { validate, z } from '../_shared/validation.ts';
-import { notifyJobTeam } from '../_shared/notification-helper.ts';
+import { getServiceClient } from '../../_shared/supabase-client.ts';
+import { success, error } from '../../_shared/response.ts';
+import { AppError } from '../../_shared/errors.ts';
+import { validate, z } from '../../_shared/validation.ts';
+import { notifyJobTeam } from '../../_shared/notification-helper.ts';
 
 // UUID v4 regex para validacao de formato
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

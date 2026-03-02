@@ -1,5 +1,5 @@
-import { getServiceClient } from '../_shared/supabase-client.ts';
-import { success, error } from '../_shared/response.ts';
+import { getServiceClient } from '../../_shared/supabase-client.ts';
+import { success, error } from '../../_shared/response.ts';
 
 // UUID v4 regex para validacao rapida de formato
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

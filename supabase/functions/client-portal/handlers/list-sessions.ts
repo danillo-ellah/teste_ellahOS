@@ -1,7 +1,7 @@
-import { getSupabaseClient } from '../_shared/supabase-client.ts';
-import { success } from '../_shared/response.ts';
-import { AppError } from '../_shared/errors.ts';
-import type { AuthContext } from '../_shared/auth.ts';
+import { getSupabaseClient } from '../../_shared/supabase-client.ts';
+import { success } from '../../_shared/response.ts';
+import { AppError } from '../../_shared/errors.ts';
+import type { AuthContext } from '../../_shared/auth.ts';
 
 // GET /client-portal/sessions?job_id=X
 // Lista todas as sessoes do portal do tenant (com filtro opcional por job).

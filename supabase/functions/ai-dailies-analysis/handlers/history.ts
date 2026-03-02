@@ -3,10 +3,10 @@
 // onde feature='dailies_analysis' e metadata->>'job_id' = job_id informado.
 // Usa serviceClient pois RLS de ai_usage_logs restringe acesso a admin/ceo.
 
-import { getServiceClient } from '../_shared/supabase-client.ts';
-import { success } from '../_shared/response.ts';
-import { AppError } from '../_shared/errors.ts';
-import type { AuthContext } from '../_shared/auth.ts';
+import { getServiceClient } from '../../_shared/supabase-client.ts';
+import { success } from '../../_shared/response.ts';
+import { AppError } from '../../_shared/errors.ts';
+import type { AuthContext } from '../../_shared/auth.ts';
 
 // Estrutura de um registro retornado pelo historico
 interface DailiesHistoryEntry {

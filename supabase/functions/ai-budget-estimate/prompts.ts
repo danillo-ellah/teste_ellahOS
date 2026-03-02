@@ -2,7 +2,7 @@
 // Mudancas no prompt = novo deploy da Edge Function.
 // Versao atual: v1
 
-import { sanitizeUserInput } from './_shared/claude-client.ts';
+import { sanitizeUserInput } from '../_shared/claude-client.ts';
 
 export const BUDGET_ESTIMATE_SYSTEM_PROMPT = `Voce e um produtor executivo senior especializado em orcamentos de producao audiovisual no Brasil. Sua tarefa e analisar os dados de um novo job e, com base no historico de jobs similares da produtora, sugerir um orcamento detalhado.
 

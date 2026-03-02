@@ -1,7 +1,7 @@
-import { getSupabaseClient } from '../_shared/supabase-client.ts';
-import { success } from '../_shared/response.ts';
-import { AppError } from '../_shared/errors.ts';
-import type { AuthContext } from '../_shared/auth.ts';
+import { getSupabaseClient } from '../../_shared/supabase-client.ts';
+import { success } from '../../_shared/response.ts';
+import { AppError } from '../../_shared/errors.ts';
+import type { AuthContext } from '../../_shared/auth.ts';
 
 // GET /dashboard/pipeline
 // Chama a RPC get_pipeline_summary(p_tenant_id) e retorna contagem de jobs por status.

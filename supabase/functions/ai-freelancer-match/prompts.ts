@@ -3,7 +3,7 @@
 // Mudancas no prompt = novo deploy da Edge Function.
 // Versao atual: v1
 
-import { sanitizeUserInput } from './_shared/claude-client.ts';
+import { sanitizeUserInput } from '../_shared/claude-client.ts';
 
 // --- Versao do prompt (para tracking em ai_usage_logs) ---
 export const FREELANCER_PROMPT_VERSION = 'v1';

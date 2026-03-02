@@ -1,7 +1,7 @@
-import { getSupabaseClient } from '../_shared/supabase-client.ts';
-import { success } from '../_shared/response.ts';
-import { AppError } from '../_shared/errors.ts';
-import type { AuthContext } from '../_shared/auth.ts';
+import { getSupabaseClient } from '../../_shared/supabase-client.ts';
+import { success } from '../../_shared/response.ts';
+import { AppError } from '../../_shared/errors.ts';
+import type { AuthContext } from '../../_shared/auth.ts';
 
 // DELETE /client-portal/sessions/:id
 // Soft delete de uma sessao. O token fica invalido imediatamente (deleted_at IS NOT NULL).

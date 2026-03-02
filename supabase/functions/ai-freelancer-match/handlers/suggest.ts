@@ -2,15 +2,15 @@
 // Recebe job_id + role desejado, busca candidatos freelancers do tenant,
 // chama Claude Sonnet para ranquear por adequacao e retorna sugestoes enriquecidas.
 
-import { getSupabaseClient, getServiceClient } from '../_shared/supabase-client.ts';
-import { success } from '../_shared/response.ts';
-import { AppError } from '../_shared/errors.ts';
-import type { AuthContext } from '../_shared/auth.ts';
-import { callClaude, estimateCost } from '../_shared/claude-client.ts';
-import type { ClaudeModel } from '../_shared/claude-client.ts';
-import { getJobFullContext, getFreelancerCandidates } from '../_shared/ai-context.ts';
-import type { FreelancerCandidate } from '../_shared/ai-context.ts';
-import { checkRateLimit, logAiUsage } from '../_shared/ai-rate-limiter.ts';
+import { getSupabaseClient, getServiceClient } from '../../_shared/supabase-client.ts';
+import { success } from '../../_shared/response.ts';
+import { AppError } from '../../_shared/errors.ts';
+import type { AuthContext } from '../../_shared/auth.ts';
+import { callClaude, estimateCost } from '../../_shared/claude-client.ts';
+import type { ClaudeModel } from '../../_shared/claude-client.ts';
+import { getJobFullContext, getFreelancerCandidates } from '../../_shared/ai-context.ts';
+import type { FreelancerCandidate } from '../../_shared/ai-context.ts';
+import { checkRateLimit, logAiUsage } from '../../_shared/ai-rate-limiter.ts';
 import {
   FREELANCER_SYSTEM_PROMPT,
   FREELANCER_PROMPT_VERSION,

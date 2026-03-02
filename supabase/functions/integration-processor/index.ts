@@ -1,13 +1,13 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { getServiceClient, getSupabaseClient } from './_shared/supabase-client.ts';
+import { getServiceClient, getSupabaseClient } from '../_shared/supabase-client.ts';
 import {
   getNextEvents,
   updateEventStatus,
   calculateNextRetry,
   MAX_ATTEMPTS,
-} from './_shared/integration-client.ts';
-import { createNotification } from './_shared/notification-helper.ts';
+} from '../_shared/integration-client.ts';
+import { createNotification } from '../_shared/notification-helper.ts';
 import { processDriveEvent } from './handlers/drive-handler.ts';
 import { processN8nEvent } from './handlers/n8n-handler.ts';
 import { processWhatsappEvent } from './handlers/whatsapp-handler.ts';
@@ -16,6 +16,17 @@ import { processDocuSealEvent } from './handlers/docuseal-handler.ts';
 import { processPdfEvent } from './handlers/pdf-handler.ts';
 import { processDriveCopyEvent } from './handlers/drive-copy-handler.ts';
 import { processNfEmailEvent } from './handlers/nf-email-handler.ts';
+// Fallback de email via Resend (ativado quando n8n esta indisponivel apos MAX_ATTEMPTS retries)
+import { sendFallbackEmail, buildFallbackEmailContent } from '../_shared/email-fallback.ts';
+
+// Tipos de evento que exigem fallback de email quando falham definitivamente.
+// Para estes eventos o sistema tenta notificar por Resend antes de marcar como failed.
+const CRITICAL_EVENT_TYPES = [
+  'nf_email_send',      // Pedido de NF para fornecedor — urgente, fornecedor aguarda
+  'nf_request_sent',    // Status de NF enviada — fornecedor precisa saber
+  'nf_status_update',   // Atualizacao de status de NF — mesma urgencia
+  'contract_ready',     // Contrato pronto para assinatura — DocuSeal alternativo
+] as const;
 
 // ========================================================
 // integration-processor — Processa fila de integration_events
@@ -26,7 +37,7 @@ import { processNfEmailEvent } from './handlers/nf-email-handler.ts';
 
 Deno.serve(async (req: Request) => {
   // Apenas POST (pg_cron via pg_net)
-  if (req.method \!== 'POST') {
+  if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
       headers: { 'Content-Type': 'application/json' },
@@ -42,7 +53,7 @@ Deno.serve(async (req: Request) => {
   if (providedSecret) {
     // Caminho 1: pg_cron envia X-Cron-Secret — validar contra o Vault
     const { data: storedSecret } = await serviceClient.rpc('read_secret', { secret_name: 'CRON_SECRET' });
-    if (\!storedSecret || providedSecret \!== storedSecret) {
+    if (!storedSecret || providedSecret !== storedSecret) {
       console.warn('[integration-processor] X-Cron-Secret invalido');
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
@@ -55,7 +66,7 @@ Deno.serve(async (req: Request) => {
     const token = authHeader.replace('Bearer ', '');
     const userClient = getSupabaseClient(token);
     const { data: { user }, error } = await userClient.auth.getUser(token);
-    if (error || \!user) {
+    if (error || !user) {
       console.warn('[integration-processor] JWT invalido');
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
@@ -63,7 +74,7 @@ Deno.serve(async (req: Request) => {
       });
     }
     const role = user.app_metadata?.role ?? '';
-    if (\!['admin', 'ceo'].includes(role)) {
+    if (!['admin', 'ceo'].includes(role)) {
       console.warn('[integration-processor] JWT valido mas role insuficiente:', role);
       return new Response(JSON.stringify({ error: 'Forbidden' }), {
         status: 403,
@@ -141,8 +152,23 @@ Deno.serve(async (req: Request) => {
       console.error(`[integration-processor] evento ${event.id} falhou (tentativa ${event.attempts}): ${errMsg}`);
 
       if (event.attempts >= MAX_ATTEMPTS) {
-        // Falha permanente — marcar como failed e notificar admin
-        await updateEventStatus(serviceClient, event.id, 'failed', undefined, errMsg);
+        // Falha permanente — tentar fallback de email antes de marcar como failed
+        const isCritical = (CRITICAL_EVENT_TYPES as readonly string[]).includes(event.event_type);
+
+        let fallbackResult: Record<string, unknown> = {};
+
+        if (isCritical) {
+          console.warn(
+            `[integration-processor] evento critico ${event.id} (${event.event_type}) esgotou retries — ativando fallback de email`,
+          );
+          fallbackResult = await _runEmailFallback(event.event_type, event.payload, errMsg);
+        } else {
+          console.error(
+            `[integration-processor] evento ${event.id} (${event.event_type}) esgotou retries — marcando como failed (nao critico, sem fallback)`,
+          );
+        }
+
+        await updateEventStatus(serviceClient, event.id, 'failed', fallbackResult || undefined, errMsg);
         await notifyAdminOfFailure(serviceClient, event.tenant_id, event, errMsg);
       } else {
         // Agendar retry com backoff exponencial
@@ -211,6 +237,72 @@ async function notifyAdminOfFailure(
     }
   } catch (notifErr) {
     console.error('[integration-processor] falha ao notificar admins:', notifErr);
+  }
+}
+
+// Executa o fallback de email para eventos criticos que esgotaram as retries.
+// Para 'nf_email_send' usa o HTML pre-montado do payload (via Resend).
+// Para outros eventos criticos usa o template generico de fallback.
+// Nunca lanca excecao — erros sao logados internamente pelo email-fallback.ts.
+async function _runEmailFallback(
+  eventType: string,
+  payload: Record<string, unknown>,
+  errorInfo: string,
+): Promise<Record<string, unknown>> {
+  try {
+    // nf_email_send: usar o HTML e destinatario ja presentes no payload
+    if (eventType === 'nf_email_send') {
+      const supplierEmail = payload.supplier_email as string;
+
+      if (!supplierEmail) {
+        console.warn('[integration-processor] fallback: supplier_email ausente no payload nf_email_send');
+        return { fallback_attempted: false, reason: 'supplier_email ausente' };
+      }
+
+      const subject =
+        (payload.email_subject as string) || 'Ellah Filmes - Pedido de Nota Fiscal';
+      const html = (payload.email_html as string) || '';
+      const text = (payload.email_text as string) || undefined;
+      const replyTo = (payload.reply_to as string) || undefined;
+
+      const sent = await sendFallbackEmail(supplierEmail, subject, html, { text, reply_to: replyTo });
+
+      return {
+        fallback_attempted: true,
+        fallback_sent: sent,
+        fallback_channel: sent ? 'resend' : 'none',
+        fallback_to: supplierEmail,
+        fallback_error_context: errorInfo.slice(0, 200),
+      };
+    }
+
+    // Eventos criticos genericos: enviar template basico para admin via Resend
+    // Destinatario de fallback admin configuravel via env var
+    const adminEmail = Deno.env.get('FALLBACK_ADMIN_EMAIL');
+
+    if (!adminEmail) {
+      console.warn(
+        '[integration-processor] fallback: FALLBACK_ADMIN_EMAIL nao configurada — ' +
+          'nao e possivel notificar admin por email. Configure: supabase secrets set FALLBACK_ADMIN_EMAIL=admin@ellahfilmes.com',
+      );
+      return { fallback_attempted: false, reason: 'FALLBACK_ADMIN_EMAIL ausente' };
+    }
+
+    const { subject, html, text } = buildFallbackEmailContent(eventType, payload, errorInfo);
+    const sent = await sendFallbackEmail(adminEmail, subject, html, { text });
+
+    return {
+      fallback_attempted: true,
+      fallback_sent: sent,
+      fallback_channel: sent ? 'resend' : 'none',
+      fallback_to: adminEmail,
+      fallback_error_context: errorInfo.slice(0, 200),
+    };
+  } catch (err) {
+    // Falha no proprio fallback — apenas loga, nao propaga
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[integration-processor] erro inesperado no fallback de email: ${msg}`);
+    return { fallback_attempted: true, fallback_sent: false, fallback_error: msg };
   }
 }
 

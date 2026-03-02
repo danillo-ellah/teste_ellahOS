@@ -1,8 +1,8 @@
-import { getServiceClient } from '../_shared/supabase-client.ts';
-import { success, error } from '../_shared/response.ts';
-import { AppError } from '../_shared/errors.ts';
-import { validate, z } from '../_shared/validation.ts';
-import { createNotification } from '../_shared/notification-helper.ts';
+import { getServiceClient } from '../../_shared/supabase-client.ts';
+import { success, error } from '../../_shared/response.ts';
+import { AppError } from '../../_shared/errors.ts';
+import { validate, z } from '../../_shared/validation.ts';
+import { createNotification } from '../../_shared/notification-helper.ts';
 
 const RespondSchema = z.object({
   action: z.enum(['approved', 'rejected'], {

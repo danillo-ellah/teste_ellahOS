@@ -103,6 +103,9 @@ export async function processPdfEvent(
   const encoder = new TextEncoder();
   const htmlBytes = encoder.encode(html);
 
+  // uploaded_by vem do payload do evento, se disponivel
+  const uploadedBy = (event.payload.user_id as string) ?? null;
+
   const driveResult = await savePdfToDrive(serviceClient, {
     tenantId,
     jobId,
@@ -110,9 +113,12 @@ export async function processPdfEvent(
     fileName,
     folderKey: 'documentos',
     fileType: 'aprovacao_interna',
+    uploadedBy: uploadedBy ?? undefined,
   });
 
-  console.log(`[pdf-handler] PDF salvo no Drive: ${driveResult.driveUrl}`);
+  console.log(
+    `[pdf-handler] PDF salvo no Drive: ${driveResult.driveUrl} (version=${driveResult.version}${driveResult.previousFileId ? `, substitui ${driveResult.previousFileId}` : ''})`,
+  );
 
   return {
     job_id: jobId,
@@ -120,6 +126,8 @@ export async function processPdfEvent(
     drive_file_id: driveResult.driveFileId,
     drive_url: driveResult.driveUrl,
     job_file_id: driveResult.jobFileId,
+    version: driveResult.version,
+    previous_file_id: driveResult.previousFileId,
     html_length: html.length,
   };
 }

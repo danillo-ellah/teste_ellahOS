@@ -131,17 +131,26 @@ export async function processDriveCopyEvent(
       const copyResult = await copyDriveFile(accessToken, sourceId, fileName, targetFolderId);
 
       // Registrar em job_files
+      // Colunas mapeadas para o schema real:
+      //   file_url = URL de acesso no Drive
+      //   external_id = ID unico para idempotencia (template:{source_id})
+      //   external_source = 'google_drive'
+      //   category = 'template'
+      //   file_type = MIME type
+      //   metadata = dados extras (source_template_id, folder_key)
+      const driveViewUrl = copyResult.webViewLink ?? `https://drive.google.com/file/d/${copyResult.id}/view`;
       await serviceClient
         .from('job_files')
         .insert({
           tenant_id: tenantId,
           job_id: jobId,
           file_name: fileName,
-          file_type: 'template',
-          drive_file_id: copyResult.id,
-          drive_url: copyResult.webViewLink ?? `https://drive.google.com/file/d/${copyResult.id}/view`,
+          file_url: driveViewUrl,
+          file_type: 'application/vnd.google-apps.document',
+          category: 'template',
           external_id: externalId,
-          metadata: { source_template_id: sourceId, folder_key: targetFolderKey },
+          external_source: 'google_drive',
+          metadata: { source_template_id: sourceId, folder_key: targetFolderKey, drive_copied_file_id: copyResult.id },
         });
 
       copiedCount++;

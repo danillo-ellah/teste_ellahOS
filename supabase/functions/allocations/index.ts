@@ -1,8 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { handleCors } from './_shared/cors.ts';
-import { getAuthContext } from './_shared/auth.ts';
-import { error, fromAppError } from './_shared/response.ts';
-import { AppError } from './_shared/errors.ts';
+import { handleCors } from '../_shared/cors.ts';
+import { getAuthContext } from '../_shared/auth.ts';
+import { error, fromAppError } from '../_shared/response.ts';
+import { AppError } from '../_shared/errors.ts';
 import { listByJob } from './handlers/list-by-job.ts';
 import { listByPerson } from './handlers/list-by-person.ts';
 import { listByRange } from './handlers/list-by-range.ts';

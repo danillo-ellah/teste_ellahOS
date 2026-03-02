@@ -1,9 +1,9 @@
-import { getSupabaseClient, getServiceClient } from '../_shared/supabase-client.ts';
-import { success } from '../_shared/response.ts';
-import { AppError } from '../_shared/errors.ts';
-import { validate, z } from '../_shared/validation.ts';
-import { createNotification } from '../_shared/notification-helper.ts';
-import type { AuthContext } from '../_shared/auth.ts';
+import { getSupabaseClient, getServiceClient } from '../../_shared/supabase-client.ts';
+import { success } from '../../_shared/response.ts';
+import { AppError } from '../../_shared/errors.ts';
+import { validate, z } from '../../_shared/validation.ts';
+import { createNotification } from '../../_shared/notification-helper.ts';
+import type { AuthContext } from '../../_shared/auth.ts';
 
 const RejectInternalSchema = z.object({
   comment: z.string().min(1, 'Comentario obrigatorio para rejeicao').max(5000),

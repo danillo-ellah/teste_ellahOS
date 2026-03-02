@@ -1,8 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { handleCors } from './_shared/cors.ts';
-import { getAuthContext } from './_shared/auth.ts';
-import { error, fromAppError } from './_shared/response.ts';
-import { AppError } from './_shared/errors.ts';
+import { handleCors } from '../_shared/cors.ts';
+import { getAuthContext } from '../_shared/auth.ts';
+import { error, fromAppError } from '../_shared/response.ts';
+import { AppError } from '../_shared/errors.ts';
 import { listByJob } from './handlers/list-by-job.ts';
 import { listPending } from './handlers/list-pending.ts';
 import { createApproval } from './handlers/create.ts';

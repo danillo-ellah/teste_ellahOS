@@ -1,10 +1,10 @@
 // GET /ai-budget-estimate/history?job_id=X
 // Lista estimativas anteriores de um job, ordenadas por data (mais recente primeiro)
 
-import { getSupabaseClient } from '../_shared/supabase-client.ts';
-import { success } from '../_shared/response.ts';
-import { AppError } from '../_shared/errors.ts';
-import type { AuthContext } from '../_shared/auth.ts';
+import { getSupabaseClient } from '../../_shared/supabase-client.ts';
+import { success } from '../../_shared/response.ts';
+import { AppError } from '../../_shared/errors.ts';
+import type { AuthContext } from '../../_shared/auth.ts';
 
 export async function handleHistory(
   req: Request,

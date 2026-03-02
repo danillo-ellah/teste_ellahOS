@@ -38,3 +38,23 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  check-edge-functions:
+    name: Typecheck Edge Functions (Deno)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: "2.x"
+
+      - name: Check types in all Edge Functions
+        run: |
+          for dir in supabase/functions/*/; do
+            if [ -f "$dir/index.ts" ]; then
+              echo "Checking $dir..."
+              deno check "$dir/index.ts" || exit 1
+            fi
+          done

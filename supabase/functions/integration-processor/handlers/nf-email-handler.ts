@@ -1,9 +1,13 @@
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import type { IntegrationEvent } from '../../_shared/integration-client.ts';
+import { sendFallbackEmail } from '../../_shared/email-fallback.ts';
 
 // Handler: processa evento nf_email_send
-// Delega o envio de email de pedido de NF para o workflow n8n wf-nf-request
-// que envia via Gmail API com a credencial OAuth2 configurada.
+// Canal primario: n8n wf-nf-request (Gmail OAuth2).
+// Canal de fallback: Resend API — ativado automaticamente quando o n8n esta indisponivel
+//   e o evento ja esgotou as retries do integration-processor (attempts >= MAX_ATTEMPTS).
+//   Neste handler o fallback e usado apenas como tentativa imediata na ultima chamada;
+//   o fallback definitivo por exaustao de retries ocorre em index.ts.
 export async function processNfEmailEvent(
   serviceClient: SupabaseClient,
   event: IntegrationEvent,
@@ -79,7 +83,7 @@ export async function processNfEmailEvent(
     throw new Error(`n8n webhook nf_request retornou HTTP ${resp.status}: ${text.slice(0, 300)}`);
   }
 
-  const responseBody = await resp.json().catch(() => ({}));
+  await resp.json().catch(() => ({}));
 
   // Nota: nf_request_status ja foi atualizado para 'enviado' pelo request-send.ts
   // Nao duplicar o update aqui para evitar race condition (H4 fix)
@@ -89,5 +93,69 @@ export async function processNfEmailEvent(
   return {
     supplier_email: supplierEmail,
     http_status: resp.status,
+    channel: 'n8n',
   };
+}
+
+/**
+ * Tenta enviar o email de pedido de NF diretamente via Resend (fallback).
+ * Deve ser chamado apenas quando o n8n esta definitivamente indisponivel
+ * (apos exaustao de retries no integration-processor).
+ *
+ * Retorna { sent, channel } para compor o result do evento.
+ */
+export async function sendNfEmailFallback(
+  event: IntegrationEvent,
+): Promise<{ sent: boolean; channel: string }> {
+  const supplierEmail = event.payload.supplier_email as string;
+  const supplierName = (event.payload.supplier_name as string) ?? '';
+
+  if (!supplierEmail) {
+    console.warn('[nf-email-handler] fallback ignorado: supplier_email ausente no payload');
+    return { sent: false, channel: 'none' };
+  }
+
+  // Usa o HTML e subject pre-montados pelo request-send.ts (estao no payload)
+  const subject =
+    (event.payload.email_subject as string) || 'Ellah Filmes - Pedido de Nota Fiscal';
+  const html = (event.payload.email_html as string) || '';
+  const text = (event.payload.email_text as string) || undefined;
+  const replyTo = (event.payload.reply_to as string) || undefined;
+
+  if (!html) {
+    console.warn(
+      `[nf-email-handler] fallback: email_html ausente no payload do evento ${event.id} — enviando template basico`,
+    );
+  }
+
+  console.log(
+    `[nf-email-handler] ativando fallback Resend para pedido de NF de ${supplierName} <${supplierEmail}>`,
+  );
+
+  const sent = await sendFallbackEmail(supplierEmail, subject, html || _buildMinimalNfHtml(supplierName), {
+    reply_to: replyTo,
+    text,
+  });
+
+  return { sent, channel: sent ? 'resend_fallback' : 'none' };
+}
+
+// HTML minimalista caso email_html nao esteja no payload (situacao de emergencia)
+function _buildMinimalNfHtml(supplierName: string): string {
+  const safe = supplierName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return `<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8"/></head>
+<body style="font-family:Arial,sans-serif;color:#111;padding:32px;">
+  <h2 style="color:#09090b;">Solicitacao de Nota Fiscal</h2>
+  <p>Prezado(a) <strong>${safe}</strong>,</p>
+  <p>
+    Voce tem uma solicitacao de nota fiscal pendente.<br/>
+    Por favor, acesse o sistema ou entre em contato com o financeiro da Ellah Filmes.
+  </p>
+  <p style="color:#6b7280;font-size:12px;">
+    Este email foi enviado pelo sistema ELLAHOS em modo de contingencia.<br/>
+    Em caso de duvidas, contate o financeiro da Ellah Filmes.
+  </p>
+</body>
+</html>`;
 }

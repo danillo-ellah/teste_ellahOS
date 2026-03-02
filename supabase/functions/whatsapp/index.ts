@@ -1,8 +1,8 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
-import { handleCors } from './_shared/cors.ts';
-import { getAuthContext } from './_shared/auth.ts';
-import { error, fromAppError } from './_shared/response.ts';
-import { AppError } from './_shared/errors.ts';
+import { handleCors } from '../_shared/cors.ts';
+import { getAuthContext } from '../_shared/auth.ts';
+import { error, fromAppError } from '../_shared/response.ts';
+import { AppError } from '../_shared/errors.ts';
 import { listMessages } from './handlers/list-messages.ts';
 import { handleWebhook } from './handlers/webhook.ts';
 import { sendManual } from './handlers/send-manual.ts';

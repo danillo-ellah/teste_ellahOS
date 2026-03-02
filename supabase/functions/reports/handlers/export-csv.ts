@@ -1,8 +1,8 @@
-import { getSupabaseClient } from '../_shared/supabase-client.ts';
-import { error } from '../_shared/response.ts';
-import { AppError } from '../_shared/errors.ts';
-import { getCorsHeaders } from '../_shared/cors.ts';
-import type { AuthContext } from '../_shared/auth.ts';
+import { getSupabaseClient } from '../../_shared/supabase-client.ts';
+import { error } from '../../_shared/response.ts';
+import { AppError } from '../../_shared/errors.ts';
+import { getCorsHeaders } from '../../_shared/cors.ts';
+import type { AuthContext } from '../../_shared/auth.ts';
 
 // Tipos de relatorio suportados no export
 type ReportType = 'financial_monthly' | 'performance' | 'team_utilization';
