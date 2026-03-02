@@ -16,6 +16,10 @@ const DepositSchema = z.object({
   amount: z.number().positive().max(DEPOSIT_MAX_VALUE, {
     message: `Valor do deposito nao pode exceder R$ ${DEPOSIT_MAX_VALUE.toLocaleString('pt-BR')}`,
   }),
+  // Campos opcionais de rastreabilidade do deposito
+  pix_key_used: z.string().max(255).optional().nullable(),
+  deposit_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  receipt_url: z.string().url().optional().nullable(),
 });
 
 export async function handleDeposit(
@@ -49,7 +53,7 @@ export async function handleDeposit(
     });
   }
 
-  const { amount } = parseResult.data;
+  const { amount, pix_key_used, deposit_date, receipt_url } = parseResult.data;
   const client = getSupabaseClient(auth.token);
 
   // Buscar adiantamento atual
@@ -76,10 +80,18 @@ export async function handleDeposit(
 
   const newAmountDeposited = (advance.amount_deposited ?? 0) + amount;
 
+  // Montar objeto de atualizacao (inclui campos de rastreabilidade se fornecidos)
+  const updatePayload: Record<string, unknown> = {
+    amount_deposited: newAmountDeposited,
+  };
+  if (pix_key_used !== undefined) updatePayload.pix_key_used = pix_key_used ?? null;
+  if (deposit_date !== undefined) updatePayload.deposit_date = deposit_date ?? null;
+  if (receipt_url !== undefined) updatePayload.receipt_url = receipt_url ?? null;
+
   // Atualizar amount_deposited com lock otimista (verifica valor anterior para evitar race condition)
   const { data: updatedAdvance, error: updateError } = await client
     .from('cash_advances')
-    .update({ amount_deposited: newAmountDeposited })
+    .update(updatePayload)
     .eq('id', id)
     .eq('tenant_id', auth.tenantId)
     .eq('amount_deposited', advance.amount_deposited ?? 0)

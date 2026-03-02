@@ -1,7 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, ExternalLink, Banknote, FileText, Lock } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  Banknote,
+  FileText,
+  Lock,
+  AlertTriangle,
+  ShieldCheck,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -24,6 +33,7 @@ import type { CashAdvance, CashAdvanceStatus } from '@/types/cost-management'
 import { ReceiptRow } from './ReceiptRow'
 import { DepositDialog } from './DepositDialog'
 import { SubmitReceiptDialog } from './SubmitReceiptDialog'
+import { ApproveDialog } from './ApproveDialog'
 
 // ============ Status badge ============
 
@@ -121,20 +131,36 @@ interface CashAdvanceCardProps {
   advance: CashAdvance
   isFinanceiro: boolean
   isProdutor: boolean
+  isCeoOrAdmin: boolean
 }
 
-export function CashAdvanceCard({ advance, isFinanceiro, isProdutor }: CashAdvanceCardProps) {
+export function CashAdvanceCard({
+  advance,
+  isFinanceiro,
+  isProdutor,
+  isCeoOrAdmin,
+}: CashAdvanceCardProps) {
   const [expanded, setExpanded] = useState(false)
   const [depositOpen, setDepositOpen] = useState(false)
   const [receiptOpen, setReceiptOpen] = useState(false)
   const [closeOpen, setCloseOpen] = useState(false)
+  const [approveOpen, setApproveOpen] = useState(false)
 
   const receipts = advance.expense_receipts ?? []
   const isEditable = advance.status === 'aberta'
 
+  // Adiantamento excede 10% do orcamento e ainda nao foi aprovado
+  const needsApproval = advance.threshold_exceeded && !advance.approved_by
+
   return (
     <>
-      <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
+      <div
+        className={cn(
+          'rounded-lg border bg-card shadow-sm overflow-hidden',
+          // Destaque visual quando precisa de aprovacao CEO/CFO
+          needsApproval && 'border-amber-300',
+        )}
+      >
         {/* Header — sempre visivel */}
         <button
           type="button"
@@ -147,12 +173,39 @@ export function CashAdvanceCard({ advance, isFinanceiro, isProdutor }: CashAdvan
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-semibold text-sm truncate">{advance.recipient_name}</span>
+
                 <Badge
                   variant="outline"
                   className={cn('text-xs shrink-0', statusBadgeClass(advance.status))}
                 >
                   {STATUS_LABELS[advance.status]}
                 </Badge>
+
+                {/* Badge de threshold excedido */}
+                {advance.threshold_exceeded && (
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      'text-xs shrink-0 gap-1',
+                      advance.approved_by
+                        ? 'bg-green-50 text-green-700 border-green-200'
+                        : 'bg-amber-50 text-amber-700 border-amber-200',
+                    )}
+                  >
+                    {advance.approved_by ? (
+                      <>
+                        <ShieldCheck className="h-3 w-3" />
+                        Aprovado CEO/CFO
+                      </>
+                    ) : (
+                      <>
+                        <AlertTriangle className="h-3 w-3" />
+                        Aguarda aprovacao
+                      </>
+                    )}
+                  </Badge>
+                )}
+
                 {advance.drive_folder_url && (
                   <a
                     href={advance.drive_folder_url}
@@ -195,7 +248,53 @@ export function CashAdvanceCard({ advance, isFinanceiro, isProdutor }: CashAdvan
         {/* Expanded content */}
         {expanded && (
           <div className="border-t px-4 py-3 space-y-3">
-            {/* Comprovantes */}
+            {/* Alerta de aprovacao pendente */}
+            {needsApproval && (
+              <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
+                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
+                <span>
+                  Este adiantamento excede 10% do orcamento fechado do job e precisa de aprovacao
+                  do CEO ou CFO antes de ser executado.
+                </span>
+              </div>
+            )}
+
+            {/* Metadados de deposito (se preenchidos) */}
+            {(advance.pix_key_used || advance.deposit_date) && (
+              <div className="rounded-md border bg-muted/30 px-3 py-2 space-y-1 text-xs text-muted-foreground">
+                {advance.deposit_date && (
+                  <div className="flex justify-between">
+                    <span>Data do deposito</span>
+                    <span className="font-medium text-foreground">
+                      {new Date(advance.deposit_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+                )}
+                {advance.pix_key_used && (
+                  <div className="flex justify-between gap-4">
+                    <span className="shrink-0">Chave PIX</span>
+                    <span className="font-medium text-foreground truncate text-right">
+                      {advance.pix_key_used}
+                    </span>
+                  </div>
+                )}
+                {advance.receipt_url && (
+                  <div className="flex justify-between">
+                    <span>Comprovante</span>
+                    <a
+                      href={advance.receipt_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-primary hover:underline"
+                    >
+                      Ver <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Comprovantes de gasto */}
             {receipts.length > 0 ? (
               <div className="space-y-2">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -230,6 +329,18 @@ export function CashAdvanceCard({ advance, isFinanceiro, isProdutor }: CashAdvan
               <>
                 <Separator />
                 <div className="flex flex-wrap gap-2">
+                  {/* Aprovacao CEO/CFO — visivel quando threshold excedido e ainda sem aprovacao */}
+                  {isCeoOrAdmin && needsApproval && (
+                    <Button
+                      size="sm"
+                      className="bg-amber-600 hover:bg-amber-700 text-white"
+                      onClick={() => setApproveOpen(true)}
+                    >
+                      <ShieldCheck className="h-4 w-4 mr-1.5" />
+                      Aprovar adiantamento
+                    </Button>
+                  )}
+
                   {isFinanceiro && (
                     <Button
                       size="sm"
@@ -271,6 +382,12 @@ export function CashAdvanceCard({ advance, isFinanceiro, isProdutor }: CashAdvan
       </div>
 
       {/* Dialogs */}
+      <ApproveDialog
+        open={approveOpen}
+        onOpenChange={setApproveOpen}
+        advance={advance}
+      />
+
       <DepositDialog
         open={depositOpen}
         onOpenChange={setDepositOpen}

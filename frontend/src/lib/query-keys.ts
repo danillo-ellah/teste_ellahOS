@@ -232,3 +232,8 @@ export const cashAdvanceKeys = {
   details: () => [...cashAdvanceKeys.all, 'detail'] as const,
   detail: (id: string) => [...cashAdvanceKeys.details(), id] as const,
 }
+
+export const approvalPdfKeys = {
+  all: ['approval-pdf'] as const,
+  files: (jobId: string) => [...approvalPdfKeys.all, 'files', jobId] as const,
+}

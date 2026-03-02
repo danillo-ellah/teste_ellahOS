@@ -17,12 +17,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { Edit, Trash2, Plus, Star } from 'lucide-react'
+import { Edit, Trash2, Plus, Star, Link2 } from 'lucide-react'
 import { useVendor, useDeleteVendor, useUpdateVendor, useCreateBankAccount, useUpdateBankAccount, useDeleteBankAccount } from '@/hooks/useVendors'
 import { safeErrorMessage } from '@/lib/api'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { VendorEditDialog } from './VendorEditDialog'
 import { BankAccountForm, getEmptyBankAccountForm, bankAccountToFormData } from './BankAccountForm'
+import { SendInviteDialog } from './SendInviteDialog'
 import type { BankAccountFormData } from './BankAccountForm'
 import type { BankAccount } from '@/types/cost-management'
 
@@ -101,6 +102,7 @@ export function VendorDetailSheet({ vendorId, open, onOpenChange, onDeleted }: V
   const [addBankOpen, setAddBankOpen] = useState(false)
   const [editBank, setEditBank] = useState<BankAccount | null>(null)
   const [deleteBankId, setDeleteBankId] = useState<string | null>(null)
+  const [inviteOpen, setInviteOpen] = useState(false)
 
   const vendorQuery = useVendor(vendorId ?? '')
   const vendor = vendorQuery.data?.data
@@ -235,6 +237,15 @@ export function VendorDetailSheet({ vendorId, open, onOpenChange, onDeleted }: V
                     disabled={updateMutation.isPending}
                   >
                     {vendor.is_active ? 'Desativar' : 'Ativar'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setInviteOpen(true)}
+                    title="Enviar link de cadastro para o fornecedor"
+                  >
+                    <Link2 className="size-3.5 mr-1" />
+                    Enviar Convite
                   </Button>
                   <Button
                     size="sm"
@@ -411,6 +422,14 @@ export function VendorDetailSheet({ vendorId, open, onOpenChange, onDeleted }: V
           vendor={vendor}
           open={editOpen}
           onOpenChange={setEditOpen}
+        />
+      )}
+
+      {vendor && (
+        <SendInviteDialog
+          vendor={vendor}
+          open={inviteOpen}
+          onOpenChange={setInviteOpen}
         />
       )}
 

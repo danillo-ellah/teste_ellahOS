@@ -1,15 +1,18 @@
 import { z } from 'https://esm.sh/zod@3.22.4';
 import type { AuthContext } from '../../_shared/auth.ts';
 import { AppError } from '../../_shared/errors.ts';
-import { created } from '../../_shared/response.ts';
+import { created, createdWithWarnings } from '../../_shared/response.ts';
 import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 import { insertHistory } from '../../_shared/history.ts';
 
 // Roles autorizados para criar adiantamentos
 const ALLOWED_ROLES = ['financeiro', 'admin', 'ceo'];
 
-// Limite maximo de adiantamento autorizado
+// Limite maximo de adiantamento autorizado (teto absoluto de seguranca)
 const ADVANCE_MAX_VALUE = 1_000_000;
+
+// Percentual do orcamento fechado permitido sem aprovacao adicional
+const THRESHOLD_PERCENT = 10;
 
 // Schema de validacao para criacao de adiantamento
 const CreateCashAdvanceSchema = z.object({
@@ -21,6 +24,10 @@ const CreateCashAdvanceSchema = z.object({
   amount_authorized: z.number().positive().max(ADVANCE_MAX_VALUE, {
     message: `Valor autorizado nao pode exceder R$ ${ADVANCE_MAX_VALUE.toLocaleString('pt-BR')}`,
   }),
+  // Campos opcionais de deposito que podem ser preenchidos na criacao
+  pix_key_used: z.string().max(255).optional().nullable(),
+  deposit_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  notes: z.string().max(2000).optional().nullable(),
 });
 
 export async function handleCreate(req: Request, auth: AuthContext): Promise<Response> {
@@ -53,9 +60,10 @@ export async function handleCreate(req: Request, auth: AuthContext): Promise<Res
   const client = getSupabaseClient(auth.token);
 
   // Validar que o job existe e pertence ao tenant
+  // Inclui closed_value para calcular se excede o threshold de 10%
   const { data: job, error: jobError } = await client
     .from('jobs')
-    .select('id, title, code')
+    .select('id, title, code, closed_value')
     .eq('id', input.job_id)
     .eq('tenant_id', auth.tenantId)
     .is('deleted_at', null)
@@ -100,7 +108,20 @@ export async function handleCreate(req: Request, auth: AuthContext): Promise<Res
     }
   }
 
-  // Inserir o adiantamento
+  // Calcular se o adiantamento excede o limite automatico (10% do orcamento fechado)
+  // Se o job nao tem closed_value, threshold nao se aplica (nao bloqueia)
+  const closedValue = job.closed_value ? Number(job.closed_value) : null;
+  const thresholdValue = closedValue ? (closedValue * THRESHOLD_PERCENT) / 100 : null;
+  const thresholdExceeded = thresholdValue !== null && input.amount_authorized > thresholdValue;
+
+  console.log('[cash-advances/create] calculo de threshold', {
+    closedValue,
+    thresholdValue,
+    amountAuthorized: input.amount_authorized,
+    thresholdExceeded,
+  });
+
+  // Inserir o adiantamento com flag de threshold
   const { data: advance, error: insertError } = await client
     .from('cash_advances')
     .insert({
@@ -114,6 +135,10 @@ export async function handleCreate(req: Request, auth: AuthContext): Promise<Res
       amount_deposited: 0,
       amount_documented: 0,
       status: 'aberta',
+      threshold_exceeded: thresholdExceeded,
+      pix_key_used: input.pix_key_used ?? null,
+      deposit_date: input.deposit_date ?? null,
+      notes: input.notes ?? null,
       created_by: auth.userId,
     })
     .select('*')
@@ -137,13 +162,28 @@ export async function handleCreate(req: Request, auth: AuthContext): Promise<Res
         cash_advance_id: advance.id,
         amount_authorized: input.amount_authorized,
         recipient_name: input.recipient_name,
+        threshold_exceeded: thresholdExceeded,
       },
-      description: `Adiantamento criado: R$ ${input.amount_authorized.toFixed(2)} para ${input.recipient_name}`,
+      description: `Adiantamento criado: R$ ${input.amount_authorized.toFixed(2)} para ${input.recipient_name}${thresholdExceeded ? ' (ACIMA DO LIMITE — requer aprovacao CEO/CFO)' : ''}`,
     });
   } catch (histErr) {
     console.error('[cash-advances/create] erro ao inserir historico:', histErr);
   }
 
-  console.log('[cash-advances/create] adiantamento criado com sucesso', { id: advance.id });
+  console.log('[cash-advances/create] adiantamento criado com sucesso', {
+    id: advance.id,
+    thresholdExceeded,
+  });
+
+  // Se excede o threshold, retorna com warning para o frontend exibir alerta
+  if (thresholdExceeded) {
+    return createdWithWarnings(advance, [
+      {
+        code: 'THRESHOLD_EXCEEDED',
+        message: `Adiantamento excede ${THRESHOLD_PERCENT}% do orcamento fechado (limite: R$ ${thresholdValue!.toFixed(2)}). Aprovacao de CEO/CFO necessaria.`,
+      },
+    ]);
+  }
+
   return created(advance);
 }

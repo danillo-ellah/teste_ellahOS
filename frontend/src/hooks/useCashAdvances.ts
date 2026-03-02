@@ -3,7 +3,9 @@ import { apiGet, apiMutate } from '@/lib/api'
 import { cashAdvanceKeys, finDashboardKeys } from '@/lib/query-keys'
 import type {
   CashAdvance,
+  CashAdvancesSummary,
   CreateCashAdvancePayload,
+  DepositCashAdvancePayload,
   CreateReceiptPayload,
   ReviewReceiptPayload,
 } from '@/types/cost-management'
@@ -25,12 +27,27 @@ export function useCashAdvance(id: string) {
   })
 }
 
+// Resumo agregado de verbas a vista de um job (totais, saldo, threshold)
+export function useCashAdvancesSummary(jobId: string) {
+  return useQuery({
+    queryKey: [...cashAdvanceKeys.list(jobId), 'summary'],
+    queryFn: () => apiGet<CashAdvancesSummary>('cash-advances', { job_id: jobId }, 'summary'),
+    enabled: !!jobId,
+    staleTime: 30_000,
+  })
+}
+
 export function useCreateCashAdvance() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (payload: CreateCashAdvancePayload) =>
-      apiMutate<CashAdvance>('cash-advances', 'POST', payload as unknown as Record<string, unknown>),
-    onSuccess: () => {
+      apiMutate<CashAdvance>(
+        'cash-advances',
+        'POST',
+        payload as unknown as Record<string, unknown>,
+      ),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: cashAdvanceKeys.list(variables.job_id) })
       queryClient.invalidateQueries({ queryKey: cashAdvanceKeys.lists() })
       queryClient.invalidateQueries({ queryKey: finDashboardKeys.all })
     },
@@ -40,10 +57,27 @@ export function useCreateCashAdvance() {
 export function useDepositCashAdvance() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, amount }: { id: string; amount: number }) =>
-      apiMutate<CashAdvance>('cash-advances', 'POST', { amount }, `${id}/deposit`),
+    mutationFn: ({ id, ...payload }: DepositCashAdvancePayload & { id: string }) =>
+      apiMutate<CashAdvance>(
+        'cash-advances',
+        'POST',
+        payload as unknown as Record<string, unknown>,
+        `${id}/deposit`,
+      ),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: cashAdvanceKeys.detail(variables.id) })
+      queryClient.invalidateQueries({ queryKey: cashAdvanceKeys.lists() })
+    },
+  })
+}
+
+// Aprovacao de adiantamentos acima do threshold (apenas CEO/CFO)
+export function useApproveCashAdvance() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiMutate<CashAdvance>('cash-advances', 'POST', undefined, `${id}/approve`),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cashAdvanceKeys.lists() })
     },
   })

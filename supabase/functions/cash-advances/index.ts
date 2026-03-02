@@ -11,9 +11,11 @@ import { handleDeposit } from './handlers/deposit.ts';
 import { handleReceiptCreate } from './handlers/receipt-create.ts';
 import { handleReceiptReview } from './handlers/receipt-review.ts';
 import { handleClose } from './handlers/close.ts';
+import { handleSummary } from './handlers/summary.ts';
+import { handleApprove } from './handlers/approve.ts';
 
-// Rotas nomeadas que devem ser verificadas antes de tratar segment1 como :id
-const NAMED_ROUTES = new Set<string>([]);
+// Rotas nomeadas que nao devem ser tratadas como :id
+const NAMED_ROUTES = new Set<string>(['summary']);
 
 Deno.serve(async (req: Request) => {
   const corsResponse = handleCors(req);
@@ -42,12 +44,17 @@ Deno.serve(async (req: Request) => {
       return await handleCreate(req, auth);
     }
 
-    // GET /cash-advances (sem segment1)
+    // GET /cash-advances (sem segment1) — listagem com job_id obrigatorio
     if (!segment1 && method === 'GET') {
       return await handleList(req, auth);
     }
 
-    // Rotas com :id (segment1 e UUID)
+    // GET /cash-advances/summary?job_id=xxx — resumo agregado
+    if (segment1 === 'summary' && !segment2 && method === 'GET') {
+      return await handleSummary(req, auth);
+    }
+
+    // Rotas com :id (segment1 nao e rota nomeada)
     if (segment1 && !NAMED_ROUTES.has(segment1)) {
       const id = segment1;
 
@@ -59,6 +66,11 @@ Deno.serve(async (req: Request) => {
       // POST /cash-advances/:id/deposit
       if (segment2 === 'deposit' && !segment3 && method === 'POST') {
         return await handleDeposit(req, auth, id);
+      }
+
+      // POST /cash-advances/:id/approve — aprovacao CEO/CFO para adiantamentos acima do threshold
+      if (segment2 === 'approve' && !segment3 && method === 'POST') {
+        return await handleApprove(req, auth, id);
       }
 
       // POST /cash-advances/:id/receipts (criar comprovante)

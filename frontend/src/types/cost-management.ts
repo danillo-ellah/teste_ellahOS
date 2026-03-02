@@ -354,6 +354,15 @@ export interface CashAdvance {
   amount_documented: number
   balance: number
   status: CashAdvanceStatus
+  // Indica se excede 10% do orcamento fechado — requer aprovacao CEO/CFO
+  threshold_exceeded: boolean
+  // Rastreabilidade do deposito
+  pix_key_used: string | null
+  deposit_date: string | null
+  receipt_url: string | null
+  // Aprovacao (necessaria quando threshold_exceeded = true)
+  approved_by: string | null
+  approved_at: string | null
   drive_folder_url: string | null
   notes: string | null
   created_at: string
@@ -361,6 +370,23 @@ export interface CashAdvance {
   deleted_at: string | null
   created_by: string | null
   expense_receipts?: ExpenseReceipt[]
+}
+
+// Resumo agregado de verbas a vista de um job
+export interface CashAdvancesSummary {
+  job_id: string
+  budget_value: number | null
+  threshold_value: number | null
+  total_advances: number
+  advances_open: number
+  advances_closed: number
+  advances_over_threshold: number
+  total_authorized: number
+  total_deposited: number
+  total_documented: number
+  total_balance: number
+  has_negative_balance: boolean
+  pct_of_budget: number | null
 }
 
 export interface ExpenseReceipt {
@@ -391,6 +417,16 @@ export interface CreateCashAdvancePayload {
   recipient_name: string
   description: string
   amount_authorized: number
+  pix_key_used?: string
+  deposit_date?: string
+  notes?: string
+}
+
+export interface DepositCashAdvancePayload {
+  amount: number
+  pix_key_used?: string
+  deposit_date?: string
+  receipt_url?: string
 }
 
 export interface CreateReceiptPayload {

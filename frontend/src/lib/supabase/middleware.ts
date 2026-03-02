@@ -49,10 +49,11 @@ export async function updateSession(request: NextRequest) {
       !request.nextUrl.pathname.startsWith('/reset-password') &&
       !request.nextUrl.pathname.startsWith('/auth/callback')
     ) {
-      // Rotas publicas: portal do cliente e aprovacoes externas nao requerem autenticacao
+      // Rotas publicas: portal do cliente, aprovacoes externas e portal do fornecedor nao requerem autenticacao
       const isPublicRoute =
         request.nextUrl.pathname.startsWith('/portal/') ||
-        request.nextUrl.pathname.startsWith('/approve/')
+        request.nextUrl.pathname.startsWith('/approve/') ||
+        request.nextUrl.pathname.startsWith('/vendor/')
       if (isPublicRoute) {
         return supabaseResponse
       }

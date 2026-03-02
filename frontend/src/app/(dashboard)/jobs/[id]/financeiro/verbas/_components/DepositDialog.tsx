@@ -28,11 +28,19 @@ export function DepositDialog({ open, onOpenChange, advance }: DepositDialogProp
   const [amount, setAmount] = useState(() =>
     remaining > 0 ? remaining.toFixed(2).replace('.', ',') : '',
   )
+  const [pixKey, setPixKey] = useState('')
+  const [depositDate, setDepositDate] = useState(
+    () => new Date().toISOString().split('T')[0],
+  )
+  const [receiptUrl, setReceiptUrl] = useState('')
 
   const { mutateAsync, isPending } = useDepositCashAdvance()
 
   function handleClose() {
     setAmount(remaining > 0 ? remaining.toFixed(2).replace('.', ',') : '')
+    setPixKey('')
+    setDepositDate(new Date().toISOString().split('T')[0])
+    setReceiptUrl('')
     onOpenChange(false)
   }
 
@@ -46,7 +54,13 @@ export function DepositDialog({ open, onOpenChange, advance }: DepositDialogProp
     }
 
     try {
-      await mutateAsync({ id: advance.id, amount: parsedAmount })
+      await mutateAsync({
+        id: advance.id,
+        amount: parsedAmount,
+        pix_key_used: pixKey.trim() || undefined,
+        deposit_date: depositDate || undefined,
+        receipt_url: receiptUrl.trim() || undefined,
+      })
       toast.success('Deposito registrado com sucesso.')
       handleClose()
     } catch (err) {
@@ -80,7 +94,9 @@ export function DepositDialog({ open, onOpenChange, advance }: DepositDialogProp
               <span className="text-muted-foreground font-medium">Faltam</span>
               <span
                 className={
-                  remaining > 0 ? 'font-semibold text-amber-700 tabular-nums' : 'font-semibold tabular-nums'
+                  remaining > 0
+                    ? 'font-semibold text-amber-700 tabular-nums'
+                    : 'font-semibold tabular-nums'
                 }
               >
                 {formatCurrency(remaining)}
@@ -88,7 +104,7 @@ export function DepositDialog({ open, onOpenChange, advance }: DepositDialogProp
             </div>
           </div>
 
-          {/* Campo de valor */}
+          {/* Valor a depositar */}
           <div className="space-y-1.5">
             <Label htmlFor="deposit-amount">Valor a depositar (R$) *</Label>
             <Input
@@ -99,6 +115,41 @@ export function DepositDialog({ open, onOpenChange, advance }: DepositDialogProp
               value={amount}
               onChange={e => setAmount(e.target.value)}
               autoFocus
+            />
+          </div>
+
+          {/* Data do deposito */}
+          <div className="space-y-1.5">
+            <Label htmlFor="deposit-date">Data do deposito</Label>
+            <Input
+              id="deposit-date"
+              type="date"
+              value={depositDate}
+              onChange={e => setDepositDate(e.target.value)}
+            />
+          </div>
+
+          {/* Chave PIX usada */}
+          <div className="space-y-1.5">
+            <Label htmlFor="deposit-pix">Chave PIX utilizada (opcional)</Label>
+            <Input
+              id="deposit-pix"
+              type="text"
+              placeholder="CPF, email, telefone ou chave aleatoria"
+              value={pixKey}
+              onChange={e => setPixKey(e.target.value)}
+            />
+          </div>
+
+          {/* Comprovante do deposito */}
+          <div className="space-y-1.5">
+            <Label htmlFor="deposit-receipt">Comprovante do deposito (link, opcional)</Label>
+            <Input
+              id="deposit-receipt"
+              type="url"
+              placeholder="https://drive.google.com/..."
+              value={receiptUrl}
+              onChange={e => setReceiptUrl(e.target.value)}
             />
           </div>
 

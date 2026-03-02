@@ -7,14 +7,15 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { JobFinancialTabs } from '../_components/JobFinancialTabs'
 import { CashAdvanceCard } from './_components/CashAdvanceCard'
 import { NewAdvanceDialog } from './_components/NewAdvanceDialog'
-import { useCashAdvances } from '@/hooks/useCashAdvances'
+import { SummaryCards, SummaryCardsSkeleton } from './_components/SummaryCards'
+import { useCashAdvances, useCashAdvancesSummary } from '@/hooks/useCashAdvances'
 import { useUserRole } from '@/hooks/useUserRole'
 
 interface PageProps {
   params: Promise<{ id: string }>
 }
 
-// ============ Loading skeleton ============
+// ============ Loading skeleton da lista ============
 
 function CashAdvancesSkeleton() {
   return (
@@ -45,9 +46,11 @@ export default function JobCashAdvancesPage({ params }: PageProps) {
   const [newAdvanceOpen, setNewAdvanceOpen] = useState(false)
 
   const { data, isLoading, isError } = useCashAdvances(jobId)
+  const { data: summaryData, isLoading: summaryLoading } = useCashAdvancesSummary(jobId)
   const { role } = useUserRole()
 
   const advances = data?.data ?? []
+  const summary = summaryData?.data ?? null
 
   // Permissoes por role
   const isFinanceiro = role === 'financeiro' || role === 'admin' || role === 'ceo'
@@ -56,6 +59,8 @@ export default function JobCashAdvancesPage({ params }: PageProps) {
     role === 'coordenador' ||
     role === 'admin' ||
     role === 'ceo'
+  // Apenas CEO e admin (CFO) podem aprovar adiantamentos acima do threshold
+  const isCeoOrAdmin = role === 'admin' || role === 'ceo'
 
   return (
     <div className="space-y-4 pb-24">
@@ -82,7 +87,13 @@ export default function JobCashAdvancesPage({ params }: PageProps) {
         )}
       </div>
 
-      {/* Loading */}
+      {/* Cards de resumo */}
+      {summaryLoading && <SummaryCardsSkeleton />}
+      {!summaryLoading && summary && advances.length > 0 && (
+        <SummaryCards summary={summary} />
+      )}
+
+      {/* Loading lista */}
       {isLoading && <CashAdvancesSkeleton />}
 
       {/* Erro */}
@@ -124,6 +135,7 @@ export default function JobCashAdvancesPage({ params }: PageProps) {
               advance={advance}
               isFinanceiro={isFinanceiro}
               isProdutor={isProdutor}
+              isCeoOrAdmin={isCeoOrAdmin}
             />
           ))}
         </div>
@@ -134,6 +146,7 @@ export default function JobCashAdvancesPage({ params }: PageProps) {
         open={newAdvanceOpen}
         onOpenChange={setNewAdvanceOpen}
         jobId={jobId}
+        thresholdValue={summary?.threshold_value}
       />
     </div>
   )
