@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useCostItems } from '@/hooks/useCostItems'
+import { useJob } from '@/hooks/useJob'
 import { createClient } from '@/lib/supabase/client'
 import { formatCurrency } from '@/lib/format'
 import {
@@ -62,6 +63,11 @@ export default function JobCostsPage({ params }: PageProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   const { data: costItems, meta, isLoading, isError } = useCostItems(filters)
+
+  // Busca dados do job para extrair a data base de calculo de vencimento
+  const { data: job } = useJob(jobId)
+  // Data base: kickoff_ppm_date tem prioridade, fallback para briefing_date
+  const jobStartDate: string | null = job?.kickoff_ppm_date ?? job?.briefing_date ?? null
 
   const items = costItems ?? []
 
@@ -273,6 +279,7 @@ export default function JobCostsPage({ params }: PageProps) {
         }}
         jobId={jobId}
         editingItem={editingItem}
+        jobStartDate={jobStartDate}
       />
 
       {/* Dialog de pagamento */}

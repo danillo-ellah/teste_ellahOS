@@ -33,6 +33,53 @@ const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
   cancelado: ['orcado'],
 };
 
+// Mapa de condicao de pagamento para numero de dias apos a data base do job
+const CONDITION_DAYS: Record<string, number | null> = {
+  a_vista: 0,
+  cnf_30: 30,
+  cnf_40: 40,
+  cnf_45: 45,
+  cnf_60: 60,
+  cnf_90: 90,
+  snf_30: 30,
+};
+
+/**
+ * Calcula a data de vencimento com base na condicao de pagamento e na data base do job.
+ * Retorna string no formato YYYY-MM-DD ou null se nao for possivel calcular.
+ */
+function calculateDueDate(condition: string, baseDate: string): string | null {
+  const days = CONDITION_DAYS[condition];
+  if (days === undefined || days === null) return null;
+
+  const date = new Date(baseDate);
+  if (isNaN(date.getTime())) return null;
+
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10); // YYYY-MM-DD
+}
+
+/**
+ * Busca a data base do job para calcular vencimento.
+ * Prioridade: kickoff_ppm_date > briefing_date.
+ * Retorna null se o job nao existir ou nao tiver nenhuma das datas.
+ */
+async function fetchJobBaseDate(
+  client: ReturnType<typeof getSupabaseClient>,
+  jobId: string,
+  tenantId: string,
+): Promise<string | null> {
+  const { data: job } = await client
+    .from('jobs')
+    .select('kickoff_ppm_date, briefing_date')
+    .eq('id', jobId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+
+  if (!job) return null;
+  return (job.kickoff_ppm_date as string | null) ?? (job.briefing_date as string | null) ?? null;
+}
+
 // Schema de atualizacao (todos os campos opcionais)
 const UpdateCostItemSchema = z.object({
   item_number: z.number().int().min(1).max(99).optional(),
@@ -221,6 +268,50 @@ export async function handleUpdate(req: Request, auth: AuthContext, id: string):
     }
   }
 
+  // Calculo automatico de payment_due_date quando a condicao mudou
+  // e payment_due_date NAO foi explicitamente enviado no payload (usuario nao sobrescreveu).
+  // Regra: se o payload contem payment_condition mas NAO contem payment_due_date,
+  // e o item tem um job_id, recalcular automaticamente.
+  let dueDateCalculation: { payment_due_date: string | null; payment_due_date_auto: boolean } = {
+    payment_due_date: updates.payment_due_date ?? (current.payment_due_date as string | null),
+    payment_due_date_auto: false,
+  };
+
+  const conditionChanged = 'payment_condition' in updates;
+  const dueDateExplicitlySet = 'payment_due_date' in updates;
+
+  if (conditionChanged && !dueDateExplicitlySet) {
+    const newCondition = updates.payment_condition;
+    const jobId = current.job_id as string | null;
+
+    if (newCondition && jobId) {
+      // Condicao preenchida: calcular data automaticamente
+      const baseDate = await fetchJobBaseDate(client, jobId, auth.tenantId);
+      if (baseDate) {
+        const calculated = calculateDueDate(newCondition, baseDate);
+        if (calculated) {
+          dueDateCalculation = {
+            payment_due_date: calculated,
+            payment_due_date_auto: true,
+          };
+          console.log('[cost-items/update] data de vencimento recalculada automaticamente', {
+            condition: newCondition,
+            baseDate,
+            calculated,
+          });
+        }
+      } else {
+        console.log('[cost-items/update] job sem data base para recalcular vencimento', { jobId });
+      }
+    } else if (!newCondition) {
+      // Condicao foi removida (null): limpar data calculada
+      dueDateCalculation = {
+        payment_due_date: null,
+        payment_due_date_auto: false,
+      };
+    }
+  }
+
   // Resolver cost_category_id se item_number mudou
   let categoryUpdate: Record<string, string | null> = {};
   if ('item_number' in updates && updates.item_number !== current.item_number) {
@@ -253,9 +344,17 @@ export async function handleUpdate(req: Request, auth: AuthContext, id: string):
     }
   }
 
+  // Montar payload final de update com payment_due_date calculado (se aplicavel)
+  const updatePayload: Record<string, unknown> = {
+    ...updates,
+    ...vendorSnapshot,
+    ...categoryUpdate,
+    payment_due_date: dueDateCalculation.payment_due_date,
+  };
+
   const { data: updated, error: updateError } = await client
     .from('cost_items')
-    .update({ ...updates, ...vendorSnapshot, ...categoryUpdate })
+    .update(updatePayload)
     .eq('id', id)
     .eq('tenant_id', auth.tenantId)
     .select('*')
@@ -281,6 +380,15 @@ export async function handleUpdate(req: Request, auth: AuthContext, id: string):
     });
   }
 
-  console.log('[cost-items/update] item atualizado com sucesso', { id });
-  return success(updated);
+  // Enriquecer resposta com indicador de calculo automatico
+  const responseData = {
+    ...updated,
+    payment_due_date_auto: dueDateCalculation.payment_due_date_auto,
+  };
+
+  console.log('[cost-items/update] item atualizado com sucesso', {
+    id,
+    dueDateAutoCalculated: dueDateCalculation.payment_due_date_auto,
+  });
+  return success(responseData);
 }

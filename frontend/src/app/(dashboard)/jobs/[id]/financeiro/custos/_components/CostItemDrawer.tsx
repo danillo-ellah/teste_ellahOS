@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { toast } from 'sonner'
-import { ChevronDown, ChevronRight, ChevronsUpDown, Check, X, ExternalLink, Unlink, Link2, AlertTriangle } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronsUpDown, Check, X, ExternalLink, Unlink, Link2, AlertTriangle, Building2, Wand2 } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select,
   SelectContent,
@@ -33,7 +34,7 @@ import {
 import { useCreateCostItem, useUpdateCostItem } from '@/hooks/useCostItems'
 import { useQueryClient } from '@tanstack/react-query'
 import { nfKeys } from '@/lib/query-keys'
-import { useVendorSuggest } from '@/hooks/useVendors'
+import { useVendorSuggest, useVendor } from '@/hooks/useVendors'
 import {
   PAYMENT_CONDITION_LABELS,
   PAYMENT_METHOD_LABELS,
@@ -42,12 +43,178 @@ import {
   type PaymentCondition,
   type PaymentMethod,
   type VendorSuggestion,
+  type BankAccount,
+  type PixKeyType,
+  type AccountType,
 } from '@/types/cost-management'
 import { parseBRNumber, formatBRNumber, formatCurrency } from '@/lib/format'
 import { safeErrorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { useUserRole } from '@/hooks/useUserRole'
 import { LinkNfDialog } from './LinkNfDialog'
+
+// ---- Labels de tipos bancarios ----
+
+const PIX_KEY_TYPE_LABELS: Record<PixKeyType, string> = {
+  cpf: 'CPF',
+  cnpj: 'CNPJ',
+  email: 'E-mail',
+  telefone: 'Telefone',
+  aleatoria: 'Aleatoria',
+}
+
+const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
+  corrente: 'Corrente',
+  poupanca: 'Poupanca',
+}
+
+// ---- BankAccountCard: exibe dados bancarios read-only ----
+
+interface BankAccountCardProps {
+  account: BankAccount
+  isPrimary: boolean
+}
+
+function BankAccountCard({ account, isPrimary }: BankAccountCardProps) {
+  // Monta nome do banco: "341 - Itau" ou apenas o nome se nao tiver codigo
+  const bankLabel = account.bank_code && account.bank_name
+    ? `${account.bank_code} - ${account.bank_name}`
+    : account.bank_name ?? account.bank_code ?? '—'
+
+  return (
+    <div className={cn(
+      'rounded-md border bg-muted/30 p-3 space-y-1.5 text-sm',
+      isPrimary && 'border-primary/40',
+    )}>
+      {isPrimary && (
+        <span className="text-[11px] font-medium text-primary uppercase tracking-wide">
+          Conta principal
+        </span>
+      )}
+
+      {/* Titular */}
+      {account.account_holder && (
+        <div className="flex gap-2">
+          <span className="text-muted-foreground w-20 shrink-0">Titular</span>
+          <span className="font-medium">{account.account_holder}</span>
+        </div>
+      )}
+
+      {/* Banco */}
+      <div className="flex gap-2">
+        <span className="text-muted-foreground w-20 shrink-0">Banco</span>
+        <span>{bankLabel}</span>
+      </div>
+
+      {/* Agencia e conta */}
+      {(account.agency || account.account_number) && (
+        <div className="flex gap-2">
+          <span className="text-muted-foreground w-20 shrink-0">Agencia/Conta</span>
+          <span>
+            {[account.agency, account.account_number].filter(Boolean).join(' / ')}
+            {account.account_type && (
+              <span className="text-muted-foreground ml-1.5">
+                ({ACCOUNT_TYPE_LABELS[account.account_type]})
+              </span>
+            )}
+          </span>
+        </div>
+      )}
+
+      {/* PIX */}
+      {account.pix_key && (
+        <div className="flex gap-2">
+          <span className="text-muted-foreground w-20 shrink-0">PIX</span>
+          <span>
+            {account.pix_key_type && (
+              <span className="text-muted-foreground mr-1">
+                [{PIX_KEY_TYPE_LABELS[account.pix_key_type]}]
+              </span>
+            )}
+            {account.pix_key}
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---- VendorBankInfo: secao de dados bancarios do fornecedor ----
+
+interface VendorBankInfoProps {
+  vendorId: string
+}
+
+function VendorBankInfo({ vendorId }: VendorBankInfoProps) {
+  const { data, isLoading } = useVendor(vendorId)
+  const vendor = data?.data
+
+  if (isLoading) {
+    return (
+      <div className="space-y-2 pt-1">
+        <Skeleton className="h-4 w-3/4" />
+        <Skeleton className="h-4 w-1/2" />
+        <Skeleton className="h-4 w-2/3" />
+      </div>
+    )
+  }
+
+  const accounts = vendor?.bank_accounts?.filter(a => a.is_active) ?? []
+
+  if (accounts.length === 0) {
+    return (
+      <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
+        <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+        <span>Fornecedor sem dados bancarios cadastrados.</span>
+      </div>
+    )
+  }
+
+  // Ordena: primaria primeiro, depois pelo mais recente
+  const sorted = [...accounts].sort((a, b) => {
+    if (a.is_primary && !b.is_primary) return -1
+    if (!a.is_primary && b.is_primary) return 1
+    return 0
+  })
+
+  return (
+    <div className="space-y-2">
+      {sorted.map(account => (
+        <BankAccountCard
+          key={account.id}
+          account={account}
+          isPrimary={account.is_primary}
+        />
+      ))}
+    </div>
+  )
+}
+
+// Mapa de condicao de pagamento para numero de dias apos a data base do job
+const CONDITION_DAYS: Record<PaymentCondition, number> = {
+  a_vista: 0,
+  cnf_30: 30,
+  cnf_40: 40,
+  cnf_45: 45,
+  cnf_60: 60,
+  cnf_90: 90,
+  snf_30: 30,
+}
+
+/**
+ * Calcula a data de vencimento no cliente com base na condicao e na data base do job.
+ * Retorna string no formato YYYY-MM-DD (compativel com <input type="date">) ou null.
+ */
+function calculateDueDate(condition: PaymentCondition, baseDate: string): string | null {
+  const days = CONDITION_DAYS[condition]
+  if (days === undefined) return null
+
+  const date = new Date(baseDate)
+  if (isNaN(date.getTime())) return null
+
+  date.setUTCDate(date.getUTCDate() + days)
+  return date.toISOString().slice(0, 10) // YYYY-MM-DD
+}
 
 // Categorias fixas do sistema (item_number 1-20, conforme planilha)
 const COST_CATEGORIES: { value: number; label: string }[] = [
@@ -202,6 +369,8 @@ interface CostItemDrawerProps {
   jobId: string
   editingItem: CostItem | null
   defaultItemNumber?: number
+  // Data base do job para calculo automatico de vencimento (kickoff_ppm_date ?? briefing_date)
+  jobStartDate?: string | null
 }
 
 interface FormState {
@@ -261,13 +430,18 @@ export function CostItemDrawer({
   jobId,
   editingItem,
   defaultItemNumber,
+  jobStartDate,
 }: CostItemDrawerProps) {
   const [form, setForm] = useState<FormState>(() => defaultForm(jobId, editingItem))
   const [initialForm, setInitialForm] = useState<FormState>(() => defaultForm(jobId, editingItem))
   const [overtimeExpanded, setOvertimeExpanded] = useState(false)
   const [nfExpanded, setNfExpanded] = useState(false)
+  const [bankExpanded, setBankExpanded] = useState(false)
   const [linkNfOpen, setLinkNfOpen] = useState(false)
   const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false)
+
+  // Controla se a data de vencimento atual foi calculada automaticamente (nao editada pelo usuario)
+  const [dueDateIsAuto, setDueDateIsAuto] = useState(false)
 
   const { mutateAsync: createItem, isPending: isCreating } = useCreateCostItem()
   const { mutateAsync: updateItem, isPending: isUpdating } = useUpdateCostItem()
@@ -300,13 +474,59 @@ export function CostItemDrawer({
         !!(editingItem?.overtime_hours || editingItem?.overtime_rate),
       )
       setNfExpanded(false)
+      setBankExpanded(false)
       setLinkNfOpen(false)
       setDiscardConfirmOpen(false)
+      // Ao abrir com item existente, nunca exibir indicador de automatico
+      setDueDateIsAuto(false)
     }
   }, [open, editingItem, jobId, defaultItemNumber])
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm(prev => ({ ...prev, [key]: value }))
+  }
+
+  /**
+   * Ao selecionar uma condicao de pagamento:
+   * - calcula a data de vencimento client-side (UX imediata)
+   * - marca a data como calculada automaticamente (exibe indicador)
+   * - se nao houver data base, apenas atualiza a condicao sem calcular
+   */
+  function handleConditionChange(condition: PaymentCondition | '') {
+    setField('payment_condition', condition)
+
+    if (!condition) {
+      // Condicao removida: limpar data calculada automaticamente,
+      // mas apenas se estava no modo auto (nao sobrescrever edicao manual)
+      if (dueDateIsAuto) {
+        setField('payment_due_date', '')
+        setDueDateIsAuto(false)
+      }
+      return
+    }
+
+    // Tentar calcular a data automaticamente se ha data base disponivel
+    if (jobStartDate) {
+      const calculated = calculateDueDate(condition, jobStartDate)
+      if (calculated) {
+        setField('payment_due_date', calculated)
+        setDueDateIsAuto(true)
+        return
+      }
+    }
+
+    // Sem data base: apenas atualiza condicao, nao mexe na data
+    setDueDateIsAuto(false)
+  }
+
+  /**
+   * Ao editar a data de vencimento manualmente:
+   * - atualiza o campo normalmente
+   * - remove o indicador de calculado automaticamente
+   */
+  function handleDueDateChange(value: string) {
+    setField('payment_due_date', value)
+    setDueDateIsAuto(false)
   }
 
   // Handler de fechamento com verificacao de dirty state
@@ -336,6 +556,13 @@ export function CostItemDrawer({
     const overtimeHours = form.overtime_hours.trim() ? parseFloat(form.overtime_hours) : undefined
     const overtimeRate = form.overtime_rate.trim() ? parseBRNumber(form.overtime_rate) ?? undefined : undefined
 
+    // Quando a data foi calculada automaticamente, nao enviamos payment_due_date no payload
+    // para que o backend realize o proprio calculo (fonte de verdade).
+    // Quando editada manualmente, enviamos explicitamente para sobrescrever.
+    const paymentDueDatePayload = dueDateIsAuto
+      ? undefined                             // backend vai calcular
+      : (form.payment_due_date || undefined)  // manual ou vazio = manter/limpar
+
     const payload = {
       job_id: jobId,
       item_number: form.item_number,
@@ -346,7 +573,7 @@ export function CostItemDrawer({
       overtime_hours: overtimeHours,
       overtime_rate: overtimeRate,
       payment_condition: (form.payment_condition || undefined) as PaymentCondition | undefined,
-      payment_due_date: form.payment_due_date || undefined,
+      payment_due_date: paymentDueDatePayload,
       payment_method: (form.payment_method || undefined) as PaymentMethod | undefined,
       vendor_id: form.vendor_id || undefined,
       notes: form.notes.trim() || undefined,
@@ -643,7 +870,9 @@ export function CostItemDrawer({
             <Label htmlFor="payment-condition">Condicao de Pagamento</Label>
             <Select
               value={form.payment_condition || 'none'}
-              onValueChange={v => setField('payment_condition', v === 'none' ? '' : (v as PaymentCondition))}
+              onValueChange={v =>
+                handleConditionChange(v === 'none' ? '' : (v as PaymentCondition))
+              }
               disabled={isPaid}
             >
               <SelectTrigger id="payment-condition">
@@ -658,6 +887,12 @@ export function CostItemDrawer({
                 ))}
               </SelectContent>
             </Select>
+            {/* Aviso quando nao ha data base para calculo automatico */}
+            {form.payment_condition && !jobStartDate && (
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                Job sem data de kickoff ou briefing — informe o vencimento manualmente.
+              </p>
+            )}
           </div>
 
           {/* Vencimento */}
@@ -667,9 +902,16 @@ export function CostItemDrawer({
               id="payment-due-date"
               type="date"
               value={form.payment_due_date}
-              onChange={e => setField('payment_due_date', e.target.value)}
+              onChange={e => handleDueDateChange(e.target.value)}
               disabled={isPaid}
             />
+            {/* Indicador de data calculada automaticamente */}
+            {dueDateIsAuto && form.payment_due_date && (
+              <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Wand2 className="h-3 w-3" />
+                Calculado automaticamente — edite para personalizar
+              </p>
+            )}
           </div>
 
           {/* Metodo de Pagamento */}
@@ -702,10 +944,39 @@ export function CostItemDrawer({
               onSelect={(vendorId, name) => {
                 setField('vendor_id', vendorId)
                 setField('vendor_name', name)
+                // Expandir automaticamente a secao de dados bancarios ao selecionar um vendor
+                if (vendorId) setBankExpanded(true)
+                else setBankExpanded(false)
               }}
               disabled={isPaid}
             />
           </div>
+
+          {/* Dados Bancarios do Fornecedor (colapsavel, visivel quando ha vendor selecionado) */}
+          {form.vendor_id && (
+            <div className="border border-border rounded-md">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between px-3 py-2 text-sm font-medium hover:bg-accent/50 rounded-md"
+                onClick={() => setBankExpanded(v => !v)}
+              >
+                <span className="flex items-center gap-2">
+                  <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                  Dados Bancarios do Fornecedor
+                </span>
+                {bankExpanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
+              {bankExpanded && (
+                <div className="px-3 pb-3">
+                  <VendorBankInfo vendorId={form.vendor_id} />
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Notas */}
           <div className="space-y-2">

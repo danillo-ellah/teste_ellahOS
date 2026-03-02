@@ -36,6 +36,53 @@ const CreateCostItemSchema = z.object({
     .default('orcado'),
 });
 
+// Mapa de condicao de pagamento para numero de dias apos a data base do job
+const CONDITION_DAYS: Record<string, number | null> = {
+  a_vista: 0,
+  cnf_30: 30,
+  cnf_40: 40,
+  cnf_45: 45,
+  cnf_60: 60,
+  cnf_90: 90,
+  snf_30: 30,
+};
+
+/**
+ * Calcula a data de vencimento com base na condicao de pagamento e na data base do job.
+ * Retorna string no formato YYYY-MM-DD ou null se nao for possivel calcular.
+ */
+function calculateDueDate(condition: string, baseDate: string): string | null {
+  const days = CONDITION_DAYS[condition];
+  if (days === undefined || days === null) return null;
+
+  const date = new Date(baseDate);
+  if (isNaN(date.getTime())) return null;
+
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10); // YYYY-MM-DD
+}
+
+/**
+ * Busca a data base do job para calcular vencimento.
+ * Prioridade: kickoff_ppm_date > briefing_date.
+ * Retorna null se o job nao existir ou nao tiver nenhuma das datas.
+ */
+async function fetchJobBaseDate(
+  client: ReturnType<typeof getSupabaseClient>,
+  jobId: string,
+  tenantId: string,
+): Promise<string | null> {
+  const { data: job } = await client
+    .from('jobs')
+    .select('kickoff_ppm_date, briefing_date')
+    .eq('id', jobId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+
+  if (!job) return null;
+  return (job.kickoff_ppm_date as string | null) ?? (job.briefing_date as string | null) ?? null;
+}
+
 // Busca vendor e conta bancaria primaria para montar snapshot
 async function fetchVendorSnapshot(
   client: ReturnType<typeof getSupabaseClient>,
@@ -115,6 +162,33 @@ export async function handleCreate(req: Request, auth: AuthContext): Promise<Res
 
   const client = getSupabaseClient(auth.token);
 
+  // Calculo automatico de payment_due_date quando:
+  // - ha uma condicao de pagamento
+  // - payment_due_date NAO foi preenchido pelo usuario (null/vazio)
+  // - o item pertence a um job (job_id presente)
+  let finalDueDate: string | null = data.payment_due_date ?? null;
+  let dueDateAutoCalculated = false;
+
+  if (data.payment_condition && !data.payment_due_date && data.job_id) {
+    const baseDate = await fetchJobBaseDate(client, data.job_id, auth.tenantId);
+    if (baseDate) {
+      const calculated = calculateDueDate(data.payment_condition, baseDate);
+      if (calculated) {
+        finalDueDate = calculated;
+        dueDateAutoCalculated = true;
+        console.log('[cost-items/create] data de vencimento calculada automaticamente', {
+          condition: data.payment_condition,
+          baseDate,
+          calculated,
+        });
+      }
+    } else {
+      console.log('[cost-items/create] job sem data base para calcular vencimento', {
+        jobId: data.job_id,
+      });
+    }
+  }
+
   // Resolver cost_category_id a partir de item_number
   let costCategoryId: string | null = null;
   const { data: matchedCategory } = await client
@@ -156,7 +230,7 @@ export async function handleCreate(req: Request, auth: AuthContext): Promise<Res
     overtime_hours: data.overtime_hours ?? null,
     overtime_rate: data.overtime_rate ?? null,
     payment_condition: data.payment_condition ?? null,
-    payment_due_date: data.payment_due_date ?? null,
+    payment_due_date: finalDueDate,
     payment_method: data.payment_method ?? null,
     vendor_id: data.vendor_id ?? null,
     cost_category_id: costCategoryId,
@@ -179,6 +253,15 @@ export async function handleCreate(req: Request, auth: AuthContext): Promise<Res
     });
   }
 
-  console.log('[cost-items/create] item criado com sucesso', { id: createdItem.id });
-  return created(createdItem);
+  // Enriquecer resposta com indicador de calculo automatico
+  const responseData = {
+    ...createdItem,
+    payment_due_date_auto: dueDateAutoCalculated,
+  };
+
+  console.log('[cost-items/create] item criado com sucesso', {
+    id: createdItem.id,
+    dueDateAutoCalculated,
+  });
+  return created(responseData);
 }

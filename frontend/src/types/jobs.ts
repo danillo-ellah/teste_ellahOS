@@ -115,6 +115,9 @@ export interface Job {
   expected_delivery_date: string | null
   actual_start_date: string | null
   actual_delivery_date: string | null
+  // Datas de planejamento (retornadas pela API diretamente do banco, sem mapeamento)
+  kickoff_ppm_date: string | null
+  briefing_date: string | null
 
   // Briefing e notas
   briefing: string | null
