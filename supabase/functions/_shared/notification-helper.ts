@@ -116,7 +116,7 @@ export async function notifyJobTeam(
 
   // Filtra somente membros com profile_id (pessoa vinculada a um usuario do sistema)
   const membersWithProfile = members.filter(
-    (m) => (m.people as { profile_id: string | null } | null)?.profile_id,
+    (m) => (m.people as unknown as { profile_id: string | null } | null)?.profile_id,
   );
 
   if (membersWithProfile.length === 0) {
@@ -129,7 +129,7 @@ export async function notifyJobTeam(
   // Cria uma notificacao por membro (insercao em batch)
   const inserts = membersWithProfile.map((m) => ({
     tenant_id: notification.tenant_id,
-    user_id: (m.people as { profile_id: string }).profile_id,
+    user_id: (m.people as unknown as { profile_id: string }).profile_id,
     type: notification.type,
     priority: notification.priority ?? 'normal',
     title: notification.title,
