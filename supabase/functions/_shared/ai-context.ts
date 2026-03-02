@@ -395,8 +395,8 @@ export async function getJobFullContext(
     drive_folder_url: j.drive_folder_url,
   };
 
-  // Montar client
-  const client: JobFullContext['client'] = clientData
+  // Montar client info
+  const clientInfo: JobFullContext['client'] = clientData
     ? {
         id: clientData.id,
         name: clientData.name,
@@ -458,7 +458,7 @@ export async function getJobFullContext(
 
   return {
     job: jobContext,
-    client,
+    client: clientInfo,
     team,
     deliverables,
     shooting_dates,
