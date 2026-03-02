@@ -77,9 +77,9 @@ Deno.serve(async (req: Request) => {
     throw new AppError('NOT_FOUND', `Rota nao encontrada: ${req.method} ${segment2}`, 404);
   } catch (err) {
     if (err instanceof AppError) {
-      return fromAppError(err);
+      return fromAppError(err, req);
     }
     console.error('[drive-integration] Erro inesperado:', err);
-    return error('INTERNAL_ERROR', 'Erro interno do servidor', 500);
+    return error('INTERNAL_ERROR', 'Erro interno do servidor', 500, undefined, req);
   }
 });

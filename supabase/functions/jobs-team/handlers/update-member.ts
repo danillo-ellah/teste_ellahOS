@@ -4,7 +4,7 @@ import { AppError } from '../../_shared/errors.ts';
 import { validate, UpdateTeamMemberSchema } from '../../_shared/validation.ts';
 import { insertHistory } from '../../_shared/history.ts';
 import { detectConflicts } from '../../_shared/conflict-detection.ts';
-import { corsHeaders } from '../../_shared/cors.ts';
+import { getCorsHeaders } from '../../_shared/cors.ts';
 import type { AuthContext } from '../../_shared/auth.ts';
 
 export async function updateMember(
@@ -157,7 +157,7 @@ export async function updateMember(
   if (warnings.length > 0) {
     return new Response(JSON.stringify(responseBody), {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 

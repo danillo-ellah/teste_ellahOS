@@ -11,10 +11,17 @@ import type { AuthContext } from '../../_shared/auth.ts';
 // Colunas permitidas para ordenacao
 const ALLOWED_SORT_COLS = ['created_at', 'full_name', 'email', 'entity_type', 'updated_at'];
 
+// Roles autorizados — lista expoe dados sensiveis (CPF, CNPJ, PIX)
+const ALLOWED_ROLES = ['financeiro', 'admin', 'ceo'];
+
 export async function listVendors(
   req: Request,
   auth: AuthContext,
 ): Promise<Response> {
+  if (!ALLOWED_ROLES.includes(auth.role)) {
+    throw new AppError('FORBIDDEN', 'Permissao insuficiente para listar vendors', 403);
+  }
+
   console.log('[vendors/list] listando vendors', {
     userId: auth.userId,
     tenantId: auth.tenantId,

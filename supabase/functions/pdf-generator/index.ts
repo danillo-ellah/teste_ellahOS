@@ -1,5 +1,5 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
-import { handleCors, corsHeaders } from '../_shared/cors.ts';
+import { handleCors, getCorsHeaders } from '../_shared/cors.ts';
 import { getAuthContext } from '../_shared/auth.ts';
 import { error } from '../_shared/response.ts';
 import { generateApprovalHandler } from './handlers/aprovacao-interna.ts';
@@ -36,16 +36,16 @@ Deno.serve(async (req: Request) => {
       return await previewHandler(req, auth, previewType, jobId);
     }
 
-    return error('NOT_FOUND', `Rota nao encontrada: ${req.method} ${action}`, 404);
+    return error('NOT_FOUND', `Rota nao encontrada: ${req.method} ${action}`, 404, undefined, req);
   } catch (err) {
     if (err && typeof err === 'object' && 'statusCode' in err) {
       const appErr = err as { code: string; message: string; statusCode: number };
       return new Response(
         JSON.stringify({ error: { code: appErr.code, message: appErr.message } }),
-        { status: appErr.statusCode, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        { status: appErr.statusCode, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } },
       );
     }
     console.error('[pdf-generator] erro inesperado:', err);
-    return error('INTERNAL_ERROR', 'Erro interno no pdf-generator', 500);
+    return error('INTERNAL_ERROR', 'Erro interno no pdf-generator', 500, undefined, req);
   }
 });

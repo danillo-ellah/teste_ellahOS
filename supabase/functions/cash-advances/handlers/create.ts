@@ -8,6 +8,9 @@ import { insertHistory } from '../../_shared/history.ts';
 // Roles autorizados para criar adiantamentos
 const ALLOWED_ROLES = ['financeiro', 'admin', 'ceo'];
 
+// Limite maximo de adiantamento autorizado
+const ADVANCE_MAX_VALUE = 1_000_000;
+
 // Schema de validacao para criacao de adiantamento
 const CreateCashAdvanceSchema = z.object({
   job_id: z.string().uuid(),
@@ -15,7 +18,9 @@ const CreateCashAdvanceSchema = z.object({
   recipient_vendor_id: z.string().uuid().optional().nullable(),
   recipient_name: z.string().min(1).max(255),
   description: z.string().min(1).max(1000),
-  amount_authorized: z.number().positive(),
+  amount_authorized: z.number().positive().max(ADVANCE_MAX_VALUE, {
+    message: `Valor autorizado nao pode exceder R$ ${ADVANCE_MAX_VALUE.toLocaleString('pt-BR')}`,
+  }),
 });
 
 export async function handleCreate(req: Request, auth: AuthContext): Promise<Response> {

@@ -298,8 +298,9 @@ function ItemRow({
   onPay,
   onDelete,
 }: ItemRowProps) {
-  const canSelect = !item.is_category_header && item.payment_status === 'pendente'
-  const canPay = item.payment_status === 'pendente' && !item.is_category_header
+  const isCancelled = item.item_status === 'cancelado' || item.payment_status === 'cancelado'
+  const canSelect = !item.is_category_header && item.payment_status === 'pendente' && !isCancelled
+  const canPay = item.payment_status === 'pendente' && !item.is_category_header && !isCancelled
   const isOverdue =
     item.payment_due_date &&
     item.payment_status === 'pendente' &&
@@ -437,6 +438,24 @@ function ItemRow({
                     <CreditCard className="h-4 w-4 mr-2" />
                     Pagar
                   </DropdownMenuItem>
+                </>
+              )}
+              {isCancelled && item.payment_status === 'pendente' && (
+                <>
+                  <DropdownMenuSeparator />
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="flex items-center gap-2 px-2 py-1.5 text-sm text-muted-foreground cursor-not-allowed select-none">
+                          <CreditCard className="h-4 w-4 mr-2 opacity-40" />
+                          Pagar
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="text-xs">
+                        Item cancelado — nao pode ser pago
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </>
               )}
               <DropdownMenuSeparator />

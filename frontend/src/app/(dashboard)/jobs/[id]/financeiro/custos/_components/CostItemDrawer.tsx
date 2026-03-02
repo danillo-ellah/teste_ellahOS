@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { toast } from 'sonner'
-import { ChevronDown, ChevronRight, ChevronsUpDown, Check, X, ExternalLink, Unlink, Link2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronsUpDown, Check, X, ExternalLink, Unlink, Link2, AlertTriangle } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -20,6 +20,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { useCreateCostItem, useUpdateCostItem } from '@/hooks/useCostItems'
 import { useQueryClient } from '@tanstack/react-query'
 import { nfKeys } from '@/lib/query-keys'
@@ -31,12 +41,10 @@ import {
   type CostItem,
   type PaymentCondition,
   type PaymentMethod,
-  type NfRequestStatus,
   type VendorSuggestion,
 } from '@/types/cost-management'
 import { parseBRNumber, formatBRNumber, formatCurrency } from '@/lib/format'
 import { safeErrorMessage } from '@/lib/api'
-import { AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUserRole } from '@/hooks/useUserRole'
 import { LinkNfDialog } from './LinkNfDialog'
@@ -255,9 +263,11 @@ export function CostItemDrawer({
   defaultItemNumber,
 }: CostItemDrawerProps) {
   const [form, setForm] = useState<FormState>(() => defaultForm(jobId, editingItem))
+  const [initialForm, setInitialForm] = useState<FormState>(() => defaultForm(jobId, editingItem))
   const [overtimeExpanded, setOvertimeExpanded] = useState(false)
   const [nfExpanded, setNfExpanded] = useState(false)
   const [linkNfOpen, setLinkNfOpen] = useState(false)
+  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false)
 
   const { mutateAsync: createItem, isPending: isCreating } = useCreateCostItem()
   const { mutateAsync: updateItem, isPending: isUpdating } = useUpdateCostItem()
@@ -271,6 +281,12 @@ export function CostItemDrawer({
   const canManageNf = !!role && ['admin', 'ceo', 'financeiro'].includes(role) && !isPaid
   const hasLinkedNf = !!editingItem?.nf_document_id
 
+  // Detectar dirty state: qualquer campo diferente do inicial
+  const isDirty = useMemo(() => {
+    const keys = Object.keys(form) as (keyof FormState)[]
+    return keys.some(k => String(form[k] ?? '') !== String(initialForm[k] ?? ''))
+  }, [form, initialForm])
+
   // Resetar form quando o drawer abre/fecha ou o item muda
   useEffect(() => {
     if (open) {
@@ -279,16 +295,32 @@ export function CostItemDrawer({
         f.item_number = defaultItemNumber
       }
       setForm(f)
+      setInitialForm(f)
       setOvertimeExpanded(
         !!(editingItem?.overtime_hours || editingItem?.overtime_rate),
       )
       setNfExpanded(false)
       setLinkNfOpen(false)
+      setDiscardConfirmOpen(false)
     }
   }, [open, editingItem, jobId, defaultItemNumber])
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm(prev => ({ ...prev, [key]: value }))
+  }
+
+  // Handler de fechamento com verificacao de dirty state
+  function handleCloseRequest(nextOpen: boolean) {
+    if (!nextOpen && isDirty && !isPending) {
+      setDiscardConfirmOpen(true)
+      return
+    }
+    onOpenChange(nextOpen)
+  }
+
+  function handleDiscardConfirm() {
+    setDiscardConfirmOpen(false)
+    onOpenChange(false)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -335,7 +367,8 @@ export function CostItemDrawer({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <>
+    <Sheet open={open} onOpenChange={handleCloseRequest}>
       <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader>
           <SheetTitle>
@@ -692,7 +725,7 @@ export function CostItemDrawer({
               type="button"
               variant="outline"
               className="flex-1"
-              onClick={() => onOpenChange(false)}
+              onClick={() => handleCloseRequest(false)}
               disabled={isPending}
             >
               Cancelar
@@ -703,15 +736,37 @@ export function CostItemDrawer({
           </div>
         </form>
       </SheetContent>
-
-      {linkNfOpen && editingItem && (
-        <LinkNfDialog
-          open={linkNfOpen}
-          onOpenChange={setLinkNfOpen}
-          jobId={jobId}
-          costItemId={editingItem.id}
-        />
-      )}
     </Sheet>
+
+    {/* AlertDialog: descartar alteracoes nao salvas */}
+    <AlertDialog open={discardConfirmOpen} onOpenChange={setDiscardConfirmOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Descartar alteracoes?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Voce fez alteracoes que ainda nao foram salvas. Se fechar agora, as alteracoes serao perdidas.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Continuar editando</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={handleDiscardConfirm}
+          >
+            Descartar
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    {linkNfOpen && editingItem && (
+      <LinkNfDialog
+        open={linkNfOpen}
+        onOpenChange={setLinkNfOpen}
+        jobId={jobId}
+        costItemId={editingItem.id}
+      />
+    )}
+    </>
   )
 }

@@ -196,7 +196,15 @@ export function VendorCreateDialog({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'BUTTON') {
+              e.preventDefault()
+            }
+          }}
+        >
           {/* Nome */}
           <div className="space-y-1.5">
             <Label htmlFor="full_name">

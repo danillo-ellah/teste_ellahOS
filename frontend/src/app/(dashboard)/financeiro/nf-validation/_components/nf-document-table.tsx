@@ -41,6 +41,16 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { cn } from '@/lib/utils'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { toast } from 'sonner'
@@ -313,6 +323,8 @@ export function NfDocumentTable({
   onBulkReject,
 }: NfDocumentTableProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [bulkRejectConfirmOpen, setBulkRejectConfirmOpen] = useState(false)
+  const [pendingRejectIds, setPendingRejectIds] = useState<string[]>([])
 
   const sortBy = filters.sort_by ?? 'created_at'
   const sortOrder = filters.sort_order ?? 'desc'
@@ -699,12 +711,43 @@ export function NfDocumentTable({
           setSelected(new Set())
         }}
         onRejectBulk={() => {
-          if (onBulkReject) {
-            onBulkReject(Array.from(selected))
-            setSelected(new Set())
+          if (onBulkReject && selected.size > 0) {
+            setPendingRejectIds(Array.from(selected))
+            setBulkRejectConfirmOpen(true)
           }
         }}
       />
+
+      {/* AlertDialog de confirmacao para bulk reject */}
+      <AlertDialog open={bulkRejectConfirmOpen} onOpenChange={setBulkRejectConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rejeitar {pendingRejectIds.length} NF{pendingRejectIds.length > 1 ? 's' : ''}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acao ira rejeitar {pendingRejectIds.length > 1 ? `as ${pendingRejectIds.length} NFs selecionadas` : 'a NF selecionada'}.
+              Os fornecedores serao notificados e precisarao reenviar os documentos.
+              Esta operacao nao pode ser desfeita facilmente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingRejectIds([])}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (onBulkReject) {
+                  onBulkReject(pendingRejectIds)
+                }
+                setSelected(new Set())
+                setPendingRejectIds([])
+              }}
+            >
+              Rejeitar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </div>
   )

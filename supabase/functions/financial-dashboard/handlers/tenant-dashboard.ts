@@ -61,6 +61,11 @@ export async function handleTenantDashboard(
       0,
     );
 
+  // total_pending: soma dos itens com payment_status 'pendente' (exclui 'pago' e 'cancelado')
+  const totalPending = items
+    .filter((i) => i.payment_status === 'pendente')
+    .reduce((acc, i) => acc + (i.total_with_overtime ?? 0), 0);
+
   const totalOverdue = items
     .filter(
       (i) =>
@@ -117,7 +122,7 @@ export async function handleTenantDashboard(
       total_budgeted: totalBudgeted,
       total_paid: totalPaid,
       total_overdue: totalOverdue,
-      total_pending: totalBudgeted - totalPaid,
+      total_pending: totalPending,
       jobs_count: jobsWithItems.size,
       items_pending_payment: itemsPendingNext30Days,
     },

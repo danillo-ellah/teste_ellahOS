@@ -19,15 +19,15 @@ Deno.serve(async (req: Request) => {
     const jobId = fnIndex >= 0 && pathSegments.length > fnIndex + 1 ? pathSegments[fnIndex + 1] : null;
 
     if (!jobId) {
-      return error('VALIDATION_ERROR', 'job_id e obrigatorio na URL', 400);
+      return error('VALIDATION_ERROR', 'job_id e obrigatorio na URL', 400, undefined, req);
     }
 
     if (req.method === 'GET') return await listHistory(req, auth, jobId);
 
-    return error('METHOD_NOT_ALLOWED', 'Metodo nao permitido. Historico e somente leitura.', 405);
+    return error('METHOD_NOT_ALLOWED', 'Metodo nao permitido. Historico e somente leitura.', 405, undefined, req);
   } catch (err) {
-    if (err instanceof AppError) return fromAppError(err);
+    if (err instanceof AppError) return fromAppError(err, req);
     console.error('Erro nao tratado:', err);
-    return error('INTERNAL_ERROR', 'Erro interno do servidor', 500);
+    return error('INTERNAL_ERROR', 'Erro interno do servidor', 500, undefined, req);
   }
 });

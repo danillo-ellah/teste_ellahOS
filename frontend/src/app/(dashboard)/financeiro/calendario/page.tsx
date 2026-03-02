@@ -182,8 +182,8 @@ export default function PaymentCalendarPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <ToolbarTotals
           items={items ?? []}
-          tenantTotal={tenantDashboard?.total_paid}
-          tenantOverdue={tenantDashboard?.total_overdue}
+          tenantTotal={tenantDashboard?.totals.total_paid}
+          tenantOverdue={tenantDashboard?.totals.total_overdue}
         />
         <Select value={period} onValueChange={v => setPeriod(v as PeriodOption)}>
           <SelectTrigger className="w-48">

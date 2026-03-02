@@ -9,8 +9,13 @@ import { insertHistory } from '../../_shared/history.ts';
 const ALLOWED_ROLES = ['financeiro', 'admin', 'ceo'];
 
 // Schema de validacao
+// Limite maximo de 1.000.000 por deposito para prevenir entradas acidentais ou maliciosas
+const DEPOSIT_MAX_VALUE = 1_000_000;
+
 const DepositSchema = z.object({
-  amount: z.number().positive(),
+  amount: z.number().positive().max(DEPOSIT_MAX_VALUE, {
+    message: `Valor do deposito nao pode exceder R$ ${DEPOSIT_MAX_VALUE.toLocaleString('pt-BR')}`,
+  }),
 });
 
 export async function handleDeposit(

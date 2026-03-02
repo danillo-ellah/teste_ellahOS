@@ -1550,3 +1550,114 @@ console.log(`[ai-copilot/chat] tenant=${shortTenant}... user=${shortUser}...`);
 | FASE8-BAIXO-003 | BAIXA | INSERT policy de ai_conversation_messages nao valida conversation_id | ABERTO (deferred) |
 | FASE8-BAIXO-004 | BAIXA | Logs de INFO expoe tenantId e userId completos | CORRIGIDO (2026-02-24) |
 
+---
+
+# Auditoria de Seguranca - Fase 10 (Modulo Financeiro)
+
+**Data:** 2026-03-02
+**Auditor:** Security Engineer + QA Engineers (4 agentes)
+**Escopo:** Edge Functions financeiras (cost-items, vendors, cash-advances, financial-dashboard, payment-manager, budget) + frontend financeiro + RLS
+
+---
+
+## RESUMO EXECUTIVO DA FASE 10
+
+A Fase 10 adiciona 6 tabelas financeiras (cost_categories, vendors, bank_accounts, cost_items, cash_advances, expense_receipts) + financial_records e invoices. 4 agentes rodaram QA em paralelo gerando ~99 findings. Todos BLOCKER e CRITICAL foram corrigidos.
+
+---
+
+## RESULTADO POR FINDING
+
+### FASE10-ALTO-001 — DELETE RLS policies ausentes em 8 tabelas financeiras
+**Severidade:** ALTA
+**Tabelas:** cost_categories, vendors, bank_accounts, cost_items, cash_advances, expense_receipts, financial_records, invoices
+**Status:** CORRIGIDO (2026-03-02) — migration 20260302100000_add_delete_rls_policies_fase10.sql
+**Fix:** Policies FOR DELETE com restricao por role (admin/ceo para tabelas criticas, +financeiro para as demais)
+
+### FASE10-ALTO-002 — CORS wildcard em todas as respostas de EFs autenticadas
+**Severidade:** ALTA
+**Arquivo:** _shared/response.ts + 26 index.ts
+**Status:** CORRIGIDO (2026-03-02)
+**Fix:** response.ts aceita `req?` para CORS dinamico. Todos os 26 index.ts passam `req` para error/fromAppError. Endpoints publicos mantêm wildcard.
+
+### FASE10-MEDIO-001 — vendors/suggest.ts e list.ts sem role check (dados LGPD)
+**Severidade:** MEDIA
+**Arquivos:** vendors/handlers/suggest.ts, vendors/handlers/list.ts
+**Status:** CORRIGIDO (2026-03-02)
+**Fix:** suggest.ts → ALLOWED_ROLES ['financeiro', 'produtor_executivo', 'admin', 'ceo']; list.ts → ['financeiro', 'admin', 'ceo'] (mais restritivo por expor PIX/bank data)
+
+### FASE10-MEDIO-002 — cost-items/budget-summary.ts sem role check (dados comerciais)
+**Severidade:** MEDIA
+**Arquivo:** cost-items/handlers/budget-summary.ts
+**Status:** CORRIGIDO (2026-03-02)
+**Fix:** ALLOWED_ROLES ['financeiro', 'produtor_executivo', 'admin', 'ceo']
+
+### FASE10-MEDIO-003 — total_pending calculado errado no financial-dashboard
+**Severidade:** MEDIA (impacto funcional)
+**Arquivo:** financial-dashboard/handlers/tenant-dashboard.ts
+**Status:** CORRIGIDO (2026-03-02)
+**Fix:** total_pending agora filtra explicitamente payment_status === 'pendente'. Items cancelados excluidos com .neq('item_status', 'cancelado')
+
+### FASE10-MEDIO-004 — payment_due_date filtros ignorados no cost-items list
+**Severidade:** MEDIA (impacto funcional)
+**Arquivo:** cost-items/handlers/list.ts
+**Status:** CORRIGIDO (2026-03-02)
+**Fix:** Adicionados parametros payment_due_date_from/to com .gte/.lte na query
+
+### FASE10-MEDIO-005 — Items cancelados podem ser marcados como pagos
+**Severidade:** MEDIA (regra de negocio)
+**Arquivo:** cost-items/handlers/update.ts + frontend CostItemsTable
+**Status:** CORRIGIDO (2026-03-02)
+**Fix:** Backend rejeita com 422; frontend desabilita botao de pagamento + tooltip
+
+### FASE10-MEDIO-006 — Cash advance deposit sem limite de valor
+**Severidade:** MEDIA
+**Arquivo:** cash-advances/handlers/deposit.ts, create.ts
+**Status:** CORRIGIDO (2026-03-02)
+**Fix:** .max(1_000_000) no schema Zod
+
+### FASE10-BAIXO-001 — Sem rate limiting em endpoints financeiros de escrita
+**Severidade:** BAIXA
+**Mitigacao:** Role checks presentes em todos os endpoints
+**Status:** ABERTO (deferred — risco baixo com role checks)
+
+### FASE10-BAIXO-002 — vendors/create.ts expoe dados pessoais em erro 409
+**Severidade:** BAIXA
+**Status:** ABERTO (deferred)
+
+### FASE10-BAIXO-003 — CORS hardcoded inline em vendors/create.ts (4 blocos)
+**Severidade:** BAIXA
+**Status:** ABERTO (deferred)
+
+---
+
+## FIXES FRONTEND (Sprint 3 QA)
+
+| Finding | Severidade | Fix | Status |
+|---------|------------|-----|--------|
+| TenantFinancialDashboard type mismatch | BLOCKER | Tipo corrigido para estrutura nested (totals + upcoming_payments_30d) | CORRIGIDO |
+| Bulk reject NF sem confirmacao | CRITICAL | AlertDialog adicionado antes do bulk reject | CORRIGIDO |
+| Drawer fecha sem salvar alteracoes | CRITICAL | isDirty tracking + AlertDialog "Descartar?" | CORRIGIDO |
+| Enter submete vendor form | HIGH | onKeyDown previne submit em Enter (exceto botao) | CORRIGIDO |
+| Budget page sem role check | HIGH | useUserRole + tela "Acesso restrito" | CORRIGIDO |
+| Batch create idempotency | MEDIUM | Ja implementado (disabled={isPending}) | JA OK |
+| Cancelled items pagaveis no frontend | HIGH | Desabilita botao + tooltip para items cancelados | CORRIGIDO |
+
+---
+
+## TABELA RESUMO - FASE 10
+
+| ID | Severidade | Descricao | Status |
+|----|------------|-----------|--------|
+| FASE10-ALTO-001 | ALTA | DELETE RLS ausente em 8 tabelas financeiras | CORRIGIDO (2026-03-02) |
+| FASE10-ALTO-002 | ALTA | CORS wildcard em respostas de EFs autenticadas (26 EFs) | CORRIGIDO (2026-03-02) |
+| FASE10-MEDIO-001 | MEDIA | vendors suggest/list sem role check — CPF/CNPJ/PIX expostos | CORRIGIDO (2026-03-02) |
+| FASE10-MEDIO-002 | MEDIA | budget-summary sem role check — margem/closed_value expostos | CORRIGIDO (2026-03-02) |
+| FASE10-MEDIO-003 | MEDIA | total_pending calculado errado (incluia cancelados) | CORRIGIDO (2026-03-02) |
+| FASE10-MEDIO-004 | MEDIA | payment_due_date filtros ignorados no backend | CORRIGIDO (2026-03-02) |
+| FASE10-MEDIO-005 | MEDIA | Items cancelados podem ser marcados como pagos | CORRIGIDO (2026-03-02) |
+| FASE10-MEDIO-006 | MEDIA | Cash advance deposit sem limite de valor | CORRIGIDO (2026-03-02) |
+| FASE10-BAIXO-001 | BAIXA | Sem rate limiting em endpoints financeiros | ABERTO (deferred) |
+| FASE10-BAIXO-002 | BAIXA | vendors/create expoe dados pessoais em 409 | ABERTO (deferred) |
+| FASE10-BAIXO-003 | BAIXA | CORS hardcoded inline em vendors/create | ABERTO (deferred) |
+

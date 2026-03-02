@@ -3,6 +3,9 @@ import { AppError } from '../../_shared/errors.ts';
 import { success } from '../../_shared/response.ts';
 import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 
+// Roles autorizados para visualizar adiantamentos
+const ALLOWED_ROLES = ['financeiro', 'produtor_executivo', 'admin', 'ceo'];
+
 export async function handleGet(
   _req: Request,
   auth: AuthContext,
@@ -13,6 +16,11 @@ export async function handleGet(
     tenantId: auth.tenantId,
     id,
   });
+
+  // Validacao de role
+  if (!ALLOWED_ROLES.includes(auth.role)) {
+    throw new AppError('FORBIDDEN', 'Permissao insuficiente para visualizar adiantamentos', 403);
+  }
 
   const client = getSupabaseClient(auth.token);
 

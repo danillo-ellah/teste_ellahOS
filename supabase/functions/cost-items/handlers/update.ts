@@ -166,6 +166,17 @@ export async function handleUpdate(req: Request, auth: AuthContext, id: string):
     throw new AppError('NOT_FOUND', 'Item de custo nao encontrado', 404);
   }
 
+  // Bloquear payment_status 'pago' em item cancelado
+  const targetItemStatus = updates.item_status ?? current.item_status;
+  if (targetItemStatus === 'cancelado' && updates.payment_status === 'pago') {
+    throw new AppError(
+      'BUSINESS_RULE_VIOLATION',
+      'Nao e possivel marcar como pago um item cancelado',
+      422,
+      { item_status: targetItemStatus },
+    );
+  }
+
   // Validar transicao de status
   if (updates.item_status && updates.item_status !== current.item_status) {
     const allowed = VALID_STATUS_TRANSITIONS[current.item_status as string] ?? [];

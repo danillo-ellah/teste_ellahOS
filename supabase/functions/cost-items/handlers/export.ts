@@ -1,7 +1,7 @@
 import type { AuthContext } from '../../_shared/auth.ts';
 import { AppError } from '../../_shared/errors.ts';
 import { getSupabaseClient } from '../../_shared/supabase-client.ts';
-import { corsHeaders } from '../../_shared/cors.ts';
+import { getCorsHeaders } from '../../_shared/cors.ts';
 
 // Roles autorizados para exportar dados
 const ALLOWED_ROLES = ['financeiro', 'produtor_executivo', 'admin', 'ceo'];
@@ -65,7 +65,7 @@ function formatCurrency(value: unknown): string {
 }
 
 export async function handleExport(
-  _req: Request,
+  req: Request,
   auth: AuthContext,
   jobId: string,
 ): Promise<Response> {
@@ -176,7 +176,7 @@ export async function handleExport(
   return new Response(csvContent, {
     status: 200,
     headers: {
-      ...corsHeaders,
+      ...getCorsHeaders(req),
       'Content-Type': 'text/csv; charset=utf-8',
       'Content-Disposition': `attachment; filename="${filename}"`,
     },

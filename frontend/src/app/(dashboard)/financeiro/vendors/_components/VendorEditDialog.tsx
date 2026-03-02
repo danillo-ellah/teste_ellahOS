@@ -114,7 +114,15 @@ export function VendorEditDialog({ vendor, open, onOpenChange }: VendorEditDialo
           <DialogTitle>Editar Fornecedor</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'BUTTON') {
+              e.preventDefault()
+            }
+          }}
+        >
           <div className="space-y-1.5">
             <Label htmlFor="edit_full_name">
               Nome <span className="text-destructive">*</span>

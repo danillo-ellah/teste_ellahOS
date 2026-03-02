@@ -62,7 +62,7 @@ Deno.serve(async (req: Request) => {
       const to = url.searchParams.get('to');
       if (from && to) return await listByRange(req, auth);
 
-      return error('VALIDATION_ERROR', 'Informe job_id, people_id ou from/to como query params', 400);
+      return error('VALIDATION_ERROR', 'Informe job_id, people_id ou from/to como query params', 400, undefined, req);
     }
 
     // POST /allocations
@@ -70,10 +70,10 @@ Deno.serve(async (req: Request) => {
       return await createAllocation(req, auth);
     }
 
-    return error('METHOD_NOT_ALLOWED', 'Metodo nao permitido', 405);
+    return error('METHOD_NOT_ALLOWED', 'Metodo nao permitido', 405, undefined, req);
   } catch (err) {
-    if (err instanceof AppError) return fromAppError(err);
+    if (err instanceof AppError) return fromAppError(err, req);
     console.error('Erro nao tratado em allocations:', err);
-    return error('INTERNAL_ERROR', 'Erro interno do servidor', 500);
+    return error('INTERNAL_ERROR', 'Erro interno do servidor', 500, undefined, req);
   }
 });

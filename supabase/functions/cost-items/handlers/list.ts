@@ -2,7 +2,7 @@ import type { AuthContext } from '../../_shared/auth.ts';
 import { AppError } from '../../_shared/errors.ts';
 import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 import { parsePagination, getOffset, buildMeta } from '../../_shared/pagination.ts';
-import { corsHeaders } from '../../_shared/cors.ts';
+import { getCorsHeaders } from '../../_shared/cors.ts';
 
 // Colunas permitidas para ordenacao
 const ALLOWED_SORT_COLS = [
@@ -30,6 +30,8 @@ export async function handleList(req: Request, auth: AuthContext): Promise<Respo
   const jobId = url.searchParams.get('job_id');
   const periodMonthFrom = url.searchParams.get('period_month_from');
   const periodMonthTo = url.searchParams.get('period_month_to');
+  const paymentDueDateFrom = url.searchParams.get('payment_due_date_from');
+  const paymentDueDateTo = url.searchParams.get('payment_due_date_to');
   const itemStatus = url.searchParams.get('item_status');
   const paymentStatus = url.searchParams.get('payment_status');
   const nfRequestStatus = url.searchParams.get('nf_request_status');
@@ -60,6 +62,10 @@ export async function handleList(req: Request, auth: AuthContext): Promise<Respo
   if (search) {
     query = query.ilike('service_description', `%${search}%`);
   }
+
+  // Filtros por data de vencimento
+  if (paymentDueDateFrom) query = query.gte('payment_due_date', paymentDueDateFrom);
+  if (paymentDueDateTo) query = query.lte('payment_due_date', paymentDueDateTo);
 
   // Ordenacao: item_number ASC, sub_item_number ASC por padrao
   // Se o sort_by nao foi especificado (default created_at), usar item_number ASC
@@ -130,7 +136,7 @@ export async function handleList(req: Request, auth: AuthContext): Promise<Respo
     JSON.stringify({ data: items, meta: extendedMeta }),
     {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
     },
   );
 }

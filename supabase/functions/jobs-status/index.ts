@@ -22,7 +22,7 @@ Deno.serve(async (req: Request) => {
     const action = fnIndex >= 0 && pathSegments.length > fnIndex + 2 ? pathSegments[fnIndex + 2] : null;
 
     if (!jobId) {
-      return error('VALIDATION_ERROR', 'job_id e obrigatorio na URL', 400);
+      return error('VALIDATION_ERROR', 'job_id e obrigatorio na URL', 400, undefined, req);
     }
 
     if (req.method === 'PATCH' && (!action || action === 'status')) {
@@ -32,10 +32,10 @@ Deno.serve(async (req: Request) => {
       return await approveJob(req, auth, jobId);
     }
 
-    return error('METHOD_NOT_ALLOWED', 'Metodo nao permitido', 405);
+    return error('METHOD_NOT_ALLOWED', 'Metodo nao permitido', 405, undefined, req);
   } catch (err) {
-    if (err instanceof AppError) return fromAppError(err);
+    if (err instanceof AppError) return fromAppError(err, req);
     console.error('Erro nao tratado:', err);
-    return error('INTERNAL_ERROR', 'Erro interno do servidor', 500);
+    return error('INTERNAL_ERROR', 'Erro interno do servidor', 500, undefined, req);
   }
 });

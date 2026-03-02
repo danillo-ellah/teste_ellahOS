@@ -7,11 +7,19 @@ import { parsePagination, getOffset, buildMeta } from '../../_shared/pagination.
 // Colunas permitidas para ordenacao
 const ALLOWED_SORT_COLS = ['created_at', 'updated_at', 'amount_authorized', 'status', 'recipient_name'];
 
+// Roles autorizados para listar adiantamentos
+const ALLOWED_ROLES = ['financeiro', 'produtor_executivo', 'admin', 'ceo'];
+
 export async function handleList(req: Request, auth: AuthContext): Promise<Response> {
   console.log('[cash-advances/list] iniciando listagem de adiantamentos', {
     userId: auth.userId,
     tenantId: auth.tenantId,
   });
+
+  // Validacao de role
+  if (!ALLOWED_ROLES.includes(auth.role)) {
+    throw new AppError('FORBIDDEN', 'Permissao insuficiente para visualizar adiantamentos', 403);
+  }
 
   const url = new URL(req.url);
 

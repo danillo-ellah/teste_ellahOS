@@ -1,6 +1,7 @@
 'use client'
 
 import { use } from 'react'
+import { ShieldAlert } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -12,11 +13,15 @@ import { BudgetCategoryTable } from './_components/BudgetCategoryTable'
 import { ApplyTemplateSection } from './_components/ApplyTemplateSection'
 import { ReferenceJobsSection } from './_components/ReferenceJobsSection'
 import { useBudgetSummary } from '@/hooks/useCostItems'
+import { useUserRole } from '@/hooks/useUserRole'
 import type { BudgetMode } from '@/types/cost-management'
 
 interface PageProps {
   params: Promise<{ id: string }>
 }
+
+// Roles com acesso a pagina de orcamento
+const BUDGET_ALLOWED_ROLES = ['admin', 'ceo', 'financeiro', 'produtor_executivo', 'producer'] as const
 
 const BUDGET_MODE_LABELS: Record<BudgetMode, string> = {
   bottom_up: 'Bottom-up',
@@ -55,6 +60,36 @@ export default function JobBudgetPage({ params }: PageProps) {
   const { id: jobId } = use(params)
   const { data, isLoading, isError, refetch } = useBudgetSummary(jobId)
   const budget = data?.data
+
+  const { role, isLoading: roleLoading } = useUserRole()
+
+  // Verificacao de role — aguarda carregamento para evitar flash
+  if (roleLoading) {
+    return (
+      <div className="space-y-6 pb-12">
+        <JobFinancialTabs jobId={jobId} />
+        <BudgetPageSkeleton />
+      </div>
+    )
+  }
+
+  const hasAccess = !!role && (BUDGET_ALLOWED_ROLES as readonly string[]).includes(role)
+
+  if (!hasAccess) {
+    return (
+      <div className="space-y-6 pb-12">
+        <JobFinancialTabs jobId={jobId} />
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <ShieldAlert className="h-12 w-12 text-zinc-300 dark:text-zinc-600" />
+          <p className="mt-4 text-lg font-semibold text-foreground">Acesso restrito</p>
+          <p className="mt-2 max-w-sm text-sm text-zinc-500">
+            Voce nao tem permissao para visualizar dados de orcamento.
+            Contate um administrador se precisar de acesso.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6 pb-12">

@@ -42,10 +42,10 @@ Deno.serve(async (req: Request) => {
       return await handleBatchPreview(req, auth);
     }
 
-    return error('METHOD_NOT_ALLOWED', 'Metodo ou rota nao permitido', 405);
+    return error('METHOD_NOT_ALLOWED', 'Metodo ou rota nao permitido', 405, undefined, req);
   } catch (err) {
-    if (err instanceof AppError) return fromAppError(err);
+    if (err instanceof AppError) return fromAppError(err, req);
     console.error('[payment-manager] erro nao tratado:', err);
-    return error('INTERNAL_ERROR', 'Erro interno do servidor', 500);
+    return error('INTERNAL_ERROR', 'Erro interno do servidor', 500, undefined, req);
   }
 });

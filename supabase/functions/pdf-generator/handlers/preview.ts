@@ -1,7 +1,7 @@
 import { getSupabaseClient, getServiceClient } from '../../_shared/supabase-client.ts';
 import { AppError } from '../../_shared/errors.ts';
 import { buildApprovalInternalHtml } from '../../_shared/pdf-generator.ts';
-import { corsHeaders } from '../../_shared/cors.ts';
+import { getCorsHeaders } from '../../_shared/cors.ts';
 import type { AuthContext } from '../../_shared/auth.ts';
 
 // Tipos de preview suportados
@@ -11,7 +11,7 @@ const SUPPORTED_TYPES = ['aprovacao-interna'];
 const ALLOWED_ROLES = ['admin', 'ceo', 'produtor_executivo'];
 
 export async function previewHandler(
-  _req: Request,
+  req: Request,
   auth: AuthContext,
   previewType: string,
   jobId: string | null,
@@ -128,7 +128,7 @@ export async function previewHandler(
   return new Response(html, {
     status: 200,
     headers: {
-      ...corsHeaders,
+      ...getCorsHeaders(req),
       'Content-Type': 'text/html; charset=utf-8',
       'Cache-Control': 'no-cache',
     },

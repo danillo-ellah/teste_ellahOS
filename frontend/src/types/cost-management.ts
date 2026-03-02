@@ -315,16 +315,24 @@ export interface JobFinancialDashboard {
 }
 
 export interface TenantFinancialDashboard {
-  total_budgeted: number
-  total_paid: number
-  total_overdue: number
-  jobs_count: number
-  items_pending_next_30d: number
-  upcoming_by_week: Array<{
-    week_label: string
+  totals: {
+    total_budgeted: number
+    total_paid: number
+    total_overdue: number
+    total_pending: number
+    jobs_count: number
+    items_pending_payment: number
+  }
+  upcoming_payments_30d: {
     total: number
-    items_count: number
-  }>
+    by_week: Array<{
+      week_label: string
+      week_start: string
+      week_end: string
+      total: number
+      items_count: number
+    }>
+  }
 }
 
 // ============ Cash Advances ============

@@ -93,10 +93,12 @@ export async function mergeVendor(
   console.log('[vendors/merge] cost_items movidos:', costItemsCount ?? 0);
 
   // 2. Buscar bank_accounts do target para saber quais PIX/contas ja existem (evitar conflito)
+  // Filtra por tenant_id para garantir isolamento mesmo com serviceClient (bypass RLS)
   const { data: targetBankAccounts } = await serviceClient
     .from('bank_accounts')
     .select('id, pix_key, account_number')
     .eq('vendor_id', target_vendor_id)
+    .eq('tenant_id', auth.tenantId)
     .is('deleted_at', null);
 
   const targetPixKeys = new Set(
@@ -111,6 +113,7 @@ export async function mergeVendor(
     .from('bank_accounts')
     .select('id, pix_key, account_number')
     .eq('vendor_id', sourceVendorId)
+    .eq('tenant_id', auth.tenantId)
     .is('deleted_at', null);
 
   let bankAccountsMoved = 0;
@@ -125,7 +128,8 @@ export async function mergeVendor(
       const { error: baErr } = await serviceClient
         .from('bank_accounts')
         .update({ vendor_id: target_vendor_id, is_primary: false })
-        .eq('id', ba.id);
+        .eq('id', ba.id)
+        .eq('tenant_id', auth.tenantId);
 
       if (!baErr) {
         bankAccountsMoved++;
@@ -139,14 +143,15 @@ export async function mergeVendor(
 
   console.log('[vendors/merge] bank_accounts movidos:', bankAccountsMoved);
 
-  // 4. Soft delete do vendor de origem
+  // 4. Soft delete do vendor de origem — filtro por tenant_id obrigatorio mesmo com serviceClient
   const { error: softDeleteErr } = await serviceClient
     .from('vendors')
     .update({
       deleted_at: new Date().toISOString(),
       notes: `Mergeado para vendor ${target_vendor_id} (${target.full_name})`,
     })
-    .eq('id', sourceVendorId);
+    .eq('id', sourceVendorId)
+    .eq('tenant_id', auth.tenantId);
 
   if (softDeleteErr) {
     console.error('[vendors/merge] erro ao soft-delete source:', softDeleteErr);

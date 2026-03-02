@@ -1,7 +1,7 @@
 import { getSupabaseClient } from '../_shared/supabase-client.ts';
 import { error } from '../_shared/response.ts';
 import { AppError } from '../_shared/errors.ts';
-import { corsHeaders } from '../_shared/cors.ts';
+import { getCorsHeaders } from '../_shared/cors.ts';
 import type { AuthContext } from '../_shared/auth.ts';
 
 // Tipos de relatorio suportados no export
@@ -275,7 +275,7 @@ export async function exportCsv(
   return new Response(csvContent, {
     status: 200,
     headers: {
-      ...corsHeaders,
+      ...getCorsHeaders(req),
       'Content-Type': 'text/csv; charset=utf-8',
       'Content-Disposition': `attachment; filename="${filename}"`,
     },

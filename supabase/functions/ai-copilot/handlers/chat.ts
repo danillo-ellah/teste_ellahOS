@@ -7,7 +7,7 @@
 
 import { getSupabaseClient, getServiceClient } from '../_shared/supabase-client.ts';
 import { success } from '../_shared/response.ts';
-import { corsHeaders } from '../_shared/cors.ts';
+import { getCorsHeaders } from '../_shared/cors.ts';
 import { AppError } from '../_shared/errors.ts';
 import type { AuthContext } from '../_shared/auth.ts';
 import { callGroq, callGroqStream, estimateGroqCost, GROQ_MODEL } from '../_shared/groq-client.ts';
@@ -619,7 +619,7 @@ export async function handleChat(
   // 12. Retornar SSE Response
   return new Response(outputStream, {
     headers: {
-      ...corsHeaders,
+      ...getCorsHeaders(req),
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive',

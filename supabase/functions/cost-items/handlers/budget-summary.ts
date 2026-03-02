@@ -3,11 +3,18 @@ import { AppError } from '../../_shared/errors.ts';
 import { success } from '../../_shared/response.ts';
 import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 
+// Roles autorizados — budget expoe closed_value e margem (dados comerciais confidenciais)
+const ALLOWED_ROLES = ['financeiro', 'produtor_executivo', 'admin', 'ceo'];
+
 export async function handleBudgetSummary(
   _req: Request,
   auth: AuthContext,
   jobId: string,
 ): Promise<Response> {
+  if (!ALLOWED_ROLES.includes(auth.role)) {
+    throw new AppError('FORBIDDEN', 'Permissao insuficiente para visualizar orcamento', 403);
+  }
+
   console.log('[cost-items/budget-summary] buscando resumo orcamentario do job', {
     jobId,
     userId: auth.userId,

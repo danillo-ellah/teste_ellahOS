@@ -73,10 +73,10 @@ Deno.serve(async (req: Request) => {
       return await listLogs(req, auth);
     }
 
-    return error('METHOD_NOT_ALLOWED', 'Metodo nao permitido', 405);
+    return error('METHOD_NOT_ALLOWED', 'Metodo nao permitido', 405, undefined, req);
   } catch (err) {
-    if (err instanceof AppError) return fromAppError(err);
+    if (err instanceof AppError) return fromAppError(err, req);
     console.error('Erro nao tratado em tenant-settings:', err);
-    return error('INTERNAL_ERROR', 'Erro interno do servidor', 500);
+    return error('INTERNAL_ERROR', 'Erro interno do servidor', 500, undefined, req);
   }
 });

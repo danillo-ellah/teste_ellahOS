@@ -3,10 +3,17 @@ import { success } from '../../_shared/response.ts';
 import { AppError } from '../../_shared/errors.ts';
 import type { AuthContext } from '../../_shared/auth.ts';
 
+// Roles autorizados — suggest e usado em formularios de cost-items
+const ALLOWED_ROLES = ['financeiro', 'produtor_executivo', 'admin', 'ceo'];
+
 export async function suggestVendors(
   req: Request,
   auth: AuthContext,
 ): Promise<Response> {
+  if (!ALLOWED_ROLES.includes(auth.role)) {
+    throw new AppError('FORBIDDEN', 'Permissao insuficiente para buscar vendors', 403);
+  }
+
   const url = new URL(req.url);
   const q = url.searchParams.get('q') ?? '';
 

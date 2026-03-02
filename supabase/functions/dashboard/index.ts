@@ -39,7 +39,7 @@ Deno.serve(async (req: Request) => {
 
     // Apenas GET e permitido nesta Edge Function
     if (method !== 'GET') {
-      return error('METHOD_NOT_ALLOWED', 'Metodo nao permitido', 405);
+      return error('METHOD_NOT_ALLOWED', 'Metodo nao permitido', 405, undefined, req);
     }
 
     if (segment1 === 'kpis') {
@@ -62,10 +62,10 @@ Deno.serve(async (req: Request) => {
       return await getRevenueChart(req, auth);
     }
 
-    return error('NOT_FOUND', 'Rota nao encontrada', 404);
+    return error('NOT_FOUND', 'Rota nao encontrada', 404, undefined, req);
   } catch (err) {
-    if (err instanceof AppError) return fromAppError(err);
+    if (err instanceof AppError) return fromAppError(err, req);
     console.error('Erro nao tratado em dashboard:', err);
-    return error('INTERNAL_ERROR', 'Erro interno do servidor', 500);
+    return error('INTERNAL_ERROR', 'Erro interno do servidor', 500, undefined, req);
   }
 });
