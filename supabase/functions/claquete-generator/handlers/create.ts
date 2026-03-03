@@ -81,6 +81,9 @@ export async function createHandler(req: Request, auth: AuthContext): Promise<Re
     }
   }
 
+  // Converter strings vazias em null para campos com CHECK constraints
+  const safeStr = (v: string | undefined): string | null => v && v.trim() ? v.trim() : null;
+
   // Inserir no banco
   const { data: claquete, error: dbError } = await client
     .from('claquetes')
@@ -90,16 +93,16 @@ export async function createHandler(req: Request, auth: AuthContext): Promise<Re
       version: nextVersion,
       title: input.title,
       duration: input.duration,
-      product: input.product,
-      advertiser: input.advertiser,
-      agency: input.agency,
-      director: input.director,
-      type: input.type,
-      segment: input.segment,
-      crt: input.crt,
-      production_company: productionCompany,
-      cnpj: cnpj,
-      audio_company: input.audio_company,
+      product: safeStr(input.product),
+      advertiser: safeStr(input.advertiser),
+      agency: safeStr(input.agency),
+      director: safeStr(input.director),
+      type: input.type || 'COMUM',
+      segment: safeStr(input.segment),
+      crt: safeStr(input.crt),
+      production_company: safeStr(productionCompany),
+      cnpj: safeStr(cnpj),
+      audio_company: safeStr(input.audio_company),
       production_year: input.production_year ?? new Date().getFullYear(),
       closed_caption: input.closed_caption,
       sap_key: input.sap_key,
