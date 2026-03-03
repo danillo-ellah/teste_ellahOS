@@ -10,6 +10,7 @@ import {
   Loader2,
   Save,
   ShieldCheck,
+  Trash2,
   Upload,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -188,7 +189,29 @@ export function AncineSection({ job }: AncineSectionProps) {
     },
   })
 
-  const isPending = saveMutation.isPending || markRegisteredMutation.isPending
+  // Mutation "Limpar Registro" — remove dados importados e volta status pra pendente
+  const clearRegistrationMutation = useMutation({
+    mutationFn: async () => {
+      const currentCf = (job.custom_fields ?? {}) as Record<string, unknown>
+      const { ancine_registration: _, ...cfWithout } = currentCf
+      await apiMutate('jobs', 'PATCH', {
+        ancine_number: null,
+        custom_fields: {
+          ...cfWithout,
+          ancine_status: 'pendente',
+        },
+      }, job.id)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['job', job.id] })
+      toast.success('Registro ANCINE removido')
+    },
+    onError: (err) => {
+      toast.error(safeErrorMessage(err))
+    },
+  })
+
+  const isPending = saveMutation.isPending || markRegisteredMutation.isPending || clearRegistrationMutation.isPending
   const statusConfig = ANCINE_STATUS_BADGE[form.ancine_status]
   const isRegistrado = form.ancine_status === 'registrado'
   const checkedCount = checklistChecked.filter(Boolean).length
@@ -364,11 +387,31 @@ export function AncineSection({ job }: AncineSectionProps) {
             <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-semibold">Dados do Registro ANCINE</Label>
-                {registration.imported_at && (
-                  <span className="text-xs text-muted-foreground">
-                    Importado em {new Date(registration.imported_at).toLocaleDateString('pt-BR')}
-                  </span>
-                )}
+                <div className="flex items-center gap-3">
+                  {registration.imported_at && (
+                    <span className="text-xs text-muted-foreground">
+                      Importado em {new Date(registration.imported_at).toLocaleDateString('pt-BR')}
+                    </span>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10 h-7 px-2"
+                    disabled={isPending}
+                    onClick={() => {
+                      if (confirm('Tem certeza que deseja limpar o registro ANCINE? Os dados importados serao removidos.')) {
+                        clearRegistrationMutation.mutate()
+                      }
+                    }}
+                  >
+                    {clearRegistrationMutation.isPending ? (
+                      <Loader2 className="size-3.5 mr-1 animate-spin" />
+                    ) : (
+                      <Trash2 className="size-3.5 mr-1" />
+                    )}
+                    Limpar Registro
+                  </Button>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-sm">
