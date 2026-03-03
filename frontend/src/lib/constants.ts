@@ -366,3 +366,197 @@ export const FINANCIAL_STATUS_STYLE_MAP: Record<
     textClass: 'text-zinc-500 dark:text-zinc-400',
   },
 }
+
+// =========================================================================
+// AREA SYSTEM — Navegacao por areas com color-coding
+// =========================================================================
+
+export type AreaType = 'producao' | 'comercial' | 'financeiro' | 'equipe' | 'admin'
+
+export const AREA_CONFIG: Record<
+  AreaType,
+  {
+    label: string
+    color: string
+    bgClass: string
+    textClass: string
+    dotClass: string
+    tintClass: string
+  }
+> = {
+  producao: {
+    label: 'Producao',
+    color: '#3B82F6',
+    bgClass: 'bg-blue-500/10',
+    textClass: 'text-blue-600 dark:text-blue-400',
+    dotClass: 'bg-blue-500',
+    tintClass: 'from-blue-500/3',
+  },
+  comercial: {
+    label: 'Comercial',
+    color: '#8B5CF6',
+    bgClass: 'bg-violet-500/10',
+    textClass: 'text-violet-600 dark:text-violet-400',
+    dotClass: 'bg-violet-500',
+    tintClass: 'from-violet-500/3',
+  },
+  financeiro: {
+    label: 'Financeiro',
+    color: '#10B981',
+    bgClass: 'bg-emerald-500/10',
+    textClass: 'text-emerald-600 dark:text-emerald-400',
+    dotClass: 'bg-emerald-500',
+    tintClass: 'from-emerald-500/3',
+  },
+  equipe: {
+    label: 'Equipe',
+    color: '#F59E0B',
+    bgClass: 'bg-amber-500/10',
+    textClass: 'text-amber-600 dark:text-amber-400',
+    dotClass: 'bg-amber-500',
+    tintClass: 'from-amber-500/3',
+  },
+  admin: {
+    label: 'Admin',
+    color: '#64748B',
+    bgClass: 'bg-slate-500/10',
+    textClass: 'text-slate-600 dark:text-slate-400',
+    dotClass: 'bg-slate-500',
+    tintClass: 'from-slate-500/3',
+  },
+}
+
+// Sidebar sections — substitui NAV_ITEMS flat
+export interface SidebarItem {
+  label: string
+  href: string
+  icon: string
+  exact?: boolean
+  disabled?: boolean
+  adminOnly?: boolean
+}
+
+export interface SidebarSection {
+  area: AreaType | null // null = Dashboard (sem secao header)
+  items: SidebarItem[]
+}
+
+export const SIDEBAR_SECTIONS: SidebarSection[] = [
+  {
+    area: null,
+    items: [
+      { label: 'Dashboard', href: '/', icon: 'LayoutDashboard', exact: true },
+    ],
+  },
+  {
+    area: 'producao',
+    items: [
+      { label: 'Jobs', href: '/jobs', icon: 'Clapperboard' },
+      { label: 'Calendario', href: '/team/calendar', icon: 'CalendarDays' },
+      { label: 'Aprovacoes', href: '/approvals', icon: 'ClipboardCheck' },
+    ],
+  },
+  {
+    area: 'comercial',
+    items: [
+      { label: 'Pipeline', href: '/crm', icon: 'Target' },
+      { label: 'Clientes', href: '/clients', icon: 'Building2' },
+      { label: 'Agencias', href: '/agencies', icon: 'Briefcase' },
+    ],
+  },
+  {
+    area: 'financeiro',
+    items: [
+      { label: 'Visao Geral', href: '/financeiro', icon: 'DollarSign', exact: true },
+      { label: 'Fornecedores', href: '/financeiro/vendors', icon: 'UserRoundSearch' },
+      { label: 'Calendario Pgtos', href: '/financeiro/calendario', icon: 'CalendarClock' },
+      { label: 'Validacao NFs', href: '/financeiro/nf-validation', icon: 'FileCheck2' },
+      { label: 'Solicitar NFs', href: '/financeiro/nf-request', icon: 'MailPlus' },
+      { label: 'Conciliacao', href: '/financeiro/conciliacao', icon: 'Landmark' },
+    ],
+  },
+  {
+    area: 'equipe',
+    items: [
+      { label: 'Pessoas', href: '/people', icon: 'Users' },
+      { label: 'Portal', href: '/portal', icon: 'Globe' },
+      { label: 'Relatorios', href: '/reports', icon: 'BarChart3' },
+    ],
+  },
+  {
+    area: 'admin',
+    items: [
+      { label: 'Categorias Custo', href: '/admin/financeiro/categorias', icon: 'ListTree', adminOnly: true },
+      { label: 'Configuracoes', href: '/settings', icon: 'Settings' },
+    ],
+  },
+]
+
+// Job Detail Tab Groups — substitui renderizacao flat do JOB_DETAIL_TABS
+export interface JobTabGroup {
+  group: string
+  area: AreaType
+  tabs: Array<{ id: JobDetailTabId; label: string; icon: string }>
+}
+
+export const JOB_TAB_GROUPS: JobTabGroup[] = [
+  {
+    group: 'Info',
+    area: 'producao',
+    tabs: [
+      { id: 'geral', label: 'Geral', icon: 'FileText' },
+      { id: 'equipe', label: 'Equipe', icon: 'Users' },
+      { id: 'entregaveis', label: 'Entregaveis', icon: 'Package' },
+    ],
+  },
+  {
+    group: 'Producao',
+    area: 'producao',
+    tabs: [
+      { id: 'diarias', label: 'Diarias', icon: 'Calendar' },
+      { id: 'locacoes', label: 'Locacoes', icon: 'MapPin' },
+      { id: 'claquete', label: 'Claquete', icon: 'Clapperboard' },
+      { id: 'diario', label: 'Diario', icon: 'BookOpen' },
+      { id: 'figurino', label: 'Figurino/Arte', icon: 'Shirt' },
+    ],
+  },
+  {
+    group: 'Gestao',
+    area: 'financeiro',
+    tabs: [
+      { id: 'financeiro', label: 'Financeiro', icon: 'DollarSign' },
+      { id: 'aprovacoes', label: 'Aprovacoes', icon: 'CheckSquare' },
+      { id: 'contratos', label: 'Contratos', icon: 'PenLine' },
+      { id: 'ppm', label: 'PPM', icon: 'FileCheck' },
+      { id: 'horas-extras', label: 'Horas Extras', icon: 'Timer' },
+    ],
+  },
+  {
+    group: 'Registro',
+    area: 'admin',
+    tabs: [
+      { id: 'historico', label: 'Historico', icon: 'Clock' },
+      { id: 'portal', label: 'Portal', icon: 'Globe' },
+    ],
+  },
+]
+
+// Helper: detectar area ativa pelo pathname
+export function getActiveArea(pathname: string): AreaType | null {
+  if (pathname.startsWith('/jobs') || pathname.startsWith('/approvals') || pathname.startsWith('/team/calendar')) {
+    return 'producao'
+  }
+  if (pathname.startsWith('/crm') || pathname.startsWith('/clients') || pathname.startsWith('/agencies')) {
+    return 'comercial'
+  }
+  if (pathname.startsWith('/financeiro')) {
+    return 'financeiro'
+  }
+  if (pathname.startsWith('/people') || pathname.startsWith('/portal') || pathname.startsWith('/reports')) {
+    return 'equipe'
+  }
+  if (pathname.startsWith('/settings') || pathname.startsWith('/admin')) {
+    return 'admin'
+  }
+  return null
+}
