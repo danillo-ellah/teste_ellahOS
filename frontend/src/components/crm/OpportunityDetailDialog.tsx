@@ -119,7 +119,7 @@ export function OpportunityDetailDialog({
   const [winnerValue, setWinnerValue] = useState('')
 
   const { data: opportunity, isLoading } = useOpportunity(opportunityId)
-  const { data: activities } = useOpportunityActivities(opportunityId)
+  const { data: activities } = useOpportunityActivities(opportunityId, { enabled: !!opportunity })
 
   const addActivityMutation = useAddActivity(opportunityId)
   const updateMutation = useUpdateOpportunity(opportunityId)

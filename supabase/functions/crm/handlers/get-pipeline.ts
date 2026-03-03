@@ -59,7 +59,8 @@ export async function handleGetPipeline(req: Request, auth: AuthContext): Promis
     `)
     .eq('tenant_id', auth.tenantId)
     .is('deleted_at', null)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(200);
 
   // Por padrao omite ganho/perdido para nao sobrecarregar o kanban
   // pausado e mantido mesmo sem include_closed — e um estado temporario visivel no kanban

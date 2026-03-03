@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { CalendarDays, Building2, ChevronRight, Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Opportunity } from '@/hooks/useCrm'
@@ -48,7 +49,7 @@ function isOverdue(dateStr: string | null, stage: string): boolean {
   }
 }
 
-export function OpportunityCard({ opportunity, onClick }: OpportunityCardProps) {
+export const OpportunityCard = memo(function OpportunityCard({ opportunity, onClick }: OpportunityCardProps) {
   const formattedValue = formatCurrency(opportunity.estimated_value)
   const clientName = opportunity.clients?.name
   const agencyName = opportunity.agencies?.name
@@ -168,7 +169,7 @@ export function OpportunityCard({ opportunity, onClick }: OpportunityCardProps) 
       )}
     </button>
   )
-}
+})
 
 function HeatIndicator({ probability }: { probability: number }) {
   if (probability >= 70) {

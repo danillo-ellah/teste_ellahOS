@@ -230,22 +230,23 @@ export function useOpportunity(id: string) {
   })
 }
 
-export function useOpportunityActivities(opportunityId: string) {
+export function useOpportunityActivities(opportunityId: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: crmKeys.activities(opportunityId),
     queryFn: () =>
       apiGet<OpportunityActivity[]>('crm', undefined, `opportunities/${opportunityId}/activities`),
-    enabled: !!opportunityId,
+    enabled: (options?.enabled ?? true) && !!opportunityId,
     staleTime: 15_000,
     select: (res) => res.data,
   })
 }
 
-export function useCrmStats(periodDays = 90) {
+export function useCrmStats(periodDays = 90, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: crmKeys.stats(periodDays),
     queryFn: () => apiGet<CrmStats>('crm', { period_days: String(periodDays) }, 'stats'),
     staleTime: 60_000,
+    enabled: options?.enabled ?? true,
     select: (res) => res.data,
   })
 }
@@ -323,7 +324,8 @@ export function useFollowUpAlerts() {
   return useQuery({
     queryKey: crmKeys.alerts(),
     queryFn: () => apiGet<CrmAlertsData>('crm', undefined, 'alerts'),
-    staleTime: 60_000,
+    staleTime: 300_000,
+    refetchOnWindowFocus: false,
     select: (res) => res.data,
   })
 }
@@ -427,7 +429,8 @@ export function useCreateOpportunity() {
     mutationFn: (payload: CreateOpportunityPayload) =>
       apiMutate<Opportunity>('crm/opportunities', 'POST', payload as unknown as Record<string, unknown>),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: crmKeys.all })
+      qc.invalidateQueries({ queryKey: crmKeys.pipeline() })
+      qc.invalidateQueries({ queryKey: crmKeys.alerts() })
     },
   })
 }
@@ -444,7 +447,8 @@ export function useUpdateOpportunity(id: string) {
         `opportunities/${id}`,
       ),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: crmKeys.all })
+      qc.invalidateQueries({ queryKey: crmKeys.pipeline() })
+      qc.invalidateQueries({ queryKey: crmKeys.alerts() })
     },
   })
 }
@@ -496,7 +500,8 @@ export function useConvertToJob(opportunityId: string) {
         `opportunities/${opportunityId}/convert-to-job`,
       ),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: crmKeys.all })
+      qc.invalidateQueries({ queryKey: crmKeys.pipeline() })
+      qc.invalidateQueries({ queryKey: crmKeys.dashboard() })
     },
   })
 }
@@ -512,7 +517,7 @@ export function useGenerateBudgetLetter() {
         'generate',
       ),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: crmKeys.all })
+      qc.invalidateQueries({ queryKey: crmKeys.pipeline() })
     },
   })
 }

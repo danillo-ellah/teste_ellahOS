@@ -39,7 +39,7 @@ export async function handleGetDashboard(req: Request, auth: AuthContext): Promi
   const { data: allOpps, error: oppsError } = await client
     .from('opportunities')
     .select(
-      'id, stage, estimated_value, actual_close_date, response_deadline, updated_at, assigned_to, is_competitive_bid, loss_category, agency_id',
+      'id, title, stage, estimated_value, actual_close_date, response_deadline, updated_at, assigned_to, is_competitive_bid, loss_category, agency_id',
     )
     .eq('tenant_id', auth.tenantId)
     .is('deleted_at', null);
@@ -128,16 +128,40 @@ export async function handleGetDashboard(req: Request, auth: AuthContext): Promi
   }));
 
   // -----------------------------------------------------------------------
-  // 6. Top agencies by value this year (via jobs table)
+  // 6 & 7. Top agencies (via jobs table) e by PE — queries paralelas
   // -----------------------------------------------------------------------
   const yearStart = new Date(now.getFullYear(), 0, 1).toISOString();
 
-  const { data: jobRows, error: jobsError } = await client
-    .from('jobs')
-    .select('agency_id, estimated_value')
-    .eq('tenant_id', auth.tenantId)
-    .not('agency_id', 'is', null)
-    .gte('created_at', yearStart);
+  // Calcular peMap aqui para ter os assignedIds antes do Promise.all
+  const peMap: Record<string, { active_count: number; active_value: number }> = {};
+  for (const o of activeOpps) {
+    const pid = o.assigned_to ?? '__unassigned__';
+    if (!peMap[pid]) peMap[pid] = { active_count: 0, active_value: 0 };
+    peMap[pid].active_count += 1;
+    peMap[pid].active_value += Number(o.estimated_value ?? 0);
+  }
+
+  const assignedIds = Object.keys(peMap).filter((id) => id !== '__unassigned__');
+
+  // Rodada 1: jobs e profiles em paralelo (sao independentes entre si)
+  const [jobsResult, profilesResult] = await Promise.all([
+    client
+      .from('jobs')
+      .select('agency_id, closed_value')
+      .eq('tenant_id', auth.tenantId)
+      .not('agency_id', 'is', null)
+      .gte('created_at', yearStart),
+    assignedIds.length > 0
+      ? client
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', assignedIds)
+          .eq('tenant_id', auth.tenantId)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  const { data: jobRows, error: jobsError } = jobsResult;
+  const { data: profileRows, error: profileError } = profilesResult;
 
   if (jobsError) {
     console.error('[crm/dashboard] erro ao buscar jobs:', jobsError.message);
@@ -151,7 +175,7 @@ export async function handleGetDashboard(req: Request, auth: AuthContext): Promi
     if (!j.agency_id) continue;
     if (!agencyMap[j.agency_id]) agencyMap[j.agency_id] = { total_jobs: 0, total_value: 0 };
     agencyMap[j.agency_id].total_jobs += 1;
-    agencyMap[j.agency_id].total_value += Number(j.estimated_value ?? 0);
+    agencyMap[j.agency_id].total_value += Number(j.closed_value ?? 0);
   }
 
   const topAgencyIds = Object.entries(agencyMap)
@@ -162,6 +186,7 @@ export async function handleGetDashboard(req: Request, auth: AuthContext): Promi
   let topAgencies: Array<{ agency_id: string; name: string; total_jobs: number; total_value: number }> = [];
 
   if (topAgencyIds.length > 0) {
+    // Rodada 2: buscar nomes das agencias (depende de topAgencyIds da rodada 1)
     const { data: agencyRows, error: agencyError } = await client
       .from('agencies')
       .select('id, name')
@@ -185,34 +210,17 @@ export async function handleGetDashboard(req: Request, auth: AuthContext): Promi
   }
 
   // -----------------------------------------------------------------------
-  // 7. By PE (responsavel pelas oportunidades ativas)
+  // 7. By PE — montar com profileRows ja buscados em paralelo acima
   // -----------------------------------------------------------------------
-  const peMap: Record<string, { active_count: number; active_value: number }> = {};
-  for (const o of activeOpps) {
-    const pid = o.assigned_to ?? '__unassigned__';
-    if (!peMap[pid]) peMap[pid] = { active_count: 0, active_value: 0 };
-    peMap[pid].active_count += 1;
-    peMap[pid].active_value += Number(o.estimated_value ?? 0);
-  }
-
-  const assignedIds = Object.keys(peMap).filter((id) => id !== '__unassigned__');
   let byPe: Array<{ profile_id: string; name: string; active_count: number; active_value: number }> = [];
 
-  if (assignedIds.length > 0) {
-    const { data: profileRows, error: profileError } = await client
-      .from('profiles')
-      .select('id, full_name')
-      .in('id', assignedIds)
-      .eq('tenant_id', auth.tenantId);
-
-    if (!profileError && profileRows) {
-      byPe = profileRows.map((p) => ({
-        profile_id: p.id,
-        name: p.full_name,
-        active_count: peMap[p.id]?.active_count ?? 0,
-        active_value: peMap[p.id]?.active_value ?? 0,
-      }));
-    }
+  if (!profileError && profileRows && profileRows.length > 0) {
+    byPe = profileRows.map((p) => ({
+      profile_id: p.id,
+      name: p.full_name,
+      active_count: peMap[p.id]?.active_count ?? 0,
+      active_value: peMap[p.id]?.active_value ?? 0,
+    }));
   }
 
   // Incluir nao atribuidos se existirem
@@ -230,7 +238,9 @@ export async function handleGetDashboard(req: Request, auth: AuthContext): Promi
   // -----------------------------------------------------------------------
   // 8. Competition stats: ultimos 6 meses, is_competitive_bid=true
   // -----------------------------------------------------------------------
-  const sixMonthsAgo = new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000).toISOString();
+  const sixMonthsAgoDate = new Date();
+  sixMonthsAgoDate.setMonth(sixMonthsAgoDate.getMonth() - 6);
+  const sixMonthsAgo = sixMonthsAgoDate.toISOString();
 
   const competitiveOpps = opps.filter(
     (o) =>
@@ -260,56 +270,32 @@ export async function handleGetDashboard(req: Request, auth: AuthContext): Promi
   };
 
   // -----------------------------------------------------------------------
-  // 9. Recent closings: ultimos 5 ganho/perdido com nome do responsavel
+  // 9. Recent closings: ultimos 5 ganho/perdido
+  // Usa os dados ja carregados em allOpps (query 1) + profileRows (rodada 1 acima).
+  // Nao faz query adicional.
   // -----------------------------------------------------------------------
-  const recentClosed = opps
+
+  // Mapa de profiles ja buscados para lookup rapido
+  const profileNameMap = new Map<string, string>();
+  for (const p of (profileRows ?? [])) {
+    profileNameMap.set(p.id, p.full_name);
+  }
+
+  const recentClosings = opps
     .filter((o) => (o.stage === 'ganho' || o.stage === 'perdido') && o.actual_close_date != null)
     .sort((a, b) => {
       if (!a.actual_close_date || !b.actual_close_date) return 0;
       return a.actual_close_date > b.actual_close_date ? -1 : 1;
     })
-    .slice(0, 5);
-
-  // Buscar detalhes (title, assigned name) das 5 recentes
-  let recentClosings: Array<{
-    id: string;
-    title: string;
-    value: number | null;
-    stage: string;
-    assigned_name: string | null;
-    closed_at: string | null;
-  }> = [];
-
-  if (recentClosed.length > 0) {
-    const recentIds = recentClosed.map((o) => o.id);
-    const { data: detailRows, error: detailError } = await client
-      .from('opportunities')
-      .select(`
-        id,
-        title,
-        estimated_value,
-        stage,
-        actual_close_date,
-        assigned_profile:profiles!opportunities_assigned_to_fkey(id, full_name)
-      `)
-      .in('id', recentIds)
-      .eq('tenant_id', auth.tenantId);
-
-    if (!detailError && detailRows) {
-      recentClosings = recentClosed.map((o) => {
-        const detail = detailRows.find((d) => d.id === o.id);
-        const assignedProfile = detail?.assigned_profile as { id: string; full_name: string } | null | undefined;
-        return {
-          id: o.id,
-          title: detail?.title ?? '',
-          value: detail?.estimated_value != null ? Number(detail.estimated_value) : null,
-          stage: o.stage,
-          assigned_name: assignedProfile?.full_name ?? null,
-          closed_at: o.actual_close_date ?? null,
-        };
-      });
-    }
-  }
+    .slice(0, 5)
+    .map((o) => ({
+      id: o.id,
+      title: (o as Record<string, unknown>).title as string ?? '',
+      value: o.estimated_value != null ? Number(o.estimated_value) : null,
+      stage: o.stage,
+      assigned_name: o.assigned_to ? (profileNameMap.get(o.assigned_to) ?? null) : null,
+      closed_at: o.actual_close_date ?? null,
+    }));
 
   // -----------------------------------------------------------------------
   // Retorno

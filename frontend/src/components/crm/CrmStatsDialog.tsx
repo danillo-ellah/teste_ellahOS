@@ -34,7 +34,7 @@ interface CrmStatsDialogProps {
 
 export function CrmStatsDialog({ open, onOpenChange }: CrmStatsDialogProps) {
   const [periodDays, setPeriodDays] = useState(90)
-  const { data: stats, isLoading } = useCrmStats(periodDays)
+  const { data: stats, isLoading } = useCrmStats(periodDays, { enabled: open })
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useMemo, useRef, createContext, useContext } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect, memo, createContext, useContext } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -360,7 +360,7 @@ interface KanbanColumnProps {
   onAddClick: () => void
 }
 
-function KanbanColumn({
+const KanbanColumn = memo(function KanbanColumn({
   stage,
   config,
   items,
@@ -464,7 +464,7 @@ function KanbanColumn({
       </div>
     </div>
   )
-}
+})
 
 // ---------------------------------------------------------------------------
 // Card draggable
@@ -477,15 +477,16 @@ interface DraggableCardProps {
   onCardClick: (opp: Opportunity) => void
 }
 
-function DraggableCard({ opportunity, onCardClick }: DraggableCardProps) {
+const DraggableCard = memo(function DraggableCard({ opportunity, onCardClick }: DraggableCardProps) {
   const { register } = useMutationRegistry()
 
   // Hook de mutacao fixo para este id
   const { mutateAsync } = useUpdateOpportunity(opportunity.id)
 
-  // Registrar (ou atualizar) a referencia de mutacao toda vez que o componente renderiza.
-  // Como register usa useCallback sem deps, nao causa loop.
-  register(opportunity.id, mutateAsync)
+  // Registrar no contexto em efeito para evitar side-effect durante render
+  useEffect(() => {
+    register(opportunity.id, mutateAsync)
+  }, [opportunity.id, mutateAsync, register])
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: opportunity.id,
@@ -514,4 +515,4 @@ function DraggableCard({ opportunity, onCardClick }: DraggableCardProps) {
       />
     </div>
   )
-}
+})

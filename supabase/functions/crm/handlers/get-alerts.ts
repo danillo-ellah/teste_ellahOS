@@ -66,22 +66,11 @@ export async function handleGetAlerts(req: Request, auth: AuthContext): Promise<
 
   const client = getSupabaseClient(auth.token);
 
-  // 1. Buscar todas as oportunidades ativas (excluindo stages finais)
-  const { data: opportunities, error: oppError } = await client
+  // 1. Buscar oportunidades ativas SEM JOINs para deteccao de alertas
+  // JOINs de nome (clients, agencies, profiles) so serao feitos para as alertadas
+  const { data: baseOpps, error: oppError } = await client
     .from('opportunities')
-    .select(`
-      id,
-      title,
-      stage,
-      estimated_value,
-      assigned_to,
-      response_deadline,
-      client_id,
-      agency_id,
-      clients(id, name),
-      agencies(id, name),
-      assigned_profile:profiles!opportunities_assigned_to_fkey(id, full_name)
-    `)
+    .select('id, title, stage, estimated_value, assigned_to, response_deadline, updated_at, client_id, agency_id')
     .eq('tenant_id', auth.tenantId)
     .is('deleted_at', null)
     .not('stage', 'in', `(${EXCLUDED_STAGES.map((s) => `"${s}"`).join(',')})`);
@@ -93,18 +82,21 @@ export async function handleGetAlerts(req: Request, auth: AuthContext): Promise<
     });
   }
 
-  const rows = opportunities ?? [];
+  const baseRows = baseOpps ?? [];
 
-  if (rows.length === 0) {
+  if (baseRows.length === 0) {
     return success({ total_alerts: 0, alerts: [] }, 200, req);
   }
 
-  // 2. Buscar ultima atividade por oportunidade (query unica, evita N+1)
+  // 2. Buscar ultima atividade por oportunidade — com order para aproveitar indice
+  // Usar Map para pegar so a primeira (mais recente) por opportunity_id
   const { data: activityRows, error: activityError } = await client
     .from('opportunity_activities')
     .select('opportunity_id, created_at')
     .eq('tenant_id', auth.tenantId)
-    .in('opportunity_id', rows.map((o) => o.id));
+    .in('opportunity_id', baseRows.map((o) => o.id))
+    .order('opportunity_id', { ascending: true })
+    .order('created_at', { ascending: false });
 
   if (activityError) {
     console.error('[crm/get-alerts] erro ao buscar atividades:', activityError.message);
@@ -113,16 +105,16 @@ export async function handleGetAlerts(req: Request, auth: AuthContext): Promise<
     });
   }
 
-  // Agrupar last_activity_at por opportunity_id em memoria
+  // Como resultado ja vem ordenado por (opportunity_id, created_at DESC),
+  // basta pegar a primeira ocorrencia de cada opportunity_id
   const lastActivityMap = new Map<string, string>();
   for (const row of (activityRows ?? [])) {
-    const current = lastActivityMap.get(row.opportunity_id);
-    if (!current || row.created_at > current) {
+    if (!lastActivityMap.has(row.opportunity_id)) {
       lastActivityMap.set(row.opportunity_id, row.created_at);
     }
   }
 
-  // 3. Avaliar alertas por oportunidade
+  // 3. Detectar alertas em memoria (sem JOINs) e coletar IDs dos alertados
   const today = todayStr();
   const urgentCutoff = (() => {
     const d = new Date();
@@ -131,12 +123,27 @@ export async function handleGetAlerts(req: Request, auth: AuthContext): Promise<
   })();
   const inactivityCutoff = daysAgoStr(INACTIVITY_DAYS);
 
-  const alerts: AlertItem[] = [];
+  interface AlertCandidate {
+    id: string;
+    title: string;
+    stage: string;
+    estimated_value: number | null;
+    assigned_to: string | null;
+    response_deadline: string | null;
+    client_id: string | null;
+    agency_id: string | null;
+    alert_types: AlertType[];
+    last_activity_at: string | null;
+  }
 
-  for (const opp of rows) {
+  const alertCandidates: AlertCandidate[] = [];
+  const alertedClientIds = new Set<string>();
+  const alertedAgencyIds = new Set<string>();
+  const alertedAssignedIds = new Set<string>();
+
+  for (const opp of baseRows) {
     const alertTypes: AlertType[] = [];
 
-    // Verificar deadline
     if (opp.response_deadline) {
       const deadlineDateStr = opp.response_deadline.slice(0, 10);
       if (deadlineDateStr < today) {
@@ -146,42 +153,79 @@ export async function handleGetAlerts(req: Request, auth: AuthContext): Promise<
       }
     }
 
-    // Verificar inatividade
     const lastActivity = lastActivityMap.get(opp.id) ?? null;
     if (!lastActivity || lastActivity < inactivityCutoff) {
       alertTypes.push('inactive');
     }
 
-    // Verificar sem responsavel
     if (!opp.assigned_to) {
       alertTypes.push('unassigned');
     }
 
-    // So inclui se tiver pelo menos um alerta
     if (alertTypes.length === 0) continue;
 
-    // Extrair nomes das relacoes (Supabase retorna objetos ou arrays)
-    const clientObj = Array.isArray(opp.clients) ? opp.clients[0] : opp.clients;
-    const agencyObj = Array.isArray(opp.agencies) ? opp.agencies[0] : opp.agencies;
-    const profileObj = Array.isArray(opp.assigned_profile)
-      ? opp.assigned_profile[0]
-      : opp.assigned_profile;
-
-    alerts.push({
-      opportunity_id: opp.id,
+    alertCandidates.push({
+      id: opp.id,
       title: opp.title,
-      agency_name: agencyObj?.name ?? null,
-      client_name: clientObj?.name ?? null,
-      assigned_name: profileObj?.full_name ?? null,
       stage: opp.stage,
-      alert_types: alertTypes,
-      response_deadline: opp.response_deadline ?? null,
-      last_activity_at: lastActivity,
       estimated_value: opp.estimated_value != null ? Number(opp.estimated_value) : null,
+      assigned_to: opp.assigned_to ?? null,
+      response_deadline: opp.response_deadline ?? null,
+      client_id: opp.client_id ?? null,
+      agency_id: opp.agency_id ?? null,
+      alert_types: alertTypes,
+      last_activity_at: lastActivity,
     });
+
+    if (opp.client_id) alertedClientIds.add(opp.client_id);
+    if (opp.agency_id) alertedAgencyIds.add(opp.agency_id);
+    if (opp.assigned_to) alertedAssignedIds.add(opp.assigned_to);
   }
 
-  // 4. Ordenar por severidade decrescente
+  if (alertCandidates.length === 0) {
+    return success({ total_alerts: 0, alerts: [] }, 200, req);
+  }
+
+  // 4. Buscar nomes APENAS dos alertados (clients, agencies, profiles) — 3 queries paralelas
+  const [clientsResult, agenciesResult, profilesResult] = await Promise.all([
+    alertedClientIds.size > 0
+      ? client.from('clients').select('id, name').in('id', [...alertedClientIds]).eq('tenant_id', auth.tenantId)
+      : Promise.resolve({ data: [], error: null }),
+    alertedAgencyIds.size > 0
+      ? client.from('agencies').select('id, name').in('id', [...alertedAgencyIds]).eq('tenant_id', auth.tenantId)
+      : Promise.resolve({ data: [], error: null }),
+    alertedAssignedIds.size > 0
+      ? client.from('profiles').select('id, full_name').in('id', [...alertedAssignedIds]).eq('tenant_id', auth.tenantId)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  const clientNameMap = new Map<string, string>();
+  for (const c of (clientsResult.data ?? [])) clientNameMap.set(c.id, c.name);
+
+  const agencyNameMap = new Map<string, string>();
+  for (const a of (agenciesResult.data ?? [])) agencyNameMap.set(a.id, a.name);
+
+  const profileNameMap = new Map<string, string>();
+  for (const p of (profilesResult.data ?? [])) profileNameMap.set(p.id, p.full_name);
+
+  // Montar AlertItems finais
+  const rows = alertCandidates; // alias para compatibilidade com bloco abaixo
+
+  // 5. Montar AlertItems com nomes resolvidos via Maps
+  const alerts: AlertItem[] = rows.map((opp) => ({
+    opportunity_id: opp.id,
+    title: opp.title,
+    agency_name: opp.agency_id ? (agencyNameMap.get(opp.agency_id) ?? null) : null,
+    client_name: opp.client_id ? (clientNameMap.get(opp.client_id) ?? null) : null,
+    assigned_name: opp.assigned_to ? (profileNameMap.get(opp.assigned_to) ?? null) : null,
+    stage: opp.stage,
+    alert_types: opp.alert_types,
+    response_deadline: opp.response_deadline,
+    last_activity_at: opp.last_activity_at,
+    estimated_value: opp.estimated_value,
+  }));
+
+  // 6. Ordenar por severidade decrescente
   alerts.sort((a, b) => severityScore(b.alert_types) - severityScore(a.alert_types));
 
   console.log('[crm/get-alerts] alertas calculados', {

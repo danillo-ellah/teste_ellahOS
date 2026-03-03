@@ -37,11 +37,12 @@ async function fetchClients(search?: string): Promise<ClientOption[]> {
 }
 
 /** Hook para dropdown/combobox — retorna {id, name}[] */
-export function useClients(search?: string) {
+export function useClients(search?: string, options?: { enabled?: boolean }) {
   const query = useQuery({
     queryKey: clientKeys.list(search),
     queryFn: () => fetchClients(search),
     staleTime: 5 * 60_000,
+    enabled: options?.enabled ?? true,
   })
 
   return {

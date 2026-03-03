@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, memo } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Building2,
@@ -108,14 +108,17 @@ function SortIcon({
 // Helper: deadline badge
 // ---------------------------------------------------------------------------
 
-function DeadlineBadge({ deadline }: { deadline: string | null }) {
-  if (!deadline) return <span className="text-muted-foreground">—</span>
+const DeadlineBadge = memo(function DeadlineBadge({ deadline }: { deadline: string | null }) {
+  const diffDays = useMemo(() => {
+    if (!deadline) return null
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const deadlineDate = new Date(deadline + 'T00:00:00')
+    const diffMs = deadlineDate.getTime() - today.getTime()
+    return Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+  }, [deadline])
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const deadlineDate = new Date(deadline + 'T00:00:00')
-  const diffMs = deadlineDate.getTime() - today.getTime()
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+  if (!deadline || diffDays === null) return <span className="text-muted-foreground">—</span>
 
   if (diffDays < 0) {
     return (
@@ -132,7 +135,7 @@ function DeadlineBadge({ deadline }: { deadline: string | null }) {
     )
   }
   return <span className="text-[13px]">{formatDate(deadline)}</span>
-}
+})
 
 // ---------------------------------------------------------------------------
 // Component

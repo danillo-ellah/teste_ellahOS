@@ -1,7 +1,8 @@
 'use client'
 
 import { TrendingUp, DollarSign, Percent } from 'lucide-react'
-import type { CrmStats } from '@/hooks/useCrm'
+import { Skeleton } from '@/components/ui/skeleton'
+import { useCrmStats } from '@/hooks/useCrm'
 
 function formatCurrency(value: number): string {
   if (value >= 1_000_000) {
@@ -13,11 +14,21 @@ function formatCurrency(value: number): string {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-interface CrmStatsBarProps {
-  stats: CrmStats
-}
+export function CrmStatsBar() {
+  const { data: stats, isLoading } = useCrmStats(90)
 
-export function CrmStatsBar({ stats }: CrmStatsBarProps) {
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-3 gap-3 md:grid-cols-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-16 rounded-lg" />
+        ))}
+      </div>
+    )
+  }
+
+  if (!stats) return null
+
   return (
     <div className="grid grid-cols-3 gap-3 md:grid-cols-6">
       <StatCard

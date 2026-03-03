@@ -35,13 +35,13 @@ async function fetchContacts(
 }
 
 /** Lista contatos de um cliente ou agencia */
-export function useContacts(clientId?: string, agencyId?: string) {
+export function useContacts(clientId?: string, agencyId?: string, options?: { enabled?: boolean }) {
   const entityId = clientId ?? agencyId ?? ''
   const query = useQuery({
     queryKey: contactKeys.list(entityId),
     queryFn: () => fetchContacts(clientId, agencyId),
     staleTime: 60_000,
-    enabled: !!entityId,
+    enabled: (options?.enabled ?? true) && !!entityId,
   })
 
   return {

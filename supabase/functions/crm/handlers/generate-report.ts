@@ -107,14 +107,37 @@ export async function handleGenerateReport(
   const { start, end, label } = parseMonthRange(monthParam);
   const client = getSupabaseClient(auth.token);
 
-  // 1. Oportunidades criadas no mes
-  const { data: createdOpps, error: createdError } = await client
-    .from('opportunities')
-    .select('id, title, stage, estimated_value, agency_id, created_at, is_competitive_bid, agencies(id, name)')
-    .eq('tenant_id', auth.tenantId)
-    .gte('created_at', start)
-    .lte('created_at', end)
-    .is('deleted_at', null);
+  // 1, 2 e 3 em paralelo — sao totalmente independentes entre si
+  const [createdResult, closedResult, activeResult] = await Promise.all([
+    // 1. Oportunidades criadas no mes
+    client
+      .from('opportunities')
+      .select('id, title, stage, estimated_value, agency_id, created_at, is_competitive_bid, agencies(id, name)')
+      .eq('tenant_id', auth.tenantId)
+      .gte('created_at', start)
+      .lte('created_at', end)
+      .is('deleted_at', null),
+    // 2. Oportunidades fechadas no mes (ganhas ou perdidas)
+    client
+      .from('opportunities')
+      .select('id, title, stage, estimated_value, actual_close_date, loss_reason, agency_id, is_competitive_bid, agencies(id, name)')
+      .eq('tenant_id', auth.tenantId)
+      .in('stage', ['ganho', 'perdido'])
+      .gte('actual_close_date', start)
+      .lte('actual_close_date', end)
+      .is('deleted_at', null),
+    // 3. Pipeline atual (oportunidades ativas)
+    client
+      .from('opportunities')
+      .select('id, stage, estimated_value')
+      .eq('tenant_id', auth.tenantId)
+      .in('stage', ACTIVE_STAGES)
+      .is('deleted_at', null),
+  ]);
+
+  const { data: createdOpps, error: createdError } = createdResult;
+  const { data: closedOpps, error: closedError } = closedResult;
+  const { data: activeOpps, error: activeError } = activeResult;
 
   if (createdError) {
     console.error('[crm/generate-report] erro ao buscar criadas:', createdError.message);
@@ -123,30 +146,12 @@ export async function handleGenerateReport(
     });
   }
 
-  // 2. Oportunidades fechadas no mes (ganhas ou perdidas)
-  const { data: closedOpps, error: closedError } = await client
-    .from('opportunities')
-    .select('id, title, stage, estimated_value, actual_close_date, loss_reason, agency_id, is_competitive_bid, agencies(id, name)')
-    .eq('tenant_id', auth.tenantId)
-    .in('stage', ['ganho', 'perdido'])
-    .gte('actual_close_date', start)
-    .lte('actual_close_date', end)
-    .is('deleted_at', null);
-
   if (closedError) {
     console.error('[crm/generate-report] erro ao buscar fechadas:', closedError.message);
     throw new AppError('INTERNAL_ERROR', 'Erro ao buscar fechamentos do mes', 500, {
       detail: closedError.message,
     });
   }
-
-  // 3. Pipeline atual (oportunidades ativas)
-  const { data: activeOpps, error: activeError } = await client
-    .from('opportunities')
-    .select('id, stage, estimated_value')
-    .eq('tenant_id', auth.tenantId)
-    .in('stage', ACTIVE_STAGES)
-    .is('deleted_at', null);
 
   if (activeError) {
     console.error('[crm/generate-report] erro ao buscar pipeline ativo:', activeError.message);

@@ -37,11 +37,12 @@ async function fetchAgencies(search?: string): Promise<AgencyOption[]> {
 }
 
 /** Hook para dropdown/combobox — retorna {id, name}[] */
-export function useAgencies(search?: string) {
+export function useAgencies(search?: string, options?: { enabled?: boolean }) {
   const query = useQuery({
     queryKey: agencyKeys.list(search),
     queryFn: () => fetchAgencies(search),
     staleTime: 5 * 60_000,
+    enabled: options?.enabled ?? true,
   })
 
   return {

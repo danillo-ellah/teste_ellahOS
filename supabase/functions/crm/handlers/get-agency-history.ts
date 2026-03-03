@@ -21,13 +21,33 @@ export async function handleGetAgencyHistory(
 
   const client = getSupabaseClient(auth.token);
 
-  // Buscar dados da agencia
-  const { data: agency, error: agencyError } = await client
-    .from('agencies')
-    .select('id, name, cnpj, email, phone, website')
-    .eq('id', agencyId)
-    .eq('tenant_id', auth.tenantId)
-    .maybeSingle();
+  // Rodada 1: agency, all jobs e opportunities em paralelo (sao independentes)
+  const [agencyResult, jobsResult, oppResult] = await Promise.all([
+    client
+      .from('agencies')
+      .select('id, name, cnpj, email, phone, website')
+      .eq('id', agencyId)
+      .eq('tenant_id', auth.tenantId)
+      .maybeSingle(),
+    client
+      .from('jobs')
+      .select('id, title, code, job_aba, estimated_value, status, created_at')
+      .eq('agency_id', agencyId)
+      .eq('tenant_id', auth.tenantId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false }),
+    client
+      .from('opportunities')
+      .select('stage')
+      .eq('agency_id', agencyId)
+      .eq('tenant_id', auth.tenantId)
+      .is('deleted_at', null)
+      .in('stage', ['ganho', 'perdido']),
+  ]);
+
+  const { data: agency, error: agencyError } = agencyResult;
+  const { data: allJobs, error: jobsError } = jobsResult;
+  const { data: oppStats, error: oppError } = oppResult;
 
   if (agencyError) {
     console.error('[crm/agency-history] erro ao buscar agencia:', agencyError.message);
@@ -40,18 +60,17 @@ export async function handleGetAgencyHistory(
     throw new AppError('NOT_FOUND', 'Agencia nao encontrada', 404);
   }
 
-  // Buscar todos os jobs da agencia para calcular metricas
-  const { data: allJobs, error: jobsError } = await client
-    .from('jobs')
-    .select('id, estimated_value, status, created_at')
-    .eq('agency_id', agencyId)
-    .eq('tenant_id', auth.tenantId)
-    .is('deleted_at', null);
-
   if (jobsError) {
     console.error('[crm/agency-history] erro ao buscar jobs:', jobsError.message);
     throw new AppError('INTERNAL_ERROR', 'Erro ao buscar jobs da agencia', 500, {
       detail: jobsError.message,
+    });
+  }
+
+  if (oppError) {
+    console.error('[crm/agency-history] erro ao buscar oportunidades:', oppError.message);
+    throw new AppError('INTERNAL_ERROR', 'Erro ao calcular taxa de conversao', 500, {
+      detail: oppError.message,
     });
   }
 
@@ -68,52 +87,16 @@ export async function handleGetAgencyHistory(
         jobsWithValue.length
       : 0;
 
-  // Data do ultimo job
-  const lastJobDate =
-    jobs.length > 0
-      ? jobs.reduce(
-          (latest, j) => (j.created_at > latest ? j.created_at : latest),
-          jobs[0].created_at,
-        )
-      : null;
-
-  // Taxa de conversao de oportunidades: ganho / (ganho + perdido)
-  const { data: oppStats, error: oppError } = await client
-    .from('opportunities')
-    .select('stage')
-    .eq('agency_id', agencyId)
-    .eq('tenant_id', auth.tenantId)
-    .is('deleted_at', null)
-    .in('stage', ['ganho', 'perdido']);
-
-  if (oppError) {
-    console.error('[crm/agency-history] erro ao buscar oportunidades:', oppError.message);
-    throw new AppError('INTERNAL_ERROR', 'Erro ao calcular taxa de conversao', 500, {
-      detail: oppError.message,
-    });
-  }
+  // Data do ultimo job (ja vem ordenado por created_at DESC da query)
+  const lastJobDate = jobs.length > 0 ? jobs[0].created_at : null;
 
   const closedOpps = oppStats ?? [];
   const wonCount = closedOpps.filter((o) => o.stage === 'ganho').length;
   const winRate =
     closedOpps.length > 0 ? Math.round((wonCount / closedOpps.length) * 1000) / 10 : null;
 
-  // Ultimos 5 jobs (ordenados por created_at desc)
-  const { data: recentJobs, error: recentError } = await client
-    .from('jobs')
-    .select('id, title, code, job_aba, estimated_value, status, created_at')
-    .eq('agency_id', agencyId)
-    .eq('tenant_id', auth.tenantId)
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false })
-    .limit(5);
-
-  if (recentError) {
-    console.error('[crm/agency-history] erro ao buscar jobs recentes:', recentError.message);
-    throw new AppError('INTERNAL_ERROR', 'Erro ao buscar jobs recentes', 500, {
-      detail: recentError.message,
-    });
-  }
+  // Ultimos 5 jobs derivados em memoria — evita query adicional
+  const recentJobs = jobs.slice(0, 5);
 
   console.log('[crm/agency-history] historico retornado', {
     agencyId,

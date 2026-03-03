@@ -264,13 +264,14 @@ export function OpportunityDialog({
   const [clientSearch, setClientSearch] = useState('')
   const [contactSearch, setContactSearch] = useState('')
 
-  // --- Queries ---
-  const { data: agencies, isLoading: agenciesLoading } = useAgencies(agencySearch)
-  const { data: clients, isLoading: clientsLoading } = useClients(clientSearch)
+  // --- Queries (enabled: open evita fetch enquanto dialog esta fechado) ---
+  const { data: agencies, isLoading: agenciesLoading } = useAgencies(agencySearch, { enabled: open })
+  const { data: clients, isLoading: clientsLoading } = useClients(clientSearch, { enabled: open })
   // Contatos: filtra pela agencia selecionada se houver, senao pelo cliente
   const { data: contacts, isLoading: contactsLoading } = useContacts(
     agencyId ? undefined : clientId ?? undefined,
     agencyId ?? undefined,
+    { enabled: open },
   )
 
   // Filtra contatos pelo search local (os dados ja vem filtrados por entidade)

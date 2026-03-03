@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import {
   AlertTriangle,
   BarChart3,
@@ -84,7 +85,7 @@ function DashboardSkeleton() {
 // Ranking de Diretores
 // ---------------------------------------------------------------------------
 
-function DirectorRankingSection() {
+const DirectorRankingSection = memo(function DirectorRankingSection() {
   const { data, isLoading } = useDirectorRanking(12)
 
   if (isLoading) {
@@ -195,7 +196,7 @@ function DirectorRankingSection() {
       </CardContent>
     </Card>
   )
-}
+})
 
 // ---------------------------------------------------------------------------
 // Componente principal

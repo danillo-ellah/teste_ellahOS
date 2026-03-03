@@ -62,19 +62,44 @@ export function safeErrorMessage(error: unknown): string {
   return 'Erro ao processar a requisicao. Tente novamente.'
 }
 
+// Cache de token em memoria para evitar round-trips repetidos
+let _cachedToken: string | null = null
+let _cachedTokenExp = 0
+
 async function getToken(): Promise<string> {
+  const now = Date.now()
+  // Reusar token se ainda valido (margem de 60s)
+  if (_cachedToken && _cachedTokenExp > now + 60_000) {
+    return _cachedToken
+  }
+
   const supabase = createClient()
-  // Validar JWT contra o servidor antes de usar o token
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error || !user) {
+    _cachedToken = null
     throw new ApiRequestError('UNAUTHORIZED', 'Sessao expirada', 401)
   }
-  // Token validado - seguro obter session para extrair access_token
   const { data: { session } } = await supabase.auth.getSession()
   if (!session?.access_token) {
+    _cachedToken = null
     throw new ApiRequestError('UNAUTHORIZED', 'Sessao expirada', 401)
   }
-  return session.access_token
+
+  _cachedToken = session.access_token
+  // Decodificar exp do JWT para saber quando expira
+  try {
+    const payload = JSON.parse(atob(session.access_token.split('.')[1]))
+    _cachedTokenExp = (payload.exp ?? 0) * 1000
+  } catch {
+    _cachedTokenExp = now + 55_000 // fallback 55s
+  }
+
+  return _cachedToken
+}
+
+export function clearTokenCache() {
+  _cachedToken = null
+  _cachedTokenExp = 0
 }
 
 async function apiFetch<T>(

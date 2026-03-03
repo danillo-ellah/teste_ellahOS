@@ -1,18 +1,23 @@
 'use client'
 
 import { useState } from 'react'
+import dynamic from 'next/dynamic'
 import { Target, Plus, BarChart3, RefreshCw, LayoutGrid, List } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
-import { useCrmPipeline, useCrmStats } from '@/hooks/useCrm'
+import { useCrmPipeline } from '@/hooks/useCrm'
 import { CrmKanban } from '@/components/crm/CrmKanban'
 import { CrmListView } from '@/components/crm/CrmListView'
 import { CrmStatsBar } from '@/components/crm/CrmStatsBar'
 import { OpportunityDialog } from '@/components/crm/OpportunityDialog'
-import { CrmStatsDialog } from '@/components/crm/CrmStatsDialog'
 import { CrmAlertsBanner } from '@/components/crm/CrmAlertsBanner'
+
+const CrmStatsDialog = dynamic(
+  () => import('@/components/crm/CrmStatsDialog').then((m) => ({ default: m.CrmStatsDialog })),
+  { ssr: false },
+)
 
 export default function CrmPage() {
   const [includeClosed, setIncludeClosed] = useState(false)
@@ -26,8 +31,6 @@ export default function CrmPage() {
     isError: pipelineError,
     refetch,
   } = useCrmPipeline(includeClosed)
-
-  const { data: stats, isLoading: statsLoading } = useCrmStats(90)
 
   return (
     <div className="flex flex-col gap-6">
@@ -75,17 +78,8 @@ export default function CrmPage() {
         </div>
       </div>
 
-      {/* Stats bar compacta */}
-      {!statsLoading && stats && (
-        <CrmStatsBar stats={stats} />
-      )}
-      {statsLoading && (
-        <div className="grid grid-cols-3 gap-3">
-          <Skeleton className="h-16 rounded-lg" />
-          <Skeleton className="h-16 rounded-lg" />
-          <Skeleton className="h-16 rounded-lg" />
-        </div>
-      )}
+      {/* Stats bar compacta — gerencia seu proprio fetch internamente */}
+      <CrmStatsBar />
 
       {/* Alertas de follow-up */}
       <CrmAlertsBanner />
