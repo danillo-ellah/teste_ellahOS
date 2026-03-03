@@ -5,6 +5,7 @@ import { Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from './ThemeToggle'
 import { Breadcrumb } from './Breadcrumb'
+import { CommandPaletteTrigger } from '@/components/command-palette'
 import { usePathname } from 'next/navigation'
 
 // Dynamic imports para evitar hydration mismatch (Radix gera IDs diferentes no SSR vs CSR)
@@ -21,6 +22,7 @@ interface TopbarProps {
   onMenuClick?: () => void
   showMenuButton?: boolean
   breadcrumbItems?: { label: string; href?: string }[]
+  onSearchClick?: () => void
 }
 
 function getDefaultBreadcrumb(pathname: string) {
@@ -59,7 +61,7 @@ function getDefaultBreadcrumb(pathname: string) {
   return items
 }
 
-export function Topbar({ onMenuClick, showMenuButton, breadcrumbItems }: TopbarProps) {
+export function Topbar({ onMenuClick, showMenuButton, breadcrumbItems, onSearchClick }: TopbarProps) {
   const pathname = usePathname()
   const items = breadcrumbItems || getDefaultBreadcrumb(pathname)
 
@@ -82,6 +84,11 @@ export function Topbar({ onMenuClick, showMenuButton, breadcrumbItems }: TopbarP
       <div className="flex-1">
         {items.length > 0 && <Breadcrumb items={items} />}
       </div>
+
+      {/* Busca global */}
+      {onSearchClick && (
+        <CommandPaletteTrigger onClick={onSearchClick} />
+      )}
 
       {/* Acoes */}
       <div className="flex items-center gap-1">

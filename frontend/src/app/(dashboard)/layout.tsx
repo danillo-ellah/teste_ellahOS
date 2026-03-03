@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useCallback, useState, useEffect, useMemo } from 'react'
 import { usePathname } from 'next/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { AiCopilotTrigger } from '@/components/ai/ai-copilot-trigger'
+import { CommandPalette } from '@/components/command-palette'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { useIsDesktop } from '@/hooks/useMediaQuery'
 import {
@@ -34,6 +35,7 @@ export default function DashboardLayout({
   const isDesktop = useIsDesktop()
   const [collapsed, setCollapsed] = useLocalStorage('sidebar-collapsed', false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const [userId, setUserId] = useState<string>()
 
   // Obter userId para Realtime subscription
@@ -55,6 +57,9 @@ export default function DashboardLayout({
     const config = AREA_CONFIG[activeArea]
     return { borderColor: config.color } as React.CSSProperties
   }, [activeArea])
+
+  // Callback para abrir busca global via Topbar
+  const handleSearchClick = useCallback(() => setSearchOpen(true), [])
 
   // NF pending count para badge no sidebar
   const { data: nfStats } = useNfStats()
@@ -111,6 +116,7 @@ export default function DashboardLayout({
         <Topbar
           showMenuButton={!isDesktop}
           onMenuClick={() => setMobileOpen(true)}
+          onSearchClick={handleSearchClick}
         />
 
         {/* Ambient tint — barra sutil colorida no topo do conteudo */}
@@ -136,6 +142,12 @@ export default function DashboardLayout({
 
       {/* Copilot ELLA — disponivel em todas as paginas do dashboard */}
       <AiCopilotTrigger />
+
+      {/* Busca global (Ctrl+K) */}
+      <CommandPalette
+        externalOpen={searchOpen}
+        onExternalOpenChange={setSearchOpen}
+      />
     </div>
   )
 }
