@@ -43,12 +43,12 @@ function boolToText(val: boolean): string {
 
 /**
  * Gera campo da claquete: label normal + valor em bold
- * Font 27px com line-height 1.55 para espaçamento mais confortavel entre linhas.
- * 17 campos x ~42px (27*1.55) = ~714px, cabe bem nos ~920px disponíveis.
- * letter-spacing 0.5px melhora legibilidade em tela grande.
+ * Font 30px com line-height 1.5 para espaçamento confortavel entre linhas.
+ * 17 campos x ~45px (30*1.5) = ~765px, cabe bem nos ~920px disponíveis.
+ * letter-spacing 0.3px melhora legibilidade em tela grande.
  */
 function field(label: string, value: string): string {
-  return `<p style="font-size:27px;line-height:1.55;margin:0;padding:1px 0;color:#1a1a1a;font-family:Arial,Helvetica,sans-serif;letter-spacing:0.5px;">` +
+  return `<p style="font-size:30px;line-height:1.5;margin:0;padding:1px 0;color:#1a1a1a;font-family:Arial,Helvetica,sans-serif;letter-spacing:0.3px;">` +
     `${label} <b>${value}</b></p>`;
 }
 

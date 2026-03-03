@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
@@ -597,10 +597,10 @@ export function TabClaquete({ job }: TabClaqueteProps) {
 
       {/* Preview dialog — Full HD aspect ratio */}
       <Dialog open={!!previewHtml} onOpenChange={() => { setPreviewHtml(null); setPreviewClaquete(null) }}>
-        <DialogContent className="max-w-[95vw] w-[1800px] max-h-[95vh]">
+        <DialogContent className="!max-w-[95vw] !w-[95vw] !max-h-[95vh] sm:!max-w-[95vw]">
           <DialogHeader>
-            <DialogTitle>
-              {previewClaquete ? buildFilename(previewClaquete) : 'Preview da Claquete'} — Full HD 1920x1080
+            <DialogTitle className="text-sm truncate">
+              {previewClaquete ? buildFilename(previewClaquete) : 'Preview da Claquete'}
             </DialogTitle>
           </DialogHeader>
           {previewHtml && (
@@ -639,10 +639,8 @@ export function TabClaquete({ job }: TabClaqueteProps) {
 }
 
 // ---------------------------------------------------------------------------
-// PreviewContent — uses CSS-only scaling (no JS timing issues)
-// The trick: a wrapper with aspect-ratio 16/9 and a 1920x1080 iframe
-// scaled down using CSS transform. The wrapper's aspect-ratio ensures
-// the container always has the correct height regardless of width.
+// PreviewContent — iframe 1920x1080 escalado para caber no container
+// Usa ResizeObserver para recalcular o scale quando o dialog abre/redimensiona.
 // ---------------------------------------------------------------------------
 
 function PreviewContent({
@@ -656,33 +654,39 @@ function PreviewContent({
   onExportPdf: () => void
   onExportJpeg: () => void
 }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+
+  useEffect(() => {
+    const container = containerRef.current
+    const iframe = iframeRef.current
+    if (!container || !iframe) return
+
+    const updateScale = () => {
+      const w = container.offsetWidth
+      if (w > 0) {
+        const scale = w / 1920
+        iframe.style.transform = `scale(${scale})`
+      }
+    }
+
+    // ResizeObserver para reagir a animacao de abertura + resize da janela
+    const observer = new ResizeObserver(updateScale)
+    observer.observe(container)
+    updateScale()
+
+    return () => observer.disconnect()
+  }, [])
+
   return (
     <>
-      {/*
-        Outer div: takes full width, aspect-ratio 16/9 gives correct height.
-        Inner iframe: 1920x1080 native, scaled down to fit via CSS.
-        The scale factor = containerWidth / 1920, but since we use
-        width:100% + aspect-ratio, we can use a CSS calc trick:
-        scale = 100% of container width / 1920px
-        We achieve this by setting the iframe width/height in the style
-        and using transform with a known ratio.
-      */}
       <div
+        ref={containerRef}
         style={{ position: 'relative', width: '100%', aspectRatio: '16/9', overflow: 'hidden' }}
         className="rounded-lg border bg-white"
       >
-        {/*
-          The iframe is absolutely positioned at 1920x1080.
-          We use an inline style with CSS calc for the scale.
-          Unfortunately CSS calc can't divide px by px to get unitless,
-          so we use a ResizeObserver-free approach: the iframe is placed
-          inside a div that we know is exactly containerWidth x (containerWidth * 9/16).
-          We set the iframe to 1920x1080 and scale it.
-
-          Approach: set the iframe inside another div with width/height 100%,
-          and use CSS zoom (widely supported) as a simpler alternative to transform.
-        */}
         <iframe
+          ref={iframeRef}
           sandbox="allow-same-origin"
           srcDoc={html}
           title="Preview Claquete"
@@ -694,22 +698,6 @@ function PreviewContent({
             height: '1080px',
             border: 'none',
             transformOrigin: 'top left',
-            /* Use percentage-based transform: 100% of parent = parent width */
-          }}
-          ref={(el) => {
-            // One-shot ref: calculate scale once the element is in the DOM
-            if (!el) return
-            const tryScale = () => {
-              const parent = el.parentElement
-              if (!parent || parent.offsetWidth === 0) {
-                // Dialog still animating, retry
-                requestAnimationFrame(tryScale)
-                return
-              }
-              const scale = parent.offsetWidth / 1920
-              el.style.transform = `scale(${scale})`
-            }
-            tryScale()
           }}
         />
       </div>
