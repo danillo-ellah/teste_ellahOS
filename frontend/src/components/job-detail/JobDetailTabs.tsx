@@ -24,7 +24,7 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs'
-import { JOB_DETAIL_TABS } from '@/lib/constants'
+import { JOB_TAB_GROUPS, AREA_CONFIG } from '@/lib/constants'
 import type { JobDetailTabId } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { TabGeral } from '@/components/job-detail/tabs/TabGeral'
@@ -103,29 +103,58 @@ export function JobDetailTabs({ job }: JobDetailTabsProps) {
   return (
     <Tabs value={currentTab} onValueChange={handleTabChange} className="mt-4">
       <TabsList className="w-full justify-start h-auto p-0 bg-transparent border-b border-border rounded-none gap-0 overflow-x-auto">
-        {JOB_DETAIL_TABS.map((tab) => {
-          const Icon = ICON_MAP[tab.icon]
-          const count = getTabCount(tab.id, job)
-
+        {JOB_TAB_GROUPS.map((group, gIdx) => {
+          const areaConfig = AREA_CONFIG[group.area]
           return (
-            <TabsTrigger
-              key={tab.id}
-              value={tab.id}
-              className={cn(
-                'relative rounded-none border-b-2 border-transparent px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium whitespace-nowrap',
-                'text-muted-foreground hover:text-foreground transition-colors',
-                'data-[state=active]:border-primary data-[state=active]:text-foreground',
-                'data-[state=active]:shadow-none data-[state=active]:bg-transparent',
+            <div key={group.group} className="flex items-end">
+              {/* Separador entre grupos */}
+              {gIdx > 0 && (
+                <div className="hidden sm:flex self-stretch items-center px-1">
+                  <div className="h-5 w-px bg-border" />
+                </div>
               )}
-            >
-              {Icon && <Icon className="size-4 mr-1.5" />}
-              <span className="hidden sm:inline">{tab.label}</span>
-              {count !== null && count > 0 && (
-                <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-muted text-muted-foreground">
-                  {count}
+
+              {/* Grupo de tabs */}
+              <div className="flex flex-col">
+                {/* Label do grupo (apenas desktop) */}
+                <span
+                  className={cn(
+                    'hidden sm:block text-[10px] font-semibold uppercase tracking-wider px-3 pb-0.5',
+                    areaConfig.textClass,
+                  )}
+                >
+                  {group.group}
                 </span>
-              )}
-            </TabsTrigger>
+
+                <div className="flex">
+                  {group.tabs.map((tab) => {
+                    const Icon = ICON_MAP[tab.icon]
+                    const count = getTabCount(tab.id, job)
+
+                    return (
+                      <TabsTrigger
+                        key={tab.id}
+                        value={tab.id}
+                        className={cn(
+                          'relative rounded-none border-b-2 border-transparent px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium whitespace-nowrap',
+                          'text-muted-foreground hover:text-foreground transition-colors',
+                          'data-[state=active]:border-primary data-[state=active]:text-foreground',
+                          'data-[state=active]:shadow-none data-[state=active]:bg-transparent',
+                        )}
+                      >
+                        {Icon && <Icon className="size-4 mr-1.5" />}
+                        <span className="hidden sm:inline">{tab.label}</span>
+                        {count !== null && count > 0 && (
+                          <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-muted text-muted-foreground">
+                            {count}
+                          </span>
+                        )}
+                      </TabsTrigger>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
           )
         })}
       </TabsList>
