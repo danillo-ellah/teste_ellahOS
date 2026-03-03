@@ -10,6 +10,7 @@ import {
   Eye,
   Trash2,
   Loader2,
+  Upload,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -44,6 +45,7 @@ import {
 import { apiGet, apiMutate, safeErrorMessage } from '@/lib/api'
 import type { JobDetail } from '@/types/jobs'
 import { AncineSection } from '@/components/job-detail/tabs/AncineSection'
+import { ImportAncineDialog } from '@/components/job-detail/tabs/ImportAncineDialog'
 
 // Tipos da claquete
 interface Claquete {
@@ -222,6 +224,7 @@ export function TabClaquete({ job }: TabClaqueteProps) {
   const [previewClaquete, setPreviewClaquete] = useState<Claquete | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [exporting, setExporting] = useState<string | null>(null)
+  const [showImport, setShowImport] = useState(false)
   const [form, setForm] = useState<ClaqueteFormData>(() => defaultFormFromJob(job))
 
   // Buscar claquetes do job
@@ -382,10 +385,16 @@ export function TabClaquete({ job }: TabClaqueteProps) {
             Documento regulatorio obrigatorio para obras veiculadas em TV aberta — Full HD 1920x1080
           </p>
         </div>
-        <Button onClick={() => { setForm(defaultFormFromJob(job)); setShowForm(true) }}>
-          <Plus className="size-4 mr-2" />
-          Nova Claquete
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setShowImport(true)}>
+            <Upload className="size-4 mr-2" />
+            Importar PDF ANCINE
+          </Button>
+          <Button onClick={() => { setForm(defaultFormFromJob(job)); setShowForm(true) }}>
+            <Plus className="size-4 mr-2" />
+            Nova Claquete
+          </Button>
+        </div>
       </div>
 
       {/* Lista de claquetes */}
@@ -613,6 +622,9 @@ export function TabClaquete({ job }: TabClaqueteProps) {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Dialog de importacao ANCINE */}
+      <ImportAncineDialog open={showImport} onOpenChange={setShowImport} job={job} />
 
       {/* Confirmacao de delete */}
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
