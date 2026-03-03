@@ -43,10 +43,10 @@ function boolToText(val: boolean): string {
 
 /**
  * Gera campo da claquete: label normal + valor em bold
- * Replica exatamente o estilo do PPTX: 25pt, line-height 135%, dk1 color
+ * PPTX usa 25pt = 33.3px a 96dpi, line-height 135%, cor dk1 (#1a1a1a)
  */
 function field(label: string, value: string): string {
-  return `<p style="font-size:25px;line-height:1.35;margin:0;color:#1a1a1a;">` +
+  return `<p style="font-size:33px;line-height:1.35;margin:0;color:#1a1a1a;font-family:Arial,Helvetica,sans-serif;">` +
     `${label} <b>${value}</b></p>`;
 }
 
@@ -80,12 +80,12 @@ export function buildClaqueteHtml(data: ClaqueteData): string {
     position: absolute; top: 0; left: 0; width: 1920px; height: 1080px;
     background: url('${CLAQUETE_BG_BASE64}') center/cover no-repeat;
   ">
-    <!-- Campos posicionados sobre a area interna da imagem de fundo -->
-    <!-- A caixa interna no background comeca aprox em 6% das bordas -->
+    <!-- Campos posicionados exatamente como no PPTX -->
+    <!-- TextBox PPTX: x=224 y=64 w=1676 h=1020 + padding interno 19px -->
     <div style="
       position: absolute;
-      top: 56px; left: 120px; right: 120px; bottom: 56px;
-      padding: 40px 60px;
+      top: 64px; left: 224px; width: 1676px; height: 1020px;
+      padding: 19px;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -109,16 +109,17 @@ export function buildClaqueteHtml(data: ClaqueteData): string {
       ${field('AUDIO DESCRI\u00c7AO:', boolToText(data.audio_description))}
     </div>
 
-    <!-- Logo ELLAH FILMES (imagem real do PPTX) -->
+    <!-- Logo ELLAH FILMES posicionado exatamente como no PPTX -->
+    <!-- PPTX: x=1437 y=864 w=386 h=148 -->
     <img
       src="${CLAQUETE_LOGO_BASE64}"
       alt="ELLAH FILMES"
       style="
         position: absolute;
-        bottom: 80px;
-        right: 140px;
-        width: 280px;
-        height: auto;
+        top: 864px;
+        left: 1437px;
+        width: 386px;
+        height: 148px;
       "
     />
   </div>

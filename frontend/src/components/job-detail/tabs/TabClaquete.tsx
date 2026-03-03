@@ -123,83 +123,92 @@ function defaultFormFromJob(job: JobDetail): ClaqueteFormData {
 
 // ---------------------------------------------------------------------------
 // Client-side export helpers (Full HD 1920x1080)
+// Uses offscreen div (not iframe) to avoid cross-origin issues with html-to-image.
+// The HTML is parsed and injected into a shadow DOM container to isolate styles.
 // ---------------------------------------------------------------------------
 
-/** Render HTML in a hidden iframe and capture as JPEG blob */
-async function captureClaqueteAsJpeg(html: string): Promise<Blob> {
+/** Render claquete HTML in an offscreen div and capture as JPEG data URL */
+async function captureClaqueteAsJpeg(html: string): Promise<string> {
   const { toJpeg } = await import('html-to-image')
 
-  // Create offscreen iframe
-  const iframe = document.createElement('iframe')
-  iframe.style.cssText = 'position:fixed;top:-10000px;left:-10000px;width:1920px;height:1080px;border:none;'
-  document.body.appendChild(iframe)
+  // Create offscreen container
+  const wrapper = document.createElement('div')
+  wrapper.style.cssText = 'position:fixed;top:-20000px;left:-20000px;width:1920px;height:1080px;overflow:hidden;z-index:-9999;'
+  document.body.appendChild(wrapper)
 
   try {
-    const doc = iframe.contentDocument!
-    doc.open()
-    doc.write(html)
-    doc.close()
+    // Parse the HTML and extract body content + styles
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(html, 'text/html')
 
-    // Wait for render
-    await new Promise(r => setTimeout(r, 300))
+    // Copy styles
+    const styles = doc.querySelectorAll('style')
+    styles.forEach((s) => {
+      const style = document.createElement('style')
+      style.textContent = s.textContent
+      wrapper.appendChild(style)
+    })
 
-    const body = doc.body
-    body.style.margin = '0'
-    body.style.width = '1920px'
-    body.style.height = '1080px'
+    // Copy body content
+    const bodyContent = doc.body.innerHTML
+    const bodyDiv = document.createElement('div')
+    bodyDiv.style.cssText = 'width:1920px;height:1080px;overflow:hidden;position:relative;font-family:Arial,Helvetica,sans-serif;'
+    bodyDiv.innerHTML = bodyContent
+    wrapper.appendChild(bodyDiv)
 
-    const dataUrl = await toJpeg(body, {
+    // Wait for images (base64) to load
+    const images = bodyDiv.querySelectorAll('img')
+    await Promise.all(
+      Array.from(images).map(
+        (img) =>
+          new Promise<void>((resolve) => {
+            if (img.complete) return resolve()
+            img.onload = () => resolve()
+            img.onerror = () => resolve()
+          }),
+      ),
+    )
+
+    // Extra wait for rendering
+    await new Promise((r) => setTimeout(r, 200))
+
+    const dataUrl = await toJpeg(bodyDiv, {
       width: 1920,
       height: 1080,
       quality: 0.95,
-      backgroundColor: '#e8c4c8',
       pixelRatio: 1,
+      cacheBust: true,
     })
 
-    // Convert data URL to Blob
-    const res = await fetch(dataUrl)
-    return await res.blob()
+    return dataUrl
   } finally {
-    document.body.removeChild(iframe)
+    document.body.removeChild(wrapper)
   }
 }
 
 /** Export claquete as JPEG file download (1920x1080) */
 async function exportAsJpeg(html: string, filename: string) {
-  const blob = await captureClaqueteAsJpeg(html)
-  const url = URL.createObjectURL(blob)
+  const dataUrl = await captureClaqueteAsJpeg(html)
   const a = document.createElement('a')
-  a.href = url
+  a.href = dataUrl
   a.download = `${filename}.jpg`
   a.click()
-  URL.revokeObjectURL(url)
 }
 
 /** Export claquete as PDF (landscape Full HD page) */
 async function exportAsPdf(html: string, filename: string) {
   const { default: jsPDF } = await import('jspdf')
-  const blob = await captureClaqueteAsJpeg(html)
+  const dataUrl = await captureClaqueteAsJpeg(html)
 
-  // Create landscape PDF with 1920x1080 dimensions (in mm at 96dpi: ~508x285.75mm)
-  // Using custom page size matching 16:9 ratio
+  // Landscape PDF with 1920x1080 pixel dimensions
   const pdf = new jsPDF({
     orientation: 'landscape',
     unit: 'px',
     format: [1920, 1080],
   })
 
-  const imgData = await blobToBase64(blob)
-  pdf.addImage(imgData, 'JPEG', 0, 0, 1920, 1080)
+  pdf.addImage(dataUrl, 'JPEG', 0, 0, 1920, 1080)
   pdf.save(`${filename}.pdf`)
-}
-
-function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onloadend = () => resolve(reader.result as string)
-    reader.onerror = reject
-    reader.readAsDataURL(blob)
-  })
 }
 
 // ---------------------------------------------------------------------------
