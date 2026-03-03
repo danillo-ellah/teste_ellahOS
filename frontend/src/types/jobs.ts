@@ -139,6 +139,14 @@ export interface Job {
   // Integracao
   drive_folder_url: string | null
 
+  // Producao / ANCINE
+  ancine_number: string | null
+  audio_company: string | null
+  media_type: string | null
+
+  // Campos customizaveis (JSONB — armazena dados extras como ancine_status, ancine_protocol, ancine_notes)
+  custom_fields: Record<string, unknown> | null
+
   // Aprovacao (API retorna 'internal'/'external', column-map traduz de/para banco)
   approval_type: 'internal' | 'external' | null
   approved_at: string | null

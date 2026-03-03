@@ -43,6 +43,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { apiGet, apiMutate, ApiRequestError, safeErrorMessage } from '@/lib/api'
 import type { JobDetail } from '@/types/jobs'
+import { AncineSection } from '@/components/job-detail/tabs/AncineSection'
 
 // Tipos da claquete
 interface Claquete {
@@ -198,6 +199,9 @@ export function TabClaquete({ job }: TabClaqueteProps) {
 
   return (
     <div className="space-y-6">
+      {/* Secao ANCINE (registro, CRT, checklist) */}
+      <AncineSection job={job} />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

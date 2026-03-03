@@ -3,6 +3,7 @@ import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 import { success } from '../../_shared/response.ts';
 import { AppError } from '../../_shared/errors.ts';
 import type { AuthContext } from '../../_shared/auth.ts';
+import { generateFileName, extractExtension } from '../../_shared/file-naming.ts';
 
 // Roles permitidos para vincular NF a cost_item
 const ALLOWED_ROLES = ['admin', 'ceo', 'financeiro'];
@@ -54,9 +55,10 @@ export async function linkCostItem(req: Request, auth: AuthContext): Promise<Res
   }
 
   // 2. Buscar cost_item por id (verificar tenant_id, deleted_at is null)
+  // job_id e necessario para buscar o codigo do job e gerar nome padronizado
   const { data: costItem, error: costItemError } = await supabase
     .from('cost_items')
-    .select('id, nf_document_id, nf_request_status')
+    .select('id, job_id, nf_document_id, nf_request_status')
     .eq('id', input.cost_item_id)
     .eq('tenant_id', auth.tenantId)
     .is('deleted_at', null)
@@ -66,7 +68,20 @@ export async function linkCostItem(req: Request, auth: AuthContext): Promise<Res
     throw new AppError('NOT_FOUND', 'Cost item nao encontrado', 404);
   }
 
-  // 3. Montar dados de atualizacao do cost_item
+  // 3. Buscar codigo do job para compor o nome padronizado (nao bloqueia se falhar)
+  let jobCode: string | null = null;
+  if (costItem.job_id) {
+    const { data: job } = await supabase
+      .from('jobs')
+      .select('code')
+      .eq('id', costItem.job_id)
+      .eq('tenant_id', auth.tenantId)
+      .maybeSingle();
+
+    jobCode = job?.code ?? null;
+  }
+
+  // 4. Montar dados de atualizacao do cost_item
   const isConfirmed = doc.status === 'confirmed';
 
   const updateData: Record<string, unknown> = {
@@ -75,7 +90,18 @@ export async function linkCostItem(req: Request, auth: AuthContext): Promise<Res
     nf_validation_ok: isConfirmed,
   };
 
-  if (doc.file_name) {
+  // Gerar nome padronizado NF se o job tiver codigo; caso contrario usa o nome original do doc
+  if (jobCode) {
+    const ext = doc.file_name ? extractExtension(doc.file_name) : 'pdf';
+    updateData.nf_filename = generateFileName({
+      type: 'nf',
+      jobCode,
+      costItemId: input.cost_item_id,
+      extension: ext,
+    });
+    console.log(`[link-cost-item] nf_filename gerado: ${updateData.nf_filename}`);
+  } else if (doc.file_name) {
+    // Fallback: manter nome original do documento quando nao ha job code
     updateData.nf_filename = doc.file_name;
   }
 
@@ -87,7 +113,7 @@ export async function linkCostItem(req: Request, auth: AuthContext): Promise<Res
     updateData.nf_extracted_value = doc.nf_value;
   }
 
-  // 4. Atualizar cost_item
+  // 5. Atualizar cost_item
   const { data: updatedCostItem, error: updateError } = await supabase
     .from('cost_items')
     .update(updateData)

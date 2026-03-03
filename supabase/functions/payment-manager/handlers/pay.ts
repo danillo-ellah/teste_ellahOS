@@ -4,6 +4,7 @@ import { AppError } from '../../_shared/errors.ts';
 import { success } from '../../_shared/response.ts';
 import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 import { insertHistory } from '../../_shared/history.ts';
+import { generateFileName, extractExtension } from '../../_shared/file-naming.ts';
 
 // Roles autorizados para registrar pagamentos
 const ALLOWED_ROLES = ['financeiro', 'admin', 'ceo'];
@@ -76,6 +77,49 @@ export async function handlePay(req: Request, auth: AuthContext): Promise<Respon
     });
   }
 
+  // Gerar nome padronizado para o comprovante de pagamento (quando URL fornecida)
+  // Estrategia: buscar codigo do job do primeiro item com job_id.
+  // Lotes com 1 item: inclui cost_item_id no nome.
+  // Lotes com N itens: usa apenas job code (sem ID de item especifico).
+  let standardizedProofFilename: string | null = null;
+  if (input.payment_proof_url != null) {
+    try {
+      const firstItemWithJob = items.find((i) => i.job_id != null);
+      if (firstItemWithJob?.job_id) {
+        const { data: job } = await client
+          .from('jobs')
+          .select('code')
+          .eq('id', firstItemWithJob.job_id)
+          .eq('tenant_id', auth.tenantId)
+          .maybeSingle();
+
+        if (job?.code) {
+          // Extrair extensao da URL do comprovante (fallback pdf)
+          const urlPath = input.payment_proof_url.split('?')[0];
+          const ext = extractExtension(urlPath);
+
+          const isSingleItem = input.cost_item_ids.length === 1;
+          standardizedProofFilename = generateFileName({
+            type: 'payment_proof',
+            jobCode: job.code,
+            costItemId: isSingleItem ? input.cost_item_ids[0] : undefined,
+            date: input.payment_date,
+            extension: ext,
+          });
+
+          console.log('[payment-manager/pay] payment_proof_filename gerado:', {
+            filename: standardizedProofFilename,
+            jobCode: job.code,
+            isSingleItem,
+          });
+        }
+      }
+    } catch (namingErr) {
+      // Nomeacao e secundaria — nao bloqueia o pagamento
+      console.error('[payment-manager/pay] erro ao gerar nome do comprovante (nao bloqueia):', namingErr);
+    }
+  }
+
   // Montar payload de UPDATE
   const updatePayload: Record<string, unknown> = {
     payment_status: 'pago',
@@ -86,6 +130,9 @@ export async function handlePay(req: Request, auth: AuthContext): Promise<Respon
 
   if (input.payment_proof_url != null) {
     updatePayload.payment_proof_url = input.payment_proof_url;
+    if (standardizedProofFilename) {
+      updatePayload.payment_proof_filename = standardizedProofFilename;
+    }
   }
 
   // actual_paid_value so aplica se houver um unico item no lote

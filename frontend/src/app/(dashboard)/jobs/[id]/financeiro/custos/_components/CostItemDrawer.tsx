@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { toast } from 'sonner'
-import { ChevronDown, ChevronRight, ChevronsUpDown, Check, X, ExternalLink, Unlink, Link2, AlertTriangle, Building2, Wand2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronsUpDown, Check, X, ExternalLink, Unlink, Link2, AlertTriangle, Building2, Wand2, TrendingUp, TrendingDown } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -614,6 +614,28 @@ export function CostItemDrawer({
             </div>
           )}
 
+          {/* Alerta de divergencia de valor (so para itens pagos com actual_paid_value) */}
+          {isPaid && editingItem?.actual_paid_value != null && editingItem.total_with_overtime > 0 && (() => {
+            const budgeted = editingItem.total_with_overtime
+            const actual = editingItem.actual_paid_value!
+            const diff = ((actual - budgeted) / budgeted) * 100
+            const absDiff = Math.abs(diff)
+            if (absDiff < 10) return null
+            const isOver = diff > 0
+            const sign = isOver ? '+' : ''
+            const Icon = isOver ? TrendingUp : TrendingDown
+            return (
+              <div className="flex items-start gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
+                <Icon className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>
+                  Divergencia de {sign}{absDiff.toFixed(1)}% entre valor orcado e valor pago.{' '}
+                  Orcado: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(budgeted)}{' '}
+                  / Pago: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(actual)}
+                </span>
+              </div>
+            )
+          })()}
+
           {/* Categoria */}
           <div className="space-y-2">
             <Label htmlFor="item-number">Categoria</Label>
@@ -975,6 +997,52 @@ export function CostItemDrawer({
                   <VendorBankInfo vendorId={form.vendor_id} />
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Resumo de valores (so no modo edicao, quando item esta pago e tem actual_paid_value) */}
+          {editingItem && isPaid && editingItem.actual_paid_value != null && (
+            <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2 text-sm">
+              <p className="font-medium text-xs text-muted-foreground uppercase tracking-wide">
+                Resumo de Valores
+              </p>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Orcado (Total+HE)</span>
+                <span className="tabular-nums font-medium">
+                  {formatCurrency(editingItem.total_with_overtime)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Valor Pago Real</span>
+                <div className="flex items-center gap-2">
+                  <span className="tabular-nums font-semibold">
+                    {formatCurrency(editingItem.actual_paid_value)}
+                  </span>
+                  {(() => {
+                    const budgeted = editingItem.total_with_overtime
+                    const actual = editingItem.actual_paid_value!
+                    if (!budgeted || !actual) return null
+                    const diff = ((actual - budgeted) / budgeted) * 100
+                    const absDiff = Math.abs(diff)
+                    if (absDiff < 1) return (
+                      <span className="text-xs text-muted-foreground">Sem divergencia</span>
+                    )
+                    const isOver = diff > 0
+                    const isHighDivergence = absDiff > 10
+                    const color = isOver
+                      ? isHighDivergence ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'
+                      : 'text-green-600 dark:text-green-400'
+                    const Icon = isOver ? TrendingUp : TrendingDown
+                    const sign = isOver ? '+' : ''
+                    return (
+                      <span className={cn('inline-flex items-center gap-0.5 text-xs font-semibold', color)}>
+                        <Icon className="h-3 w-3" />
+                        {sign}{absDiff.toFixed(1)}%
+                      </span>
+                    )
+                  })()}
+                </div>
+              </div>
             </div>
           )}
 

@@ -9,6 +9,8 @@ import {
   Pencil,
   Trash2,
   CreditCard,
+  TrendingUp,
+  TrendingDown,
 } from 'lucide-react'
 import {
   Table,
@@ -178,6 +180,62 @@ function StatusCell({ item }: { item: CostItem }) {
         </TooltipProvider>
       )}
     </div>
+  )
+}
+
+// ---- DivergenceBadge ----
+// Compara o valor orcado (total_with_overtime) com o valor real pago (actual_paid_value).
+// So exibido quando o item esta pago e a divergencia e >= 1%.
+
+interface DivergenceBadgeProps {
+  budgeted: number
+  actual: number
+}
+
+function DivergenceBadge({ budgeted, actual }: DivergenceBadgeProps) {
+  if (!budgeted || !actual) return null
+
+  const diff = ((actual - budgeted) / budgeted) * 100
+  const absDiff = Math.abs(diff)
+
+  if (absDiff < 1) return null
+
+  const isOver = diff > 0
+  const isHighDivergence = absDiff > 10
+
+  const color = isOver
+    ? isHighDivergence
+      ? 'text-red-600 dark:text-red-400'
+      : 'text-amber-600 dark:text-amber-400'
+    : 'text-green-600 dark:text-green-400'
+
+  const Icon = isOver ? TrendingUp : TrendingDown
+  const sign = isOver ? '+' : ''
+
+  const tooltipText = isOver
+    ? `Valor real ${sign}${absDiff.toFixed(1)}% acima do orcado`
+    : `Valor real ${absDiff.toFixed(1)}% abaixo do orcado`
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className={cn('inline-flex items-center gap-0.5 text-xs font-medium', color)}>
+            <Icon className="h-3 w-3" />
+            {sign}{absDiff.toFixed(1)}%
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="text-xs">
+          {tooltipText}
+          <br />
+          <span className="text-muted-foreground">
+            Orcado: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(budgeted)}
+            {' / '}
+            Pago: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(actual)}
+          </span>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   )
 }
 
@@ -371,7 +429,17 @@ function ItemRow({
 
       {/* Total+HE */}
       <TableCell className="text-right tabular-nums text-sm font-semibold">
-        {!item.is_category_header ? formatCurrency(item.total_with_overtime) : ''}
+        {!item.is_category_header ? (
+          <div className="flex flex-col items-end gap-0.5">
+            {formatCurrency(item.total_with_overtime)}
+            {item.payment_status === 'pago' && item.actual_paid_value != null && (
+              <DivergenceBadge
+                budgeted={item.total_with_overtime}
+                actual={item.actual_paid_value}
+              />
+            )}
+          </div>
+        ) : ''}
       </TableCell>
 
       {/* Cond. Pgto */}

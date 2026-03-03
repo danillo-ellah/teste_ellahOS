@@ -267,7 +267,7 @@ export default function JobCostsPage({ params }: PageProps) {
 
       {/* Totalizadores */}
       {!isLoading && items.length > 0 && (
-        <CostItemsTotals meta={meta} totalWithOvertime={totalWithOvertime} />
+        <CostItemsTotals meta={meta} totalWithOvertime={totalWithOvertime} items={items} />
       )}
 
       {/* Drawer criar/editar */}
