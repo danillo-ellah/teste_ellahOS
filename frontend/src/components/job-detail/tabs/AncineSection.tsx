@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
@@ -128,6 +128,11 @@ export function AncineSection({ job }: AncineSectionProps) {
   )
   const [showChecklist, setShowChecklist] = useState(false)
   const [showImport, setShowImport] = useState(false)
+
+  // Sincronizar form quando o job e refetchado (ex: apos import ANCINE)
+  useEffect(() => {
+    setForm(extractAncineData(job))
+  }, [job.ancine_number, (job.custom_fields as Record<string, unknown>)?.ancine_status, (job.custom_fields as Record<string, unknown>)?.ancine_registration])
 
   // Detectar se houve alteracoes (para habilitar o botao Salvar)
   const isDirty =
@@ -355,7 +360,7 @@ export function AncineSection({ job }: AncineSectionProps) {
           </div>
 
           {/* Dados importados do PDF (quando registrado via import) */}
-          {isRegistrado && registration && (
+          {registration && (
             <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-semibold">Dados do Registro ANCINE</Label>
@@ -487,11 +492,6 @@ export function AncineSection({ job }: AncineSectionProps) {
         open={showImport}
         onOpenChange={setShowImport}
         job={job}
-        onSuccess={() => {
-          // Refresh form state after import
-          const updated = extractAncineData(job)
-          setForm(prev => ({ ...prev, ancine_status: 'registrado', ancine_crt: updated.ancine_crt || prev.ancine_crt }))
-        }}
       />
     </>
   )

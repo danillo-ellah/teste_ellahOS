@@ -163,11 +163,11 @@ export function ImportAncineDialog({ open, onOpenChange, job, onSuccess }: Impor
             <div className="flex flex-col min-h-0">
               <Label className="mb-2 text-sm font-medium">PDF Original (conferencia)</Label>
               <div className="flex-1 rounded-lg border overflow-hidden bg-muted min-h-[400px]">
-                <embed
+                <iframe
                   src={pdfBlobUrl}
-                  type="application/pdf"
+                  title="PDF ANCINE"
                   className="w-full h-full"
-                  style={{ minHeight: '400px' }}
+                  style={{ minHeight: '400px', border: 'none' }}
                 />
               </div>
               <Button
