@@ -86,7 +86,7 @@ export function LinkCostItemDialog({
           params.amount_max = String(Math.ceil(abs + margin))
         }
 
-        const data = await apiGet<{ data: CostItemResult[] }>('cost-items', params)
+        const data = await apiGet<CostItemResult[]>('cost-items', params)
         setResults(data.data ?? [])
       } catch {
         setResults([])

@@ -234,7 +234,7 @@ export function useCreateOpportunity() {
 
   return useMutation({
     mutationFn: (payload: CreateOpportunityPayload) =>
-      apiMutate<Opportunity>('crm/opportunities', 'POST', payload as Record<string, unknown>),
+      apiMutate<Opportunity>('crm/opportunities', 'POST', payload as unknown as Record<string, unknown>),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: crmKeys.all })
     },
@@ -249,7 +249,7 @@ export function useUpdateOpportunity(id: string) {
       apiMutate<Opportunity>(
         'crm',
         'PATCH',
-        payload as Record<string, unknown>,
+        payload as unknown as Record<string, unknown>,
         `opportunities/${id}`,
       ),
     onSuccess: () => {
@@ -266,7 +266,7 @@ export function useAddProposal(opportunityId: string) {
       apiMutate<OpportunityProposal>(
         'crm',
         'POST',
-        payload as Record<string, unknown>,
+        payload as unknown as Record<string, unknown>,
         `opportunities/${opportunityId}/proposals`,
       ),
     onSuccess: () => {
@@ -283,7 +283,7 @@ export function useAddActivity(opportunityId: string) {
       apiMutate<OpportunityActivity>(
         'crm',
         'POST',
-        payload as Record<string, unknown>,
+        payload as unknown as Record<string, unknown>,
         `opportunities/${opportunityId}/activities`,
       ),
     onSuccess: () => {
@@ -301,7 +301,7 @@ export function useConvertToJob(opportunityId: string) {
       apiMutate<{ opportunity: Opportunity; job: { id: string; title: string; code: string; status: string } }>(
         'crm',
         'POST',
-        payload as Record<string, unknown>,
+        payload as unknown as Record<string, unknown>,
         `opportunities/${opportunityId}/convert-to-job`,
       ),
     onSuccess: () => {
