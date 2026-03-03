@@ -63,6 +63,11 @@ export interface Opportunity {
   deliverable_format: string | null
   client_budget: number | null
   campaign_period: string | null
+  // Campos de analise win/loss
+  loss_category: 'preco' | 'diretor' | 'prazo' | 'escopo' | 'relacionamento' | 'outro' | null
+  winner_competitor: string | null
+  winner_value: number | null
+  win_reason: string | null
   // joins opcionais (presentes em list/detail)
   clients?: OpportunityClient | null
   agencies?: OpportunityAgency | null
@@ -160,6 +165,11 @@ export interface CreateOpportunityPayload {
 
 export interface UpdateOpportunityPayload extends Partial<CreateOpportunityPayload> {
   actual_close_date?: string | null
+  // Campos de analise win/loss
+  loss_category?: 'preco' | 'diretor' | 'prazo' | 'escopo' | 'relacionamento' | 'outro' | null
+  winner_competitor?: string | null
+  winner_value?: number | null
+  win_reason?: string | null
 }
 
 export interface AddProposalPayload {
@@ -235,6 +245,84 @@ export function useCrmStats(periodDays = 90) {
   return useQuery({
     queryKey: crmKeys.stats(periodDays),
     queryFn: () => apiGet<CrmStats>('crm', { period_days: String(periodDays) }, 'stats'),
+    staleTime: 60_000,
+    select: (res) => res.data,
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Dashboard
+// ---------------------------------------------------------------------------
+
+export interface CrmDashboardData {
+  pipeline_summary: {
+    total_value: number
+    total_count: number
+    total_paused: number
+  }
+  month_summary: {
+    jobs_closed: number
+    revenue: number
+    vs_last_month_jobs_pct: number
+    vs_last_month_revenue_pct: number
+  }
+  alerts_count: number
+  funnel: Array<{ stage: string; label: string; count: number }>
+  top_agencies: Array<{ agency_id: string; name: string; total_jobs: number; total_value: number }>
+  by_pe: Array<{ profile_id: string; name: string; active_count: number; active_value: number }>
+  competition_stats: {
+    total_bids: number
+    total_won: number
+    win_rate: number
+    top_loss_reason: string | null
+  }
+  recent_closings: Array<{
+    id: string
+    title: string
+    value: number | null
+    stage: string
+    assigned_name: string | null
+    closed_at: string | null
+  }>
+}
+
+export function useCrmDashboard() {
+  return useQuery({
+    queryKey: crmKeys.dashboard(),
+    queryFn: () => apiGet<CrmDashboardData>('crm', undefined, 'dashboard'),
+    staleTime: 60_000,
+    select: (res) => res.data,
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Alerts
+// ---------------------------------------------------------------------------
+
+export type CrmAlertType = 'deadline_urgent' | 'deadline_overdue' | 'inactive' | 'unassigned'
+
+export interface CrmAlert {
+  opportunity_id: string
+  title: string
+  agency_name: string | null
+  client_name: string | null
+  assigned_name: string | null
+  stage: string
+  alert_types: CrmAlertType[]
+  response_deadline: string | null
+  last_activity_at: string | null
+  estimated_value: number | null
+}
+
+export interface CrmAlertsData {
+  total_alerts: number
+  alerts: CrmAlert[]
+}
+
+export function useFollowUpAlerts() {
+  return useQuery({
+    queryKey: crmKeys.alerts(),
+    queryFn: () => apiGet<CrmAlertsData>('crm', undefined, 'alerts'),
     staleTime: 60_000,
     select: (res) => res.data,
   })

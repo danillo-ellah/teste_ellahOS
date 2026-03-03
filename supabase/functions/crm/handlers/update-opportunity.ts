@@ -52,6 +52,11 @@ const UpdateOpportunitySchema = z.object({
   deliverable_format: z.string().max(500).optional().nullable(),
   client_budget: z.number().min(0).optional().nullable(),
   campaign_period: z.string().max(200).optional().nullable(),
+  // Campos de analise win/loss
+  loss_category: z.enum(['preco', 'diretor', 'prazo', 'escopo', 'relacionamento', 'outro']).optional().nullable(),
+  winner_competitor: z.string().max(200).optional().nullable(),
+  winner_value: z.number().min(0).optional().nullable(),
+  win_reason: z.string().max(500).optional().nullable(),
 });
 
 /**
@@ -121,13 +126,18 @@ export async function handleUpdateOpportunity(
       data.actual_close_date = new Date().toISOString().slice(0, 10);
     }
 
-    // Quando marca como perdido, loss_reason e obrigatoria
-    if (data.stage === 'perdido' && !data.loss_reason) {
+    // Quando marca como perdido, precisa de loss_category OU loss_reason
+    if (data.stage === 'perdido' && !data.loss_category && !data.loss_reason) {
       throw new AppError(
         'VALIDATION_ERROR',
-        'Informe o motivo da perda (loss_reason) ao marcar como perdido',
+        'Informe o motivo da perda (loss_category ou loss_reason) ao marcar como perdido',
         400,
       );
+    }
+
+    // Quando marca como perdido, registra data de fechamento se nao foi fornecida
+    if (data.stage === 'perdido' && !data.actual_close_date) {
+      data.actual_close_date = new Date().toISOString().slice(0, 10);
     }
   }
 
@@ -153,6 +163,10 @@ export async function handleUpdateOpportunity(
   if (data.deliverable_format !== undefined) updatePayload.deliverable_format = data.deliverable_format;
   if (data.client_budget !== undefined) updatePayload.client_budget = data.client_budget;
   if (data.campaign_period !== undefined) updatePayload.campaign_period = data.campaign_period;
+  if (data.loss_category !== undefined) updatePayload.loss_category = data.loss_category;
+  if (data.winner_competitor !== undefined) updatePayload.winner_competitor = data.winner_competitor;
+  if (data.winner_value !== undefined) updatePayload.winner_value = data.winner_value;
+  if (data.win_reason !== undefined) updatePayload.win_reason = data.win_reason;
 
   const { data: updated, error: updateError } = await client
     .from('opportunities')

@@ -15,13 +15,17 @@ import { handleAddActivity } from './handlers/add-activity.ts';
 import { handleGetStats } from './handlers/get-stats.ts';
 import { handleConvertToJob } from './handlers/convert-to-job.ts';
 import { handleGetAgencyHistory } from './handlers/get-agency-history.ts';
+import { handleGetAlerts } from './handlers/get-alerts.ts';
+import { handleGetDashboard } from './handlers/get-dashboard.ts';
 
 // Rotas nomeadas que devem ser verificadas antes de interpretar segment1 como :id
 const NAMED_ROUTES_SEGMENT1 = new Set([
+  'dashboard',
   'pipeline',
   'opportunities',
   'stats',
   'agency-history',
+  'alerts',
 ]);
 
 Deno.serve(async (req: Request) => {
@@ -50,6 +54,11 @@ Deno.serve(async (req: Request) => {
       ? pathSegments[fnIndex + 3]
       : null;
 
+    // GET /crm/dashboard
+    if (segment1 === 'dashboard' && !segment2 && method === 'GET') {
+      return await handleGetDashboard(req, auth);
+    }
+
     // GET /crm/pipeline
     if (segment1 === 'pipeline' && !segment2 && method === 'GET') {
       return await handleGetPipeline(req, auth);
@@ -58,6 +67,11 @@ Deno.serve(async (req: Request) => {
     // GET /crm/stats
     if (segment1 === 'stats' && !segment2 && method === 'GET') {
       return await handleGetStats(req, auth);
+    }
+
+    // GET /crm/alerts
+    if (segment1 === 'alerts' && !segment2 && method === 'GET') {
+      return await handleGetAlerts(req, auth);
     }
 
     // GET /crm/agency-history/:agencyId

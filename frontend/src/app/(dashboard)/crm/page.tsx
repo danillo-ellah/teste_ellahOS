@@ -12,6 +12,7 @@ import { CrmListView } from '@/components/crm/CrmListView'
 import { CrmStatsBar } from '@/components/crm/CrmStatsBar'
 import { OpportunityDialog } from '@/components/crm/OpportunityDialog'
 import { CrmStatsDialog } from '@/components/crm/CrmStatsDialog'
+import { CrmAlertsBanner } from '@/components/crm/CrmAlertsBanner'
 
 export default function CrmPage() {
   const [includeClosed, setIncludeClosed] = useState(false)
@@ -85,6 +86,9 @@ export default function CrmPage() {
           <Skeleton className="h-16 rounded-lg" />
         </div>
       )}
+
+      {/* Alertas de follow-up */}
+      <CrmAlertsBanner />
 
       <Separator />
 

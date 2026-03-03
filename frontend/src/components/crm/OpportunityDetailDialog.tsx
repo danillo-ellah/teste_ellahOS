@@ -58,6 +58,24 @@ const ACTIVITY_TYPE_OPTIONS: { value: AddActivityPayload['activity_type']; label
   { value: 'follow_up', label: 'Follow-up' },
 ]
 
+const LOSS_CATEGORY_OPTIONS: { value: string; label: string }[] = [
+  { value: 'preco', label: 'Preco' },
+  { value: 'diretor', label: 'Diretor' },
+  { value: 'prazo', label: 'Prazo' },
+  { value: 'escopo', label: 'Escopo' },
+  { value: 'relacionamento', label: 'Relacionamento' },
+  { value: 'outro', label: 'Outro' },
+]
+
+const LOSS_CATEGORY_LABEL: Record<string, string> = {
+  preco: 'Preco',
+  diretor: 'Diretor',
+  prazo: 'Prazo',
+  escopo: 'Escopo',
+  relacionamento: 'Relacionamento',
+  outro: 'Outro',
+}
+
 const ACTIVITY_TYPE_ICON: Record<string, string> = {
   note: '📝',
   call: '📞',
@@ -94,7 +112,11 @@ export function OpportunityDetailDialog({
   const [editOpen, setEditOpen] = useState(false)
   const [activityType, setActivityType] = useState<AddActivityPayload['activity_type']>('note')
   const [activityText, setActivityText] = useState('')
+  const [lossOpen, setLossOpen] = useState(false)
+  const [lossCategory, setLossCategory] = useState<'preco' | 'diretor' | 'prazo' | 'escopo' | 'relacionamento' | 'outro' | ''>('')
   const [lossReason, setLossReason] = useState('')
+  const [winnerCompetitor, setWinnerCompetitor] = useState('')
+  const [winnerValue, setWinnerValue] = useState('')
 
   const { data: opportunity, isLoading } = useOpportunity(opportunityId)
   const { data: activities } = useOpportunityActivities(opportunityId)
@@ -130,15 +152,24 @@ export function OpportunityDetailDialog({
   }
 
   async function handleMarkLost() {
-    const reason = lossReason.trim()
-    if (!reason) {
-      toast.error('Informe o motivo da perda')
+    if (!lossCategory) {
+      toast.error('Selecione o motivo principal da perda')
       return
     }
     try {
-      await updateMutation.mutateAsync({ stage: 'perdido', loss_reason: reason })
+      await updateMutation.mutateAsync({
+        stage: 'perdido',
+        loss_category: lossCategory,
+        loss_reason: lossReason.trim() || null,
+        winner_competitor: winnerCompetitor.trim() || null,
+        winner_value: winnerValue ? parseFloat(winnerValue) : null,
+      })
       toast.success('Oportunidade marcada como perdida')
+      setLossCategory('')
       setLossReason('')
+      setWinnerCompetitor('')
+      setWinnerValue('')
+      setLossOpen(false)
     } catch (err) {
       toast.error(safeErrorMessage(err as Error))
     }
@@ -317,10 +348,38 @@ export function OpportunityDetailDialog({
                 </div>
               )}
 
-              {/* Motivo de perda */}
-              {opportunity.stage === 'perdido' && opportunity.loss_reason && (
-                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-                  <span className="font-medium">Motivo da perda:</span> {opportunity.loss_reason}
+              {/* Analise de perda */}
+              {opportunity.stage === 'perdido' && (opportunity.loss_category || opportunity.loss_reason) && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2">
+                  <p className="text-xs font-semibold text-destructive uppercase tracking-wide">Analise da perda</p>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {opportunity.loss_category && (
+                      <span className="inline-flex items-center rounded-full bg-destructive/15 px-2.5 py-0.5 text-xs font-semibold text-destructive capitalize">
+                        {LOSS_CATEGORY_LABEL[opportunity.loss_category] ?? opportunity.loss_category}
+                      </span>
+                    )}
+                    {opportunity.winner_competitor && (
+                      <span className="text-xs text-muted-foreground">
+                        Concorrente: <span className="font-medium text-foreground">{opportunity.winner_competitor}</span>
+                      </span>
+                    )}
+                    {opportunity.winner_value != null && (
+                      <span className="text-xs text-muted-foreground">
+                        Valor: <span className="font-medium text-foreground tabular-nums">{opportunity.winner_value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                      </span>
+                    )}
+                  </div>
+                  {opportunity.loss_reason && (
+                    <p className="text-sm text-destructive/80">{opportunity.loss_reason}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Analise de ganho */}
+              {opportunity.stage === 'ganho' && opportunity.win_reason && (
+                <div className="rounded-lg border border-emerald-300/50 bg-emerald-500/5 p-3 space-y-1">
+                  <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">Por que ganhamos</p>
+                  <p className="text-sm text-emerald-800 dark:text-emerald-300">{opportunity.win_reason}</p>
                 </div>
               )}
 
@@ -356,24 +415,84 @@ export function OpportunityDetailDialog({
                     )}
                   </div>
 
-                  {/* Marcar como perdido */}
+                  {/* Marcar como perdido — form expandido */}
                   {opportunity.stage !== 'perdido' && (
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="Motivo da perda..."
-                        className="h-8 text-xs"
-                        value={lossReason}
-                        onChange={(e) => setLossReason(e.target.value)}
-                      />
+                    <div className="space-y-2">
                       <Button
                         size="sm"
-                        variant="destructive"
-                        onClick={handleMarkLost}
-                        disabled={updateMutation.isPending || !lossReason.trim()}
-                        className="shrink-0"
+                        variant="ghost"
+                        className="gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive px-2"
+                        onClick={() => setLossOpen((v) => !v)}
                       >
-                        Perdido
+                        Perdemos
                       </Button>
+
+                      {lossOpen && (
+                        <div className="space-y-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+                          <div className="space-y-1">
+                            <label className="text-[11px] text-muted-foreground">Motivo principal *</label>
+                            <Select
+                              value={lossCategory}
+                              onValueChange={(v) => setLossCategory(v as typeof lossCategory)}
+                            >
+                              <SelectTrigger className="h-8 text-xs border-destructive/30">
+                                <SelectValue placeholder="Selecione..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {LOSS_CATEGORY_OPTIONS.map((o) => (
+                                  <SelectItem key={o.value} value={o.value} className="text-xs">
+                                    {o.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <Input
+                            placeholder="Concorrente vencedor (opcional)"
+                            className="h-8 text-xs border-destructive/30"
+                            value={winnerCompetitor}
+                            onChange={(e) => setWinnerCompetitor(e.target.value)}
+                          />
+
+                          <Input
+                            type="number"
+                            min={0}
+                            placeholder="Valor do concorrente (opcional)"
+                            className="h-8 text-xs border-destructive/30"
+                            value={winnerValue}
+                            onChange={(e) => setWinnerValue(e.target.value)}
+                          />
+
+                          <Textarea
+                            rows={2}
+                            className="text-xs resize-none border-destructive/30"
+                            placeholder="Detalhes do que aconteceu..."
+                            value={lossReason}
+                            onChange={(e) => setLossReason(e.target.value)}
+                          />
+
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="flex-1 h-7 text-xs"
+                              onClick={handleMarkLost}
+                              disabled={updateMutation.isPending || !lossCategory}
+                            >
+                              Confirmar perda
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-xs"
+                              onClick={() => setLossOpen(false)}
+                            >
+                              Cancelar
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
