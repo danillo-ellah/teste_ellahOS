@@ -12,7 +12,6 @@ import {
   ExternalLink,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { useFollowUpAlerts, type CrmAlert, type CrmAlertType } from '@/hooks/useCrm'

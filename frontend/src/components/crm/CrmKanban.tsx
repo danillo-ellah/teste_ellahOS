@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef, createContext, useContext } from 'react'
+import { useState, useCallback, useMemo, useRef, createContext, useContext } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -261,13 +261,15 @@ function KanbanBoard({ pipeline, includeClosed, onCardClick, onAddClick }: Kanba
 
   const stages = includeClosed ? ALL_STAGES : ACTIVE_STAGES
 
-  // Mapa id→opportunity para lookup rapido
-  const opportunityMap = useRef<Map<string, Opportunity>>(new Map())
-  opportunityMap.current.clear()
-  stages.forEach((stage) => {
-    const items = pipeline.stages[stage] ?? []
-    items.forEach((opp) => opportunityMap.current.set(opp.id, opp))
-  })
+  // Mapa id→opportunity para lookup rapido (derivado do pipeline)
+  const opportunityMap = useMemo(() => {
+    const map = new Map<string, Opportunity>()
+    stages.forEach((stage) => {
+      const items = pipeline.stages[stage] ?? []
+      items.forEach((opp) => map.set(opp.id, opp))
+    })
+    return map
+  }, [pipeline, stages])
 
   // Sensor com distancia minima de 5px — preserva click normal nos cards
   const sensors = useSensors(
@@ -277,7 +279,7 @@ function KanbanBoard({ pipeline, includeClosed, onCardClick, onAddClick }: Kanba
   )
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
-    const opp = opportunityMap.current.get(String(event.active.id))
+    const opp = opportunityMap.get(String(event.active.id))
     if (opp) setActiveCard(opp)
   }, [])
 
@@ -290,7 +292,7 @@ function KanbanBoard({ pipeline, includeClosed, onCardClick, onAddClick }: Kanba
 
       const draggedId = String(active.id)
       const targetStage = String(over.id) as OpportunityStage
-      const opp = opportunityMap.current.get(draggedId)
+      const opp = opportunityMap.get(draggedId)
 
       if (!opp) return
       if (opp.stage === targetStage) return
