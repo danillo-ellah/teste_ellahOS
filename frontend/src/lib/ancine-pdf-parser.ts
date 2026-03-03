@@ -423,9 +423,13 @@ function extractYear(text: string): number {
     if (y >= 2000 && y <= currentYear + 1) return y
   }
 
-  // Fallback
+  // Fallback: pegar o ano mais frequente (nao o maior, que pode ser data de validade)
   const matches = text.match(/\b(20\d{2})\b/g)
   if (!matches) return currentYear
   const years = matches.map(Number).filter(y => y >= 2020 && y <= currentYear + 1)
-  return years.length > 0 ? Math.max(...years) : currentYear
+  if (years.length === 0) return currentYear
+  // Conta frequencia e retorna o mais comum
+  const freq = new Map<number, number>()
+  for (const y of years) freq.set(y, (freq.get(y) || 0) + 1)
+  return [...freq.entries()].sort((a, b) => b[1] - a[1])[0][0]
 }
