@@ -39,9 +39,8 @@ export interface AncinePdfData {
 async function extractTextLines(file: File): Promise<string[]> {
   const pdfjsLib = await import('pdfjs-dist')
 
-  // Worker via CDN (pdfjs-dist v5)
-  pdfjsLib.GlobalWorkerOptions.workerSrc =
-    `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
+  // Worker local (copiado de node_modules para public/ — evita bloqueio CSP)
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
 
   const arrayBuffer = await file.arrayBuffer()
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise

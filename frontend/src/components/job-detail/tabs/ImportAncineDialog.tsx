@@ -85,8 +85,9 @@ export function ImportAncineDialog({ open, onOpenChange, job }: ImportAncineDial
         })),
       )
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
       console.error('[ancine-import] parse error:', err)
-      toast.error('Erro ao extrair dados do PDF. Verifique se e um registro ANCINE valido.')
+      toast.error(`Erro ao extrair dados do PDF: ${msg}`)
     } finally {
       setParsing(false)
     }

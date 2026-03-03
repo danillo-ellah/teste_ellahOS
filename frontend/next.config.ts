@@ -16,6 +16,7 @@ const nextConfig: NextConfig = {
             value: [
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              "worker-src 'self' blob:",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https:",
               "connect-src 'self' https://etvapcxesaxhsvzgaane.supabase.co wss://etvapcxesaxhsvzgaane.supabase.co",
