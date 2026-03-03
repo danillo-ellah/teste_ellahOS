@@ -279,6 +279,8 @@ export const crmKeys = {
   agencyHistory: (agencyId: string) => [...crmKeys.all, 'agency-history', agencyId] as const,
   dashboard: () => [...crmKeys.all, 'dashboard'] as const,
   alerts: () => [...crmKeys.all, 'alerts'] as const,
+  directorRanking: (months?: number) => [...crmKeys.all, 'director-ranking', months] as const,
+  monthlyReport: (month?: string) => [...crmKeys.all, 'report', month] as const,
 }
 
 export const bankReconciliationKeys = {

@@ -1,0 +1,281 @@
+{
+  "name": "[CRM] Email Ingest - Briefing por Forward",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 5,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "mailbox": "INBOX",
+        "options": {
+          "allowUnauthorizedCerts": false,
+          "forceReconnect": false
+        }
+      },
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "id": "imap-trigger",
+      "name": "IMAP - Ler Novos Emails",
+      "credentials": {
+        "imap": {
+          "id": "IMAP_CREDENTIAL_ID",
+          "name": "IMAP briefings@ellahfilmes.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extrair e normalizar dados do email recebido\nconst item = $input.first().json;\n\n// --- Extrair from_email e from_name ---\nconst rawFrom = item.from || '';\n// Formato possivel: \"Nome Sobrenome <email@dominio.com>\" ou apenas \"email@dominio.com\"\nconst emailMatch = rawFrom.match(/<([^>]+)>/);\nconst fromEmail = emailMatch ? emailMatch[1].trim() : rawFrom.trim();\nconst fromName = rawFrom.replace(/<[^>]+>/, '').replace(/\"/g, '').trim() || fromEmail;\n\n// --- Limpar subject (remover prefixos Re:, Fwd:, Enc:, FWD:, RES:) ---\nconst rawSubject = item.subject || '';\nconst cleanSubject = rawSubject\n  .replace(/^\\s*(Re|Fwd|Fw|Enc|FWD|RES|ENC|AW|WG)\\s*:\\s*/gi, '')\n  .trim()\n  || '(sem assunto)';\n\n// --- Extrair body ---\nconst bodyText = item.text || item.textAsHtml?.replace(/<[^>]*>/g, ' ').replace(/\\s+/g, ' ').trim() || '';\nconst bodyHtml = item.html || item.textAsHtml || '';\n\n// --- Validacao minima ---\nif (!fromEmail || !fromEmail.includes('@')) {\n  return [{ json: { _valid: false, _error: 'Remetente invalido ou ausente', raw_from: rawFrom } }];\n}\n\nif (!cleanSubject || cleanSubject === '(sem assunto)') {\n  console.warn('[crm-email-ingest] email sem assunto de:', fromEmail);\n}\n\nreturn [{\n  json: {\n    _valid: true,\n    from_email: fromEmail,\n    from_name: fromName,\n    clean_subject: cleanSubject,\n    body_text: bodyText.slice(0, 10000),\n    body_html: bodyHtml.slice(0, 50000),\n    received_at: item.date || new Date().toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 0],
+      "id": "parse-email",
+      "name": "Parse Email Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json._valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [480, 0],
+      "id": "is-valid-email",
+      "name": "Email Valido?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://etvapcxesaxhsvzgaane.supabase.co/functions/v1/crm/ingest-email",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-cron-secret",
+              "value": "={{ $env.CRON_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"from_email\": \"{{ $json.from_email }}\",\n  \"from_name\": \"{{ $json.from_name }}\",\n  \"subject\": \"{{ $json.clean_subject }}\",\n  \"body_text\": \"{{ $json.body_text }}\",\n  \"tenant_id\": \"{{ $env.TENANT_ID }}\"\n}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, -100],
+      "id": "call-supabase-ingest",
+      "name": "POST /crm/ingest-email",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.data && $json.data.opportunity_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [960, -100],
+      "id": "check-opportunity-created",
+      "name": "Oportunidade Criada?"
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.BRIEFING_EMAIL }}",
+        "toEmail": "={{ $('Parse Email Data').item.json.from_email }}",
+        "subject": "=[ELLAHOS] Oportunidade criada: {{ $json.data.title }}",
+        "emailType": "html",
+        "message": "=<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;\">\n  <h2 style=\"color: #1a1a2e;\">Oportunidade registrada no ELLAHOS</h2>\n  <p>Ola, {{ $('Parse Email Data').item.json.from_name }},</p>\n  <p>Recebemos seu briefing e uma nova oportunidade foi criada no CRM:</p>\n  <table style=\"width: 100%; border-collapse: collapse; margin: 20px 0;\">\n    <tr>\n      <td style=\"padding: 8px; background: #f5f5f5; font-weight: bold;\">Titulo</td>\n      <td style=\"padding: 8px;\">{{ $json.data.title }}</td>\n    </tr>\n    <tr>\n      <td style=\"padding: 8px; background: #f5f5f5; font-weight: bold;\">Estagio</td>\n      <td style=\"padding: 8px;\">{{ $json.data.stage }}</td>\n    </tr>\n    <tr>\n      <td style=\"padding: 8px; background: #f5f5f5; font-weight: bold;\">ID</td>\n      <td style=\"padding: 8px;\">{{ $json.data.opportunity_id }}</td>\n    </tr>\n  </table>\n  <p>\n    <a href=\"https://teste-ellah-os.vercel.app/crm/{{ $json.data.opportunity_id }}\"\n       style=\"background: #1a1a2e; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;\">\n      Ver Oportunidade no ELLAHOS\n    </a>\n  </p>\n  <hr style=\"margin-top: 30px;\" />\n  <p style=\"color: #888; font-size: 12px;\">Este email foi gerado automaticamente pelo ELLAHOS.</p>\n</div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1200, -200],
+      "id": "send-confirmation-email",
+      "name": "Enviar Confirmacao ao PE",
+      "credentials": {
+        "smtp": {
+          "id": "SMTP_CREDENTIAL_ID",
+          "name": "SMTP briefings@ellahfilmes.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Logar sucesso da criacao\nconst ingestResult = $('POST /crm/ingest-email').item.json;\nconst parsedEmail = $('Parse Email Data').item.json;\n\nconsole.log('[crm-email-ingest] oportunidade criada com sucesso', {\n  opportunity_id: ingestResult.data?.opportunity_id,\n  title: ingestResult.data?.title,\n  from_email: parsedEmail.from_email,\n  subject: parsedEmail.clean_subject\n});\n\nreturn [{ json: { success: true, ...ingestResult.data } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1440, -200],
+      "id": "log-success",
+      "name": "Log Sucesso"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Preparar dados para notificacao de erro (resposta da API sem opportunity_id)\nconst ingestResult = $('POST /crm/ingest-email').item.json;\nconst parsedEmail = $('Parse Email Data').item.json;\n\nconst errorDetail = ingestResult.error\n  ? `${ingestResult.error}: ${ingestResult.message || ''}`\n  : JSON.stringify(ingestResult).slice(0, 500);\n\nconsole.error('[crm-email-ingest] falha ao criar oportunidade', {\n  from_email: parsedEmail.from_email,\n  subject: parsedEmail.clean_subject,\n  error: errorDetail\n});\n\nreturn [{\n  json: {\n    _error: errorDetail,\n    from_email: parsedEmail.from_email,\n    from_name: parsedEmail.from_name,\n    subject: parsedEmail.clean_subject\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 0],
+      "id": "format-api-error",
+      "name": "Format API Error"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Capturar erro de conexao ou timeout no HTTP Request\nconst item = $input.first().json;\nconst parsedEmail = $('Parse Email Data').item.json;\n\nconst errorMsg = item.error?.message || item.message || 'Falha na chamada HTTP para Supabase';\n\nconsole.error('[crm-email-ingest] erro HTTP ao chamar ingest-email', {\n  from_email: parsedEmail.from_email,\n  subject: parsedEmail.clean_subject,\n  error: errorMsg\n});\n\nreturn [{\n  json: {\n    _error: errorMsg,\n    from_email: parsedEmail.from_email,\n    from_name: parsedEmail.from_name,\n    subject: parsedEmail.clean_subject\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 100],
+      "id": "format-http-error",
+      "name": "Format HTTP Error"
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.BRIEFING_EMAIL }}",
+        "toEmail": "={{ $env.ADMIN_EMAIL }}",
+        "subject": "=[ELLAHOS] ERRO - Ingest CRM falhou para {{ $json.from_email }}",
+        "emailType": "html",
+        "message": "=<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;\">\n  <h2 style=\"color: #c0392b;\">Falha no processamento de email CRM</h2>\n  <p>O workflow de ingest de briefings encontrou um erro:</p>\n  <table style=\"width: 100%; border-collapse: collapse; margin: 20px 0;\">\n    <tr>\n      <td style=\"padding: 8px; background: #fef0f0; font-weight: bold;\">Remetente</td>\n      <td style=\"padding: 8px;\">{{ $json.from_name }} &lt;{{ $json.from_email }}&gt;</td>\n    </tr>\n    <tr>\n      <td style=\"padding: 8px; background: #fef0f0; font-weight: bold;\">Assunto</td>\n      <td style=\"padding: 8px;\">{{ $json.subject }}</td>\n    </tr>\n    <tr>\n      <td style=\"padding: 8px; background: #fef0f0; font-weight: bold;\">Erro</td>\n      <td style=\"padding: 8px; color: #c0392b;\">{{ $json._error }}</td>\n    </tr>\n    <tr>\n      <td style=\"padding: 8px; background: #fef0f0; font-weight: bold;\">Horario</td>\n      <td style=\"padding: 8px;\">{{ new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) }}</td>\n    </tr>\n  </table>\n  <p>Verifique o email original na caixa de entrada de {{ $env.BRIEFING_EMAIL }} e crie a oportunidade manualmente se necessario.</p>\n  <hr style=\"margin-top: 30px;\" />\n  <p style=\"color: #888; font-size: 12px;\">ELLAHOS — Notificacao automatica de erro</p>\n</div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1440, 60],
+      "id": "send-error-notification",
+      "name": "Notificar Admin (Erro)",
+      "credentials": {
+        "smtp": {
+          "id": "SMTP_CREDENTIAL_ID",
+          "name": "SMTP briefings@ellahfilmes.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Email invalido - logar e ignorar silenciosamente\nconst item = $input.first().json;\nconsole.warn('[crm-email-ingest] email ignorado por falha de validacao', {\n  error: item._error,\n  raw_from: item.raw_from\n});\nreturn [{ json: { skipped: true, reason: item._error } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 100],
+      "id": "log-invalid-skip",
+      "name": "Log e Ignorar Email Invalido"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Node de error handler global do workflow\nconst error = $input.first().json;\nconsole.error('[crm-email-ingest] ERRO NAO TRATADO no workflow:', JSON.stringify(error).slice(0, 1000));\nreturn [{ json: { handled: false, error: error } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1680, 60],
+      "id": "workflow-error-handler",
+      "name": "Workflow Error Handler"
+    }
+  ],
+  "connections": {
+    "IMAP - Ler Novos Emails": {
+      "main": [
+        [{ "node": "Parse Email Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse Email Data": {
+      "main": [
+        [{ "node": "Email Valido?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Email Valido?": {
+      "main": [
+        [{ "node": "POST /crm/ingest-email", "type": "main", "index": 0 }],
+        [{ "node": "Log e Ignorar Email Invalido", "type": "main", "index": 0 }]
+      ]
+    },
+    "POST /crm/ingest-email": {
+      "main": [
+        [{ "node": "Oportunidade Criada?", "type": "main", "index": 0 }],
+        [{ "node": "Format HTTP Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Oportunidade Criada?": {
+      "main": [
+        [{ "node": "Enviar Confirmacao ao PE", "type": "main", "index": 0 }],
+        [{ "node": "Format API Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Enviar Confirmacao ao PE": {
+      "main": [
+        [{ "node": "Log Sucesso", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format API Error": {
+      "main": [
+        [{ "node": "Notificar Admin (Erro)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format HTTP Error": {
+      "main": [
+        [{ "node": "Notificar Admin (Erro)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Notificar Admin (Erro)": {
+      "main": [
+        [{ "node": "Workflow Error Handler", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "meta": {
+    "instanceId": "",
+    "templateCredsSetupCompleted": false,
+    "description": "Monitora a caixa INBOX do email briefings@ellahfilmes.com via IMAP. Quando um PE encaminha um briefing, extrai remetente/assunto/corpo, chama POST /crm/ingest-email no Supabase para criar a oportunidade no CRM, e envia confirmacao por email ao PE. Em caso de falha, notifica o admin."
+  },
+  "tags": [
+    { "name": "ELLAHOS" },
+    { "name": "CRM" },
+    { "name": "Fase11" }
+  ],
+  "pinData": {}
+}

@@ -329,6 +329,62 @@ export function useFollowUpAlerts() {
 }
 
 // ---------------------------------------------------------------------------
+// Director Ranking
+// ---------------------------------------------------------------------------
+
+export interface DirectorRanking {
+  person_id: string
+  name: string
+  total_bids: number
+  wins: number
+  losses: number
+  win_rate: number
+  total_value_won: number
+}
+
+export interface DirectorRankingData {
+  directors: DirectorRanking[]
+  period_months: number
+}
+
+export function useDirectorRanking(months = 12) {
+  return useQuery({
+    queryKey: crmKeys.directorRanking(months),
+    queryFn: () => apiGet<DirectorRankingData>('crm', { months: String(months) }, 'director-ranking'),
+    staleTime: 120_000,
+    select: (res) => res.data,
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Monthly Report
+// ---------------------------------------------------------------------------
+
+export interface CrmMonthlyReportSummary {
+  month: string
+  created: number
+  won: number
+  lost: number
+  pipeline_value: number
+  total_won_value: number
+}
+
+export function useMonthlyReport(month?: string) {
+  return useQuery({
+    queryKey: crmKeys.monthlyReport(month),
+    queryFn: () =>
+      apiGet<{ month: string; html: string; summary: CrmMonthlyReportSummary }>(
+        'crm',
+        month ? { month } : undefined,
+        'report/monthly',
+      ),
+    enabled: !!month,
+    staleTime: 300_000,
+    select: (res) => res.data,
+  })
+}
+
+// ---------------------------------------------------------------------------
 // Agency History (para detalhe CRM)
 // ---------------------------------------------------------------------------
 

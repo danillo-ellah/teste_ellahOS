@@ -8,13 +8,14 @@ import {
   RefreshCw,
   TrendingDown,
   TrendingUp,
+  Trophy,
   XCircle,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { useCrmDashboard } from '@/hooks/useCrm'
+import { useCrmDashboard, useDirectorRanking } from '@/hooks/useCrm'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { AREA_CONFIG } from '@/lib/constants'
 
@@ -76,6 +77,123 @@ function DashboardSkeleton() {
       </div>
       <Skeleton className="h-44 rounded-lg" />
     </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Ranking de Diretores
+// ---------------------------------------------------------------------------
+
+function DirectorRankingSection() {
+  const { data, isLoading } = useDirectorRanking(12)
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader className="pb-3 pt-5">
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+            <Trophy className="size-4 text-muted-foreground" />
+            Ranking de Diretores (12 meses)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pb-5">
+          <div className="flex flex-col gap-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-9 w-full rounded" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const directors = data?.directors ?? []
+
+  return (
+    <Card>
+      <CardHeader className="pb-3 pt-5">
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+          <Trophy className="size-4 text-muted-foreground" />
+          Ranking de Diretores (12 meses)
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pb-5">
+        {directors.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Nenhuma concorrencia com diretor registrada.
+          </p>
+        ) : (
+          <div className="w-full overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-xs text-muted-foreground">
+                  <th className="pb-2 pl-1 pr-3 text-left font-medium">#</th>
+                  <th className="pb-2 pr-3 text-left font-medium">Diretor</th>
+                  <th className="pb-2 pr-3 text-right font-medium">Concorrencias</th>
+                  <th className="pb-2 pr-3 text-right font-medium">Ganhas</th>
+                  <th className="pb-2 pr-3 text-right font-medium">Perdidas</th>
+                  <th className="pb-2 pr-6 text-right font-medium">Win Rate</th>
+                  <th className="pb-2 pr-1 text-right font-medium">Valor Ganho</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {directors.map((dir, idx) => {
+                  const winRate = dir.win_rate ?? 0
+                  const barColor =
+                    winRate >= 60
+                      ? 'bg-emerald-500'
+                      : winRate >= 40
+                      ? 'bg-amber-500'
+                      : 'bg-red-500'
+                  const textColor =
+                    winRate >= 60
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : winRate >= 40
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : 'text-red-600 dark:text-red-400'
+
+                  return (
+                    <tr key={dir.person_id} className="group">
+                      <td className="py-2.5 pl-1 pr-3 text-xs font-bold text-muted-foreground">
+                        {idx + 1}
+                      </td>
+                      <td className="max-w-[140px] truncate py-2.5 pr-3 font-medium">
+                        {dir.name}
+                      </td>
+                      <td className="py-2.5 pr-3 text-right tabular-nums">
+                        {dir.total_bids}
+                      </td>
+                      <td className="py-2.5 pr-3 text-right tabular-nums text-emerald-600 dark:text-emerald-400">
+                        {dir.wins}
+                      </td>
+                      <td className="py-2.5 pr-3 text-right tabular-nums text-red-600 dark:text-red-400">
+                        {dir.losses}
+                      </td>
+                      <td className="py-2.5 pr-6">
+                        <div className="flex items-center justify-end gap-2">
+                          <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted/60">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+                              style={{ width: `${Math.min(winRate, 100)}%` }}
+                            />
+                          </div>
+                          <span className={`w-10 text-right text-xs font-semibold tabular-nums ${textColor}`}>
+                            {winRate.toFixed(0)}%
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-2.5 pr-1 text-right font-semibold tabular-nums">
+                        {formatCurrency(dir.total_value_won)}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
@@ -401,6 +519,11 @@ export function CrmDashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Ranking de Diretores (full width)                                    */}
+      {/* ------------------------------------------------------------------ */}
+      <DirectorRankingSection />
     </div>
   )
 }

@@ -17,6 +17,10 @@ import { handleConvertToJob } from './handlers/convert-to-job.ts';
 import { handleGetAgencyHistory } from './handlers/get-agency-history.ts';
 import { handleGetAlerts } from './handlers/get-alerts.ts';
 import { handleGetDashboard } from './handlers/get-dashboard.ts';
+import { handleGetDirectorRanking } from './handlers/get-director-ranking.ts';
+import { handleProcessAlerts } from './handlers/process-alerts.ts';
+import { handleGenerateReport } from './handlers/generate-report.ts';
+import { handleIngestEmail } from './handlers/ingest-email.ts';
 
 // Rotas nomeadas que devem ser verificadas antes de interpretar segment1 como :id
 const NAMED_ROUTES_SEGMENT1 = new Set([
@@ -26,14 +30,20 @@ const NAMED_ROUTES_SEGMENT1 = new Set([
   'stats',
   'agency-history',
   'alerts',
+  'director-ranking',
+  'process-alerts',
+  'report',
+  'ingest-email',
 ]);
+
+// Rotas CRON — autenticadas via x-cron-secret, nao via JWT
+const CRON_ROUTES = new Set(['process-alerts', 'ingest-email']);
 
 Deno.serve(async (req: Request) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
 
   try {
-    const auth = await getAuthContext(req);
     const url = new URL(req.url);
     const method = req.method;
 
@@ -42,6 +52,7 @@ Deno.serve(async (req: Request) => {
     // Ex: /crm/opportunities -> ['opportunities']
     // Ex: /crm/opportunities/uuid -> ['opportunities', 'uuid']
     // Ex: /crm/opportunities/uuid/proposals -> ['opportunities', 'uuid', 'proposals']
+    // Ex: /crm/report/monthly -> ['report', 'monthly']
     const pathSegments = url.pathname.split('/').filter(Boolean);
     const fnIndex = pathSegments.findIndex((s) => s === 'crm');
     const segment1 = fnIndex >= 0 && pathSegments.length > fnIndex + 1
@@ -53,6 +64,26 @@ Deno.serve(async (req: Request) => {
     const segment3 = fnIndex >= 0 && pathSegments.length > fnIndex + 3
       ? pathSegments[fnIndex + 3]
       : null;
+
+    // ----------------------------------------------------------------
+    // Rotas CRON — autenticadas via x-cron-secret (sem JWT)
+    // Devem ser tratadas ANTES de getAuthContext()
+    // ----------------------------------------------------------------
+
+    // POST /crm/process-alerts
+    if (segment1 === 'process-alerts' && !segment2 && method === 'POST') {
+      return await handleProcessAlerts(req);
+    }
+
+    // POST /crm/ingest-email
+    if (segment1 === 'ingest-email' && !segment2 && method === 'POST') {
+      return await handleIngestEmail(req);
+    }
+
+    // ----------------------------------------------------------------
+    // Rotas autenticadas — requerem JWT valido
+    // ----------------------------------------------------------------
+    const auth = await getAuthContext(req);
 
     // GET /crm/dashboard
     if (segment1 === 'dashboard' && !segment2 && method === 'GET') {
@@ -72,6 +103,16 @@ Deno.serve(async (req: Request) => {
     // GET /crm/alerts
     if (segment1 === 'alerts' && !segment2 && method === 'GET') {
       return await handleGetAlerts(req, auth);
+    }
+
+    // GET /crm/director-ranking
+    if (segment1 === 'director-ranking' && !segment2 && method === 'GET') {
+      return await handleGetDirectorRanking(req, auth);
+    }
+
+    // GET /crm/report/monthly
+    if (segment1 === 'report' && segment2 === 'monthly' && !segment3 && method === 'GET') {
+      return await handleGenerateReport(req, auth);
     }
 
     // GET /crm/agency-history/:agencyId
