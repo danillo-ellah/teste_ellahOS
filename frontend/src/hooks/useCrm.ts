@@ -444,3 +444,19 @@ export function useConvertToJob(opportunityId: string) {
     },
   })
 }
+
+export function useGenerateBudgetLetter() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: { job_id: string; custom_instructions?: string }) =>
+      apiMutate<{ content: string; version: number; job_file_id: string | null }>(
+        'budget-letter',
+        'POST',
+        payload as unknown as Record<string, unknown>,
+        'generate',
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: crmKeys.all })
+    },
+  })
+}

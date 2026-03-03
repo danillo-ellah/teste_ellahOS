@@ -1,16 +1,32 @@
 'use client'
 
-import { useState } from 'react'
-import { ChevronRight, Plus } from 'lucide-react'
+import { useState, useCallback, useRef, createContext, useContext } from 'react'
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDroppable,
+  useDraggable,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core'
+import { CSS } from '@dnd-kit/utilities'
+import { Plus } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { Opportunity, OpportunityStage, PipelineData } from '@/hooks/useCrm'
+import { useUpdateOpportunity } from '@/hooks/useCrm'
 import { OpportunityCard } from './OpportunityCard'
 import { OpportunityDialog } from './OpportunityDialog'
 import { OpportunityDetailDialog } from './OpportunityDetailDialog'
 
+// ---------------------------------------------------------------------------
 // Configuracao visual de cada stage
+// ---------------------------------------------------------------------------
+
 export const STAGE_CONFIG: Record<
   OpportunityStage,
   { label: string; color: string; badgeClass: string; headerClass: string }
@@ -65,7 +81,7 @@ export const STAGE_CONFIG: Record<
   },
 }
 
-// Stages mostrados no kanban ativo (sem ganho/perdido/pausado quando includeClosed = false)
+// Stages mostrados no kanban ativo
 const ACTIVE_STAGES: OpportunityStage[] = [
   'lead',
   'qualificado',
@@ -85,6 +101,107 @@ const ALL_STAGES: OpportunityStage[] = [
   'pausado',
 ]
 
+// Stages para os quais nao e permitido drop via DnD (requerem fluxo de detalhe)
+const DND_BLOCKED_TARGETS = new Set<OpportunityStage>(['ganho', 'perdido'])
+
+// ---------------------------------------------------------------------------
+// Validacao de transicao de stage via DnD
+// ---------------------------------------------------------------------------
+
+function validateTransition(
+  from: OpportunityStage,
+  to: OpportunityStage,
+): { allowed: boolean; reason?: string } {
+  if (from === to) return { allowed: false }
+
+  // ganho e terminal — nao pode sair via DnD
+  if (from === 'ganho') {
+    return {
+      allowed: false,
+      reason: 'Oportunidades ganhas nao podem ser movidas via drag. Use o detalhe para alterar.',
+    }
+  }
+
+  // perdido so pode voltar para lead
+  if (from === 'perdido' && to !== 'lead') {
+    return {
+      allowed: false,
+      reason: 'Oportunidades perdidas so podem ser reativadas para Consulta (lead).',
+    }
+  }
+
+  // Nao permite drop em ganho/perdido via DnD
+  if (DND_BLOCKED_TARGETS.has(to)) {
+    return {
+      allowed: false,
+      reason: 'Use o detalhe da oportunidade para marcar como ganho ou perdido.',
+    }
+  }
+
+  return { allowed: true }
+}
+
+// ---------------------------------------------------------------------------
+// Contexto de registry de mutations
+//
+// Como useUpdateOpportunity precisa de um id fixo no momento da chamada do hook,
+// cada DraggableCard se registra com seu proprio mutateAsync.
+// O onDragEnd do DndContext chama o execute() pelo id do card arrastado.
+// ---------------------------------------------------------------------------
+
+type MutateFn = (payload: { stage: OpportunityStage }) => Promise<unknown>
+
+interface MutationRegistryValue {
+  register: (id: string, fn: MutateFn) => void
+  execute: (id: string, stage: OpportunityStage) => Promise<void>
+}
+
+const MutationRegistryContext = createContext<MutationRegistryValue | null>(null)
+
+function useMutationRegistry() {
+  const ctx = useContext(MutationRegistryContext)
+  if (!ctx) throw new Error('useMutationRegistry precisa estar dentro de MutationRegistryProvider')
+  return ctx
+}
+
+interface MutationRegistryProviderProps {
+  children: React.ReactNode
+}
+
+function MutationRegistryProvider({ children }: MutationRegistryProviderProps) {
+  // Usar ref para evitar re-renders ao registrar
+  const registryRef = useRef<Map<string, MutateFn>>(new Map())
+
+  const register = useCallback((id: string, fn: MutateFn) => {
+    registryRef.current.set(id, fn)
+    // Cleanup ao desmontar e feito pelo DraggableCard
+  }, [])
+
+  const execute = useCallback(async (id: string, stage: OpportunityStage) => {
+    const fn = registryRef.current.get(id)
+    if (!fn) {
+      toast.error('Erro interno: mutacao nao encontrada.')
+      return
+    }
+    try {
+      await fn({ stage })
+      toast.success(`Movido para ${STAGE_CONFIG[stage].label}`, { duration: 2500 })
+    } catch {
+      toast.error('Erro ao mover oportunidade. Tente novamente.', { duration: 4000 })
+    }
+  }, [])
+
+  return (
+    <MutationRegistryContext.Provider value={{ register, execute }}>
+      {children}
+    </MutationRegistryContext.Provider>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Componente principal
+// ---------------------------------------------------------------------------
+
 interface CrmKanbanProps {
   pipeline: PipelineData
   includeClosed: boolean
@@ -94,31 +211,14 @@ export function CrmKanban({ pipeline, includeClosed }: CrmKanbanProps) {
   const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null)
   const [createInStage, setCreateInStage] = useState<OpportunityStage | null>(null)
 
-  const stages = includeClosed ? ALL_STAGES : ACTIVE_STAGES
-
   return (
-    <>
-      {/* Kanban horizontal com scroll */}
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {stages.map((stage) => {
-          const config = STAGE_CONFIG[stage]
-          const items = pipeline.stages[stage] ?? []
-          const summary = pipeline.summary.find((s) => s.stage === stage)
-          const totalValue = summary?.total_value ?? 0
-
-          return (
-            <KanbanColumn
-              key={stage}
-              stage={stage}
-              config={config}
-              items={items}
-              totalValue={totalValue}
-              onCardClick={setSelectedOpportunity}
-              onAddClick={() => setCreateInStage(stage)}
-            />
-          )
-        })}
-      </div>
+    <MutationRegistryProvider>
+      <KanbanBoard
+        pipeline={pipeline}
+        includeClosed={includeClosed}
+        onCardClick={setSelectedOpportunity}
+        onAddClick={setCreateInStage}
+      />
 
       {/* Dialog de detalhe */}
       {selectedOpportunity && (
@@ -140,12 +240,112 @@ export function CrmKanban({ pipeline, includeClosed }: CrmKanbanProps) {
         mode="create"
         defaultStage={createInStage ?? undefined}
       />
-    </>
+    </MutationRegistryProvider>
   )
 }
 
 // ---------------------------------------------------------------------------
-// Coluna do Kanban
+// Board com DndContext — precisa estar dentro do MutationRegistryProvider
+// ---------------------------------------------------------------------------
+
+interface KanbanBoardProps {
+  pipeline: PipelineData
+  includeClosed: boolean
+  onCardClick: (opp: Opportunity) => void
+  onAddClick: (stage: OpportunityStage) => void
+}
+
+function KanbanBoard({ pipeline, includeClosed, onCardClick, onAddClick }: KanbanBoardProps) {
+  const { execute } = useMutationRegistry()
+  const [activeCard, setActiveCard] = useState<Opportunity | null>(null)
+
+  const stages = includeClosed ? ALL_STAGES : ACTIVE_STAGES
+
+  // Mapa id→opportunity para lookup rapido
+  const opportunityMap = useRef<Map<string, Opportunity>>(new Map())
+  opportunityMap.current.clear()
+  stages.forEach((stage) => {
+    const items = pipeline.stages[stage] ?? []
+    items.forEach((opp) => opportunityMap.current.set(opp.id, opp))
+  })
+
+  // Sensor com distancia minima de 5px — preserva click normal nos cards
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+    }),
+  )
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const opp = opportunityMap.current.get(String(event.active.id))
+    if (opp) setActiveCard(opp)
+  }, [])
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      setActiveCard(null)
+
+      const { active, over } = event
+      if (!over) return
+
+      const draggedId = String(active.id)
+      const targetStage = String(over.id) as OpportunityStage
+      const opp = opportunityMap.current.get(draggedId)
+
+      if (!opp) return
+      if (opp.stage === targetStage) return
+
+      const { allowed, reason } = validateTransition(opp.stage, targetStage)
+      if (!allowed) {
+        if (reason) toast.warning(reason, { duration: 4500 })
+        return
+      }
+
+      // Executar mutation registrada pelo DraggableCard desse id
+      void execute(draggedId, targetStage)
+    },
+    [execute],
+  )
+
+  return (
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      {/* Kanban horizontal com scroll */}
+      <div className="flex gap-4 overflow-x-auto pb-4">
+        {stages.map((stage) => {
+          const config = STAGE_CONFIG[stage]
+          const items = pipeline.stages[stage] ?? []
+          const summary = pipeline.summary.find((s) => s.stage === stage)
+          const totalValue = summary?.total_value ?? 0
+
+          return (
+            <KanbanColumn
+              key={stage}
+              stage={stage}
+              config={config}
+              items={items}
+              totalValue={totalValue}
+              activeCard={activeCard}
+              onCardClick={onCardClick}
+              onAddClick={() => onAddClick(stage)}
+            />
+          )
+        })}
+      </div>
+
+      {/* Preview do card enquanto arrasta */}
+      <DragOverlay dropAnimation={null}>
+        {activeCard ? (
+          <div className="w-72 rotate-1 scale-105 opacity-95 shadow-2xl pointer-events-none">
+            <OpportunityCard opportunity={activeCard} onClick={() => {}} />
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Coluna droppable
 // ---------------------------------------------------------------------------
 
 interface KanbanColumnProps {
@@ -153,6 +353,7 @@ interface KanbanColumnProps {
   config: (typeof STAGE_CONFIG)[OpportunityStage]
   items: Opportunity[]
   totalValue: number
+  activeCard: Opportunity | null
   onCardClick: (opp: Opportunity) => void
   onAddClick: () => void
 }
@@ -162,9 +363,19 @@ function KanbanColumn({
   config,
   items,
   totalValue,
+  activeCard,
   onCardClick,
   onAddClick,
 }: KanbanColumnProps) {
+  const { setNodeRef, isOver } = useDroppable({ id: stage })
+
+  const isDragging = !!activeCard
+
+  // Validar se esse stage e um drop target valido para o card atual
+  const transitionValid = activeCard
+    ? validateTransition(activeCard.stage, stage).allowed
+    : false
+
   const formatValue = (v: number) => {
     if (v === 0) return null
     if (v >= 1_000_000) return `R$ ${(v / 1_000_000).toFixed(1)}M`
@@ -176,9 +387,19 @@ function KanbanColumn({
 
   return (
     <div
+      ref={setNodeRef}
       className={cn(
-        'flex w-72 shrink-0 flex-col rounded-lg border bg-muted/30',
+        'flex w-72 shrink-0 flex-col rounded-lg border bg-muted/30 transition-all duration-150',
         config.headerClass,
+        // Coluna valida com hover: borda verde + fundo sutil
+        isOver && transitionValid &&
+          'border-emerald-400 bg-emerald-50/40 ring-1 ring-emerald-300 dark:bg-emerald-950/20 dark:ring-emerald-700',
+        // Coluna invalida com hover: borda vermelha sutil
+        isOver && !transitionValid && isDragging &&
+          'border-red-300/70 bg-red-50/20 dark:bg-red-950/10',
+        // Colunas validas piscam levemente durante qualquer drag
+        !isOver && isDragging && transitionValid &&
+          'border-blue-300/50 bg-blue-50/10 dark:bg-blue-950/10',
       )}
     >
       {/* Header da coluna */}
@@ -188,6 +409,11 @@ function KanbanColumn({
           <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-[11px] font-medium text-muted-foreground">
             {items.length}
           </span>
+          {isOver && transitionValid && (
+            <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 animate-pulse">
+              Soltar aqui
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1.5">
           {formattedValue && (
@@ -212,21 +438,78 @@ function KanbanColumn({
         {items.length === 0 ? (
           <button
             onClick={onAddClick}
-            className="flex flex-col items-center gap-1.5 rounded-md border border-dashed p-4 text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+            className={cn(
+              'flex flex-col items-center gap-1.5 rounded-md border border-dashed p-4 text-muted-foreground',
+              'transition-colors hover:border-primary/40 hover:text-foreground',
+              isOver && transitionValid &&
+                'border-emerald-400 bg-emerald-50/60 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400',
+            )}
           >
             <Plus className="size-4 opacity-50" />
-            <span className="text-xs">Adicionar oportunidade</span>
+            <span className="text-xs">
+              {isOver && transitionValid ? 'Soltar aqui' : 'Adicionar oportunidade'}
+            </span>
           </button>
         ) : (
           items.map((opp) => (
-            <OpportunityCard
+            <DraggableCard
               key={opp.id}
               opportunity={opp}
-              onClick={() => onCardClick(opp)}
+              onCardClick={onCardClick}
             />
           ))
         )}
       </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Card draggable
+// Envolve OpportunityCard sem modificar o componente original.
+// Registra o mutateAsync no contexto para ser chamado pelo onDragEnd.
+// ---------------------------------------------------------------------------
+
+interface DraggableCardProps {
+  opportunity: Opportunity
+  onCardClick: (opp: Opportunity) => void
+}
+
+function DraggableCard({ opportunity, onCardClick }: DraggableCardProps) {
+  const { register } = useMutationRegistry()
+
+  // Hook de mutacao fixo para este id
+  const { mutateAsync } = useUpdateOpportunity(opportunity.id)
+
+  // Registrar (ou atualizar) a referencia de mutacao toda vez que o componente renderiza.
+  // Como register usa useCallback sem deps, nao causa loop.
+  register(opportunity.id, mutateAsync)
+
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: opportunity.id,
+    data: { stage: opportunity.stage },
+  })
+
+  const style = transform
+    ? { transform: CSS.Translate.toString(transform) }
+    : undefined
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        'touch-none select-none',
+        // Card some quando esta sendo arrastado — DragOverlay assume o papel visual
+        isDragging && 'opacity-0',
+      )}
+    >
+      <OpportunityCard
+        opportunity={opportunity}
+        onClick={() => onCardClick(opportunity)}
+      />
     </div>
   )
 }

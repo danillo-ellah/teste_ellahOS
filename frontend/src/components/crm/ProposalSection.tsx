@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, ExternalLink, FileText } from 'lucide-react'
+import { Plus, ExternalLink, FileText, Sparkles, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -14,7 +15,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { useAddProposal, type OpportunityProposal, type AddProposalPayload } from '@/hooks/useCrm'
+import {
+  useAddProposal,
+  useGenerateBudgetLetter,
+  type OpportunityProposal,
+  type AddProposalPayload,
+} from '@/hooks/useCrm'
 import { safeErrorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
@@ -32,10 +38,10 @@ const STATUS_CONFIG: Record<
 interface ProposalSectionProps {
   opportunityId: string
   proposals: OpportunityProposal[]
+  jobId?: string | null
 }
 
-export function ProposalSection({ opportunityId, proposals }: ProposalSectionProps) {
-  const [open, setOpen] = useState(false)
+export function ProposalSection({ opportunityId, proposals, jobId }: ProposalSectionProps) {
   const [addingProposal, setAddingProposal] = useState(false)
   const [form, setForm] = useState({
     title: '',
@@ -44,7 +50,14 @@ export function ProposalSection({ opportunityId, proposals }: ProposalSectionPro
     status: 'draft' as AddProposalPayload['status'],
   })
 
+  // Estado da geracao de carta orcamento IA
+  const [aiFormOpen, setAiFormOpen] = useState(false)
+  const [customInstructions, setCustomInstructions] = useState('')
+  const [generatedContent, setGeneratedContent] = useState<string | null>(null)
+  const [generatedVersion, setGeneratedVersion] = useState<number | null>(null)
+
   const addProposalMutation = useAddProposal(opportunityId)
+  const generateLetterMutation = useGenerateBudgetLetter()
 
   async function handleAddProposal() {
     if (!form.title.trim()) {
@@ -67,6 +80,48 @@ export function ProposalSection({ opportunityId, proposals }: ProposalSectionPro
     }
   }
 
+  async function handleGenerateLetter() {
+    if (!jobId) return
+
+    try {
+      const result = await generateLetterMutation.mutateAsync({
+        job_id: jobId,
+        custom_instructions: customInstructions.trim() || undefined,
+      })
+      setGeneratedContent(result.data.content)
+      setGeneratedVersion(result.data.version)
+      toast.success('Carta orcamento gerada com sucesso')
+    } catch (err) {
+      toast.error(safeErrorMessage(err as Error))
+    }
+  }
+
+  async function handleSaveGeneratedAsProposal() {
+    if (!generatedContent || generatedVersion == null) return
+
+    try {
+      await addProposalMutation.mutateAsync({
+        title: `Carta Orcamento v${generatedVersion}`,
+        content: generatedContent,
+        status: 'draft',
+      })
+      toast.success('Carta salva como proposta')
+      setGeneratedContent(null)
+      setGeneratedVersion(null)
+      setCustomInstructions('')
+      setAiFormOpen(false)
+    } catch (err) {
+      toast.error(safeErrorMessage(err as Error))
+    }
+  }
+
+  function handleDiscardGenerated() {
+    setGeneratedContent(null)
+    setGeneratedVersion(null)
+    setCustomInstructions('')
+    setAiFormOpen(false)
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -78,18 +133,140 @@ export function ProposalSection({ opportunityId, proposals }: ProposalSectionPro
             </span>
           )}
         </h3>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 gap-1.5 text-xs"
-          onClick={() => setAddingProposal(!addingProposal)}
-        >
-          <Plus className="size-3" />
-          Adicionar
-        </Button>
+        <div className="flex items-center gap-1">
+          {jobId ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1.5 text-xs text-violet-600 hover:text-violet-700 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-950"
+              onClick={() => {
+                setAiFormOpen(!aiFormOpen)
+                setAddingProposal(false)
+                setGeneratedContent(null)
+              }}
+            >
+              <Sparkles className="size-3" />
+              Gerar Carta IA
+            </Button>
+          ) : null}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1.5 text-xs"
+            onClick={() => {
+              setAddingProposal(!addingProposal)
+              setAiFormOpen(false)
+              setGeneratedContent(null)
+            }}
+          >
+            <Plus className="size-3" />
+            Adicionar
+          </Button>
+        </div>
       </div>
 
-      {/* Form de adicao */}
+      {/* Hint quando nao ha job vinculado */}
+      {!jobId && (
+        <p className="text-[11px] text-muted-foreground/70 italic">
+          Vincule a um job para gerar carta orcamento com IA.
+        </p>
+      )}
+
+      {/* Form de geracao IA */}
+      {aiFormOpen && jobId && (
+        <div className="rounded-lg border border-violet-200 bg-violet-500/5 p-3 space-y-3 dark:border-violet-800">
+          <div className="flex items-center gap-2">
+            <Sparkles className="size-3.5 text-violet-500 shrink-0" />
+            <span className="text-xs font-semibold text-violet-700 dark:text-violet-300">
+              Gerar Carta Orcamento com IA
+            </span>
+          </div>
+
+          {/* Preview do conteudo gerado */}
+          {generatedContent ? (
+            <div className="space-y-3">
+              <div className="rounded-md border bg-card p-3 max-h-72 overflow-y-auto">
+                <div className="prose prose-sm dark:prose-invert whitespace-pre-wrap text-xs leading-relaxed">
+                  {generatedContent}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  className="h-7 text-xs bg-violet-600 hover:bg-violet-700"
+                  onClick={handleSaveGeneratedAsProposal}
+                  disabled={addProposalMutation.isPending}
+                >
+                  {addProposalMutation.isPending ? (
+                    <>
+                      <Loader2 className="size-3 animate-spin mr-1" />
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="size-3 mr-1" />
+                      Salvar como proposta
+                    </>
+                  )}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs"
+                  onClick={handleDiscardGenerated}
+                >
+                  Descartar
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">
+                  Instrucoes adicionais (opcional)
+                </Label>
+                <Textarea
+                  rows={2}
+                  className="text-xs resize-none"
+                  placeholder="Ex: Destacar entregaveis de social media, tom formal, incluir referencias..."
+                  value={customInstructions}
+                  onChange={(e) => setCustomInstructions(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  className="h-7 text-xs bg-violet-600 hover:bg-violet-700"
+                  onClick={handleGenerateLetter}
+                  disabled={generateLetterMutation.isPending}
+                >
+                  {generateLetterMutation.isPending ? (
+                    <>
+                      <Loader2 className="size-3 animate-spin mr-1" />
+                      Gerando...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="size-3 mr-1" />
+                      Gerar com IA
+                    </>
+                  )}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs"
+                  onClick={() => setAiFormOpen(false)}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Form de adicao manual */}
       {addingProposal && (
         <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
           <div className="space-y-1.5">
@@ -170,7 +347,7 @@ export function ProposalSection({ opportunityId, proposals }: ProposalSectionPro
       )}
 
       {/* Lista de propostas */}
-      {proposals.length === 0 && !addingProposal && (
+      {proposals.length === 0 && !addingProposal && !aiFormOpen && (
         <p className="text-xs text-muted-foreground">Nenhuma proposta registrada.</p>
       )}
 

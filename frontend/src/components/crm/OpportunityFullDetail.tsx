@@ -520,6 +520,7 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
               <ProposalSection
                 opportunityId={opportunity.id}
                 proposals={opportunity.proposals}
+                jobId={opportunity.job_id}
               />
             </CardContent>
           </Card>
