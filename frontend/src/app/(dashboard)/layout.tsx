@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { usePathname } from 'next/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
 import { BottomNav } from '@/components/layout/BottomNav'
@@ -15,6 +16,7 @@ import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications'
 import { useNfStats } from '@/hooks/useNf'
+import { getActiveArea, AREA_CONFIG } from '@/lib/constants'
 
 // Hook para evitar hydration mismatch de IDs Radix (SSR gera IDs diferentes do client)
 function useMounted() {
@@ -44,6 +46,15 @@ export default function DashboardLayout({
 
   // Realtime: atualiza badge de notificacoes sem refresh
   useRealtimeNotifications(userId)
+
+  // Detectar area ativa para ambient tint
+  const pathname = usePathname()
+  const activeArea = useMemo(() => getActiveArea(pathname), [pathname])
+  const tintStyle = useMemo(() => {
+    if (!activeArea) return undefined
+    const config = AREA_CONFIG[activeArea]
+    return { borderColor: config.color } as React.CSSProperties
+  }, [activeArea])
 
   // NF pending count para badge no sidebar
   const { data: nfStats } = useNfStats()
@@ -101,6 +112,14 @@ export default function DashboardLayout({
           showMenuButton={!isDesktop}
           onMenuClick={() => setMobileOpen(true)}
         />
+
+        {/* Ambient tint — barra sutil colorida no topo do conteudo */}
+        {activeArea && (
+          <div
+            className="h-[2px] w-full opacity-40 transition-colors duration-300"
+            style={{ backgroundColor: AREA_CONFIG[activeArea].color }}
+          />
+        )}
 
         <main className="flex-1 px-4 py-6 lg:px-6">
           <div className="mx-auto max-w-7xl">
