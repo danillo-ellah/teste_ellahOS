@@ -12,6 +12,7 @@ import {
   Globe,
   PenLine,
   Clapperboard,
+  FileCheck,
 } from 'lucide-react'
 import {
   Tabs,
@@ -32,6 +33,7 @@ import { TabHistorico } from '@/components/job-detail/tabs/TabHistorico'
 import { PortalSessionsManager } from '@/components/portal/portal-sessions-manager'
 import { ContractsTab } from '@/app/(dashboard)/jobs/[id]/_components/contracts/contracts-tab'
 import { TabClaquete } from '@/components/job-detail/tabs/TabClaquete'
+import { TabPPM } from '@/components/job-detail/tabs/TabPPM'
 import type { JobDetail } from '@/types/jobs'
 
 // Mapa de icones por nome
@@ -46,6 +48,7 @@ const ICON_MAP: Record<string, typeof FileText> = {
   Globe,
   PenLine,
   Clapperboard,
+  FileCheck,
 }
 
 interface JobDetailTabsProps {
@@ -148,6 +151,11 @@ export function JobDetailTabs({ job }: JobDetailTabsProps) {
       {/* Tab: Contratos */}
       <TabsContent value="contratos" className="mt-6">
         <ContractsTab jobId={job.id} />
+      </TabsContent>
+
+      {/* Tab: PPM */}
+      <TabsContent value="ppm" className="mt-6">
+        <TabPPM job={job} />
       </TabsContent>
 
       {/* Tab: Claquete */}

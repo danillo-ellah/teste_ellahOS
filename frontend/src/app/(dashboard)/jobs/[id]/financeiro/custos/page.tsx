@@ -280,6 +280,7 @@ export default function JobCostsPage({ params }: PageProps) {
         jobId={jobId}
         editingItem={editingItem}
         jobStartDate={jobStartDate}
+        allItems={items}
       />
 
       {/* Dialog de pagamento */}

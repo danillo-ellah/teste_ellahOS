@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { toast } from 'sonner'
-import { ChevronDown, ChevronRight, ChevronsUpDown, Check, X, ExternalLink, Unlink, Link2, AlertTriangle, Building2, Wand2, TrendingUp, TrendingDown } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronsUpDown, Check, X, ExternalLink, Unlink, Link2, AlertTriangle, Building2, Wand2, TrendingUp, TrendingDown, Receipt, Plus } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -32,9 +32,13 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useCreateCostItem, useUpdateCostItem } from '@/hooks/useCostItems'
-import { useQueryClient } from '@tanstack/react-query'
-import { nfKeys } from '@/lib/query-keys'
+import { useQueryClient, useQuery } from '@tanstack/react-query'
+import { nfKeys, paymentApprovalKeys } from '@/lib/query-keys'
+import { apiGet, safeErrorMessage } from '@/lib/api'
+import type { PaymentApproval } from '@/types/cost-management'
+import { PaymentApprovalSection } from './PaymentApprovalSection'
 import { useVendorSuggest, useVendor } from '@/hooks/useVendors'
+import { usePaymentProofsByCostItem, useUnlinkProofFromItem } from '@/hooks/usePaymentProofs'
 import {
   PAYMENT_CONDITION_LABELS,
   PAYMENT_METHOD_LABELS,
@@ -48,10 +52,10 @@ import {
   type AccountType,
 } from '@/types/cost-management'
 import { parseBRNumber, formatBRNumber, formatCurrency } from '@/lib/format'
-import { safeErrorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { useUserRole } from '@/hooks/useUserRole'
 import { LinkNfDialog } from './LinkNfDialog'
+import { PaymentProofDialog } from './PaymentProofDialog'
 
 // ---- Labels de tipos bancarios ----
 
@@ -371,6 +375,8 @@ interface CostItemDrawerProps {
   defaultItemNumber?: number
   // Data base do job para calculo automatico de vencimento (kickoff_ppm_date ?? briefing_date)
   jobStartDate?: string | null
+  // Lista de todos os itens do job para o PaymentProofDialog (vinculo N:N)
+  allItems?: CostItem[]
 }
 
 interface FormState {
@@ -431,13 +437,16 @@ export function CostItemDrawer({
   editingItem,
   defaultItemNumber,
   jobStartDate,
+  allItems = [],
 }: CostItemDrawerProps) {
   const [form, setForm] = useState<FormState>(() => defaultForm(jobId, editingItem))
   const [initialForm, setInitialForm] = useState<FormState>(() => defaultForm(jobId, editingItem))
   const [overtimeExpanded, setOvertimeExpanded] = useState(false)
   const [nfExpanded, setNfExpanded] = useState(false)
   const [bankExpanded, setBankExpanded] = useState(false)
+  const [proofsExpanded, setProofsExpanded] = useState(false)
   const [linkNfOpen, setLinkNfOpen] = useState(false)
+  const [proofDialogOpen, setProofDialogOpen] = useState(false)
   const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false)
 
   // Controla se a data de vencimento atual foi calculada automaticamente (nao editada pelo usuario)
@@ -449,6 +458,32 @@ export function CostItemDrawer({
   const queryClient = useQueryClient()
 
   const { role } = useUserRole()
+
+  // Aprovacao de pagamento mais recente para o item em edicao.
+  // Busca todas as aprovacoes do job e filtra client-side pelo cost_item_id.
+  // O endpoint nao oferece filtro por cost_item_id, mas os resultados sao pequenos por job.
+  const { data: itemApproval, refetch: refetchApproval } = useQuery({
+    queryKey: paymentApprovalKeys.detail(editingItem?.id ?? ''),
+    queryFn: async () => {
+      const res = await apiGet<PaymentApproval[]>('payment-approvals', {
+        job_id: jobId,
+        per_page: '100',
+      })
+      // Retornar a aprovacao mais recente para este cost_item (qualquer status)
+      const items = res.data ?? []
+      return items.find((a) => a.cost_item_id === editingItem?.id) ?? null
+    },
+    enabled: !!editingItem?.id && open,
+    staleTime: 30_000,
+  })
+
+  // Comprovantes vinculados ao item em edicao
+  const { data: proofsData } = usePaymentProofsByCostItem(
+    editingItem?.id && open ? editingItem.id : undefined,
+  )
+  const linkedProofs = proofsData?.data ?? []
+
+  const { mutateAsync: unlinkProof, isPending: isUnlinking } = useUnlinkProofFromItem()
 
   // Item pago = campos financeiros read-only (backend tambem bloqueia)
   const isPaid = editingItem?.payment_status === 'pago'
@@ -475,7 +510,9 @@ export function CostItemDrawer({
       )
       setNfExpanded(false)
       setBankExpanded(false)
+      setProofsExpanded(false)
       setLinkNfOpen(false)
+      setProofDialogOpen(false)
       setDiscardConfirmOpen(false)
       // Ao abrir com item existente, nunca exibir indicador de automatico
       setDueDateIsAuto(false)
@@ -887,6 +924,151 @@ export function CostItemDrawer({
             </div>
           )}
 
+          {/* Secao Comprovantes de Pagamento (so no modo edicao) */}
+          {editingItem && (
+            <div className="border border-border rounded-md">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between px-3 py-2 text-sm font-medium hover:bg-accent/50 rounded-md"
+                onClick={() => setProofsExpanded(v => !v)}
+              >
+                <span className="flex items-center gap-2">
+                  <Receipt className="h-3.5 w-3.5 text-muted-foreground" />
+                  Comprovantes
+                  {linkedProofs.length > 0 && (
+                    <span className="inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-green-500/20 text-green-700 dark:text-green-400 text-[10px] font-semibold">
+                      {linkedProofs.length}
+                    </span>
+                  )}
+                </span>
+                {proofsExpanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
+
+              {proofsExpanded && (
+                <div className="px-3 pb-3 space-y-3">
+                  {linkedProofs.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Nenhum comprovante vinculado a este item.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {linkedProofs.map(proof => {
+                        const allocation = proof.linked_items?.find(
+                          li => li.cost_item_id === editingItem.id,
+                        )
+                        return (
+                          <div
+                            key={proof.id}
+                            className="rounded-md border border-border bg-muted/30 p-3 space-y-1.5 text-sm"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Receipt className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                {proof.file_url ? (
+                                  <a
+                                    href={proof.file_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:underline flex items-center gap-1 truncate text-sm font-medium"
+                                  >
+                                    {proof.file_name ?? 'Comprovante'}
+                                    <ExternalLink className="h-3 w-3 shrink-0" />
+                                  </a>
+                                ) : (
+                                  <span className="text-sm font-medium truncate">
+                                    {proof.file_name ?? 'Comprovante'}
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                disabled={isUnlinking}
+                                onClick={async () => {
+                                  try {
+                                    await unlinkProof({
+                                      proofId: proof.id,
+                                      costItemId: editingItem.id,
+                                    })
+                                    toast.success('Comprovante desvinculado')
+                                  } catch (err) {
+                                    toast.error(safeErrorMessage(err))
+                                  }
+                                }}
+                                className="shrink-0 text-muted-foreground hover:text-destructive disabled:opacity-50 transition-colors"
+                                aria-label="Desvincular comprovante"
+                              >
+                                <Unlink className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+
+                            <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+                              {proof.payment_date && (
+                                <span>
+                                  Data:{' '}
+                                  <span className="text-foreground">
+                                    {new Date(proof.payment_date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                                  </span>
+                                </span>
+                              )}
+                              {proof.bank_reference && (
+                                <span>
+                                  Ref:{' '}
+                                  <span className="text-foreground">{proof.bank_reference}</span>
+                                </span>
+                              )}
+                              {proof.amount != null && (
+                                <span>
+                                  Total:{' '}
+                                  <span className="text-foreground font-medium">
+                                    {formatCurrency(proof.amount)}
+                                  </span>
+                                </span>
+                              )}
+                              {allocation?.allocated_amount != null && (
+                                <span>
+                                  Alocado:{' '}
+                                  <span className="text-green-700 dark:text-green-400 font-medium">
+                                    {formatCurrency(allocation.allocated_amount)}
+                                  </span>
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setProofDialogOpen(true)}
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />
+                    Vincular Comprovante
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Secao Aprovacao de Pagamento (so no modo edicao) */}
+          {editingItem && (
+            <PaymentApprovalSection
+              item={editingItem}
+              approval={itemApproval}
+              onApprovalChanged={() => {
+                refetchApproval()
+                queryClient.invalidateQueries({ queryKey: paymentApprovalKeys.lists() })
+              }}
+            />
+          )}
+
           {/* Condicao de Pagamento */}
           <div className="space-y-2">
             <Label htmlFor="payment-condition">Condicao de Pagamento</Label>
@@ -1104,6 +1286,16 @@ export function CostItemDrawer({
         onOpenChange={setLinkNfOpen}
         jobId={jobId}
         costItemId={editingItem.id}
+      />
+    )}
+
+    {proofDialogOpen && editingItem && (
+      <PaymentProofDialog
+        open={proofDialogOpen}
+        onOpenChange={setProofDialogOpen}
+        jobId={jobId}
+        availableItems={allItems}
+        preselectedItemId={editingItem.id}
       />
     )}
     </>

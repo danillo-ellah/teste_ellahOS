@@ -5,6 +5,9 @@ import { docusealKeys } from '@/lib/query-keys'
 import type {
   DocuSealSubmission,
   CreateDocuSealPayload,
+  DocuSealTemplatesResponse,
+  BatchGeneratePayload,
+  BatchGenerateResult,
 } from '@/types/docuseal'
 
 // --- Lista submissions de um job ---
@@ -97,6 +100,65 @@ export function useResendDocuSeal() {
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : 'Erro ao reenviar email')
+    },
+  })
+}
+
+// --- Listar templates DocuSeal classificados por tipo ---
+
+export function useDocuSealTemplates() {
+  const query = useQuery({
+    queryKey: docusealKeys.templates(),
+    queryFn: () =>
+      apiGet<DocuSealTemplatesResponse>('docuseal-integration', undefined, 'templates'),
+    staleTime: 5 * 60_000, // templates mudam raramente — cache por 5 minutos
+  })
+
+  return {
+    data: query.data?.data,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    error: query.error,
+    refetch: query.refetch,
+  }
+}
+
+// --- Gerar contratos em lote para membros da equipe ---
+
+export function useBatchGenerateContracts() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (payload: BatchGeneratePayload) =>
+      apiMutate<BatchGenerateResult>(
+        'docuseal-integration',
+        'POST',
+        payload as unknown as Record<string, unknown>,
+        'batch-generate',
+      ),
+    onSuccess: (response, payload) => {
+      // Invalidar lista de submissions do job para refletir novos contratos
+      queryClient.invalidateQueries({
+        queryKey: docusealKeys.list(payload.job_id),
+      })
+
+      const result = response.data
+      if (result.generated_count > 0) {
+        toast.success(
+          `${result.generated_count} contrato(s) gerado(s) com sucesso`,
+        )
+      }
+
+      // Mostrar aviso se algum membro foi ignorado
+      if (result.skipped_count > 0) {
+        const skippedNames = result.skipped.map((s) => s.person_name).join(', ')
+        toast.warning(
+          `${result.skipped_count} membro(s) ignorado(s): ${skippedNames}`,
+        )
+      }
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Erro ao gerar contratos')
     },
   })
 }

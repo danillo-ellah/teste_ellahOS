@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { Plus, MoreHorizontal, Pencil, Trash2, Users, Star, CalendarDays } from 'lucide-react'
+import { Plus, MoreHorizontal, Pencil, Trash2, Users, Star, CalendarDays, FileSignature } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -23,12 +23,14 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ConfirmDialog } from '@/components/jobs/ConfirmDialog'
 import { EmptyTabState } from '@/components/shared/EmptyTabState'
 import { TeamMemberDialog } from './TeamMemberDialog'
+import { BatchContractDialog } from './BatchContractDialog'
 import {
   useJobTeam,
   useAddTeamMember,
   useUpdateTeamMember,
   useRemoveTeamMember,
 } from '@/hooks/useJobTeam'
+import { useUserRole, APPROVAL_PDF_ROLES } from '@/hooks/useUserRole'
 import { ApiRequestError } from '@/lib/api'
 import { TEAM_ROLE_LABELS, HIRING_STATUS_LABELS } from '@/lib/constants'
 import { formatCurrency, formatDateShort } from '@/lib/format'
@@ -43,10 +45,15 @@ export function TabEquipe({ job }: TabEquipeProps) {
   const { mutateAsync: addMember, isPending: isAdding } = useAddTeamMember()
   const { mutateAsync: updateMember, isPending: isUpdating } = useUpdateTeamMember()
   const { mutateAsync: removeMember, isPending: isRemoving } = useRemoveTeamMember()
+  const { role: userRole } = useUserRole()
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingMember, setEditingMember] = useState<JobTeamMember | undefined>()
   const [deletingMember, setDeletingMember] = useState<JobTeamMember | null>(null)
+  const [batchContractOpen, setBatchContractOpen] = useState(false)
+
+  // Roles que podem gerar contratos em lote (mesmos do backend)
+  const canGenerateContracts = userRole !== null && APPROVAL_PDF_ROLES.includes(userRole)
 
   function handleOpenAdd() {
     setEditingMember(undefined)
@@ -158,6 +165,11 @@ export function TabEquipe({ job }: TabEquipeProps) {
           onSubmit={handleSubmit}
           isPending={isAdding}
         />
+        <BatchContractDialog
+          open={batchContractOpen}
+          onOpenChange={setBatchContractOpen}
+          jobId={job.id}
+        />
       </>
     )
   }
@@ -169,10 +181,22 @@ export function TabEquipe({ job }: TabEquipeProps) {
         <h3 className="text-sm font-semibold">
           Equipe ({teamList.length})
         </h3>
-        <Button size="sm" variant="outline" onClick={handleOpenAdd}>
-          <Plus className="size-4" />
-          Adicionar membro
-        </Button>
+        <div className="flex items-center gap-2">
+          {canGenerateContracts && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setBatchContractOpen(true)}
+            >
+              <FileSignature className="size-4" />
+              Gerar Contratos
+            </Button>
+          )}
+          <Button size="sm" variant="outline" onClick={handleOpenAdd}>
+            <Plus className="size-4" />
+            Adicionar membro
+          </Button>
+        </div>
       </div>
 
       {/* Tabela */}
@@ -283,6 +307,13 @@ export function TabEquipe({ job }: TabEquipeProps) {
         variant="destructive"
         isPending={isRemoving}
         onConfirm={handleDelete}
+      />
+
+      {/* Dialog de geracao de contratos em lote */}
+      <BatchContractDialog
+        open={batchContractOpen}
+        onOpenChange={setBatchContractOpen}
+        jobId={job.id}
       />
     </>
   )

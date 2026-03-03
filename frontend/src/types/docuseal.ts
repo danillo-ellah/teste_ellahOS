@@ -55,6 +55,52 @@ export interface CreateDocuSealPayload {
   submitters: CreateDocuSealSubmitter[]
 }
 
+// Tipos de template de contrato suportados
+export type ContractTemplateType = 'elenco' | 'tecnico' | 'pj'
+
+// Template classificado retornado por GET /docuseal-integration/templates
+export interface DocuSealTemplate {
+  id: number
+  name: string
+  type: ContractTemplateType | null
+  fields: Array<{ name: string; type: string }>
+}
+
+export interface DocuSealTemplatesResponse {
+  templates: DocuSealTemplate[]
+  total: number
+}
+
+// Resultado de um membro no lote
+export interface BatchMemberResult {
+  member_id: string
+  person_id: string
+  person_name: string
+  status: 'generated' | 'skipped'
+  skip_reason?: string
+  submission_id?: string
+  docuseal_submission_id?: number
+}
+
+// Payload para POST /docuseal-integration/batch-generate
+export interface BatchGeneratePayload {
+  job_id: string
+  template_type: ContractTemplateType
+  member_ids: string[]
+}
+
+// Resposta de POST /docuseal-integration/batch-generate
+export interface BatchGenerateResult {
+  job_id: string
+  job_code: string
+  template_type: ContractTemplateType
+  template_id: number
+  generated: BatchMemberResult[]
+  skipped: BatchMemberResult[]
+  generated_count: number
+  skipped_count: number
+}
+
 // Labels pt-BR para status DocuSeal
 export const DOCUSEAL_STATUS_LABELS: Record<DocuSealStatus, string> = {
   pending: 'Pendente',

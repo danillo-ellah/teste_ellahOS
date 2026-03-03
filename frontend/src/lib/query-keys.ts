@@ -192,6 +192,7 @@ export const docusealKeys = {
   list: (jobId: string) => [...docusealKeys.lists(), jobId] as const,
   details: () => [...docusealKeys.all, 'detail'] as const,
   detail: (id: string) => [...docusealKeys.details(), id] as const,
+  templates: () => [...docusealKeys.all, 'templates'] as const,
 }
 
 export const vendorKeys = {
@@ -236,4 +237,23 @@ export const cashAdvanceKeys = {
 export const approvalPdfKeys = {
   all: ['approval-pdf'] as const,
   files: (jobId: string) => [...approvalPdfKeys.all, 'files', jobId] as const,
+}
+
+export const paymentApprovalKeys = {
+  all: ['payment-approvals'] as const,
+  lists: () => [...paymentApprovalKeys.all, 'list'] as const,
+  list: (filters: Record<string, string>) => [...paymentApprovalKeys.lists(), filters] as const,
+  pending: (jobId?: string) => [...paymentApprovalKeys.all, 'pending', jobId] as const,
+  detail: (id: string) => [...paymentApprovalKeys.all, 'detail', id] as const,
+  check: (costItemId: string, amount: number) =>
+    [...paymentApprovalKeys.all, 'check', costItemId, amount] as const,
+  rules: () => [...paymentApprovalKeys.all, 'rules'] as const,
+}
+
+export const paymentProofKeys = {
+  all: ['payment-proofs'] as const,
+  lists: () => [...paymentProofKeys.all, 'list'] as const,
+  list: (params: Record<string, string | undefined>) =>
+    [...paymentProofKeys.lists(), params] as const,
+  detail: (id: string) => [...paymentProofKeys.all, 'detail', id] as const,
 }

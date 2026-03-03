@@ -138,6 +138,7 @@ export interface Job {
 
   // Integracao
   drive_folder_url: string | null
+  ppm_url: string | null
 
   // Producao / ANCINE
   ancine_number: string | null
@@ -277,6 +278,7 @@ export interface UpdateJobPayload {
   actual_delivery_date?: string | null
   tax_percentage?: number | null
   drive_folder_url?: string | null
+  ppm_url?: string | null
   closed_value?: number | null
   production_cost?: number | null
   other_costs?: number | null

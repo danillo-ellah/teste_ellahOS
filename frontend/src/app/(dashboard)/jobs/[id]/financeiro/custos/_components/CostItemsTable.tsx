@@ -11,6 +11,8 @@ import {
   CreditCard,
   TrendingUp,
   TrendingDown,
+  CheckCircle2,
+  Receipt,
 } from 'lucide-react'
 import {
   Table,
@@ -298,6 +300,41 @@ function NfCell({ item }: { item: CostItem }) {
   )
 }
 
+// ---- PaymentProofCell ----
+// Exibe icone de check verde quando o item tem comprovante(s) vinculado(s),
+// com tooltip indicando a quantidade. Usa os campos do proprio CostItem para
+// evitar fetch extra por linha (payment_proof_url indica presenca de pelo menos 1).
+
+function PaymentProofCell({ item }: { item: CostItem }) {
+  if (!item.payment_proof_url) {
+    return <span className="text-muted-foreground">-</span>
+  }
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            className="inline-flex items-center justify-center h-8 w-8"
+            aria-label="Comprovante vinculado"
+          >
+            <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="text-xs space-y-0.5">
+          <p className="flex items-center gap-1.5">
+            <Receipt className="h-3 w-3" />
+            Comprovante vinculado
+          </p>
+          {item.payment_proof_filename && (
+            <p className="text-muted-foreground">{item.payment_proof_filename}</p>
+          )}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
+}
+
 // ---- CategoryHeaderRow ----
 
 interface CategoryHeaderRowProps {
@@ -318,7 +355,7 @@ function CategoryHeaderRow({ items, isExpanded, onToggle }: CategoryHeaderRowPro
       onClick={onToggle}
     >
       <TableCell className="w-8" />
-      <TableCell colSpan={13}>
+      <TableCell colSpan={14}>
         <div className="flex items-center gap-2">
           {isExpanded ? (
             <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -484,6 +521,11 @@ function ItemRow({
         )}
       </TableCell>
 
+      {/* Comprovante */}
+      <TableCell className="w-10 text-center">
+        {!item.is_category_header && <PaymentProofCell item={item} />}
+      </TableCell>
+
       {/* Acoes */}
       <TableCell className="w-10">
         {!item.is_category_header && (
@@ -640,6 +682,18 @@ export function CostItemsTable({
                 </TooltipProvider>
               </TableHead>
               <TableHead>Pgto</TableHead>
+              <TableHead className="w-10 text-center">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-help underline decoration-dotted">Comp.</span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">
+                      Comprovante de pagamento vinculado ao item
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>

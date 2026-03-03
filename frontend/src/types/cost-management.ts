@@ -118,6 +118,8 @@ export type ItemStatus = 'orcado' | 'aguardando_nf' | 'nf_pedida' | 'nf_recebida
 export type NfRequestStatus = 'nao_aplicavel' | 'pendente' | 'pedido' | 'recebido' | 'rejeitado' | 'aprovado'
 export type PaymentStatus = 'pendente' | 'pago' | 'cancelado'
 export type BudgetMode = 'bottom_up' | 'top_down'
+// Antecipado aqui pois CostItem depende deste tipo (definicao completa em Payment Approvals abaixo)
+export type PaymentApprovalStatus = 'not_required' | 'pending' | 'approved' | 'rejected'
 
 export interface CostItem {
   id: string
@@ -162,6 +164,8 @@ export interface CostItem {
   payment_date: string | null
   payment_proof_url: string | null
   payment_proof_filename: string | null
+  // Aprovacao hierarquica (T2.5)
+  payment_approval_status: PaymentApprovalStatus
   created_at: string
   updated_at: string
   deleted_at: string | null
@@ -441,6 +445,135 @@ export interface CreateReceiptPayload {
 export interface ReviewReceiptPayload {
   status: 'aprovado' | 'rejeitado'
   review_note?: string
+}
+
+// ============ Payment Approvals ============
+
+// PaymentApprovalStatus e exportado acima (antes de CostItem que depende dele)
+export type ApprovalDecision = 'approved' | 'rejected'
+export type ApprovalRequiredRole = 'financeiro' | 'admin' | 'cfo' | 'ceo'
+
+export interface PaymentApprovalRule {
+  id: string
+  tenant_id: string
+  min_amount: number
+  max_amount: number | null
+  required_role: ApprovalRequiredRole
+  description: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+  deleted_at: string | null
+}
+
+export interface PaymentApproval {
+  id: string
+  tenant_id: string
+  cost_item_id: string
+  rule_id: string | null
+  requested_by: string
+  requested_at: string
+  status: 'pending' | 'approved' | 'rejected'
+  decided_by: string | null
+  decided_at: string | null
+  decision_notes: string | null
+  amount: number
+  created_at: string
+  updated_at: string
+  // Joins
+  cost_items?: {
+    id: string
+    service_description: string
+    item_number: number
+    sub_item_number: number
+    total_with_overtime: number
+    payment_approval_status: PaymentApprovalStatus
+    job_id: string | null
+    jobs?: {
+      id: string
+      code: string
+      job_aba: string | null
+      title: string
+    } | null
+  } | null
+  payment_approval_rules?: {
+    id: string
+    required_role: ApprovalRequiredRole
+    description: string | null
+    min_amount: number
+    max_amount: number | null
+  } | null
+  requester?: {
+    id: string
+    full_name: string
+    email: string
+  } | null
+  decider?: {
+    id: string
+    full_name: string
+    email: string
+  } | null
+}
+
+export interface CheckApprovalResult {
+  requires_approval: boolean
+  rule: Pick<PaymentApprovalRule, 'id' | 'min_amount' | 'max_amount' | 'required_role' | 'description'> | null
+  required_role: ApprovalRequiredRole | null
+}
+
+export interface RequestApprovalResult {
+  approval: PaymentApproval
+  requires_approval: boolean
+  required_role: ApprovalRequiredRole
+}
+
+export interface CreateApprovalRulePayload {
+  min_amount?: number
+  max_amount?: number | null
+  required_role: ApprovalRequiredRole
+  description?: string
+  is_active?: boolean
+}
+
+export interface UpdateApprovalRulePayload {
+  min_amount?: number
+  max_amount?: number | null
+  required_role?: ApprovalRequiredRole
+  description?: string | null
+  is_active?: boolean
+}
+
+export const PAYMENT_APPROVAL_STATUS_CONFIG: Record<
+  PaymentApprovalStatus,
+  { label: string; badgeClass: string; dotClass: string }
+> = {
+  not_required: {
+    label: 'Nao requer aprovacao',
+    badgeClass: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400',
+    dotClass: 'bg-zinc-400',
+  },
+  pending: {
+    label: 'Aguardando aprovacao',
+    badgeClass: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+    dotClass: 'bg-amber-500',
+  },
+  approved: {
+    label: 'Aprovado',
+    badgeClass: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+    dotClass: 'bg-green-500',
+  },
+  rejected: {
+    label: 'Rejeitado',
+    badgeClass: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+    dotClass: 'bg-red-500',
+  },
+}
+
+export const APPROVAL_ROLE_LABELS: Record<ApprovalRequiredRole, string> = {
+  financeiro: 'Financeiro',
+  admin: 'Administrador',
+  cfo: 'CFO',
+  ceo: 'CEO',
 }
 
 // ============ Status Labels e Cores ============

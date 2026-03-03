@@ -9,6 +9,8 @@ import { getSubmissionHandler } from './handlers/get.ts';
 import { webhookHandler } from './handlers/webhook.ts';
 import { resendHandler } from './handlers/resend.ts';
 import { downloadHandler } from './handlers/download.ts';
+import { templatesHandler } from './handlers/templates.ts';
+import { batchGenerateHandler } from './handlers/batch-generate.ts';
 
 // Rotas que usam HMAC em vez de JWT (chamadas pelo DocuSeal, nao por usuarios)
 const WEBHOOK_ROUTES = ['webhook'];
@@ -63,6 +65,12 @@ Deno.serve(async (req: Request) => {
         break;
       case 'download':
         if (req.method === 'GET') return await downloadHandler(req, auth, resourceId);
+        break;
+      case 'templates':
+        if (req.method === 'GET') return await templatesHandler(req, auth);
+        break;
+      case 'batch-generate':
+        if (req.method === 'POST') return await batchGenerateHandler(req, auth);
         break;
     }
 
