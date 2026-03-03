@@ -142,6 +142,29 @@ export interface FinancialRecordMatch {
 }
 
 // ---------------------------------------------------------------------------
+// OCR Analyze — Extracao automatica de dados da NF via Groq
+// ---------------------------------------------------------------------------
+
+export type OcrFieldConfidence = 'high' | 'medium' | 'low'
+
+export interface OcrField {
+  value: string | null
+  confidence: OcrFieldConfidence
+}
+
+export interface OcrAnalyzeResult {
+  nf_document_id: string
+  nf_number: OcrField
+  emission_date: OcrField
+  total_value: OcrField
+  cnpj_emitter: OcrField
+  company_name: OcrField
+  description: OcrField
+  overall_confidence: OcrFieldConfidence
+  source: 'groq_ocr' | 'existing_extraction'
+}
+
+// ---------------------------------------------------------------------------
 // NF Request (Fase 9.3) — Pedido de NF para fornecedores
 // ---------------------------------------------------------------------------
 

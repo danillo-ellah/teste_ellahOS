@@ -26,7 +26,9 @@ CREATE TABLE IF NOT EXISTS vendor_invite_tokens (
   used_at     TIMESTAMPTZ,
 
   created_by  UUID REFERENCES profiles(id) ON DELETE SET NULL,
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  deleted_at  TIMESTAMPTZ
 );
 
 -- Indices para lookup por token (rota publica) e por tenant/vendor
@@ -48,19 +50,28 @@ CREATE INDEX IF NOT EXISTS vendor_invite_tokens_job_idx
 ALTER TABLE vendor_invite_tokens ENABLE ROW LEVEL SECURITY;
 
 -- Leitura: apenas usuarios do tenant
+DROP POLICY IF EXISTS "vendor_invite_tokens_select" ON vendor_invite_tokens;
 CREATE POLICY "vendor_invite_tokens_select"
   ON vendor_invite_tokens FOR SELECT
   USING (tenant_id = (SELECT get_tenant_id()));
 
 -- Criacao: apenas usuarios autenticados do tenant
+DROP POLICY IF EXISTS "vendor_invite_tokens_insert" ON vendor_invite_tokens;
 CREATE POLICY "vendor_invite_tokens_insert"
   ON vendor_invite_tokens FOR INSERT
   WITH CHECK (tenant_id = (SELECT get_tenant_id()));
 
 -- Atualizacao (marcar como usado via service role via Edge Function)
+DROP POLICY IF EXISTS "vendor_invite_tokens_update" ON vendor_invite_tokens;
 CREATE POLICY "vendor_invite_tokens_update"
   ON vendor_invite_tokens FOR UPDATE
   USING (tenant_id = (SELECT get_tenant_id()));
+
+-- Trigger para updated_at automatico
+DROP TRIGGER IF EXISTS trg_vendor_invite_tokens_updated_at ON vendor_invite_tokens;
+CREATE TRIGGER trg_vendor_invite_tokens_updated_at
+  BEFORE UPDATE ON vendor_invite_tokens
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- Adicionar campos de endereco ao vendor, se ainda nao existirem
 -- (campos usados pelo portal de auto-cadastro)

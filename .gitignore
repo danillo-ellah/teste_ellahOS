@@ -30,7 +30,11 @@ __pycache__/
 sec_append.py
 sec_report_writer.py
 write_spec7.py
-scripts/
+scripts/*.py
+!scripts/migrate_sheets_data.py
+!scripts/requirements-migrate.txt
+!scripts/README-migration.md
+!scripts/data/
 
 # Empty placeholder dirs (created by accident)
 /Baseado

@@ -13,6 +13,7 @@ import { requestSendNf } from './handlers/request-send.ts';
 import { requestSentCallbackNf } from './handlers/request-sent-callback.ts';
 import { uploadNf } from './handlers/upload.ts';
 import { linkCostItem } from './handlers/link-cost-item.ts';
+import { ocrAnalyzeNf } from './handlers/ocr-analyze.ts';
 
 // Rotas que usam autenticacao via Cron Secret (chamadas pelo n8n, nao por usuarios)
 const CRON_SECRET_ROUTES = ['ingest', 'request-sent-callback'];
@@ -73,6 +74,9 @@ Deno.serve(async (req: Request) => {
         break;
       case 'link-cost-item':
         if (req.method === 'POST') return await linkCostItem(req, auth);
+        break;
+      case 'ocr-analyze':
+        if (req.method === 'POST') return await ocrAnalyzeNf(req, auth);
         break;
     }
 

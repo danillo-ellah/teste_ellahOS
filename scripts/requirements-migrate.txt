@@ -1,0 +1,14 @@
+# Dependências para o script de migração de dados
+# Instale com: pip install -r scripts/requirements-migrate.txt
+
+# Requisições HTTP para a REST API do Supabase
+requests==2.31.0
+
+# Leitura de variáveis de ambiente de arquivo .env
+python-dotenv==1.0.0
+
+# Google Sheets API (necessário apenas para --mode sheets)
+# Comente as linhas abaixo se for usar apenas o modo CSV
+google-api-python-client==2.111.0
+google-auth-httplib2==0.2.0
+google-auth-oauthlib==1.2.0

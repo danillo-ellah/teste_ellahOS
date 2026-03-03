@@ -12,6 +12,7 @@ import type {
   ReassignNfPayload,
   ReassignNfResult,
   FinancialRecordMatch,
+  OcrAnalyzeResult,
 } from '@/types/nf'
 import type { PaginationMeta } from '@/types/jobs'
 
@@ -149,5 +150,12 @@ export function useReassignNf() {
       queryClient.invalidateQueries({ queryKey: nfKeys.lists() })
       queryClient.invalidateQueries({ queryKey: nfKeys.stats() })
     },
+  })
+}
+
+export function useOcrAnalyze() {
+  return useMutation({
+    mutationFn: (nf_document_id: string) =>
+      apiMutate<OcrAnalyzeResult>('nf-processor', 'POST', { nf_document_id }, 'ocr-analyze'),
   })
 }
