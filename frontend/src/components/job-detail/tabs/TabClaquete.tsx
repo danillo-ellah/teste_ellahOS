@@ -219,7 +219,7 @@ export function TabClaquete({ job }: TabClaqueteProps) {
   const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [previewHtml, setPreviewHtml] = useState<string | null>(null)
-  const [previewTitle, setPreviewTitle] = useState('')
+  const [previewClaquete, setPreviewClaquete] = useState<Claquete | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [exporting, setExporting] = useState<string | null>(null)
   const [form, setForm] = useState<ClaqueteFormData>(() => defaultFormFromJob(job))
@@ -293,10 +293,18 @@ export function TabClaquete({ job }: TabClaqueteProps) {
   const handlePreview = useCallback(async (claquete: Claquete) => {
     const html = await fetchHtml(claquete.id)
     if (html) {
-      setPreviewTitle(claquete.title)
+      setPreviewClaquete(claquete)
       setPreviewHtml(html)
     }
   }, [fetchHtml])
+
+  // Nome do arquivo no padrao Apps Script: CLAQUETE_{duration}_{title}_{advertiser}
+  const buildFilename = useCallback((c: Claquete) => {
+    const parts = ['CLAQUETE', c.duration, c.title, c.advertiser]
+      .map(s => (s || '').trim())
+      .filter(Boolean)
+    return parts.join('_').replace(/\s+/g, ' ')
+  }, [])
 
   // Export as JPEG
   const handleExportJpeg = useCallback(async (claquete: Claquete) => {
@@ -304,8 +312,7 @@ export function TabClaquete({ job }: TabClaqueteProps) {
     try {
       const html = await fetchHtml(claquete.id)
       if (!html) return
-      const filename = `claquete_${claquete.title.replace(/\s+/g, '_')}_v${claquete.version}`
-      await exportAsJpeg(html, filename)
+      await exportAsJpeg(html, buildFilename(claquete))
       toast.success('JPEG exportado (1920x1080 Full HD)')
     } catch (err) {
       toast.error('Erro ao exportar JPEG')
@@ -313,7 +320,7 @@ export function TabClaquete({ job }: TabClaqueteProps) {
     } finally {
       setExporting(null)
     }
-  }, [fetchHtml])
+  }, [fetchHtml, buildFilename])
 
   // Export as PDF
   const handleExportPdf = useCallback(async (claquete: Claquete) => {
@@ -321,8 +328,7 @@ export function TabClaquete({ job }: TabClaqueteProps) {
     try {
       const html = await fetchHtml(claquete.id)
       if (!html) return
-      const filename = `claquete_${claquete.title.replace(/\s+/g, '_')}_v${claquete.version}`
-      await exportAsPdf(html, filename)
+      await exportAsPdf(html, buildFilename(claquete))
       toast.success('PDF exportado (Full HD)')
     } catch (err) {
       toast.error('Erro ao exportar PDF')
@@ -330,36 +336,34 @@ export function TabClaquete({ job }: TabClaqueteProps) {
     } finally {
       setExporting(null)
     }
-  }, [fetchHtml])
+  }, [fetchHtml, buildFilename])
 
   // Export from preview dialog
   const handlePreviewExportJpeg = useCallback(async () => {
-    if (!previewHtml) return
+    if (!previewHtml || !previewClaquete) return
     setExporting('preview-jpeg')
     try {
-      const filename = `claquete_${previewTitle.replace(/\s+/g, '_')}`
-      await exportAsJpeg(previewHtml, filename)
+      await exportAsJpeg(previewHtml, buildFilename(previewClaquete))
       toast.success('JPEG exportado (1920x1080 Full HD)')
     } catch {
       toast.error('Erro ao exportar JPEG')
     } finally {
       setExporting(null)
     }
-  }, [previewHtml, previewTitle])
+  }, [previewHtml, previewClaquete, buildFilename])
 
   const handlePreviewExportPdf = useCallback(async () => {
-    if (!previewHtml) return
+    if (!previewHtml || !previewClaquete) return
     setExporting('preview-pdf')
     try {
-      const filename = `claquete_${previewTitle.replace(/\s+/g, '_')}`
-      await exportAsPdf(previewHtml, filename)
+      await exportAsPdf(previewHtml, buildFilename(previewClaquete))
       toast.success('PDF exportado (Full HD)')
     } catch {
       toast.error('Erro ao exportar PDF')
     } finally {
       setExporting(null)
     }
-  }, [previewHtml, previewTitle])
+  }, [previewHtml, previewClaquete, buildFilename])
 
   const updateField = <K extends keyof ClaqueteFormData>(key: K, value: ClaqueteFormData[K]) => {
     setForm(prev => ({ ...prev, [key]: value }))
@@ -592,10 +596,12 @@ export function TabClaquete({ job }: TabClaqueteProps) {
       </Dialog>
 
       {/* Preview dialog — Full HD aspect ratio */}
-      <Dialog open={!!previewHtml} onOpenChange={() => setPreviewHtml(null)}>
-        <DialogContent className="max-w-[90vw] w-[1400px] max-h-[95vh]">
+      <Dialog open={!!previewHtml} onOpenChange={() => { setPreviewHtml(null); setPreviewClaquete(null) }}>
+        <DialogContent className="max-w-[95vw] w-[1800px] max-h-[95vh]">
           <DialogHeader>
-            <DialogTitle>Preview da Claquete — Full HD 1920x1080</DialogTitle>
+            <DialogTitle>
+              {previewClaquete ? buildFilename(previewClaquete) : 'Preview da Claquete'} — Full HD 1920x1080
+            </DialogTitle>
           </DialogHeader>
           {previewHtml && (
             <PreviewContent

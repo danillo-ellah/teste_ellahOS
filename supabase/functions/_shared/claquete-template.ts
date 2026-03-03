@@ -43,10 +43,12 @@ function boolToText(val: boolean): string {
 
 /**
  * Gera campo da claquete: label normal + valor em bold
- * PPTX usa 25pt = 33.3px a 96dpi, line-height 135%, cor dk1 (#1a1a1a)
+ * Font 27px com line-height 1.55 para espaçamento mais confortavel entre linhas.
+ * 17 campos x ~42px (27*1.55) = ~714px, cabe bem nos ~920px disponíveis.
+ * letter-spacing 0.5px melhora legibilidade em tela grande.
  */
 function field(label: string, value: string): string {
-  return `<p style="font-size:33px;line-height:1.35;margin:0;color:#1a1a1a;font-family:Arial,Helvetica,sans-serif;">` +
+  return `<p style="font-size:27px;line-height:1.55;margin:0;padding:1px 0;color:#1a1a1a;font-family:Arial,Helvetica,sans-serif;letter-spacing:0.5px;">` +
     `${label} <b>${value}</b></p>`;
 }
 
