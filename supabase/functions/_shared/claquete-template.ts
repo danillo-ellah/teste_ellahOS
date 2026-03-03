@@ -78,10 +78,8 @@ export function buildClaqueteHtml(data: ClaqueteData): string {
 </head>
 <body>
   <!-- Background: filmstrip border + inner green box (imagem real do PPTX) -->
-  <div style="
-    position: absolute; top: 0; left: 0; width: 1920px; height: 1080px;
-    background: url('${CLAQUETE_BG_BASE64}') center/cover no-repeat;
-  ">
+  <div style="position:absolute;top:0;left:0;width:1920px;height:1080px;">
+    <img src="${CLAQUETE_BG_BASE64}" alt="" style="position:absolute;top:0;left:0;width:1920px;height:1080px;object-fit:cover;" />
     <!-- Campos posicionados exatamente como no PPTX -->
     <!-- TextBox PPTX: x=224 y=64 w=1676 h=1020 + padding interno 19px -->
     <div style="
@@ -149,12 +147,8 @@ export function buildClaqueteHtmlA4(data: ClaqueteData): string {
   </style>
 </head>
 <body>
-  <div style="
-    background: url('${CLAQUETE_BG_BASE64}') center/cover no-repeat;
-    min-height: 100vh;
-    position: relative;
-    padding: 0;
-  ">
+  <div style="min-height:100vh;position:relative;padding:0;">
+    <img src="${CLAQUETE_BG_BASE64}" alt="" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;" />
     <div style="
       position: absolute;
       top: 30px; left: 60px; right: 60px; bottom: 30px;

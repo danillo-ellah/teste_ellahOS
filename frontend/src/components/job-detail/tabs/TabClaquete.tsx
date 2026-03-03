@@ -133,7 +133,7 @@ async function captureClaqueteAsJpeg(html: string): Promise<string> {
 
   // Create offscreen container
   const wrapper = document.createElement('div')
-  wrapper.style.cssText = 'position:fixed;top:-20000px;left:-20000px;width:1920px;height:1080px;overflow:hidden;z-index:-9999;'
+  wrapper.style.cssText = 'position:absolute;top:0;left:0;width:1920px;height:1080px;overflow:hidden;opacity:0;pointer-events:none;z-index:-9999;'
   document.body.appendChild(wrapper)
 
   try {
