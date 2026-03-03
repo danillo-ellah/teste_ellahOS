@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import {
   Archive,
   ChevronRight,
+  Copy,
   ExternalLink,
   MoreHorizontal,
 } from 'lucide-react'
@@ -28,6 +29,7 @@ import { SyncIndicator } from '@/components/job-detail/SyncIndicator'
 import type { SyncState } from '@/components/job-detail/SyncIndicator'
 import { useUpdateJob } from '@/hooks/useUpdateJob'
 import { useArchiveJob } from '@/hooks/useArchiveJob'
+import { useCloneJob } from '@/hooks/useCloneJob'
 import { useUserRole } from '@/hooks/useUserRole'
 import { formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -51,10 +53,12 @@ export function JobHeader({ job }: JobHeaderProps) {
   const [editValue, setEditValue] = useState(job.title)
   const [syncState, setSyncState] = useState<SyncState>('idle')
   const [archiveOpen, setArchiveOpen] = useState(false)
+  const [cloneOpen, setCloneOpen] = useState(false)
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
   const { mutateAsync: updateJob } = useUpdateJob()
   const { mutateAsync: archiveJob, isPending: isArchiving } = useArchiveJob()
+  const { mutateAsync: cloneJobMutation, isPending: isCloning } = useCloneJob()
   const { role: userRole } = useUserRole()
 
   // Sync titulo se mudar externamente
@@ -102,6 +106,20 @@ export function JobHeader({ job }: JobHeaderProps) {
     } else if (e.key === 'Escape') {
       setEditValue(job.title)
       setIsEditing(false)
+    }
+  }
+
+  async function handleCloneConfirm() {
+    try {
+      const result = await cloneJobMutation({ jobId: job.id })
+      toast.success('Job clonado com sucesso!')
+      setCloneOpen(false)
+      const newJobId = result?.data?.id
+      if (newJobId) {
+        router.push(`/jobs/${newJobId}`)
+      }
+    } catch {
+      toast.error('Erro ao clonar job. Tente novamente.')
     }
   }
 
@@ -250,6 +268,10 @@ export function JobHeader({ job }: JobHeaderProps) {
                 >
                   Copiar link
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setCloneOpen(true)}>
+                  <Copy className="size-4" />
+                  Clonar job
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
@@ -274,6 +296,17 @@ export function JobHeader({ job }: JobHeaderProps) {
         variant="destructive"
         isPending={isArchiving}
         onConfirm={handleArchiveConfirm}
+      />
+
+      <ConfirmDialog
+        open={cloneOpen}
+        onOpenChange={setCloneOpen}
+        title="Clonar job"
+        description={`Sera criada uma copia de "${job.title}" com a mesma equipe, entregaveis e configuracoes. O novo job comeca no status Briefing Recebido.`}
+        confirmLabel="Clonar"
+        cancelLabel="Cancelar"
+        isPending={isCloning}
+        onConfirm={handleCloneConfirm}
       />
     </>
   )

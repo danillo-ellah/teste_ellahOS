@@ -8,6 +8,7 @@ import { listJobs } from './handlers/list.ts';
 import { getJobById } from './handlers/get-by-id.ts';
 import { updateJob } from './handlers/update.ts';
 import { deleteJob } from './handlers/delete.ts';
+import { cloneJob } from './handlers/clone.ts';
 
 Deno.serve(async (req: Request) => {
   // CORS pre-flight
@@ -28,10 +29,18 @@ Deno.serve(async (req: Request) => {
       jobsIndex >= 0 && pathSegments.length > jobsIndex + 1
         ? pathSegments[jobsIndex + 1]
         : null;
+    const subAction =
+      jobsIndex >= 0 && pathSegments.length > jobsIndex + 2
+        ? pathSegments[jobsIndex + 2]
+        : null;
 
     const method = req.method;
 
-    // Roteamento
+    // Roteamento — sub-actions primeiro
+    if (method === 'POST' && jobId && subAction === 'clone') {
+      return await cloneJob(req, auth, jobId);
+    }
+
     if (method === 'POST' && !jobId) {
       return await createJob(req, auth);
     }
