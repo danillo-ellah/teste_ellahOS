@@ -504,7 +504,7 @@ export function TabWardrobe({ job }: TabWardrobeProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Remover ficha</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja remover "{deletingItem?.item_description}"? Esta acao nao pode ser desfeita.
+              Tem certeza que deseja remover &quot;{deletingItem?.item_description}&quot;? Esta acao nao pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

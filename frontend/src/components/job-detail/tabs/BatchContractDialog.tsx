@@ -213,7 +213,7 @@ export function BatchContractDialog({
             )}
             {selectedType && !selectedTemplate && !loadingTemplates && (
               <p className="text-xs text-destructive mt-1">
-                Nenhum template encontrado para este tipo no DocuSeal. Configure um template com "{selectedType}" no nome.
+                Nenhum template encontrado para este tipo no DocuSeal. Configure um template com &quot;{selectedType}&quot; no nome.
               </p>
             )}
           </div>

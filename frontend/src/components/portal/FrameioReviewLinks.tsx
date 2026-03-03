@@ -102,7 +102,7 @@ export function FrameioReviewLinks({ deliverables }: FrameioReviewLinksProps) {
       </div>
 
       <p className="text-xs text-muted-foreground mt-3">
-        Clique em "Revisar" para abrir o video no Frame.io e deixar seus comentarios.
+        Clique em &quot;Revisar&quot; para abrir o video no Frame.io e deixar seus comentarios.
         Quando voce aprovar, nossa equipe sera notificada automaticamente.
       </p>
     </section>

@@ -197,7 +197,7 @@ export default function ConciliacaoPage() {
                 <Landmark className="h-8 w-8 mx-auto mb-2 text-zinc-300" />
                 Nenhum extrato importado ainda.
                 <br />
-                Clique em "Importar Extrato" para comecar.
+                Clique em &quot;Importar Extrato&quot; para comecar.
               </CardContent>
             </Card>
           ) : (
