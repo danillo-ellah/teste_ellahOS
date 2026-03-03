@@ -117,6 +117,7 @@ export const approvalKeys = {
 
 export const settingsKeys = {
   all: ['settings'] as const,
+  companyInfo: () => [...settingsKeys.all, 'company-info'] as const,
   integrations: () => [...settingsKeys.all, 'integrations'] as const,
   integration: (name: string) => [...settingsKeys.integrations(), name] as const,
   logs: () => [...settingsKeys.all, 'logs'] as const,

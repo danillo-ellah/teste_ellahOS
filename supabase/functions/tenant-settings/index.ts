@@ -7,6 +7,9 @@ import { getIntegrations } from './handlers/get-integrations.ts';
 import { updateIntegration } from './handlers/update-integration.ts';
 import { testIntegration } from './handlers/test-integration.ts';
 import { listLogs } from './handlers/list-logs.ts';
+import { getCompanyInfo } from './handlers/get-company-info.ts';
+import { updateCompanyInfo } from './handlers/update-company-info.ts';
+import { uploadLogo } from './handlers/upload-logo.ts';
 
 // Roles que podem acessar configuracoes de integracao
 const ALLOWED_ROLES = ['admin', 'ceo'];
@@ -52,6 +55,25 @@ Deno.serve(async (req: Request) => {
       : null;
 
     const method = req.method;
+
+    // --- Rotas de company info ---
+
+    // GET /tenant-settings/company -> dados da empresa
+    if (method === 'GET' && seg1 === 'company' && !seg2) {
+      return await getCompanyInfo(req, auth);
+    }
+
+    // PATCH /tenant-settings/company -> atualizar dados da empresa
+    if (method === 'PATCH' && seg1 === 'company' && !seg2) {
+      return await updateCompanyInfo(req, auth);
+    }
+
+    // POST /tenant-settings/logo -> upload do logo
+    if (method === 'POST' && seg1 === 'logo' && !seg2) {
+      return await uploadLogo(req, auth);
+    }
+
+    // --- Rotas de integracoes ---
 
     // GET /tenant-settings/integrations -> listar config de todas integracoes
     if (method === 'GET' && seg1 === 'integrations' && !seg2) {

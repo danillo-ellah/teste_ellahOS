@@ -308,7 +308,7 @@ export async function generateHandler(
 
   const tenantSettings = (tenant?.settings as Record<string, unknown>) ?? {};
   const companyInfo = (tenantSettings.company_info as Record<string, unknown>) ?? {};
-  const companyName = (companyInfo.name as string) || (tenant?.name as string) || 'Ellah Filmes';
+  const companyName = (companyInfo.trade_name as string) || (companyInfo.legal_name as string) || (tenant?.name as string) || 'Ellah Filmes';
 
   // 4. Montar dados do cliente
   const clientData = (job.clients as Record<string, unknown>) ?? {};

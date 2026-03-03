@@ -64,20 +64,31 @@ export async function createHandler(req: Request, auth: AuthContext): Promise<Re
   let productionCompany = input.production_company;
   let cnpj = input.cnpj;
 
-  if (!productionCompany || !cnpj) {
+  if (!productionCompany || !cnpj || !input.audio_company) {
     const serviceClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
     const { data: tenant } = await serviceClient
       .from('tenants')
-      .select('name, cnpj')
+      .select('name, cnpj, settings')
       .eq('id', auth.tenantId)
       .single();
 
     if (tenant) {
-      if (!productionCompany) productionCompany = (tenant.name as string) ?? '';
-      if (!cnpj) cnpj = (tenant.cnpj as string) ?? '';
+      const settings = (tenant.settings as Record<string, unknown>) || {};
+      const companyInfo = (settings.company_info as Record<string, unknown>) || {};
+
+      if (!productionCompany) {
+        productionCompany = (companyInfo.legal_name as string) || (tenant.name as string) || '';
+      }
+      if (!cnpj) {
+        cnpj = (companyInfo.cnpj as string) || (tenant.cnpj as string) || '';
+      }
+      // Preencher produtora de audio padrao se nao informada
+      if (!input.audio_company && companyInfo.default_audio_company) {
+        input.audio_company = companyInfo.default_audio_company as string;
+      }
     }
   }
 

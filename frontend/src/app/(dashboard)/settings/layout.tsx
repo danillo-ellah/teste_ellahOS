@@ -2,10 +2,11 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Settings2, Bell } from 'lucide-react'
+import { Building2, Settings2, Bell } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const SETTINGS_TABS = [
+  { href: '/settings/company', label: 'Empresa', icon: Building2 },
   { href: '/settings/integrations', label: 'Integracoes', icon: Settings2 },
   { href: '/settings/notifications', label: 'Notificacoes', icon: Bell },
 ] as const

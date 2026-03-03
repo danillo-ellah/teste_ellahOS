@@ -1,3 +1,24 @@
+// Dados da empresa (perfil do tenant)
+export interface CompanyInfo {
+  legal_name: string
+  trade_name: string
+  cnpj: string
+  state_registration: string
+  address: string
+  city: string
+  state: string
+  zip_code: string
+  phone: string
+  email: string
+  ancine_registration: string
+  default_audio_company: string
+  bank_name: string
+  bank_agency: string
+  bank_account: string
+  bank_pix: string
+  logo_url: string | null
+}
+
 // Tipos de integracao
 export type IntegrationName = 'google_drive' | 'whatsapp' | 'docuseal' | 'n8n'
 
