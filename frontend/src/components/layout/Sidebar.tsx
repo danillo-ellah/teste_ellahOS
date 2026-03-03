@@ -22,6 +22,8 @@ import {
   UserRoundSearch,
   CalendarClock,
   ListTree,
+  Landmark,
+  Target,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -55,6 +57,8 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Calendario Pgtos', href: '/financeiro/calendario', icon: CalendarClock, indent: true },
   { label: 'Validacao de NFs', href: '/financeiro/nf-validation', icon: FileCheck2, indent: true },
   { label: 'Solicitar NFs', href: '/financeiro/nf-request', icon: MailPlus, indent: true },
+  { label: 'Conciliacao', href: '/financeiro/conciliacao', icon: Landmark, indent: true },
+  { label: 'CRM', href: '/crm', icon: Target },
   { label: 'Calendario', href: '/team/calendar', icon: CalendarDays },
   { label: 'Aprovacoes', href: '/approvals', icon: ClipboardCheck },
   { label: 'Portal', href: '/portal', icon: Globe },
@@ -83,9 +87,9 @@ export function Sidebar({ collapsed, onToggle, badges }: SidebarProps) {
   // Monta lista de itens incluindo admin se aplicavel
   const allItems = isAdmin
     ? [
-        ...NAV_ITEMS.slice(0, 12), // ate "Solicitar NFs"
+        ...NAV_ITEMS.slice(0, 12), // ate "Conciliacao" (indices 0-11)
         ADMIN_NAV_ITEM,
-        ...NAV_ITEMS.slice(12), // "Calendario", "Aprovacoes", etc
+        ...NAV_ITEMS.slice(12), // "Calendario", "Aprovacoes", etc (indices 12+)
       ]
     : NAV_ITEMS
 

@@ -257,3 +257,34 @@ export const paymentProofKeys = {
     [...paymentProofKeys.lists(), params] as const,
   detail: (id: string) => [...paymentProofKeys.all, 'detail', id] as const,
 }
+
+export const locationKeys = {
+  all: ['locations'] as const,
+  lists: () => [...locationKeys.all, 'list'] as const,
+  list: (filters: Record<string, string>) => [...locationKeys.lists(), filters] as const,
+  details: () => [...locationKeys.all, 'detail'] as const,
+  detail: (id: string) => [...locationKeys.details(), id] as const,
+  byJob: (jobId: string) => [...locationKeys.all, 'job', jobId] as const,
+  suggest: (q: string) => [...locationKeys.all, 'suggest', q] as const,
+}
+
+export const crmKeys = {
+  all: ['crm'] as const,
+  pipeline: (includeClosed?: boolean) => [...crmKeys.all, 'pipeline', includeClosed] as const,
+  opportunities: () => [...crmKeys.all, 'opportunities'] as const,
+  list: (filters: Record<string, string>) => [...crmKeys.opportunities(), 'list', filters] as const,
+  detail: (id: string) => [...crmKeys.opportunities(), 'detail', id] as const,
+  activities: (opportunityId: string) => [...crmKeys.detail(opportunityId), 'activities'] as const,
+  stats: (periodDays?: number) => [...crmKeys.all, 'stats', periodDays] as const,
+}
+
+export const bankReconciliationKeys = {
+  all: ['bank-reconciliation'] as const,
+  statements: () => [...bankReconciliationKeys.all, 'statements'] as const,
+  statementList: (filters: Record<string, string>) =>
+    [...bankReconciliationKeys.statements(), filters] as const,
+  transactions: (statementId: string) =>
+    [...bankReconciliationKeys.all, 'transactions', statementId] as const,
+  transactionList: (statementId: string, filters: Record<string, string>) =>
+    [...bankReconciliationKeys.transactions(statementId), filters] as const,
+}

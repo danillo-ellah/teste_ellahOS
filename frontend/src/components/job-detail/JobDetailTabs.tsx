@@ -13,6 +13,10 @@ import {
   PenLine,
   Clapperboard,
   FileCheck,
+  BookOpen,
+  MapPin,
+  Shirt,
+  Timer,
 } from 'lucide-react'
 import {
   Tabs,
@@ -34,6 +38,10 @@ import { PortalSessionsManager } from '@/components/portal/portal-sessions-manag
 import { ContractsTab } from '@/app/(dashboard)/jobs/[id]/_components/contracts/contracts-tab'
 import { TabClaquete } from '@/components/job-detail/tabs/TabClaquete'
 import { TabPPM } from '@/components/job-detail/tabs/TabPPM'
+import { TabProductionDiary } from '@/components/job-detail/tabs/TabProductionDiary'
+import { TabLocations } from '@/components/job-detail/tabs/TabLocations'
+import { TabWardrobe } from '@/components/job-detail/tabs/TabWardrobe'
+import { TabOvertime } from '@/components/job-detail/tabs/TabOvertime'
 import type { JobDetail } from '@/types/jobs'
 
 // Mapa de icones por nome
@@ -49,6 +57,10 @@ const ICON_MAP: Record<string, typeof FileText> = {
   PenLine,
   Clapperboard,
   FileCheck,
+  BookOpen,
+  MapPin,
+  Shirt,
+  Timer,
 }
 
 interface JobDetailTabsProps {
@@ -143,6 +155,11 @@ export function JobDetailTabs({ job }: JobDetailTabsProps) {
         <TabDiarias job={job} />
       </TabsContent>
 
+      {/* Tab: Locacoes */}
+      <TabsContent value="locacoes" className="mt-6">
+        <TabLocations job={job} />
+      </TabsContent>
+
       {/* Tab: Aprovacoes */}
       <TabsContent value="aprovacoes" className="mt-6">
         <TabAprovacoes job={job} />
@@ -161,6 +178,21 @@ export function JobDetailTabs({ job }: JobDetailTabsProps) {
       {/* Tab: Claquete */}
       <TabsContent value="claquete" className="mt-6">
         <TabClaquete job={job} />
+      </TabsContent>
+
+      {/* Tab: Diario de Producao */}
+      <TabsContent value="diario" className="mt-6">
+        <TabProductionDiary job={job} />
+      </TabsContent>
+
+      {/* Tab: Figurino / Arte */}
+      <TabsContent value="figurino" className="mt-6">
+        <TabWardrobe job={job} />
+      </TabsContent>
+
+      {/* Tab: Horas Extras */}
+      <TabsContent value="horas-extras" className="mt-6">
+        <TabOvertime job={job} />
       </TabsContent>
 
       {/* Tab: Historico */}

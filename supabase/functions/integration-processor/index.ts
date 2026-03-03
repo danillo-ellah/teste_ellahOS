@@ -16,6 +16,8 @@ import { processDocuSealEvent } from './handlers/docuseal-handler.ts';
 import { processPdfEvent } from './handlers/pdf-handler.ts';
 import { processDriveCopyEvent } from './handlers/drive-copy-handler.ts';
 import { processNfEmailEvent } from './handlers/nf-email-handler.ts';
+// T3.4: webhook Frame.io para revisao de entregaveis
+import { processFrameioWebhook } from './handlers/frameio-webhook.ts';
 // Fallback de email via Resend (ativado quando n8n esta indisponivel apos MAX_ATTEMPTS retries)
 import { sendFallbackEmail, buildFallbackEmailContent } from '../_shared/email-fallback.ts';
 
@@ -136,6 +138,10 @@ Deno.serve(async (req: Request) => {
           break;
         case 'drive_copy_templates':
           result = await processDriveCopyEvent(serviceClient, event);
+          break;
+        // T3.4: Frame.io webhook — revisao de entregaveis e comentarios
+        case 'frameio_webhook':
+          result = await processFrameioWebhook(serviceClient, event);
           break;
         default:
           console.warn(`[integration-processor] tipo desconhecido: ${event.event_type}`);
