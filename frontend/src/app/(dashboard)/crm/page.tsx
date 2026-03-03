@@ -1,19 +1,21 @@
 'use client'
 
 import { useState } from 'react'
-import { Target, Plus, BarChart3, RefreshCw } from 'lucide-react'
+import { Target, Plus, BarChart3, RefreshCw, LayoutGrid, List } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { useCrmPipeline, useCrmStats } from '@/hooks/useCrm'
 import { CrmKanban } from '@/components/crm/CrmKanban'
+import { CrmListView } from '@/components/crm/CrmListView'
 import { CrmStatsBar } from '@/components/crm/CrmStatsBar'
 import { OpportunityDialog } from '@/components/crm/OpportunityDialog'
 import { CrmStatsDialog } from '@/components/crm/CrmStatsDialog'
 
 export default function CrmPage() {
   const [includeClosed, setIncludeClosed] = useState(false)
+  const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [statsDialogOpen, setStatsDialogOpen] = useState(false)
 
@@ -33,9 +35,9 @@ export default function CrmPage() {
         <div className="flex items-center gap-3">
           <Target className="size-6 text-primary" />
           <div>
-            <h1 className="text-xl font-semibold">Pipeline Comercial</h1>
+            <h1 className="text-xl font-semibold">Comercial</h1>
             <p className="text-sm text-muted-foreground">
-              Gerencie oportunidades e acompanhe o funil de vendas
+              Propostas e negociacoes em andamento
             </p>
           </div>
         </div>
@@ -86,8 +88,8 @@ export default function CrmPage() {
 
       <Separator />
 
-      {/* Filtro de fechadas */}
-      <div className="flex items-center gap-2">
+      {/* Filtros + toggle de visualizacao */}
+      <div className="flex items-center gap-2 flex-wrap">
         <span className="text-sm text-muted-foreground">Visualizar:</span>
         <button
           onClick={() => setIncludeClosed(false)}
@@ -115,6 +117,32 @@ export default function CrmPage() {
             {pipeline.total_opportunities} oportunidade{pipeline.total_opportunities !== 1 ? 's' : ''}
           </Badge>
         )}
+
+        {/* Toggle Kanban / Lista */}
+        <div className="flex items-center rounded-lg border p-0.5">
+          <button
+            onClick={() => setViewMode('kanban')}
+            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+              viewMode === 'kanban'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <LayoutGrid className="size-3.5" />
+            Kanban
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+              viewMode === 'list'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <List className="size-3.5" />
+            Lista
+          </button>
+        </div>
       </div>
 
       {/* Kanban */}
@@ -137,7 +165,11 @@ export default function CrmPage() {
       )}
 
       {!pipelineLoading && !pipelineError && pipeline && (
-        <CrmKanban pipeline={pipeline} includeClosed={includeClosed} />
+        viewMode === 'kanban' ? (
+          <CrmKanban pipeline={pipeline} includeClosed={includeClosed} />
+        ) : (
+          <CrmListView pipeline={pipeline} includeClosed={includeClosed} />
+        )
       )}
 
       {/* Dialog de criacao de oportunidade */}

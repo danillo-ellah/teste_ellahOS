@@ -12,6 +12,7 @@ const STAGE_VALUES = [
   'fechamento',
   'ganho',
   'perdido',
+  'pausado',
 ] as const;
 
 const CreateOpportunitySchema = z.object({
@@ -28,6 +29,13 @@ const CreateOpportunitySchema = z.object({
   project_type: z.string().max(100).optional().nullable(),
   notes: z.string().max(5000).optional().nullable(),
   assigned_to: z.string().uuid().optional().nullable(),
+  // Novos campos adicionados na migration
+  response_deadline: z.string().optional().nullable(), // ISO date YYYY-MM-DD
+  is_competitive_bid: z.boolean().optional().nullable(),
+  competitor_count: z.number().int().min(0).optional().nullable(),
+  deliverable_format: z.string().max(500).optional().nullable(),
+  client_budget: z.number().min(0).optional().nullable(),
+  campaign_period: z.string().max(200).optional().nullable(),
 });
 
 /**
@@ -100,6 +108,12 @@ export async function handleCreateOpportunity(req: Request, auth: AuthContext): 
     notes: data.notes ?? null,
     assigned_to: data.assigned_to ?? auth.userId,
     created_by: auth.userId,
+    response_deadline: data.response_deadline ?? null,
+    is_competitive_bid: data.is_competitive_bid ?? false,
+    competitor_count: data.competitor_count ?? null,
+    deliverable_format: data.deliverable_format ?? null,
+    client_budget: data.client_budget ?? null,
+    campaign_period: data.campaign_period ?? null,
   };
 
   const { data: createdOpp, error: insertError } = await client

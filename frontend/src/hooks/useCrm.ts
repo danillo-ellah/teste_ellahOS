@@ -16,6 +16,7 @@ export type OpportunityStage =
   | 'fechamento'
   | 'ganho'
   | 'perdido'
+  | 'pausado'
 
 export interface OpportunityClient {
   id: string
@@ -55,6 +56,13 @@ export interface Opportunity {
   created_by: string | null
   created_at: string
   updated_at: string
+  // Novos campos CRM Sprint 1
+  response_deadline: string | null
+  is_competitive_bid: boolean
+  competitor_count: number | null
+  deliverable_format: string | null
+  client_budget: number | null
+  campaign_period: string | null
   // joins opcionais (presentes em list/detail)
   clients?: OpportunityClient | null
   agencies?: OpportunityAgency | null
@@ -141,6 +149,13 @@ export interface CreateOpportunityPayload {
   project_type?: string | null
   notes?: string | null
   assigned_to?: string | null
+  // Novos campos CRM Sprint 1
+  response_deadline?: string | null
+  is_competitive_bid?: boolean
+  competitor_count?: number | null
+  deliverable_format?: string | null
+  client_budget?: number | null
+  campaign_period?: string | null
 }
 
 export interface UpdateOpportunityPayload extends Partial<CreateOpportunityPayload> {
@@ -220,6 +235,38 @@ export function useCrmStats(periodDays = 90) {
   return useQuery({
     queryKey: crmKeys.stats(periodDays),
     queryFn: () => apiGet<CrmStats>('crm', { period_days: String(periodDays) }, 'stats'),
+    staleTime: 60_000,
+    select: (res) => res.data,
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Agency History (para detalhe CRM)
+// ---------------------------------------------------------------------------
+
+export interface AgencyHistory {
+  agency: { id: string; name: string }
+  stats: {
+    total_jobs: number
+    avg_ticket: number
+    last_job_date: string | null
+    win_rate: number
+  }
+  recent_jobs: Array<{
+    id: string
+    title: string
+    code: string
+    estimated_value: number | null
+    status: string
+    created_at: string
+  }>
+}
+
+export function useAgencyHistory(agencyId: string | null) {
+  return useQuery({
+    queryKey: crmKeys.agencyHistory(agencyId ?? ''),
+    queryFn: () => apiGet<AgencyHistory>('crm', undefined, `agency-history/${agencyId}`),
+    enabled: !!agencyId,
     staleTime: 60_000,
     select: (res) => res.data,
   })

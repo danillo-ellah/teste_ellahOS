@@ -41,9 +41,10 @@ export async function handleGetStats(req: Request, auth: AuthContext): Promise<R
 
   const rows = opportunities ?? [];
 
-  // Pipeline ativo (exclui ganho/perdido)
+  // Pipeline ativo (exclui ganho/perdido e pausado — pausado nao entra no valor do funil)
   const activeStages = ['lead', 'qualificado', 'proposta', 'negociacao', 'fechamento'];
   const active = rows.filter((o) => activeStages.includes(o.stage));
+  const paused = rows.filter((o) => o.stage === 'pausado');
 
   const pipelineValue = active.reduce((sum, o) => sum + Number(o.estimated_value ?? 0), 0);
   const weightedValue = active.reduce(
@@ -98,6 +99,7 @@ export async function handleGetStats(req: Request, auth: AuthContext): Promise<R
       total_active: active.length,
       total_won: wonWithValue.length,
       total_lost: rows.filter((o) => o.stage === 'perdido').length,
+      total_paused: paused.length,
       by_stage: byStage,
       by_source: bySource,
       period_days: periodDays,

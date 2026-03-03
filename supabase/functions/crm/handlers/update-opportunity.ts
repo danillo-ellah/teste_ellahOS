@@ -12,17 +12,22 @@ const STAGE_VALUES = [
   'fechamento',
   'ganho',
   'perdido',
+  'pausado',
 ] as const;
 
 // Transicoes de stage validas (pode avancar ou recuar, mas perdido/ganho sao terminais)
+// pausado pode ir para qualquer stage ativo (reativacao)
+// qualquer stage ativo pode ir para pausado
+// ganho nao pode ir para pausado — so para perdido
 const VALID_TRANSITIONS: Record<string, string[]> = {
-  lead: ['qualificado', 'proposta', 'negociacao', 'fechamento', 'ganho', 'perdido'],
-  qualificado: ['lead', 'proposta', 'negociacao', 'fechamento', 'ganho', 'perdido'],
-  proposta: ['lead', 'qualificado', 'negociacao', 'fechamento', 'ganho', 'perdido'],
-  negociacao: ['lead', 'qualificado', 'proposta', 'fechamento', 'ganho', 'perdido'],
-  fechamento: ['lead', 'qualificado', 'proposta', 'negociacao', 'ganho', 'perdido'],
-  ganho: ['perdido'], // ganho nao volta para pipeline ativo
+  lead: ['qualificado', 'proposta', 'negociacao', 'fechamento', 'ganho', 'perdido', 'pausado'],
+  qualificado: ['lead', 'proposta', 'negociacao', 'fechamento', 'ganho', 'perdido', 'pausado'],
+  proposta: ['lead', 'qualificado', 'negociacao', 'fechamento', 'ganho', 'perdido', 'pausado'],
+  negociacao: ['lead', 'qualificado', 'proposta', 'fechamento', 'ganho', 'perdido', 'pausado'],
+  fechamento: ['lead', 'qualificado', 'proposta', 'negociacao', 'ganho', 'perdido', 'pausado'],
+  ganho: ['perdido'], // ganho nao volta para pipeline ativo nem pode ser pausado
   perdido: ['lead'], // perdido pode ser reativado como lead
+  pausado: ['lead', 'qualificado', 'proposta', 'negociacao', 'fechamento', 'ganho', 'perdido'],
 };
 
 const UpdateOpportunitySchema = z.object({
@@ -40,6 +45,13 @@ const UpdateOpportunitySchema = z.object({
   project_type: z.string().max(100).optional().nullable(),
   notes: z.string().max(5000).optional().nullable(),
   assigned_to: z.string().uuid().optional().nullable(),
+  // Novos campos adicionados na migration
+  response_deadline: z.string().optional().nullable(), // ISO date YYYY-MM-DD
+  is_competitive_bid: z.boolean().optional().nullable(),
+  competitor_count: z.number().int().min(0).optional().nullable(),
+  deliverable_format: z.string().max(500).optional().nullable(),
+  client_budget: z.number().min(0).optional().nullable(),
+  campaign_period: z.string().max(200).optional().nullable(),
 });
 
 /**
@@ -135,6 +147,12 @@ export async function handleUpdateOpportunity(
   if (data.project_type !== undefined) updatePayload.project_type = data.project_type;
   if (data.notes !== undefined) updatePayload.notes = data.notes;
   if (data.assigned_to !== undefined) updatePayload.assigned_to = data.assigned_to;
+  if (data.response_deadline !== undefined) updatePayload.response_deadline = data.response_deadline;
+  if (data.is_competitive_bid !== undefined) updatePayload.is_competitive_bid = data.is_competitive_bid;
+  if (data.competitor_count !== undefined) updatePayload.competitor_count = data.competitor_count;
+  if (data.deliverable_format !== undefined) updatePayload.deliverable_format = data.deliverable_format;
+  if (data.client_budget !== undefined) updatePayload.client_budget = data.client_budget;
+  if (data.campaign_period !== undefined) updatePayload.campaign_period = data.campaign_period;
 
   const { data: updated, error: updateError } = await client
     .from('opportunities')
@@ -161,6 +179,7 @@ export async function handleUpdateOpportunity(
       fechamento: 'Fechamento',
       ganho: 'Ganho',
       perdido: 'Perdido',
+      pausado: 'Pausado',
     };
 
     await client.from('opportunity_activities').insert({

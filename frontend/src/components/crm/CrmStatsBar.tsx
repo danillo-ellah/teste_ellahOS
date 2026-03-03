@@ -22,14 +22,14 @@ export function CrmStatsBar({ stats }: CrmStatsBarProps) {
     <div className="grid grid-cols-3 gap-3 md:grid-cols-6">
       <StatCard
         icon={<DollarSign className="size-4 text-blue-500" />}
-        label="Pipeline"
+        label="Em negociacao"
         value={formatCurrency(stats.pipeline_value)}
         sub="valor total ativo"
         className="col-span-1"
       />
       <StatCard
         icon={<TrendingUp className="size-4 text-violet-500" />}
-        label="Ponderado"
+        label="Estimado"
         value={formatCurrency(stats.weighted_pipeline_value)}
         sub="por probabilidade"
         className="col-span-1"

@@ -1,10 +1,8 @@
 'use client'
 
-import { CalendarDays, Building2, ChevronRight } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { CalendarDays, Building2, ChevronRight, Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Opportunity } from '@/hooks/useCrm'
-import { STAGE_CONFIG } from './CrmKanban'
 
 interface OpportunityCardProps {
   opportunity: Opportunity
@@ -28,6 +26,18 @@ function formatDate(dateStr: string | null): string | null {
   }
 }
 
+function daysUntil(dateStr: string | null): number | null {
+  if (!dateStr) return null
+  try {
+    const d = new Date(dateStr + 'T23:59:59')
+    const now = new Date()
+    const diff = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    return diff
+  } catch {
+    return null
+  }
+}
+
 function isOverdue(dateStr: string | null, stage: string): boolean {
   if (!dateStr || stage === 'ganho' || stage === 'perdido') return false
   try {
@@ -39,20 +49,25 @@ function isOverdue(dateStr: string | null, stage: string): boolean {
 }
 
 export function OpportunityCard({ opportunity, onClick }: OpportunityCardProps) {
-  const config = STAGE_CONFIG[opportunity.stage]
   const formattedValue = formatCurrency(opportunity.estimated_value)
-  const formattedDate = formatDate(opportunity.expected_close_date)
-  const overdue = isOverdue(opportunity.expected_close_date, opportunity.stage)
   const clientName = opportunity.clients?.name
   const agencyName = opportunity.agencies?.name
-  const entityName = clientName ?? agencyName
   const assignedName = opportunity.assigned_profile?.full_name
+
+  // Prazo de retorno (response_deadline) tem prioridade sobre expected_close_date no card
+  const deadlineStr = opportunity.response_deadline ?? null
+  const closeDateStr = opportunity.expected_close_date ?? null
+  const deadlineDays = daysUntil(deadlineStr)
+  const deadlineOverdue = deadlineStr ? isOverdue(deadlineStr, opportunity.stage) : false
+  const deadlineFormatted = formatDate(deadlineStr)
+  const closeDateFormatted = formatDate(closeDateStr)
+  const closeDateOverdue = isOverdue(closeDateStr, opportunity.stage)
 
   return (
     <button
       onClick={onClick}
       className={cn(
-        'group flex flex-col gap-2 rounded-md border bg-card p-3 text-left shadow-sm transition-all',
+        'group flex flex-col gap-2 rounded-md border bg-card p-3.5 text-left shadow-sm transition-all',
         'hover:border-primary/40 hover:shadow-md',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
       )}
@@ -65,36 +80,81 @@ export function OpportunityCard({ opportunity, onClick }: OpportunityCardProps) 
         <ChevronRight className="mt-0.5 size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
       </div>
 
-      {/* Cliente/Agencia */}
-      {entityName && (
-        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-          <Building2 className="size-3 shrink-0" />
-          <span className="truncate">{entityName}</span>
+      {/* Agencia + Cliente */}
+      {(agencyName || clientName) && (
+        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <Building2 className="size-3.5 shrink-0" />
+          {agencyName && clientName ? (
+            <span className="truncate">
+              {agencyName}
+              <span className="mx-1 text-xs text-muted-foreground/60">→</span>
+              {clientName}
+            </span>
+          ) : (
+            <span className="truncate">{agencyName ?? clientName}</span>
+          )}
         </div>
       )}
 
-      {/* Footer: valor + data + probabilidade */}
+      {/* Concorrencia badge */}
+      {opportunity.is_competitive_bid && (
+        <div className="flex items-center gap-1">
+          <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-400">
+            <Shield className="size-3" />
+            Concorrencia
+          </span>
+        </div>
+      )}
+
+      {/* Footer: valor + deadline/data */}
       <div className="flex items-end justify-between gap-1 pt-0.5">
         <div className="flex flex-col gap-1">
           {formattedValue && (
             <span className="text-sm font-semibold tabular-nums">{formattedValue}</span>
           )}
-          {formattedDate && (
+
+          {/* Prazo de retorno (response_deadline) */}
+          {deadlineStr ? (
             <div
               className={cn(
-                'flex items-center gap-1 text-[11px]',
-                overdue ? 'text-destructive' : 'text-muted-foreground',
+                'flex items-center gap-1 text-[13px]',
+                deadlineOverdue
+                  ? 'text-destructive'
+                  : deadlineDays !== null && deadlineDays <= 3
+                    ? 'text-amber-600 dark:text-amber-400'
+                    : 'text-muted-foreground',
               )}
             >
               <CalendarDays className="size-3 shrink-0" />
-              <span>{formattedDate}</span>
-              {overdue && <span className="font-medium">atrasado</span>}
+              {deadlineOverdue ? (
+                <span className="font-medium">vencido</span>
+              ) : deadlineDays !== null && deadlineDays <= 3 && deadlineDays >= 0 ? (
+                <span>
+                  retorno:{' '}
+                  <span className="font-medium">
+                    em {deadlineDays === 0 ? 'hoje' : `${deadlineDays}d`}
+                  </span>
+                </span>
+              ) : (
+                <span>retorno: {deadlineFormatted}</span>
+              )}
             </div>
-          )}
+          ) : closeDateFormatted ? (
+            <div
+              className={cn(
+                'flex items-center gap-1 text-[13px]',
+                closeDateOverdue ? 'text-destructive' : 'text-muted-foreground',
+              )}
+            >
+              <CalendarDays className="size-3 shrink-0" />
+              <span>{closeDateFormatted}</span>
+              {closeDateOverdue && <span className="font-medium">atrasado</span>}
+            </div>
+          ) : null}
         </div>
 
-        {/* Probabilidade */}
-        <ProbabilityBadge probability={opportunity.probability} />
+        {/* Indicador de temperatura */}
+        <HeatIndicator probability={opportunity.probability} />
       </div>
 
       {/* Assignee */}
@@ -110,22 +170,27 @@ export function OpportunityCard({ opportunity, onClick }: OpportunityCardProps) 
   )
 }
 
-function ProbabilityBadge({ probability }: { probability: number }) {
-  const color =
-    probability >= 70
-      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300'
-      : probability >= 40
-        ? 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300'
-        : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
-
+function HeatIndicator({ probability }: { probability: number }) {
+  if (probability >= 70) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[13px] font-medium text-emerald-600 dark:text-emerald-400">
+        <span className="inline-block size-2 rounded-full bg-emerald-500" />
+        Quente
+      </span>
+    )
+  }
+  if (probability >= 40) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[13px] font-medium text-amber-600 dark:text-amber-400">
+        <span className="inline-block size-2 rounded-full bg-amber-500" />
+        Morno
+      </span>
+    )
+  }
   return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium',
-        color,
-      )}
-    >
-      {probability}%
+    <span className="inline-flex items-center gap-1 text-[13px] font-medium text-blue-600 dark:text-blue-400">
+      <span className="inline-block size-2 rounded-full bg-blue-500" />
+      Frio
     </span>
   )
 }

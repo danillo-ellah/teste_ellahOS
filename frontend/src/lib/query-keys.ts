@@ -276,6 +276,7 @@ export const crmKeys = {
   detail: (id: string) => [...crmKeys.opportunities(), 'detail', id] as const,
   activities: (opportunityId: string) => [...crmKeys.detail(opportunityId), 'activities'] as const,
   stats: (periodDays?: number) => [...crmKeys.all, 'stats', periodDays] as const,
+  agencyHistory: (agencyId: string) => [...crmKeys.all, 'agency-history', agencyId] as const,
 }
 
 export const bankReconciliationKeys = {

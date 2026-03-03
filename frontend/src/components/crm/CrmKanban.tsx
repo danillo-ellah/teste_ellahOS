@@ -16,19 +16,19 @@ export const STAGE_CONFIG: Record<
   { label: string; color: string; badgeClass: string; headerClass: string }
 > = {
   lead: {
-    label: 'Lead',
+    label: 'Consulta',
     color: 'bg-slate-500',
     badgeClass: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
     headerClass: 'border-l-4 border-l-slate-400',
   },
   qualificado: {
-    label: 'Qualificado',
+    label: 'Em Analise',
     color: 'bg-blue-500',
     badgeClass: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
     headerClass: 'border-l-4 border-l-blue-400',
   },
   proposta: {
-    label: 'Proposta',
+    label: 'Orc. Enviado',
     color: 'bg-violet-500',
     badgeClass: 'bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300',
     headerClass: 'border-l-4 border-l-violet-400',
@@ -40,13 +40,13 @@ export const STAGE_CONFIG: Record<
     headerClass: 'border-l-4 border-l-amber-400',
   },
   fechamento: {
-    label: 'Fechamento',
+    label: 'Aprovacao',
     color: 'bg-orange-500',
     badgeClass: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300',
     headerClass: 'border-l-4 border-l-orange-400',
   },
   ganho: {
-    label: 'Ganho',
+    label: 'Fechado',
     color: 'bg-emerald-500',
     badgeClass: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300',
     headerClass: 'border-l-4 border-l-emerald-400',
@@ -57,9 +57,15 @@ export const STAGE_CONFIG: Record<
     badgeClass: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
     headerClass: 'border-l-4 border-l-red-400',
   },
+  pausado: {
+    label: 'Pausado',
+    color: 'bg-slate-400',
+    badgeClass: 'bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-400',
+    headerClass: 'border-l-4 border-l-slate-400',
+  },
 }
 
-// Stages mostrados no kanban ativo (sem ganho/perdido quando includeClosed = false)
+// Stages mostrados no kanban ativo (sem ganho/perdido/pausado quando includeClosed = false)
 const ACTIVE_STAGES: OpportunityStage[] = [
   'lead',
   'qualificado',
@@ -76,6 +82,7 @@ const ALL_STAGES: OpportunityStage[] = [
   'fechamento',
   'ganho',
   'perdido',
+  'pausado',
 ]
 
 interface CrmKanbanProps {
@@ -189,11 +196,11 @@ function KanbanColumn({
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6"
+            className="h-8 w-8"
             onClick={onAddClick}
             title={`Nova oportunidade em ${config.label}`}
           >
-            <Plus className="size-3.5" />
+            <Plus className="size-4" />
           </Button>
         </div>
       </div>

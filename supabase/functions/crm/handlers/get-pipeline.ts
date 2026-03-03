@@ -4,6 +4,7 @@ import { success } from '../../_shared/response.ts';
 import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 
 // Stages do pipeline em ordem de progressao
+// pausado e incluido ao final para visibilidade, mas separado dos stages ativos
 const PIPELINE_STAGES = [
   'lead',
   'qualificado',
@@ -12,6 +13,7 @@ const PIPELINE_STAGES = [
   'fechamento',
   'ganho',
   'perdido',
+  'pausado',
 ] as const;
 
 type Stage = typeof PIPELINE_STAGES[number];
@@ -60,6 +62,7 @@ export async function handleGetPipeline(req: Request, auth: AuthContext): Promis
     .order('created_at', { ascending: false });
 
   // Por padrao omite ganho/perdido para nao sobrecarregar o kanban
+  // pausado e mantido mesmo sem include_closed — e um estado temporario visivel no kanban
   if (!includeClosed) {
     query = query.not('stage', 'in', '("ganho","perdido")');
   }
@@ -82,6 +85,7 @@ export async function handleGetPipeline(req: Request, auth: AuthContext): Promis
     fechamento: [],
     ganho: [],
     perdido: [],
+    pausado: [],
   };
 
   for (const opp of (opportunities ?? [])) {

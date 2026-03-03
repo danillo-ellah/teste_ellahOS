@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import Link from 'next/link'
 import {
   Pencil,
   Plus,
@@ -28,6 +29,7 @@ import {
   Loader2,
   ExternalLink,
   Briefcase,
+  Maximize2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
@@ -71,6 +73,7 @@ const NEXT_STAGE: Partial<Record<OpportunityStage, OpportunityStage>> = {
   proposta: 'negociacao',
   negociacao: 'fechamento',
   fechamento: 'ganho',
+  pausado: 'qualificado',
 }
 
 interface OpportunityDetailDialogProps {
@@ -163,7 +166,11 @@ export function OpportunityDetailDialog({
 
   const config = opportunity ? STAGE_CONFIG[opportunity.stage] : null
   const nextStage = opportunity ? NEXT_STAGE[opportunity.stage] : null
-  const isActive = opportunity && opportunity.stage !== 'ganho' && opportunity.stage !== 'perdido'
+  const isActive =
+    opportunity &&
+    opportunity.stage !== 'ganho' &&
+    opportunity.stage !== 'perdido' &&
+    opportunity.stage !== 'pausado'
 
   return (
     <>
@@ -199,14 +206,27 @@ export function OpportunityDetailDialog({
                       )}
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="shrink-0"
-                    onClick={() => setEditOpen(true)}
-                  >
-                    <Pencil className="size-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0"
+                      title="Ver pagina completa"
+                      asChild
+                    >
+                      <Link href={`/crm/${opportunityId}`} onClick={() => onOpenChange(false)}>
+                        <Maximize2 className="size-4" />
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0"
+                      onClick={() => setEditOpen(true)}
+                    >
+                      <Pencil className="size-4" />
+                    </Button>
+                  </div>
                 </div>
               </DialogHeader>
 
@@ -247,6 +267,21 @@ export function OpportunityDetailDialog({
                   <InfoCard
                     label="Tipo"
                     value={opportunity.project_type}
+                  />
+                )}
+                {opportunity.response_deadline && (
+                  <InfoCard
+                    icon={<Calendar className="size-4 text-amber-500" />}
+                    label="Prazo de retorno"
+                    value={new Date(opportunity.response_deadline + 'T12:00:00').toLocaleDateString(
+                      'pt-BR',
+                    )}
+                  />
+                )}
+                {opportunity.is_competitive_bid && (
+                  <InfoCard
+                    label="Concorrencia"
+                    value="Licitacao concorrente"
                   />
                 )}
                 {opportunity.assigned_profile?.full_name && (

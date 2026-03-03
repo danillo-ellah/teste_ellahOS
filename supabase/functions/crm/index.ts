@@ -14,12 +14,14 @@ import { handleListActivities } from './handlers/list-activities.ts';
 import { handleAddActivity } from './handlers/add-activity.ts';
 import { handleGetStats } from './handlers/get-stats.ts';
 import { handleConvertToJob } from './handlers/convert-to-job.ts';
+import { handleGetAgencyHistory } from './handlers/get-agency-history.ts';
 
 // Rotas nomeadas que devem ser verificadas antes de interpretar segment1 como :id
 const NAMED_ROUTES_SEGMENT1 = new Set([
   'pipeline',
   'opportunities',
   'stats',
+  'agency-history',
 ]);
 
 Deno.serve(async (req: Request) => {
@@ -56,6 +58,11 @@ Deno.serve(async (req: Request) => {
     // GET /crm/stats
     if (segment1 === 'stats' && !segment2 && method === 'GET') {
       return await handleGetStats(req, auth);
+    }
+
+    // GET /crm/agency-history/:agencyId
+    if (segment1 === 'agency-history' && segment2 && !segment3 && method === 'GET') {
+      return await handleGetAgencyHistory(req, auth, segment2);
     }
 
     // GET /crm/opportunities
