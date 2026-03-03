@@ -1,13 +1,11 @@
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Upload, Loader2, FileText, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -16,30 +14,24 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { apiMutate, safeErrorMessage } from '@/lib/api'
-import type { AncinePdfData, AncineVersion } from '@/lib/ancine-pdf-parser'
+import type { AncinePdfData } from '@/lib/ancine-pdf-parser'
 import type { JobDetail } from '@/types/jobs'
 
 interface ImportAncineDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   job: JobDetail
+  onSuccess?: () => void
 }
 
-interface VersionRow extends AncineVersion {
-  selected: boolean
-  duration: string
-}
-
-export function ImportAncineDialog({ open, onOpenChange, job }: ImportAncineDialogProps) {
+export function ImportAncineDialog({ open, onOpenChange, job, onSuccess }: ImportAncineDialogProps) {
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [parsing, setParsing] = useState(false)
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null)
   const [data, setData] = useState<AncinePdfData | null>(null)
-  const [versions, setVersions] = useState<VersionRow[]>([])
-  const [creating, setCreating] = useState(false)
-  const [progress, setProgress] = useState({ current: 0, total: 0 })
+  const [saving, setSaving] = useState(false)
 
   // Limpar estado quando fecha o dialog
   const handleOpenChange = useCallback((open: boolean) => {
@@ -47,10 +39,8 @@ export function ImportAncineDialog({ open, onOpenChange, job }: ImportAncineDial
       if (pdfBlobUrl) URL.revokeObjectURL(pdfBlobUrl)
       setPdfBlobUrl(null)
       setData(null)
-      setVersions([])
       setParsing(false)
-      setCreating(false)
-      setProgress({ current: 0, total: 0 })
+      setSaving(false)
     }
     onOpenChange(open)
   }, [onOpenChange, pdfBlobUrl])
@@ -66,7 +56,6 @@ export function ImportAncineDialog({ open, onOpenChange, job }: ImportAncineDial
 
     setParsing(true)
     setData(null)
-    setVersions([])
 
     // Criar blob URL para preview
     if (pdfBlobUrl) URL.revokeObjectURL(pdfBlobUrl)
@@ -77,13 +66,6 @@ export function ImportAncineDialog({ open, onOpenChange, job }: ImportAncineDial
       const { parseAncinePdf } = await import('@/lib/ancine-pdf-parser')
       const parsed = await parseAncinePdf(file)
       setData(parsed)
-      setVersions(
-        parsed.versions.map(v => ({
-          ...v,
-          selected: true,
-          duration: parsed.duration || '',
-        })),
-      )
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error('[ancine-import] parse error:', err)
@@ -96,83 +78,47 @@ export function ImportAncineDialog({ open, onOpenChange, job }: ImportAncineDial
     e.target.value = ''
   }, [pdfBlobUrl])
 
-  // Toggle versao
-  const toggleVersion = useCallback((index: number) => {
-    setVersions(prev => prev.map((v, i) =>
-      i === index ? { ...v, selected: !v.selected } : v
-    ))
-  }, [])
-
-  // Atualizar duracao de uma versao
-  const updateVersionDuration = useCallback((index: number, duration: string) => {
-    setVersions(prev => prev.map((v, i) =>
-      i === index ? { ...v, duration } : v
-    ))
-  }, [])
-
-  // Selecionar/deselecionar todas
-  const toggleAll = useCallback((checked: boolean) => {
-    setVersions(prev => prev.map(v => ({ ...v, selected: checked })))
-  }, [])
-
-  const selectedCount = versions.filter(v => v.selected).length
-
-  // Criar claquetes em batch (sequencial para manter numeracao)
-  const handleCreateBatch = useCallback(async () => {
+  // Registrar ANCINE — salvar dados extraidos no job
+  const handleRegister = useCallback(async () => {
     if (!data) return
-    const selected = versions.filter(v => v.selected)
-    if (selected.length === 0) {
-      toast.error('Selecione pelo menos uma versao')
-      return
-    }
 
-    setCreating(true)
-    setProgress({ current: 0, total: selected.length })
+    setSaving(true)
+    try {
+      const currentCf = (job.custom_fields ?? {}) as Record<string, unknown>
+      await apiMutate('jobs', 'PATCH', {
+        ancine_number: data.crtPrincipal || null,
+        custom_fields: {
+          ...currentCf,
+          ancine_status: 'registrado',
+          ancine_registration: {
+            crt_principal: data.crtPrincipal || '',
+            versions: data.versions.map(v => ({ number: v.number, crt: v.crt })),
+            title: data.title || '',
+            duration: data.duration || '',
+            type: data.type || '',
+            product: data.product || '',
+            production_year: data.productionYear || new Date().getFullYear(),
+            director: data.director || '',
+            advertiser: data.advertiser || '',
+            agency: data.agency || '',
+            production_company: data.productionCompany || '',
+            cnpj: data.cnpj || '',
+            segment: data.segment || '',
+            imported_at: new Date().toISOString(),
+          },
+        },
+      }, job.id)
 
-    let created = 0
-    let errors = 0
-
-    for (const v of selected) {
-      try {
-        await apiMutate('claquete-generator', 'POST', {
-          job_id: job.id,
-          title: data.title || job.title || '',
-          crt: v.crt,
-          duration: v.duration,
-          product: data.product,
-          advertiser: data.advertiser || job.clients?.name || '',
-          agency: data.agency || job.agencies?.name || '',
-          director: data.director,
-          type: data.type || 'COMUM',
-          segment: data.segment || 'TODOS OS SEGMENTOS DE MERCADO',
-          production_year: data.productionYear,
-          production_company: data.productionCompany,
-          cnpj: data.cnpj,
-          audio_company: '',
-          closed_caption: false,
-          sap_key: false,
-          libras: false,
-          audio_description: false,
-        })
-        created++
-        setProgress({ current: created, total: selected.length })
-      } catch (err) {
-        errors++
-        console.error(`[ancine-import] erro criando claquete CRT ${v.crt}:`, err)
-      }
-    }
-
-    queryClient.invalidateQueries({ queryKey: ['claquetes', job.id] })
-
-    if (errors === 0) {
-      toast.success(`${created} claquete${created > 1 ? 's' : ''} criada${created > 1 ? 's' : ''} com sucesso`)
+      queryClient.invalidateQueries({ queryKey: ['job', job.id] })
+      toast.success('Dados ANCINE registrados com sucesso')
+      onSuccess?.()
       handleOpenChange(false)
-    } else {
-      toast.error(`${created} criadas, ${errors} com erro. Verifique a lista.`)
+    } catch (err) {
+      toast.error(safeErrorMessage(err))
+    } finally {
+      setSaving(false)
     }
-
-    setCreating(false)
-  }, [data, versions, job, queryClient, handleOpenChange])
+  }, [data, job, queryClient, handleOpenChange, onSuccess])
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -242,7 +188,7 @@ export function ImportAncineDialog({ open, onOpenChange, job }: ImportAncineDial
               />
             </div>
 
-            {/* Direita: dados extraidos */}
+            {/* Direita: dados extraidos (readonly) */}
             <div className="flex flex-col min-h-0 overflow-y-auto">
               <Label className="mb-2 text-sm font-medium">Dados Extraidos</Label>
 
@@ -262,51 +208,25 @@ export function ImportAncineDialog({ open, onOpenChange, job }: ImportAncineDial
                 <DataField label="Segmento" value={data.segment} />
               </div>
 
-              {/* Versoes */}
-              {versions.length > 0 ? (
+              {/* Versoes (readonly) */}
+              {data.versions.length > 0 ? (
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-sm font-medium">
-                      Versoes ({selectedCount} de {versions.length} selecionadas)
-                    </Label>
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        checked={selectedCount === versions.length}
-                        onCheckedChange={(checked) => toggleAll(!!checked)}
-                      />
-                      <span className="text-xs text-muted-foreground">Todas</span>
-                    </div>
-                  </div>
-
+                  <Label className="text-sm font-medium mb-2 block">
+                    Versoes ({data.versions.length})
+                  </Label>
                   <div className="border rounded-lg overflow-hidden">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="bg-muted/50 border-b">
-                          <th className="w-10 p-2"></th>
                           <th className="text-left p-2 font-medium">Versao</th>
                           <th className="text-left p-2 font-medium">CRT</th>
-                          <th className="text-left p-2 font-medium w-32">Duracao</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {versions.map((v, i) => (
+                        {data.versions.map((v) => (
                           <tr key={v.crt} className="border-b last:border-0">
-                            <td className="p-2 text-center">
-                              <Checkbox
-                                checked={v.selected}
-                                onCheckedChange={() => toggleVersion(i)}
-                              />
-                            </td>
                             <td className="p-2 font-medium">{v.number}</td>
                             <td className="p-2 font-mono text-xs">{v.crt}</td>
-                            <td className="p-2">
-                              <Input
-                                value={v.duration}
-                                onChange={(e) => updateVersionDuration(i, e.target.value)}
-                                placeholder='Ex: 30"'
-                                className="h-7 text-sm"
-                              />
-                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -326,20 +246,20 @@ export function ImportAncineDialog({ open, onOpenChange, job }: ImportAncineDial
         {/* Footer */}
         {data && !parsing && (
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={creating}>
+            <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={saving}>
               Cancelar
             </Button>
             <Button
-              onClick={handleCreateBatch}
-              disabled={creating || selectedCount === 0}
+              onClick={handleRegister}
+              disabled={saving}
             >
-              {creating ? (
+              {saving ? (
                 <>
                   <Loader2 className="size-4 mr-2 animate-spin" />
-                  Criando {progress.current}/{progress.total}...
+                  Registrando...
                 </>
               ) : (
-                <>Criar {selectedCount} Claquete{selectedCount > 1 ? 's' : ''}</>
+                <>Registrar ANCINE</>
               )}
             </Button>
           </DialogFooter>

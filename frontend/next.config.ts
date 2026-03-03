@@ -21,6 +21,7 @@ const nextConfig: NextConfig = {
               "img-src 'self' data: https:",
               "connect-src 'self' https://etvapcxesaxhsvzgaane.supabase.co wss://etvapcxesaxhsvzgaane.supabase.co",
               "font-src 'self' https://fonts.gstatic.com",
+              "object-src 'self' blob:",
               "frame-src 'self' https://drive.google.com https://docs.google.com",
               "frame-ancestors 'none'",
             ].join('; '),
