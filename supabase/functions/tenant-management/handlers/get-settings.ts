@@ -23,6 +23,7 @@ export async function handleGetSettings(req: Request, auth: AuthContext): Promis
       id,
       name,
       slug,
+      cnpj,
       logo_url,
       brand_color,
       company_name,

@@ -492,7 +492,7 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
     area: 'admin',
     items: [
       { label: 'Equipe', href: '/admin/equipe', icon: 'Users', adminOnly: true },
-      { label: 'Configuracoes', href: '/admin/settings', icon: 'Settings', adminOnly: true },
+      { label: 'Configuracoes', href: '/settings', icon: 'Settings', adminOnly: true },
       { label: 'Categorias Custo', href: '/admin/financeiro/categorias', icon: 'ListTree', adminOnly: true },
     ],
   },

@@ -68,10 +68,19 @@ function categoryLabel(value: string): string {
 }
 
 // Resposta da EF generate-contracts
+interface CastMemberResult {
+  cast_member_id: string
+  name: string
+  status: 'sent' | 'skipped' | 'error'
+  error?: string
+  skip_reason?: string
+}
+
 interface GenerateContractsResult {
   sent: number
   skipped: number
   errors: number
+  results?: CastMemberResult[]
 }
 
 // --- Props ---
@@ -135,8 +144,21 @@ export function CastContractDialog({
       const data = response.data as GenerateContractsResult | undefined
       let msg = `${data?.sent ?? 0} contrato(s) enviado(s)`
       if (data?.skipped && data.skipped > 0) msg += `, ${data.skipped} ignorado(s)`
-      if (data?.errors && data.errors > 0) msg += `, ${data.errors} erro(s)`
-      toast.success(msg)
+      if (data?.errors && data.errors > 0) {
+        msg += `, ${data.errors} erro(s)`
+        // Mostrar detalhes dos erros
+        const errorDetails = data.results
+          ?.filter((r) => r.status === 'error')
+          .map((r) => `${r.name}: ${r.error}`)
+          .join('\n')
+        if (errorDetails) {
+          toast.error(msg, { description: errorDetails, duration: 10000 })
+        } else {
+          toast.warning(msg)
+        }
+      } else {
+        toast.success(msg)
+      }
       handleClose()
     },
     onError: (err) => {

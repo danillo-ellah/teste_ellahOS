@@ -345,7 +345,7 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
       person_name: member.person.full_name,
       person_email: member.person.email!,
       person_cpf: member.person.cpf ?? null,
-      docuseal_submission_id: docusealResponse.id,
+      docuseal_submission_id: docusealResponse.submission_id,
       docuseal_template_id: templateId,
       docuseal_status: 'sent',
       contract_data: {
@@ -394,11 +394,11 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
       person_name: member.person.full_name,
       status: 'generated',
       submission_id: insertedRow.id,
-      docuseal_submission_id: docusealResponse.id,
+      docuseal_submission_id: docusealResponse.submission_id,
     });
 
     console.log(
-      `[batch-generate] contrato gerado: person=${member.person.full_name} docuseal_submission_id=${docusealResponse.id}`,
+      `[batch-generate] contrato gerado: person=${member.person.full_name} docuseal_submission_id=${docusealResponse.submission_id}`,
     );
   }
 

@@ -117,7 +117,7 @@ export async function createSubmissionHandler(req: Request, auth: AuthContext): 
   }
 
   console.log(
-    `[create-submission] DocuSeal retornou submission id=${docusealResponse.id} status=${docusealResponse.status}`,
+    `[create-submission] DocuSeal retornou submission_id=${docusealResponse.submission_id} submitters=${docusealResponse.submitters?.length ?? 0}`,
   );
 
   // 4. Persistir cada submitter como registro separado em docuseal_submissions
@@ -136,7 +136,7 @@ export async function createSubmissionHandler(req: Request, auth: AuthContext): 
       person_email: submitter.email,
       person_cpf: null,
       // Armazenar o submission_id da API DocuSeal (1 submission pode ter N submitters)
-      docuseal_submission_id: docusealResponse.id,
+      docuseal_submission_id: docusealResponse.submission_id,
       docuseal_template_id: input.template_id,
       docuseal_status: 'sent',
       contract_data: {
@@ -181,12 +181,12 @@ export async function createSubmissionHandler(req: Request, auth: AuthContext): 
         job_id: input.job_id,
         job_code: job.code,
         template_id: input.template_id,
-        docuseal_submission_id: docusealResponse.id,
+        docuseal_submission_id: docusealResponse.submission_id,
         submitter_count: input.submitters.length,
         created_by: auth.userId,
         submission_ids: (insertedRows ?? []).map(r => r.id),
       },
-      idempotency_key: `docuseal_created_${docusealResponse.id}`,
+      idempotency_key: `docuseal_created_${docusealResponse.submission_id}`,
     });
   } catch (evErr) {
     console.error('[create-submission] falha ao enfileirar integration_event (nao critico):', evErr);
@@ -198,8 +198,8 @@ export async function createSubmissionHandler(req: Request, auth: AuthContext): 
   );
 
   return created({
-    docuseal_submission_id: docusealResponse.id,
-    docuseal_status: docusealResponse.status,
+    docuseal_submission_id: docusealResponse.submission_id,
+    docuseal_status: docusealResponse.submitters?.[0]?.status ?? 'sent',
     job_id: input.job_id,
     job_code: job.code,
     submissions: insertedRows ?? [],

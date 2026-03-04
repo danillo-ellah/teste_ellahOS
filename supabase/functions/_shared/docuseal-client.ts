@@ -15,12 +15,14 @@ export interface DocuSealSubmitterField {
   name: string;
   value: string;
   default_value?: string;
+  readonly?: boolean;
 }
 
 export interface DocuSealSubmitter {
   role: string;
   email: string;
-  fields: DocuSealSubmitterField[];
+  send_email?: boolean;
+  fields?: DocuSealSubmitterField[];
 }
 
 export interface DocuSealCreateSubmission {
@@ -37,12 +39,18 @@ export interface DocuSealSubmitterResponse {
   id: number;
   email: string;
   status: string;
+  role: string;
+  slug: string;
+  submission_id: number;
+  embed_src: string;
+  sent_at: string | null;
   documents: Array<{ url: string; filename: string }>;
 }
 
+// Resposta normalizada de createSubmission
+// (DocuSeal retorna array de submitters, nao objeto com id)
 export interface DocuSealSubmissionResponse {
-  id: number;
-  status: string;
+  submission_id: number;
   submitters: DocuSealSubmitterResponse[];
 }
 
@@ -174,9 +182,18 @@ export async function createSubmission(
 
   const data = await resp.json();
 
-  console.log(`[docuseal] submission criada id=${data.id} status=${data.status}`);
+  // DocuSeal retorna array de submitters, nao objeto com id no topo
+  const submitters: DocuSealSubmitterResponse[] = Array.isArray(data) ? data : [data];
+  const submissionId = submitters[0]?.submission_id ?? 0;
 
-  return data as DocuSealSubmissionResponse;
+  console.log(
+    `[docuseal] submission criada submission_id=${submissionId} submitters=${submitters.length}`,
+  );
+
+  return {
+    submission_id: submissionId,
+    submitters,
+  } as DocuSealSubmissionResponse;
 }
 
 // ========================================================

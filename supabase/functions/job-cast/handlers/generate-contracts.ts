@@ -266,70 +266,58 @@ export async function handleGenerateContracts(req: Request, auth: AuthContext): 
 
     const castingAgency = ((member.casting_agency as Record<string, string> | null) ?? {}) as Record<string, string>;
 
-    // Montar campos pre-preenchidos para os placeholders do template
+    // Montar texto multi-linha para o campo CONTRATADO_NOME do DocuSeal
+    // Esse campo de texto readonly e exibido na primeira pagina do contrato
+    const infoLines: string[] = [
+      (member.name as string) || '',
+    ];
+    if (member.cpf) infoLines.push(`CPF: ${member.cpf}`);
+    if (member.rg) infoLines.push(`RG: ${member.rg}`);
+    if (member.drt) infoLines.push(`DRT: ${member.drt}`);
+    if (member.address) {
+      let addr = member.address as string;
+      if (member.city) addr += ` - ${member.city}`;
+      infoLines.push(`Endereco: ${addr}`);
+    }
+    if (member.phone) infoLines.push(`Tel: ${member.phone}`);
+    if (member.email) infoLines.push(`Email: ${member.email}`);
+    if (member.cast_category) {
+      const catLabels: Record<string, string> = {
+        ator_principal: 'Ator Principal', ator_coadjuvante: 'Coadjuvante',
+        figurante: 'Figurante', modelo: 'Modelo', crianca: 'Crianca',
+        locutor: 'Locutor(a)', apresentador: 'Apresentador(a)', outro: 'Outro',
+      };
+      infoLines.push(`Categoria: ${catLabels[member.cast_category as string] ?? member.cast_category}`);
+    }
+    if (member.character_name) infoLines.push(`Personagem: ${member.character_name}`);
+
+    // Valores monetarios
+    const fees: string[] = [];
+    if ((member.service_fee as number) > 0) fees.push(`Prestacao: ${formatBRL(member.service_fee as number)}`);
+    if ((member.image_rights_fee as number) > 0) fees.push(`Imagem: ${formatBRL(member.image_rights_fee as number)}`);
+    if ((member.agency_fee as number) > 0) fees.push(`Agenciamento: ${formatBRL(member.agency_fee as number)}`);
+    if ((member.total_fee as number) > 0) fees.push(`TOTAL: ${formatBRL(member.total_fee as number)}`);
+    if (fees.length > 0) infoLines.push(fees.join(' | '));
+
+    // Agencia de casting
+    if (castingAgency.name) infoLines.push(`Agencia: ${castingAgency.name}`);
+
+    // Job info
+    infoLines.push(`Projeto: ${job.title || ''} (${job.code || ''})`);
+    infoLines.push(dataAtual);
+
+    const contratadoNomeValue = infoLines.join('\n');
+
+    // Campos de contexto guardados para auditoria
     const contractFields: Array<{ name: string; value: string }> = [
-      // Contratado — dados pessoais
       { name: 'NOME_COMPLETO', value: (member.name as string) || '' },
-      { name: 'Nome', value: (member.name as string) || '' },
       { name: 'CPF', value: (member.cpf as string) || '' },
       { name: 'RG', value: (member.rg as string) || '' },
-      { name: 'DRT', value: (member.drt as string) || '' },
-      { name: 'DATA_NASCIMENTO', value: (member.birth_date as string) || '' },
-      { name: 'ENDERECO', value: (member.address as string) || '' },
-      { name: 'CIDADE', value: (member.city as string) || '' },
-      { name: 'CEP', value: (member.zip_code as string) || '' },
-      { name: 'TELEFONE', value: (member.phone as string) || '' },
       { name: 'EMAIL', value: (member.email as string) || '' },
-      { name: 'PROFISSAO', value: (member.profession as string) || '' },
+      { name: 'TELEFONE', value: (member.phone as string) || '' },
       { name: 'ELENCO', value: (member.cast_category as string) || '' },
-      { name: 'OQUEFEZ', value: (member.scenes_description as string) || '' },
-      { name: 'DIARIA', value: String((member.num_days as number) || 1) },
-
-      // Valores monetarios
-      { name: 'VALOR_PRESTACAO', value: formatBRL((member.service_fee as number) || 0) },
-      { name: 'VALOR_IMAGEM', value: formatBRL((member.image_rights_fee as number) || 0) },
-      { name: 'VALOR_AGENCIAMENTO', value: formatBRL((member.agency_fee as number) || 0) },
       { name: 'VALOR_TOTAL', value: formatBRL((member.total_fee as number) || 0) },
-      { name: 'VALOR_PRESTACAO_EXTENSO', value: `(${numeroParaExtenso((member.service_fee as number) || 0)})` },
-      { name: 'VALOR_IMAGEM_EXTENSO', value: `(${numeroParaExtenso((member.image_rights_fee as number) || 0)})` },
-      { name: 'VALOR_AGENCIAMENTO_EXTENSO', value: `(${numeroParaExtenso((member.agency_fee as number) || 0)})` },
-      { name: 'VALOR_TOTAL_EXTENSO', value: `(${numeroParaExtenso((member.total_fee as number) || 0)})` },
-
-      // Agencia de Casting (Interveniente)
-      { name: 'RAZAO_SOCIAL', value: castingAgency.name || '' },
-      { name: 'ENDERECO_AGENCIA', value: castingAgency.address || '' },
-      { name: 'CNPJ_AGENCIA', value: castingAgency.cnpj || '' },
-      { name: 'REPRESENTANTE_LEGAL', value: castingAgency.representative || '' },
-      { name: 'RG_AGENCIA', value: castingAgency.rep_rg || '' },
-      { name: 'CPF_AGENCIA', value: castingAgency.rep_cpf || '' },
-
-      // Cliente (Contratante)
-      { name: 'NOME_CLIENTE', value: (clientData?.name as string) || '' },
-      { name: 'ENDERECO_CLIENTE', value: (clientData?.address as string) || '' },
-      { name: 'CNPJ_CLIENTE', value: (clientData?.cnpj as string) || '' },
-
-      // Agencia de Publicidade
-      { name: 'NOME_AGENCIA_PUBLI', value: (agencyData?.name as string) || '' },
-      { name: 'END_AGENCIA_PUBLI', value: (agencyData?.address as string) || '' },
-      { name: 'CIDADE_AGENCIA_PUBLI', value: (agencyData?.city as string) || '' },
-      { name: 'ESTADO_AGENCIA_PUBLI', value: (agencyData?.state as string) || '' },
-      { name: 'CEP_AGENCIA_PUBLI', value: (agencyData?.cep as string) || '' },
-      { name: 'CNPJ_AGENCIA_PUBLI', value: (agencyData?.cnpj as string) || '' },
-
-      // Dados da obra / job
       { name: 'TITULO', value: (job.title as string) || '' },
-      { name: 'Projeto', value: (job.title as string) || '' },
-      { name: 'Codigo', value: (job.code as string) || '' },
-      { name: 'PRODUTO', value: cf.product || (job.brand as string) || '' },
-      { name: 'QTDE_PECAS', value: cf.qtde_pecas || '' },
-      { name: 'SUP_OBRA', value: cf.sup_obra || '' },
-      { name: 'DURACAO', value: cf.duracao || '' },
-      { name: 'EXCLUSIVIDADE', value: cf.exclusividade || '' },
-      { name: 'VEICULACAO', value: cf.veiculacao || '' },
-      { name: 'COMP_GRAFICA', value: cf.comp_grafica || '' },
-      { name: 'MIDIA', value: cf.midia || '' },
-
-      // Data do contrato
       { name: 'DATA_ATUAL', value: dataAtual },
     ];
 
@@ -337,19 +325,33 @@ export async function handleGenerateContracts(req: Request, auth: AuthContext): 
       `[job-cast/generate-contracts] gerando contrato para cast_member_id=${member.id}`,
     );
 
+    // Submitters do template DocuSeal (ID 3 = "Contrato de Elenco Modelo – Ellah Filmes"):
+    //   - "Modelo(a)/Ator(triz)": assinatura, iniciais, RG, LGPD
+    //   - "ELLAH": assinatura, campo CONTRATADO_NOME (texto readonly — dados do contratado)
+    //   - "Produtor(a) de Elenco (Agencia)": assinatura (opcional)
+    const submitters: Array<{ role: string; email: string; send_email?: boolean; fields?: Array<{ name: string; value: string; readonly?: boolean }> }> = [
+      {
+        role: 'Modelo(a)/Ator(triz)',
+        email: member.email as string,
+        send_email: input.send_email,
+      },
+      {
+        role: 'ELLAH',
+        email: 'contas@ellahfilmes.com',
+        send_email: false,
+        fields: [
+          { name: 'CONTRATADO_NOME', value: contratadoNomeValue, readonly: true },
+        ],
+      },
+    ];
+
     // Chamar DocuSeal para criar a submission
     let docusealResponse;
     try {
       docusealResponse = await createSubmission(serviceClient, auth.tenantId, {
         template_id: resolvedTemplateId,
         send_email: input.send_email,
-        submitters: [
-          {
-            role: 'Contratado',
-            email: member.email as string,
-            fields: contractFields,
-          },
-        ],
+        submitters,
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -361,6 +363,11 @@ export async function handleGenerateContracts(req: Request, auth: AuthContext): 
     }
 
     // Persistir registro em docuseal_submissions
+    // O submitter do ator/modelo e o primeiro da lista de submitters retornados
+    const actorSubmitter = docusealResponse.submitters?.find(
+      (s) => s.role === 'Modelo(a)/Ator(triz)',
+    ) ?? docusealResponse.submitters?.[0];
+
     const rowToInsert: Partial<DocuSealSubmissionRow> = {
       tenant_id: auth.tenantId,
       job_id: input.job_id,
@@ -368,12 +375,12 @@ export async function handleGenerateContracts(req: Request, auth: AuthContext): 
       person_name: member.name as string,
       person_email: member.email as string,
       person_cpf: (member.cpf as string) || null,
-      docuseal_submission_id: docusealResponse.id,
+      docuseal_submission_id: docusealResponse.submission_id,
       docuseal_template_id: resolvedTemplateId,
       docuseal_status: input.send_email ? 'sent' : 'pending',
       contract_data: {
-        docuseal_submitter_id: docusealResponse.submitters?.[0]?.id ?? null,
-        docuseal_submitter_status: docusealResponse.submitters?.[0]?.status ?? null,
+        docuseal_submitter_id: actorSubmitter?.id ?? null,
+        docuseal_submitter_status: actorSubmitter?.status ?? null,
         template_type: 'elenco',
         cast_member_id: member.id,
         cast_category: member.cast_category,
@@ -429,11 +436,11 @@ export async function handleGenerateContracts(req: Request, auth: AuthContext): 
       name: member.name as string,
       status: 'sent',
       submission_id: insertedRow.id,
-      docuseal_submission_id: docusealResponse.id,
+      docuseal_submission_id: docusealResponse.submission_id,
     });
 
     console.log(
-      `[job-cast/generate-contracts] contrato enviado: name=${member.name} docuseal_submission_id=${docusealResponse.id}`,
+      `[job-cast/generate-contracts] contrato enviado: name=${member.name} docuseal_submission_id=${docusealResponse.submission_id}`,
     );
   }
 
