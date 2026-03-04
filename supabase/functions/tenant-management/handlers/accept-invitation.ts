@@ -80,6 +80,7 @@ export async function handleAcceptInvitation(req: Request): Promise<Response> {
       phone,
       role,
       accepted_at,
+      accepted_by,
       expires_at,
       tenant:tenants!tenant_invitations_tenant_id_fkey(
         id,
@@ -110,6 +111,23 @@ export async function handleAcceptInvitation(req: Request): Promise<Response> {
   }
 
   if (invitation.accepted_at) {
+    // Idempotente: se ja aceito pelo mesmo usuario, retornar sucesso
+    if (resolvedUserId && invitation.accepted_by === resolvedUserId) {
+      console.log('[tenant-management/accept-invitation] convite ja aceito pelo mesmo usuario (idempotente)');
+      return jsonPublic(
+        {
+          data: {
+            invitation_id: invitation.id,
+            tenant: invitation.tenant,
+            role: invitation.role,
+            user_id: resolvedUserId,
+            accepted: true,
+            already_accepted: true,
+          },
+        },
+        200,
+      );
+    }
     return jsonPublic(
       { error: { code: 'CONFLICT', message: 'Este convite ja foi aceito' } },
       409,

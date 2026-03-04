@@ -190,9 +190,14 @@ export default function InvitePage({
   // --- Exibir detalhes do convite ---
 
   const roleLabel = details?.role ? (ROLE_LABELS[details.role] ?? details.role) : '-'
-  const expiresDate = details?.expires_at
-    ? new Date(details.expires_at).toLocaleDateString('pt-BR')
-    : null
+  let expiresDate: string | null = null
+  try {
+    expiresDate = details?.expires_at
+      ? new Date(details.expires_at).toLocaleDateString('pt-BR')
+      : null
+  } catch {
+    expiresDate = null
+  }
 
   return (
     <div className="rounded-lg border bg-card p-6 shadow-sm space-y-6">

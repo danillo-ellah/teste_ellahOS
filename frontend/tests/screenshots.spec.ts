@@ -21,6 +21,8 @@ const PAGES = [
   { name: '13-settings-integrations', path: '/settings/integrations', needsAuth: true, waitFor: 'main,.flex' },
   { name: '14-settings-notifications', path: '/settings/notifications', needsAuth: true, waitFor: 'main,.flex' },
   { name: '15-portal', path: '/portal', needsAuth: true, waitFor: 'main,.flex' },
+  { name: '16-admin-equipe', path: '/admin/equipe', needsAuth: true, waitFor: 'main,.flex' },
+  { name: '17-admin-settings', path: '/admin/settings', needsAuth: true, waitFor: 'main,.flex' },
 ];
 
 test.describe('Screenshot Audit - All Pages', () => {
@@ -42,6 +44,30 @@ test.describe('Screenshot Audit - All Pages', () => {
     });
 
     console.log('[01-login] Title:', await page.title());
+    await context.close();
+  });
+
+  test('01b - Login Phone Tab', async ({ browser }) => {
+    const context = await browser.newContext({
+      viewport: { width: 1440, height: 900 },
+      storageState: undefined,
+    });
+    const page = await context.newPage();
+
+    await page.goto('/login');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(2000);
+
+    // Click phone tab
+    await page.getByRole('button', { name: 'Celular' }).click();
+    await page.waitForTimeout(500);
+
+    await page.screenshot({
+      path: path.join(SCREENSHOTS_DIR, '01b-login-phone.png'),
+      fullPage: true,
+    });
+
+    console.log('[01b-login-phone] Phone tab screenshot taken');
     await context.close();
   });
 

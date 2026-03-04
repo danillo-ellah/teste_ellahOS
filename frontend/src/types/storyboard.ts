@@ -14,6 +14,7 @@ export interface StoryboardScene {
   mood_references: string[]
   status: 'pendente' | 'em_preparo' | 'filmada' | 'aprovada'
   sort_order: number
+  shoot_notes: string | null
   shooting_date_id: string | null
   created_by: string | null
   created_at: string

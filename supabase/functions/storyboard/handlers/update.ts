@@ -15,6 +15,7 @@ const UpdateSceneSchema = z
     cast_notes: z.string().max(2000).nullable(),
     camera_notes: z.string().max(2000).nullable(),
     mood_references: z.array(z.string().url('URL de referencia invalida')).max(20),
+    shoot_notes: z.string().max(2000).nullable(),
     status: z.enum(['pendente', 'em_preparo', 'filmada', 'aprovada']),
     sort_order: z.number().int(),
     shooting_date_id: z.string().uuid().nullable(),

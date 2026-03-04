@@ -1,6 +1,6 @@
 'use client'
 
-import { Film, MapPin, ImageIcon } from 'lucide-react'
+import { Film, MapPin, ImageIcon, Pencil, CheckCircle2, MessageSquare } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { StoryboardScene } from '@/types/storyboard'
@@ -39,11 +39,15 @@ interface SceneCardProps {
 export function SceneCard({ scene, onClick }: SceneCardProps) {
   const statusConfig = SCENE_STATUS_CONFIG[scene.status]
   const thumbnail = scene.mood_references?.[0] ?? null
+  const hasDrawing = (scene.mood_references?.length ?? 0) > 0
+  const isFilmed = scene.status === 'filmada' || scene.status === 'aprovada'
 
   return (
     <button
       type="button"
       onClick={() => onClick(scene)}
+      aria-label={`Cena ${scene.scene_number} — ${scene.title}`}
+      title={`Cena ${scene.scene_number} — ${scene.title}`}
       className={cn(
         'w-full text-left rounded-lg border border-border overflow-hidden',
         'hover:shadow-md hover:border-primary/40 transition-all duration-150',
@@ -78,6 +82,20 @@ export function SceneCard({ scene, onClick }: SceneCardProps) {
         >
           {statusConfig.label}
         </Badge>
+
+        {/* Filmed overlay check */}
+        {isFilmed && (
+          <div className="absolute inset-0 bg-black/10 flex items-center justify-center pointer-events-none">
+            <CheckCircle2 className="size-10 text-white/80 drop-shadow-lg" />
+          </div>
+        )}
+
+        {/* Drawing indicator — bottom-left */}
+        {hasDrawing && (
+          <span className="absolute bottom-2 left-2 size-6 rounded-full bg-primary/80 text-primary-foreground flex items-center justify-center backdrop-blur-sm">
+            <Pencil className="size-3" />
+          </span>
+        )}
       </div>
 
       {/* Content */}
@@ -101,8 +119,16 @@ export function SceneCard({ scene, onClick }: SceneCardProps) {
           </div>
         )}
 
-        {/* Description preview */}
-        {scene.description && !scene.location && !scene.shot_type && (
+        {/* Shoot notes preview */}
+        {scene.shoot_notes && (
+          <div className="flex items-center gap-1.5">
+            <MessageSquare className="size-3 text-amber-500 shrink-0" />
+            <span className="text-xs text-amber-600 dark:text-amber-400 line-clamp-1">{scene.shoot_notes}</span>
+          </div>
+        )}
+
+        {/* Description preview — only if nothing else shown */}
+        {scene.description && !scene.location && !scene.shot_type && !scene.shoot_notes && (
           <p className="text-xs text-muted-foreground line-clamp-2">{scene.description}</p>
         )}
       </div>

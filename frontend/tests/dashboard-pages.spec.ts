@@ -99,6 +99,8 @@ const DASHBOARD_PAGES = [
   { path: '/settings', name: 'Settings', expectedText: /config|integra|notifica/i },
   { path: '/settings/integrations', name: 'Settings Integrations', expectedText: /integra|drive|whatsapp|n8n/i },
   { path: '/settings/notifications', name: 'Settings Notifications', expectedText: /notifica|preferencia|email/i },
+  { path: '/admin/equipe', name: 'Admin Team', expectedText: /equipe|membros|acesso restrito/i },
+  { path: '/admin/settings', name: 'Admin Settings', expectedText: /configuracoes|marca|acesso restrito/i },
 ];
 
 // Paginas que fazem fetch para APIs externas (React Query) podem nunca atingir

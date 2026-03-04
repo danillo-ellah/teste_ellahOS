@@ -53,7 +53,8 @@ export async function updateSession(request: NextRequest) {
       const isPublicRoute =
         request.nextUrl.pathname.startsWith('/portal/') ||
         request.nextUrl.pathname.startsWith('/approve/') ||
-        request.nextUrl.pathname.startsWith('/vendor/')
+        request.nextUrl.pathname.startsWith('/vendor/') ||
+        request.nextUrl.pathname.startsWith('/invite/')
       if (isPublicRoute) {
         return supabaseResponse
       }

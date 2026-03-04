@@ -35,7 +35,7 @@ export function sanitizePhone(phone: string): string {
 
 // Monta a base URL da instancia Z-API
 function instanceBaseUrl(config: ZapiConfig): string {
-  return `https://api.z-api.io/instances/${config.instanceId}/token/${config.token}`;
+  return `https://api.z-api.io/instances/${encodeURIComponent(config.instanceId)}/token/${encodeURIComponent(config.token)}`;
 }
 
 // --- sendText ---

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, Component, type ReactNode } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import {
   FileText,
@@ -45,7 +45,46 @@ import { TabLocations } from '@/components/job-detail/tabs/TabLocations'
 import { TabWardrobe } from '@/components/job-detail/tabs/TabWardrobe'
 import { TabOvertime } from '@/components/job-detail/tabs/TabOvertime'
 import { TabStoryboard } from '@/components/job-detail/tabs/TabStoryboard'
+import { TabCast } from '@/components/job-detail/tabs/TabCast'
 import type { JobDetail } from '@/types/jobs'
+
+// --- Error Boundary para abas ---
+
+class TabErrorBoundary extends Component<
+  { children: ReactNode; tabName: string },
+  { hasError: boolean }
+> {
+  constructor(props: { children: ReactNode; tabName: string }) {
+    super(props)
+    this.state = { hasError: false }
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+
+  componentDidCatch(error: Error) {
+    console.error(`[TabErrorBoundary] Erro na aba ${this.props.tabName}:`, error)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 py-10 flex flex-col items-center justify-center text-center gap-2">
+          <p className="text-sm text-destructive">Erro ao carregar esta aba.</p>
+          <button
+            type="button"
+            onClick={() => this.setState({ hasError: false })}
+            className="text-xs text-muted-foreground hover:text-foreground underline"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 // Mapa de icones por nome
 const ICON_MAP: Record<string, typeof FileText> = {
@@ -186,82 +225,89 @@ export function JobDetailTabs({ job }: JobDetailTabsProps) {
 
         {/* Tab: Geral */}
         <TabsContent value="geral" className="mt-6">
-          <TabGeral job={job} />
+          <TabErrorBoundary tabName="geral"><TabGeral job={job} /></TabErrorBoundary>
         </TabsContent>
 
         {/* Tab: Equipe */}
         <TabsContent value="equipe" className="mt-6">
-          <TabEquipe job={job} />
+          <TabErrorBoundary tabName="equipe"><TabEquipe job={job} /></TabErrorBoundary>
         </TabsContent>
 
         {/* Tab: Entregaveis */}
         <TabsContent value="entregaveis" className="mt-6">
-          <TabEntregaveis job={job} />
+          <TabErrorBoundary tabName="entregaveis"><TabEntregaveis job={job} /></TabErrorBoundary>
         </TabsContent>
 
         {/* Tab: Financeiro */}
         <TabsContent value="financeiro" className="mt-6">
-          <TabFinanceiro job={job} />
+          <TabErrorBoundary tabName="financeiro"><TabFinanceiro job={job} /></TabErrorBoundary>
         </TabsContent>
 
         {/* Tab: Diarias */}
         <TabsContent value="diarias" className="mt-6">
-          <TabDiarias job={job} />
+          <TabErrorBoundary tabName="diarias"><TabDiarias job={job} /></TabErrorBoundary>
         </TabsContent>
 
         {/* Tab: Locacoes */}
         <TabsContent value="locacoes" className="mt-6">
-          <TabLocations job={job} />
+          <TabErrorBoundary tabName="locacoes"><TabLocations job={job} /></TabErrorBoundary>
         </TabsContent>
 
         {/* Tab: Storyboard */}
         <TabsContent value="storyboard" className="mt-6">
-          <TabStoryboard job={job} />
+          <TabErrorBoundary tabName="storyboard"><TabStoryboard job={job} /></TabErrorBoundary>
+        </TabsContent>
+
+        {/* Tab: Elenco */}
+        <TabsContent value="elenco" className="mt-6">
+          <TabErrorBoundary tabName="elenco">
+            <TabCast job={job} />
+          </TabErrorBoundary>
         </TabsContent>
 
         {/* Tab: Aprovacoes */}
         <TabsContent value="aprovacoes" className="mt-6">
-          <TabAprovacoes job={job} />
+          <TabErrorBoundary tabName="aprovacoes"><TabAprovacoes job={job} /></TabErrorBoundary>
         </TabsContent>
 
         {/* Tab: Contratos */}
         <TabsContent value="contratos" className="mt-6">
-          <ContractsTab jobId={job.id} />
+          <TabErrorBoundary tabName="contratos"><ContractsTab jobId={job.id} /></TabErrorBoundary>
         </TabsContent>
 
         {/* Tab: PPM */}
         <TabsContent value="ppm" className="mt-6">
-          <TabPPM job={job} />
+          <TabErrorBoundary tabName="ppm"><TabPPM job={job} /></TabErrorBoundary>
         </TabsContent>
 
         {/* Tab: Claquete */}
         <TabsContent value="claquete" className="mt-6">
-          <TabClaquete job={job} />
+          <TabErrorBoundary tabName="claquete"><TabClaquete job={job} /></TabErrorBoundary>
         </TabsContent>
 
         {/* Tab: Diario de Producao */}
         <TabsContent value="diario" className="mt-6">
-          <TabProductionDiary job={job} />
+          <TabErrorBoundary tabName="diario"><TabProductionDiary job={job} /></TabErrorBoundary>
         </TabsContent>
 
         {/* Tab: Figurino / Arte */}
         <TabsContent value="figurino" className="mt-6">
-          <TabWardrobe job={job} />
+          <TabErrorBoundary tabName="figurino"><TabWardrobe job={job} /></TabErrorBoundary>
         </TabsContent>
 
         {/* Tab: Horas Extras */}
         <TabsContent value="horas-extras" className="mt-6">
-          <TabOvertime job={job} />
+          <TabErrorBoundary tabName="horas-extras"><TabOvertime job={job} /></TabErrorBoundary>
         </TabsContent>
 
         {/* Tab: Historico */}
         <TabsContent value="historico" className="mt-6">
-          <TabHistorico job={job} />
+          <TabErrorBoundary tabName="historico"><TabHistorico job={job} /></TabErrorBoundary>
         </TabsContent>
 
         {/* Tab: Portal */}
         <TabsContent value="portal" className="mt-6">
-          <PortalSessionsManager jobId={job.id} />
+          <TabErrorBoundary tabName="portal"><PortalSessionsManager jobId={job.id} /></TabErrorBoundary>
         </TabsContent>
       </Tabs>
     </div>

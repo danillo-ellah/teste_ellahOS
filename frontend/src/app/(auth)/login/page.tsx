@@ -356,6 +356,14 @@ function LoginForm() {
   const returnUrl = sanitizeReturnUrl(searchParams.get('returnUrl'))
 
   const [tab, setTab] = useState<'email' | 'phone'>('email')
+  // Key resets the form component when switching tabs, clearing all internal state
+  const [tabKey, setTabKey] = useState(0)
+
+  function handleTabChange(newTab: 'email' | 'phone') {
+    if (newTab === tab) return
+    setTab(newTab)
+    setTabKey((k) => k + 1)
+  }
 
   return (
     <div className="rounded-lg border bg-card p-6 shadow-sm">
@@ -369,7 +377,7 @@ function LoginForm() {
       <div className="mt-5 flex rounded-md border border-input bg-muted p-0.5">
         <button
           type="button"
-          onClick={() => setTab('email')}
+          onClick={() => handleTabChange('email')}
           className={`flex-1 rounded py-1.5 text-sm font-medium transition-colors ${
             tab === 'email'
               ? 'bg-background text-foreground shadow-sm'
@@ -380,7 +388,7 @@ function LoginForm() {
         </button>
         <button
           type="button"
-          onClick={() => setTab('phone')}
+          onClick={() => handleTabChange('phone')}
           className={`flex-1 rounded py-1.5 text-sm font-medium transition-colors ${
             tab === 'phone'
               ? 'bg-background text-foreground shadow-sm'
@@ -392,9 +400,9 @@ function LoginForm() {
       </div>
 
       {tab === 'email' ? (
-        <EmailForm returnUrl={returnUrl} />
+        <EmailForm key={tabKey} returnUrl={returnUrl} />
       ) : (
-        <PhoneForm returnUrl={returnUrl} />
+        <PhoneForm key={tabKey} returnUrl={returnUrl} />
       )}
     </div>
   )

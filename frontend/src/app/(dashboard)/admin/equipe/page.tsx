@@ -16,6 +16,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -302,6 +312,7 @@ interface MembersTableProps {
 
 function MembersTable({ isAdmin, onChangeRole }: MembersTableProps) {
   const queryClient = useQueryClient()
+  const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null)
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['team-members'],
@@ -314,6 +325,7 @@ function MembersTable({ isAdmin, onChangeRole }: MembersTableProps) {
     onSuccess: () => {
       toast.success('Membro removido')
       queryClient.invalidateQueries({ queryKey: ['team-members'] })
+      setMemberToRemove(null)
     },
     onError: (err) => {
       toast.error(safeErrorMessage(err))
@@ -347,74 +359,93 @@ function MembersTable({ isAdmin, onChangeRole }: MembersTableProps) {
   }
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Nome</TableHead>
-            <TableHead className="hidden sm:table-cell">Email</TableHead>
-            <TableHead className="hidden md:table-cell">Telefone</TableHead>
-            <TableHead>Cargo</TableHead>
-            <TableHead className="hidden lg:table-cell">Entrada</TableHead>
-            {isAdmin && <TableHead className="w-10" />}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {members.map((member) => (
-            <TableRow key={member.id}>
-              <TableCell className="font-medium">{member.full_name}</TableCell>
-              <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
-                {member.email ?? '-'}
-              </TableCell>
-              <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
-                {member.phone ?? '-'}
-              </TableCell>
-              <TableCell>
-                <Badge variant="secondary" className="text-xs font-normal">
-                  {ROLE_LABELS[member.role] ?? member.role}
-                </Badge>
-              </TableCell>
-              <TableCell className="hidden lg:table-cell text-muted-foreground text-sm">
-                {formatDate(member.joined_at)}
-              </TableCell>
-              {isAdmin && (
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="size-8">
-                        <MoreHorizontal className="size-4" />
-                        <span className="sr-only">Acoes</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onChangeRole(member)}>
-                        <UserCog className="size-4 mr-2" />
-                        Alterar Cargo
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              `Remover ${member.full_name} da equipe?`,
-                            )
-                          ) {
-                            removeMutation.mutate(member.id)
-                          }
-                        }}
-                      >
-                        <Trash2 className="size-4 mr-2" />
-                        Remover
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              )}
+    <>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nome</TableHead>
+              <TableHead className="hidden sm:table-cell">Email</TableHead>
+              <TableHead className="hidden md:table-cell">Telefone</TableHead>
+              <TableHead>Cargo</TableHead>
+              <TableHead className="hidden lg:table-cell">Entrada</TableHead>
+              {isAdmin && <TableHead className="w-10" />}
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+          </TableHeader>
+          <TableBody>
+            {members.map((member) => (
+              <TableRow key={member.id}>
+                <TableCell className="font-medium">{member.full_name}</TableCell>
+                <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
+                  {member.email ?? '-'}
+                </TableCell>
+                <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
+                  {member.phone ?? '-'}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="secondary" className="text-xs font-normal">
+                    {ROLE_LABELS[member.role] ?? member.role}
+                  </Badge>
+                </TableCell>
+                <TableCell className="hidden lg:table-cell text-muted-foreground text-sm">
+                  {formatDate(member.joined_at)}
+                </TableCell>
+                {isAdmin && (
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="size-8">
+                          <MoreHorizontal className="size-4" />
+                          <span className="sr-only">Acoes</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onChangeRole(member)}>
+                          <UserCog className="size-4 mr-2" />
+                          Alterar Cargo
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => setMemberToRemove(member)}
+                        >
+                          <Trash2 className="size-4 mr-2" />
+                          Remover
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                )}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <AlertDialog
+        open={memberToRemove !== null}
+        onOpenChange={(open) => { if (!open) setMemberToRemove(null) }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover membro</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover <strong>{memberToRemove?.full_name}</strong> da equipe?
+              Esta acao nao pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removeMutation.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => memberToRemove && removeMutation.mutate(memberToRemove.id)}
+              disabled={removeMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {removeMutation.isPending ? 'Removendo...' : 'Remover'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }
 
@@ -426,6 +457,7 @@ interface PendingInvitationsProps {
 
 function PendingInvitations({ isAdmin }: PendingInvitationsProps) {
   const queryClient = useQueryClient()
+  const [inviteToRevoke, setInviteToRevoke] = useState<Invitation | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['team-invitations'],
@@ -438,6 +470,7 @@ function PendingInvitations({ isAdmin }: PendingInvitationsProps) {
     onSuccess: () => {
       toast.success('Convite revogado')
       queryClient.invalidateQueries({ queryKey: ['team-invitations'] })
+      setInviteToRevoke(null)
     },
     onError: (err) => {
       toast.error(safeErrorMessage(err))
@@ -463,70 +496,94 @@ function PendingInvitations({ isAdmin }: PendingInvitationsProps) {
   }
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Destinatario</TableHead>
-            <TableHead>Cargo</TableHead>
-            <TableHead className="hidden sm:table-cell">Enviado em</TableHead>
-            <TableHead className="hidden md:table-cell">Expira em</TableHead>
-            {isAdmin && <TableHead className="w-24 text-right">Acao</TableHead>}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {invitations.map((inv) => (
-            <TableRow key={inv.id}>
-              <TableCell>
-                <div className="flex items-center gap-1.5 text-sm">
-                  {inv.email ? (
-                    <>
-                      <Mail className="size-3.5 shrink-0 text-muted-foreground" />
-                      <span>{inv.email}</span>
-                    </>
-                  ) : inv.phone ? (
-                    <>
-                      <Phone className="size-3.5 shrink-0 text-muted-foreground" />
-                      <span>{inv.phone}</span>
-                    </>
-                  ) : (
-                    <span className="text-muted-foreground">-</span>
-                  )}
-                </div>
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline" className="text-xs font-normal">
-                  {ROLE_LABELS[inv.role] ?? inv.role}
-                </Badge>
-              </TableCell>
-              <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
-                {formatDate(inv.created_at)}
-              </TableCell>
-              <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
-                {formatDate(inv.expires_at)}
-              </TableCell>
-              {isAdmin && (
-                <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 text-xs text-destructive hover:text-destructive"
-                    disabled={revokeMutation.isPending}
-                    onClick={() => {
-                      if (window.confirm('Revogar este convite?')) {
-                        revokeMutation.mutate(inv.id)
-                      }
-                    }}
-                  >
-                    Revogar
-                  </Button>
-                </TableCell>
-              )}
+    <>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Destinatario</TableHead>
+              <TableHead>Cargo</TableHead>
+              <TableHead className="hidden sm:table-cell">Enviado em</TableHead>
+              <TableHead className="hidden md:table-cell">Expira em</TableHead>
+              {isAdmin && <TableHead className="w-24 text-right">Acao</TableHead>}
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+          </TableHeader>
+          <TableBody>
+            {invitations.map((inv) => (
+              <TableRow key={inv.id}>
+                <TableCell>
+                  <div className="flex items-center gap-1.5 text-sm">
+                    {inv.email ? (
+                      <>
+                        <Mail className="size-3.5 shrink-0 text-muted-foreground" />
+                        <span>{inv.email}</span>
+                      </>
+                    ) : inv.phone ? (
+                      <>
+                        <Phone className="size-3.5 shrink-0 text-muted-foreground" />
+                        <span>{inv.phone}</span>
+                      </>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="text-xs font-normal">
+                    {ROLE_LABELS[inv.role] ?? inv.role}
+                  </Badge>
+                </TableCell>
+                <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
+                  {formatDate(inv.created_at)}
+                </TableCell>
+                <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
+                  {formatDate(inv.expires_at)}
+                </TableCell>
+                {isAdmin && (
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                      disabled={revokeMutation.isPending}
+                      onClick={() => setInviteToRevoke(inv)}
+                    >
+                      Revogar
+                    </Button>
+                  </TableCell>
+                )}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <AlertDialog
+        open={inviteToRevoke !== null}
+        onOpenChange={(open) => { if (!open) setInviteToRevoke(null) }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revogar convite</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja revogar o convite para{' '}
+              <strong>{inviteToRevoke?.email ?? inviteToRevoke?.phone ?? '-'}</strong>?
+              O link de convite deixara de funcionar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={revokeMutation.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => inviteToRevoke && revokeMutation.mutate(inviteToRevoke.id)}
+              disabled={revokeMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {revokeMutation.isPending ? 'Revogando...' : 'Revogar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }
 

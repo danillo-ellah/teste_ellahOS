@@ -307,16 +307,19 @@ export default function AdminSettingsPage() {
 
             {/* Logo URL */}
             <div className="space-y-1.5">
-              <Label htmlFor="logo-url">URL do logotipo</Label>
+              <Label htmlFor="logo-url" className="text-muted-foreground">URL do logotipo</Label>
               <Input
                 id="logo-url"
                 type="url"
                 value={logoUrl}
                 onChange={(e) => handleLogoUrlChange(e.target.value)}
                 placeholder="https://exemplo.com/logo.png"
+                disabled
+                title="Upload de logotipo em breve"
+                className="cursor-not-allowed"
               />
               <p className="text-xs text-muted-foreground">
-                Link publico para a imagem do logotipo (upload em breve)
+                Upload de logotipo estara disponivel em breve
               </p>
             </div>
           </CardContent>

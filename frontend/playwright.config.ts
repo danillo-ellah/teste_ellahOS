@@ -17,7 +17,7 @@ export default defineConfig({
   projects: [
     {
       name: 'public',
-      testMatch: /public-pages\.spec\.ts/,
+      testMatch: /public-pages\.spec\.ts|phone-login\.spec\.ts|invite-page\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
     {
@@ -26,7 +26,7 @@ export default defineConfig({
     },
     {
       name: 'authenticated',
-      testMatch: /dashboard-pages\.spec\.ts|forms-and-interactions\.spec\.ts|screenshots\.spec\.ts/,
+      testMatch: /dashboard-pages\.spec\.ts|forms-and-interactions\.spec\.ts|screenshots\.spec\.ts|storyboard\.spec\.ts|admin-pages\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
         storageState: 'tests/.auth/user.json',

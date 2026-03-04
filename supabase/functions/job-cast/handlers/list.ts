@@ -9,15 +9,13 @@ export async function handleList(
 ): Promise<Response> {
   const url = new URL(req.url);
   const jobId = url.searchParams.get('job_id');
-  const shootingDateId = url.searchParams.get('shooting_date_id');
 
   if (!jobId) {
     throw new AppError('VALIDATION_ERROR', 'Parametro job_id e obrigatorio', 400);
   }
 
-  console.log('[storyboard/list] listando cenas', {
+  console.log('[job-cast/list] listando elenco', {
     jobId,
-    shootingDateId,
     userId: auth.userId,
     tenantId: auth.tenantId,
   });
@@ -36,28 +34,19 @@ export async function handleList(
     throw new AppError('NOT_FOUND', 'Job nao encontrado', 404);
   }
 
-  let query = supabase
-    .from('storyboard_scenes')
-    .select(
-      'id, job_id, scene_number, title, description, shot_type, location, cast_notes, camera_notes, mood_references, shoot_notes, status, sort_order, shooting_date_id, created_by, created_at, updated_at',
-    )
+  const { data: members, error: dbErr } = await supabase
+    .from('job_cast')
+    .select('*')
     .eq('job_id', jobId)
     .eq('tenant_id', auth.tenantId)
     .order('sort_order', { ascending: true });
 
-  // Filtro opcional por data de filmagem
-  if (shootingDateId) {
-    query = query.eq('shooting_date_id', shootingDateId);
-  }
-
-  const { data: scenes, error: dbErr } = await query;
-
   if (dbErr) {
-    console.error('[storyboard/list] erro na query:', dbErr);
+    console.error('[job-cast/list] erro na query:', dbErr);
     throw new AppError('INTERNAL_ERROR', dbErr.message, 500);
   }
 
-  console.log('[storyboard/list] retornando', scenes?.length ?? 0, 'cenas');
+  console.log('[job-cast/list] retornando', members?.length ?? 0, 'membros');
 
-  return success(scenes ?? [], 200, req);
+  return success(members ?? [], 200, req);
 }
