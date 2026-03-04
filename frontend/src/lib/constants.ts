@@ -191,6 +191,7 @@ export type JobDetailTabId =
   | 'contratos'
   | 'ppm'
   | 'claquete'
+  | 'storyboard'
   | 'diario'
   | 'figurino'
   | 'horas-extras'
@@ -488,8 +489,9 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
   {
     area: 'admin',
     items: [
+      { label: 'Equipe', href: '/admin/equipe', icon: 'Users', adminOnly: true },
+      { label: 'Configuracoes', href: '/admin/settings', icon: 'Settings', adminOnly: true },
       { label: 'Categorias Custo', href: '/admin/financeiro/categorias', icon: 'ListTree', adminOnly: true },
-      { label: 'Configuracoes', href: '/settings', icon: 'Settings' },
     ],
   },
 ]
@@ -518,6 +520,7 @@ export const JOB_TAB_GROUPS: JobTabGroup[] = [
       { id: 'ppm', label: 'PPM', icon: 'FileCheck' },
       { id: 'diarias', label: 'Diarias', icon: 'Calendar' },
       { id: 'locacoes', label: 'Locacoes', icon: 'MapPin' },
+      { id: 'storyboard', label: 'Storyboard', icon: 'Film' },
       { id: 'diario', label: 'Diario', icon: 'BookOpen' },
       { id: 'figurino', label: 'Figurino/Arte', icon: 'Shirt' },
     ],

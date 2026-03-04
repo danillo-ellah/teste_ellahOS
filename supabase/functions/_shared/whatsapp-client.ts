@@ -22,7 +22,12 @@ export interface SendTextResult {
 export type WhatsAppTemplate =
   | 'payment_approaching'
   | 'shooting_date_approaching'
-  | 'deliverable_overdue';
+  | 'deliverable_overdue'
+  | 'job_approved'
+  | 'date_changed'
+  | 'nf_status'
+  | 'team_invite'
+  | 'call_sheet';
 
 // --- sanitizePhone ---
 // Evolution API espera: 55XXXXXXXXXXX (codigo pais + DDD + numero, apenas digitos)
@@ -47,6 +52,16 @@ export function buildMessageFromTemplate(
       '*Diaria em 3 dias* \u{1F3AC}\nJob: {job_code}\nData: {shooting_date}\nLocal: {location}',
     deliverable_overdue:
       '*Entregavel atrasado* \u{26A0}\u{FE0F}\nJob: {job_code}\n{deliverable}\nAtrasado {days_overdue} dia(s) (prazo: {delivery_date})',
+    job_approved:
+      '*Job Aprovado!* \u{2705}\n{job_code} - {job_title}\nCliente: {client_name}\nInicio: {start_date}',
+    date_changed:
+      '*Data de Filmagem Alterada* \u{1F4C5}\nJob: {job_code}\nNova data: {new_date}\nAnterior: {old_date}',
+    nf_status:
+      '*Status NF Atualizado* \u{1F4C4}\nJob: {job_code}\nNF: {nf_number}\nStatus: {status}',
+    team_invite:
+      '*Convite para Equipe* \u{1F3AC}\nVoce foi convidado para {company_name}\nAcesse: {invite_url}',
+    call_sheet:
+      '*Ordem do Dia* \u{1F4CB}\nJob: {job_code}\nData: {date}\nLocal: {location}\nCall Time: {call_time}',
   };
 
   const raw = TEMPLATES[template] ?? template;

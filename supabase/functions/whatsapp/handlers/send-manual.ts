@@ -3,10 +3,14 @@ import type { AuthContext } from '../../_shared/auth.ts';
 import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 import { getSecret } from '../../_shared/vault.ts';
 import {
-  sendText,
+  sendText as evolutionSendText,
   buildMessageFromTemplate,
   type WhatsAppTemplate,
 } from '../../_shared/whatsapp-client.ts';
+import {
+  sendText as zapiSendText,
+  type ZapiConfig,
+} from '../../_shared/zapi-client.ts';
 import { validate } from '../../_shared/validation.ts';
 import { created } from '../../_shared/response.ts';
 import { AppError } from '../../_shared/errors.ts';
@@ -52,47 +56,86 @@ export async function sendManual(
     throw new AppError('BUSINESS_RULE_VIOLATION', 'WhatsApp nao esta habilitado para este tenant', 422);
   }
 
-  const instanceUrl = waConfig.instance_url as string | null;
-  const instanceName = waConfig.instance_name as string | null;
+  // Determina o provider: 'zapi' ou 'evolution' (default)
+  const provider = (waConfig.provider as string | undefined) === 'zapi' ? 'zapi' : 'evolution';
 
-  if (!instanceUrl || !instanceName) {
-    throw new AppError('BUSINESS_RULE_VIOLATION', 'WhatsApp: instance_url ou instance_name nao configurados', 422);
-  }
-
-  // 2. Ler API key do Vault (service client para acessar)
-  const { getServiceClient } = await import('../../_shared/supabase-client.ts');
-  const serviceClient = getServiceClient();
-  const apiKey = await getSecret(serviceClient, `${auth.tenantId}_whatsapp_api_key`);
-  if (!apiKey) {
-    throw new AppError('BUSINESS_RULE_VIOLATION', 'API key do WhatsApp nao encontrada', 422);
-  }
-
-  // 3. Construir mensagem
+  // 2. Construir mensagem
   const message = buildMessageFromTemplate(
     payload.template as WhatsAppTemplate | string,
     (payload.data ?? {}) as Record<string, string | number>,
   );
 
-  // 4. Enviar via Evolution API
+  // Service client para acessar o Vault e persistir whatsapp_messages (bypass RLS)
+  const { getServiceClient } = await import('../../_shared/supabase-client.ts');
+  const serviceClient = getServiceClient();
+
+  // 3. Enviar via provider correto
   let externalMessageId: string | null = null;
   let finalStatus: 'sent' | 'failed' = 'sent';
   let sendError: string | undefined;
 
-  try {
-    const result = await sendText({
-      instanceUrl,
-      instanceName,
-      apiKey,
+  if (provider === 'zapi') {
+    // --- Z-API ---
+    const instanceId = waConfig.instance_id as string | null;
+    const token = waConfig.token as string | null;
+
+    if (!instanceId || !token) {
+      throw new AppError('BUSINESS_RULE_VIOLATION', 'Z-API: instance_id ou token nao configurados', 422);
+    }
+
+    // Client-Token do Vault: chave "{tenantId}_zapi_client_token"
+    const clientToken = await getSecret(serviceClient, `${auth.tenantId}_zapi_client_token`);
+    if (!clientToken) {
+      throw new AppError('BUSINESS_RULE_VIOLATION', 'Z-API client_token nao encontrado no Vault', 422);
+    }
+
+    const zapiConfig: ZapiConfig = { instanceId, token, clientToken };
+
+    const result = await zapiSendText({
+      config: zapiConfig,
       phone: payload.phone,
-      message,
+      text: message,
     });
+
     externalMessageId = result.externalMessageId;
-  } catch (err) {
-    sendError = err instanceof Error ? err.message : String(err);
-    finalStatus = 'failed';
+    if (!result.success) {
+      sendError = result.error ?? 'Falha no envio via Z-API';
+      finalStatus = 'failed';
+    }
+
+    console.log(`[send-manual] Z-API send — status: ${finalStatus}, phone: ${payload.phone}`);
+  } else {
+    // --- Evolution API ---
+    const instanceUrl = waConfig.instance_url as string | null;
+    const instanceName = waConfig.instance_name as string | null;
+
+    if (!instanceUrl || !instanceName) {
+      throw new AppError('BUSINESS_RULE_VIOLATION', 'WhatsApp: instance_url ou instance_name nao configurados', 422);
+    }
+
+    const apiKey = await getSecret(serviceClient, `${auth.tenantId}_whatsapp_api_key`);
+    if (!apiKey) {
+      throw new AppError('BUSINESS_RULE_VIOLATION', 'API key do WhatsApp nao encontrada', 422);
+    }
+
+    try {
+      const result = await evolutionSendText({
+        instanceUrl,
+        instanceName,
+        apiKey,
+        phone: payload.phone,
+        message,
+      });
+      externalMessageId = result.externalMessageId;
+    } catch (err) {
+      sendError = err instanceof Error ? err.message : String(err);
+      finalStatus = 'failed';
+    }
+
+    console.log(`[send-manual] Evolution send — status: ${finalStatus}, phone: ${payload.phone}`);
   }
 
-  // 5. Persistir em whatsapp_messages (service client para bypass RLS no INSERT)
+  // 4. Persistir em whatsapp_messages
   const { error: insertError } = await serviceClient
     .from('whatsapp_messages')
     .insert({
@@ -102,7 +145,7 @@ export async function sendManual(
       recipient_name: payload.recipient_name ?? null,
       message,
       status: finalStatus,
-      provider: 'evolution',
+      provider,
       external_message_id: externalMessageId,
       sent_at: finalStatus === 'sent' ? new Date().toISOString() : null,
     });
@@ -111,7 +154,7 @@ export async function sendManual(
     console.error('[send-manual] falha ao inserir whatsapp_messages:', insertError.message);
   }
 
-  // 6. Se falhou, lancar erro (apos persistir registro)
+  // 5. Se falhou no envio, lancar erro (apos persistir o registro)
   if (sendError) {
     throw new AppError('INTERNAL_ERROR', `Falha ao enviar: ${sendError}`, 500);
   }
@@ -119,6 +162,7 @@ export async function sendManual(
   return created({
     phone: payload.phone,
     template: payload.template,
+    provider,
     external_message_id: externalMessageId,
     status: finalStatus,
   });

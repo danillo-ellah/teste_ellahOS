@@ -14,6 +14,7 @@ import {
   PenLine,
   Clapperboard,
   FileCheck,
+  Film,
   BookOpen,
   MapPin,
   Shirt,
@@ -43,6 +44,7 @@ import { TabProductionDiary } from '@/components/job-detail/tabs/TabProductionDi
 import { TabLocations } from '@/components/job-detail/tabs/TabLocations'
 import { TabWardrobe } from '@/components/job-detail/tabs/TabWardrobe'
 import { TabOvertime } from '@/components/job-detail/tabs/TabOvertime'
+import { TabStoryboard } from '@/components/job-detail/tabs/TabStoryboard'
 import type { JobDetail } from '@/types/jobs'
 
 // Mapa de icones por nome
@@ -58,6 +60,7 @@ const ICON_MAP: Record<string, typeof FileText> = {
   PenLine,
   Clapperboard,
   FileCheck,
+  Film,
   BookOpen,
   MapPin,
   Shirt,
@@ -209,6 +212,11 @@ export function JobDetailTabs({ job }: JobDetailTabsProps) {
         {/* Tab: Locacoes */}
         <TabsContent value="locacoes" className="mt-6">
           <TabLocations job={job} />
+        </TabsContent>
+
+        {/* Tab: Storyboard */}
+        <TabsContent value="storyboard" className="mt-6">
+          <TabStoryboard job={job} />
         </TabsContent>
 
         {/* Tab: Aprovacoes */}
