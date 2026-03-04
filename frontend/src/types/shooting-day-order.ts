@@ -1,5 +1,18 @@
 // Tipos do modulo Ordem do Dia (shooting_day_orders)
 
+export interface WeatherData {
+  temp_min: number
+  temp_max: number
+  description: string
+  rain_probability: number
+  wind_speed_kmh: number
+  humidity: number
+  icon: string
+  lat?: number
+  lon?: number
+  source: string
+}
+
 export interface CrewCall {
   department: string
   call_time: string // "HH:MM"
@@ -38,7 +51,7 @@ export interface ShootingDayOrder {
   day_number: number | null
   general_location: string | null
   weather_summary: string | null
-  weather_data: Record<string, unknown> | null
+  weather_data: WeatherData | null
   first_call: string | null
   production_call: string | null
   filming_start: string | null
@@ -68,7 +81,7 @@ export interface AutoFillResult {
   }
   weather: {
     summary: string
-    data: Record<string, unknown> | null
+    data: WeatherData | null
   }
   suggested_crew_calls: CrewCall[]
   scenes: Array<{

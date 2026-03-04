@@ -136,6 +136,8 @@ async function fetchWeatherForDate(
         forecastItems.reduce((acc, f) => acc + f.main.humidity, 0) / forecastItems.length,
       ),
       icon: representative.weather[0]?.icon ?? '01d',
+      lat,
+      lon,
       source: 'openweathermap',
     };
 

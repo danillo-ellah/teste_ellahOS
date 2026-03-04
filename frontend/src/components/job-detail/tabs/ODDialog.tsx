@@ -3,7 +3,19 @@
 import { useState, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Loader2, Plus, Trash2, Wand2 } from 'lucide-react'
+import {
+  Loader2,
+  Plus,
+  Trash2,
+  Wand2,
+  Thermometer,
+  Droplets,
+  Wind,
+  CloudRain,
+  Map,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -31,6 +43,7 @@ import type {
   CastScheduleEntry,
   ODTemplate,
   AutoFillResult,
+  WeatherData,
 } from '@/types/shooting-day-order'
 
 // --- Types ---
@@ -41,6 +54,7 @@ interface ODFormState {
   day_number: number | null
   general_location: string
   weather_summary: string
+  weather_data: WeatherData | null
   // Timeline
   first_call: string
   production_call: string
@@ -66,6 +80,7 @@ function defaultForm(od?: ShootingDayOrder): ODFormState {
     day_number: od?.day_number ?? null,
     general_location: od?.general_location ?? '',
     weather_summary: od?.weather_summary ?? '',
+    weather_data: od?.weather_data ?? null,
     first_call: od?.first_call ?? '',
     production_call: od?.production_call ?? '',
     filming_start: od?.filming_start ?? '',
@@ -120,6 +135,170 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
   )
 }
 
+// --- OpenWeather icon URL ---
+function owIconUrl(code: string): string {
+  return `https://openweathermap.org/img/wn/${code}@2x.png`
+}
+
+// --- Windy embed URL ---
+function windyEmbedUrl(lat: number, lon: number): string {
+  const params = new URLSearchParams({
+    lat: lat.toFixed(2),
+    lon: lon.toFixed(2),
+    detailLat: lat.toFixed(2),
+    detailLon: lon.toFixed(2),
+    width: '600',
+    height: '350',
+    zoom: '10',
+    level: 'surface',
+    overlay: 'wind',
+    product: 'ecmwf',
+    marker: 'true',
+    calendar: 'now',
+    pressure: 'true',
+    type: 'map',
+    location: 'coordinates',
+    metricWind: 'km/h',
+    metricTemp: '°C',
+  })
+  return `https://embed.windy.com/embed2.html?${params.toString()}`
+}
+
+// --- Weather cards ---
+function WeatherSection({
+  data,
+  summary,
+  onSummaryChange,
+  disabled,
+}: {
+  data: WeatherData | null
+  summary: string
+  onSummaryChange: (v: string) => void
+  disabled: boolean
+}) {
+  const [showMap, setShowMap] = useState(false)
+
+  if (!data) {
+    return (
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="od-weather">Previsao do Tempo</Label>
+        <Input
+          id="od-weather"
+          placeholder="Use o auto-preencher para buscar a previsao, ou digite manualmente"
+          value={summary}
+          onChange={(e) => onSummaryChange(e.target.value)}
+          disabled={disabled}
+        />
+      </div>
+    )
+  }
+
+  const hasCoords = typeof data.lat === 'number' && typeof data.lon === 'number'
+
+  return (
+    <div className="flex flex-col gap-3">
+      <Label>Previsao do Tempo</Label>
+
+      {/* Cards visuais */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {/* Temperatura */}
+        <div className="rounded-lg border border-border bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 p-3 flex flex-col items-center gap-1">
+          <div className="flex items-center gap-1.5">
+            <img
+              src={owIconUrl(data.icon)}
+              alt={data.description}
+              className="size-10 -my-1"
+            />
+            <Thermometer className="size-4 text-orange-500" />
+          </div>
+          <span className="text-lg font-bold tabular-nums">
+            {data.temp_min}° — {data.temp_max}°C
+          </span>
+          <span className="text-[10px] text-muted-foreground capitalize">
+            {data.description}
+          </span>
+        </div>
+
+        {/* Chuva */}
+        <div className="rounded-lg border border-border bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 p-3 flex flex-col items-center gap-1">
+          <CloudRain className={cn(
+            'size-6',
+            data.rain_probability > 60 ? 'text-blue-600' : 'text-blue-400',
+          )} />
+          <span className="text-lg font-bold tabular-nums">
+            {data.rain_probability}%
+          </span>
+          <span className="text-[10px] text-muted-foreground">
+            Prob. chuva
+          </span>
+        </div>
+
+        {/* Vento */}
+        <div className="rounded-lg border border-border bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-950/20 dark:to-gray-950/20 p-3 flex flex-col items-center gap-1">
+          <Wind className={cn(
+            'size-6',
+            data.wind_speed_kmh > 30 ? 'text-red-500' : 'text-slate-500',
+          )} />
+          <span className="text-lg font-bold tabular-nums">
+            {data.wind_speed_kmh} km/h
+          </span>
+          <span className="text-[10px] text-muted-foreground">
+            Vento
+          </span>
+        </div>
+
+        {/* Umidade */}
+        <div className="rounded-lg border border-border bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-950/20 dark:to-emerald-950/20 p-3 flex flex-col items-center gap-1">
+          <Droplets className="size-6 text-teal-500" />
+          <span className="text-lg font-bold tabular-nums">
+            {data.humidity}%
+          </span>
+          <span className="text-[10px] text-muted-foreground">
+            Umidade
+          </span>
+        </div>
+      </div>
+
+      {/* Summary editavel (colapsado) */}
+      <Input
+        id="od-weather"
+        placeholder="Resumo do clima (editavel)"
+        value={summary}
+        onChange={(e) => onSummaryChange(e.target.value)}
+        disabled={disabled}
+        className="text-xs h-8"
+      />
+
+      {/* Mapa Windy */}
+      {hasCoords && (
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => setShowMap((v) => !v)}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors self-start"
+          >
+            <Map className="size-3.5" />
+            {showMap ? 'Ocultar mapa Windy' : 'Ver mapa Windy (tempo real)'}
+            {showMap ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+          </button>
+
+          {showMap && (
+            <div className="rounded-lg border border-border overflow-hidden">
+              <iframe
+                title="Previsao Windy"
+                src={windyEmbedUrl(data.lat!, data.lon!)}
+                className="w-full h-[350px]"
+                frameBorder="0"
+                allow="autoplay"
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // --- Props ---
 
 interface ODDialogProps {
@@ -155,6 +334,7 @@ export function ODDialog({ open, onOpenChange, jobId, od }: ODDialogProps) {
         day_number: values.day_number,
         general_location: values.general_location.trim() || null,
         weather_summary: values.weather_summary.trim() || null,
+        weather_data: values.weather_data,
         first_call: values.first_call || null,
         production_call: values.production_call || null,
         filming_start: values.filming_start || null,
@@ -211,6 +391,7 @@ export function ODDialog({ open, onOpenChange, jobId, od }: ODDialogProps) {
         general_location:
           data.shooting_date.location ?? prev.general_location,
         weather_summary: data.weather.summary ?? prev.weather_summary,
+        weather_data: data.weather.data ?? prev.weather_data,
         important_info: data.important_info || prev.important_info,
         crew_calls:
           data.suggested_crew_calls.length > 0
@@ -393,16 +574,12 @@ export function ODDialog({ open, onOpenChange, jobId, od }: ODDialogProps) {
             </div>
 
             {/* Clima */}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="od-weather">Previsao do Tempo</Label>
-              <Input
-                id="od-weather"
-                placeholder="Ex: Ensolarado, 28°C, baixa umidade"
-                value={form.weather_summary}
-                onChange={(e) => setField('weather_summary', e.target.value)}
-                disabled={isSaving}
-              />
-            </div>
+            <WeatherSection
+              data={form.weather_data}
+              summary={form.weather_summary}
+              onSummaryChange={(v) => setField('weather_summary', v)}
+              disabled={isSaving}
+            />
 
             {/* Auto-fill — so em modo edicao */}
             {isEditing && (
