@@ -75,12 +75,24 @@ export interface FolderTemplateNode {
   children?: FolderTemplateNode[];
 }
 
-// Template padrao: 26 pastas reais da Ellah Filmes (10 nivel-1 + 16 nivel-2)
+// Template padrao: pastas reais da Ellah Filmes
+// Baseado na leitura direta do Drive via API (04/03/2026)
+// Fonte: 01_PASTA_BASE_ADM (template do Apps Script) + jobs 036-040
 export const DEFAULT_FOLDER_TEMPLATE: FolderTemplateNode = {
   key: 'root',
   name: '{CODE}_{TITLE}_{CLIENT}',
   children: [
-    { key: 'documentos', name: '01_DOCUMENTOS' },
+    {
+      key: 'documentos',
+      name: '01_DOCUMENTOS',
+      children: [
+        { key: 'doc_roteiro', name: '01_ROTEIRO' },
+        { key: 'doc_briefing', name: '02_BRIEFING' },
+        { key: 'doc_relatorio_gravacao', name: '03_RELATORIO_GRAVACAO' },
+        { key: 'doc_retorno_cliente', name: '04_RETORNO_CLIENTE' },
+        { key: 'doc_isencao', name: '05_ISENCAODERESPONSABILIDADE' },
+      ],
+    },
     {
       key: 'financeiro',
       name: '02_FINANCEIRO',
@@ -95,11 +107,47 @@ export const DEFAULT_FOLDER_TEMPLATE: FolderTemplateNode = {
         { key: 'fin_fechamento', name: '08_FECHAMENTO_LUCRO_PREJUIZO' },
       ],
     },
-    { key: 'monstro_pesquisa', name: '03_MONSTRO_PESQUISA_ARTES' },
+    {
+      key: 'monstro_pesquisa',
+      name: '03_MONSTRO_PESQUISA_ARTES',
+      children: [
+        { key: 'monstro', name: '01_MONSTRO' },
+        { key: 'pesquisa_artes', name: '02_PESQUISA' },
+        { key: 'decupagem', name: '03_DECUPAGEM' },
+        { key: 'artes', name: '04_ARTES' },
+      ],
+    },
     { key: 'cronograma', name: '04_CRONOGRAMA' },
-    { key: 'contratos', name: '05_CONTRATOS' },
-    { key: 'fornecedores', name: '06_FORNECEDORES' },
-    { key: 'clientes', name: '07_CLIENTES' },
+    {
+      key: 'contratos',
+      name: '05_CONTRATOS',
+      children: [
+        { key: 'contrato_producao', name: '01_CONTRATO_DE_PRODUCAO' },
+        { key: 'contrato_equipe', name: '02_CONTRATOEQUIPE' },
+        { key: 'contrato_elenco', name: '03_CONTRATODEELENCO' },
+        { key: 'alvara', name: '04_ALVARA' },
+      ],
+    },
+    {
+      key: 'fornecedores',
+      name: '06_FORNECEDORES',
+      children: [
+        { key: 'forn_producao', name: '01_PRODUCAO_PRE' },
+        { key: 'forn_arte', name: '02_ARTE_PRE' },
+        { key: 'forn_figurino', name: '03_FIGURINO_PRE' },
+        { key: 'forn_direcao', name: '04_DIRECAO' },
+      ],
+    },
+    {
+      key: 'clientes',
+      name: '07_CLIENTES',
+      children: [
+        { key: 'cli_passagens', name: '01_PASSAGENS_AEREAS' },
+        { key: 'cli_hoteis', name: '02_HOTEIS' },
+        { key: 'cli_notinhas', name: '03_NOTINHACOMCLIENTE' },
+        { key: 'cli_avaliacao', name: '04_AVALIACAOCLIENTE' },
+      ],
+    },
     {
       key: 'pos_producao',
       name: '08_POS_PRODUCAO',
@@ -114,8 +162,25 @@ export const DEFAULT_FOLDER_TEMPLATE: FolderTemplateNode = {
         { key: 'pos_copias', name: '08_COPIAS' },
       ],
     },
-    { key: 'atendimento', name: '09_ATENDIMENTO' },
-    { key: 'vendas', name: '10_VENDAS_PRODUTOR_EXECUTIVO' },
+    {
+      key: 'atendimento',
+      name: '09_ATENDIMENTO',
+      children: [
+        { key: 'atend_pre_producao', name: '01_PRE_PRODUCAO' },
+        { key: 'atend_producao', name: '02_PRODUCAO' },
+        { key: 'atend_pos_producao', name: '03_POS_PRODUCAO' },
+        { key: 'atend_ancine', name: '04_CONTRATO_ANCINE' },
+        { key: 'atend_claquete', name: '05_CLAQUETE' },
+        { key: 'atend_ficha_tecnica', name: '06_FICHA_TECNICA' },
+      ],
+    },
+    {
+      key: 'vendas',
+      name: '10_VENDAS_PRODUTOR_EXECUTIVO',
+      children: [
+        { key: 'vendas_inicio', name: '01_INICIO_DO_PROJETO' },
+      ],
+    },
   ],
 };
 

@@ -395,36 +395,35 @@ export type NotificationPriority = (typeof NOTIFICATION_PRIORITIES)[number];
 export type IntegrationEventType = (typeof INTEGRATION_EVENT_TYPES)[number];
 export type IntegrationEventStatus = (typeof INTEGRATION_EVENT_STATUSES)[number];
 
-// Drive folder keys padrao (26 pastas reais da Ellah Filmes)
+// Drive folder keys padrao da Ellah Filmes (leitura direta do Drive 04/03/2026)
 // folder_key e TEXT (nao ENUM) para flexibilidade sem migrations
 export const DEFAULT_FOLDER_KEYS = [
   'root',
+  // 01_DOCUMENTOS
   'documentos',
+  'doc_roteiro', 'doc_briefing', 'doc_relatorio_gravacao', 'doc_retorno_cliente', 'doc_isencao',
+  // 02_FINANCEIRO
   'financeiro',
-  'fin_carta_orcamento',
-  'fin_decupado',
-  'fin_gastos_gerais',
-  'fin_nf_recebimento',
-  'fin_comprovantes_pg',
-  'fin_notinhas_producao',
-  'fin_nf_final',
-  'fin_fechamento',
+  'fin_carta_orcamento', 'fin_decupado', 'fin_gastos_gerais', 'fin_nf_recebimento',
+  'fin_comprovantes_pg', 'fin_notinhas_producao', 'fin_nf_final', 'fin_fechamento',
+  // 03_MONSTRO_PESQUISA_ARTES
   'monstro_pesquisa',
+  'monstro', 'pesquisa_artes', 'decupagem', 'artes',
+  // 04-07
   'cronograma',
-  'contratos',
-  'fornecedores',
-  'clientes',
+  'contratos', 'contrato_producao', 'contrato_equipe', 'contrato_elenco', 'alvara',
+  'fornecedores', 'forn_producao', 'forn_arte', 'forn_figurino', 'forn_direcao',
+  'clientes', 'cli_passagens', 'cli_hoteis', 'cli_notinhas', 'cli_avaliacao',
+  // 08_POS_PRODUCAO
   'pos_producao',
-  'pos_material_bruto',
-  'pos_material_limpo',
-  'pos_pesquisa',
-  'pos_storyboard',
-  'pos_montagem',
-  'pos_color',
-  'pos_finalizacao',
-  'pos_copias',
+  'pos_material_bruto', 'pos_material_limpo', 'pos_pesquisa', 'pos_storyboard',
+  'pos_montagem', 'pos_color', 'pos_finalizacao', 'pos_copias',
+  // 09_ATENDIMENTO
   'atendimento',
-  'vendas',
+  'atend_pre_producao', 'atend_producao', 'atend_pos_producao',
+  'atend_ancine', 'atend_claquete', 'atend_ficha_tecnica',
+  // 10_VENDAS
+  'vendas', 'vendas_inicio',
 ] as const;
 
 export type DefaultFolderKey = (typeof DEFAULT_FOLDER_KEYS)[number];

@@ -51,14 +51,30 @@ const FOLDER_LABELS: Record<string, string> = {
   fin_gastos_gerais: 'Gastos Gerais',
   fin_nf_recebimento: 'NF Recebimento',
   fin_comprovantes_pg: 'Comprovantes PG',
-  fin_notinhas_producao: 'Notinhas em Producao',
+  fin_notinhas_producao: 'Notinhas Producao',
   fin_nf_final: 'NF Final Producao',
-  fin_fechamento: 'Fechamento',
+  fin_fechamento: 'Fechamento P&L',
   monstro_pesquisa: '03 Monstro/Pesquisa/Artes',
+  monstro: 'Monstro',
+  pesquisa_artes: 'Pesquisa',
+  decupagem: 'Decupagem',
+  artes: 'Artes',
   cronograma: '04 Cronograma',
   contratos: '05 Contratos',
+  contrato_producao: 'Contrato Producao',
+  contrato_equipe: 'Contrato Equipe',
+  contrato_elenco: 'Contrato Elenco',
+  alvara: 'Alvara',
   fornecedores: '06 Fornecedores',
+  forn_producao: 'Producao/Pre',
+  forn_arte: 'Arte/Pre',
+  forn_figurino: 'Figurino/Pre',
+  forn_direcao: 'Direcao',
   clientes: '07 Clientes',
+  cli_passagens: 'Passagens Aereas',
+  cli_hoteis: 'Hoteis',
+  cli_notinhas: 'Notinha com Cliente',
+  cli_avaliacao: 'Avaliacao Cliente',
   pos_producao: '08 Pos-Producao',
   pos_material_bruto: 'Material Bruto',
   pos_material_limpo: 'Material Limpo',
@@ -69,11 +85,21 @@ const FOLDER_LABELS: Record<string, string> = {
   pos_finalizacao: 'Finalizacao',
   pos_copias: 'Copias',
   atendimento: '09 Atendimento',
+  atend_pre_producao: 'Pre-Producao',
+  atend_producao: 'Producao',
+  atend_pos_producao: 'Pos-Producao',
+  atend_ancine: 'Contrato ANCINE',
+  atend_claquete: 'Claquete',
+  atend_ficha_tecnica: 'Ficha Tecnica',
   vendas: '10 Vendas/PE',
+  vendas_inicio: 'Inicio do Projeto',
 }
 
 // Folders que possuem subpastas (nivel-1 com filhos)
-const PARENT_KEYS = ['financeiro', 'pos_producao']
+const PARENT_KEYS = [
+  'documentos', 'financeiro', 'monstro_pesquisa', 'contratos',
+  'fornecedores', 'clientes', 'pos_producao', 'atendimento', 'vendas',
+]
 
 export function DriveSection({ job }: DriveSectionProps) {
   const { data: folders, total, isLoading } = useDriveFolders(job.id)
