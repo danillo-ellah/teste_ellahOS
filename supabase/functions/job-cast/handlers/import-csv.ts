@@ -7,7 +7,7 @@ import type { AuthContext } from '../../_shared/auth.ts';
 
 const ImportSchema = z.object({
   job_id: z.string().uuid('job_id deve ser UUID valido'),
-  csv_content: z.string().min(10, 'Conteudo CSV muito curto'),
+  csv_content: z.string().min(10, 'Conteudo CSV muito curto').max(524288, 'CSV excede 512KB'),
 });
 
 // Parse "R$450,00" ou "R$1.050,00" para numero
@@ -144,7 +144,7 @@ export async function handleImportCsv(
         tenant_id: auth.tenantId,
         job_id,
         name,
-        cast_category: cols[2]?.trim()?.toLowerCase() || 'ator',
+        cast_category: cols[2]?.trim()?.toLowerCase() || 'ator_principal',
         cpf,
         rg: cols[4]?.trim() || null,
         birth_date: parseDate(cols[5]) || null,

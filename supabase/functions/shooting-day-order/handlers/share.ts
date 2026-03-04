@@ -37,12 +37,13 @@ export async function handleShare(
     tenantId: auth.tenantId,
   });
 
-  // 1. Parsear body
+  // 1. Parsear e validar body
   const body = await req.json().catch(() => {
     throw new AppError('VALIDATION_ERROR', 'Body JSON invalido', 400);
   });
 
-  const phones: string[] | undefined = body.phones;
+  // Validacao basica dos campos
+  const phones: string[] | undefined = Array.isArray(body.phones) ? (body.phones as string[]).slice(0, 100) : undefined;
   const sendToTeam: boolean = body.send_to_team === true;
 
   // 2. Buscar o registro da OD
@@ -234,22 +235,24 @@ export async function handleShare(
     }
   }
 
-  // 8. Atualizar status da OD para 'compartilhada'
-  const { error: updateErr } = await client
-    .from('shooting_day_orders')
-    .update({
-      status: 'compartilhada',
-      shared_at: new Date().toISOString(),
-    })
-    .eq('id', odId)
-    .eq('tenant_id', auth.tenantId);
+  // 8. Atualizar status da OD para 'compartilhada' — somente se pelo menos um envio teve sucesso
+  if (sentCount > 0) {
+    const { error: updateErr } = await client
+      .from('shooting_day_orders')
+      .update({
+        status: 'compartilhada',
+        shared_at: new Date().toISOString(),
+      })
+      .eq('id', odId)
+      .eq('tenant_id', auth.tenantId);
 
-  if (updateErr) {
-    // Nao e fatal — o envio ja foi feito; apenas loga o erro
-    console.error(
-      '[shooting-day-order/share] erro ao atualizar status da OD:',
-      updateErr.message,
-    );
+    if (updateErr) {
+      // Nao e fatal — o envio ja foi feito; apenas loga o erro
+      console.error(
+        '[shooting-day-order/share] erro ao atualizar status da OD:',
+        updateErr.message,
+      );
+    }
   }
 
   console.log('[shooting-day-order/share] compartilhamento concluido', {

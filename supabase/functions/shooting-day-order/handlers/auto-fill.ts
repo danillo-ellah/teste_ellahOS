@@ -203,7 +203,7 @@ export async function handleAutoFill(
     // a. Data de filmagem
     client
       .from('job_shooting_dates')
-      .select('id, shooting_date, description, call_time, wrap_time, weather')
+      .select('id, shooting_date, description, location, start_time, end_time, notes')
       .eq('id', shootingDateId)
       .eq('job_id', jobId)
       .maybeSingle(),
@@ -308,7 +308,7 @@ export async function handleAutoFill(
   };
 
   const apiKey = Deno.env.get('OPENWEATHER_API_KEY') ?? null;
-  const shootingDateLocation = shootingDate?.weather as string | null ?? null;
+  const shootingDateLocation = shootingDate?.location as string | null ?? null;
   const shootingDateStr = shootingDate?.shooting_date as string | null ?? null;
 
   if (apiKey && shootingDateLocation && shootingDateStr) {
@@ -372,7 +372,7 @@ export async function handleAutoFill(
     shooting_date: {
       date: shootingDateStr,
       description: (shootingDate?.description as string | null) ?? null,
-      location: (shootingDate?.weather as string | null) ?? null,
+      location: (shootingDate?.location as string | null) ?? null,
     },
     weather: weatherResult,
     suggested_crew_calls: suggestedCrewCalls,

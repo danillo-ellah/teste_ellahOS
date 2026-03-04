@@ -1,4 +1,4 @@
-import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
+import { z } from 'https://esm.sh/zod@3.22.4';
 import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 import { success } from '../../_shared/response.ts';
 import { AppError } from '../../_shared/errors.ts';
@@ -24,7 +24,7 @@ const updateSchema = z
     cast_schedule: z.array(z.record(z.unknown())).nullable(),
     important_info: z.string().max(5000).nullable(),
     pdf_template: z.enum(['classico', 'moderno']),
-    status: z.enum(['rascunho', 'publicado', 'arquivado']),
+    status: z.enum(['rascunho', 'publicada', 'compartilhada']),
     pdf_url: z.string().url().nullable(),
     shared_at: z.string().nullable(),
     shooting_date_id: z.string().uuid().nullable(),

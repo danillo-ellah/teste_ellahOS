@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { EmptyTabState } from '@/components/shared/EmptyTabState'
 import { ODDialog } from './ODDialog'
+import { ODPreviewDialog } from './ODPreviewDialog'
 import { apiGet, apiMutate, safeErrorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import type { JobDetail } from '@/types/jobs'
@@ -87,6 +88,7 @@ export function TabOrdemDoDia({ job }: TabOrdemDoDiaProps) {
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingOD, setEditingOD] = useState<ShootingDayOrder | undefined>()
+  const [previewOD, setPreviewOD] = useState<ShootingDayOrder | null>(null)
   const [deletingOD, setDeletingOD] = useState<ShootingDayOrder | null>(null)
 
   // Fetch ordens do dia
@@ -269,7 +271,7 @@ export function TabOrdemDoDia({ job }: TabOrdemDoDiaProps) {
                     aria-label="Visualizar"
                     onClick={(e) => {
                       e.stopPropagation()
-                      handleOpenEdit(od)
+                      setPreviewOD(od)
                     }}
                     className="size-7 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                   >
@@ -311,6 +313,16 @@ export function TabOrdemDoDia({ job }: TabOrdemDoDiaProps) {
         jobId={job.id}
         od={editingOD}
       />
+
+      {/* Preview Dialog */}
+      {previewOD && (
+        <ODPreviewDialog
+          open={!!previewOD}
+          onOpenChange={(open) => { if (!open) setPreviewOD(null) }}
+          od={previewOD}
+          jobId={job.id}
+        />
+      )}
 
       {/* Delete confirmation */}
       <AlertDialog

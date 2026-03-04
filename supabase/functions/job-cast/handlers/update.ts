@@ -67,9 +67,31 @@ export async function handleUpdate(
     throw new AppError('NOT_FOUND', 'Membro do elenco nao encontrado', 404);
   }
 
+  // Auto-compute total_fee se fees individuais forem enviados
+  const updatePayload = { ...validated } as Record<string, unknown>;
+  if (
+    ('service_fee' in updatePayload || 'image_rights_fee' in updatePayload || 'agency_fee' in updatePayload) &&
+    !('total_fee' in updatePayload)
+  ) {
+    // Buscar valores atuais para computar total
+    const { data: current } = await supabase
+      .from('job_cast')
+      .select('service_fee, image_rights_fee, agency_fee')
+      .eq('id', memberId)
+      .eq('tenant_id', auth.tenantId)
+      .single();
+
+    if (current) {
+      const sf = (updatePayload.service_fee as number) ?? (current.service_fee as number) ?? 0;
+      const irf = (updatePayload.image_rights_fee as number) ?? (current.image_rights_fee as number) ?? 0;
+      const af = (updatePayload.agency_fee as number) ?? (current.agency_fee as number) ?? 0;
+      updatePayload.total_fee = sf + irf + af;
+    }
+  }
+
   const { data: member, error: updateErr } = await supabase
     .from('job_cast')
-    .update(validated)
+    .update(updatePayload)
     .eq('id', memberId)
     .eq('tenant_id', auth.tenantId)
     .select()

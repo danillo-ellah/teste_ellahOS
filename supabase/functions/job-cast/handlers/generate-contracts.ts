@@ -9,7 +9,7 @@ import type { AuthContext } from '../../_shared/auth.ts';
 import type { DocuSealSubmissionRow } from '../../_shared/types.ts';
 
 // Roles com permissao de gerar contratos de elenco
-const ALLOWED_ROLES = ['admin', 'ceo', 'produtor_executivo'];
+const ALLOWED_ROLES = ['admin', 'ceo', 'produtor_executivo', 'coordenador', 'diretor', 'financeiro', 'atendimento'];
 
 // Schema de validacao do payload
 const GenerateContractsSchema = z.object({
@@ -334,7 +334,7 @@ export async function handleGenerateContracts(req: Request, auth: AuthContext): 
     ];
 
     console.log(
-      `[job-cast/generate-contracts] gerando contrato para cast_member_id=${member.id} email=${member.email}`,
+      `[job-cast/generate-contracts] gerando contrato para cast_member_id=${member.id}`,
     );
 
     // Chamar DocuSeal para criar a submission
@@ -411,11 +411,18 @@ export async function handleGenerateContracts(req: Request, auth: AuthContext): 
     }
 
     // Atualizar contract_status no job_cast
-    await supabase
+    const { error: castUpdateErr } = await supabase
       .from('job_cast')
       .update({ contract_status: 'enviado' })
       .eq('id', member.id as string)
       .eq('tenant_id', auth.tenantId);
+
+    if (castUpdateErr) {
+      console.error(
+        `[job-cast/generate-contracts] falha ao atualizar contract_status para cast_member_id=${member.id}:`,
+        castUpdateErr.message,
+      );
+    }
 
     sent.push({
       cast_member_id: member.id as string,

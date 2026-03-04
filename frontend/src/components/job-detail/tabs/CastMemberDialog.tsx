@@ -108,6 +108,7 @@ export function CastMemberDialog({
     handleSubmit,
     control,
     reset,
+    watch,
     formState: { errors },
   } = useForm<CastMemberFormValues>({
     resolver: zodResolver(castMemberSchema),
@@ -185,6 +186,7 @@ export function CastMemberDialog({
         service_fee: values.service_fee,
         image_rights_fee: values.image_rights_fee,
         agency_fee: values.agency_fee,
+        total_fee: values.service_fee + values.image_rights_fee + values.agency_fee,
         num_days: values.num_days,
         scenes_description: nullIfEmpty(values.scenes_description),
         notes: nullIfEmpty(values.notes),
@@ -210,6 +212,12 @@ export function CastMemberDialog({
   function onSubmit(values: CastMemberFormValues) {
     mutation.mutate(values)
   }
+
+  // Computed total fee
+  const watchedServiceFee = watch('service_fee') || 0
+  const watchedImageRightsFee = watch('image_rights_fee') || 0
+  const watchedAgencyFee = watch('agency_fee') || 0
+  const computedTotalFee = watchedServiceFee + watchedImageRightsFee + watchedAgencyFee
 
   const isLoading = mutation.isPending
 
@@ -487,6 +495,14 @@ export function CastMemberDialog({
                   disabled={isLoading}
                 />
               </div>
+            </div>
+
+            {/* Valor Total computado */}
+            <div className="flex items-center justify-between rounded-lg bg-muted/50 px-4 py-2.5">
+              <span className="text-sm font-medium text-muted-foreground">Valor Total</span>
+              <span className="text-sm font-semibold font-mono">
+                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(computedTotalFee)}
+              </span>
             </div>
           </div>
 

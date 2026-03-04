@@ -89,7 +89,7 @@ function buildClassicoHtml(
         <td style="padding:6px 10px;border:1px solid #ccc;">${esc(actor.character as string)}</td>
         <td style="padding:6px 10px;border:1px solid #ccc;text-align:center;">${esc(actor.call_time as string) || '—'}</td>
         <td style="padding:6px 10px;border:1px solid #ccc;text-align:center;">${esc(actor.makeup_time as string) || '—'}</td>
-        <td style="padding:6px 10px;border:1px solid #ccc;text-align:center;">${esc(actor.set_time as string) || '—'}</td>
+        <td style="padding:6px 10px;border:1px solid #ccc;text-align:center;">${esc(actor.on_set_time as string) || '—'}</td>
         <td style="padding:6px 10px;border:1px solid #ccc;text-align:center;">${esc(actor.wrap_time as string) || '—'}</td>
       </tr>`;
   });
@@ -251,13 +251,21 @@ ${importantInfo ? `
 </html>`;
 }
 
+// Valida e sanitiza cor hex para prevenir CSS injection
+function sanitizeBrandColor(color: string | null | undefined): string {
+  const DEFAULT = '#2563eb';
+  if (!color) return DEFAULT;
+  const hexRegex = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+  return hexRegex.test(color.trim()) ? color.trim() : DEFAULT;
+}
+
 // Gera o HTML do template moderno (usa cor da marca, visual mais rico)
 function buildModernoHtml(
   od: Record<string, unknown>,
   job: Record<string, unknown>,
   tenant: Record<string, unknown>,
 ): string {
-  const brandColor = (tenant.brand_color as string | null) ?? '#2563eb';
+  const brandColor = sanitizeBrandColor(tenant.brand_color as string | null);
   const crewCalls = (od.crew_calls as Array<Record<string, unknown>> | null) ?? [];
   const filmingBlocks = (od.filming_blocks as Array<Record<string, unknown>> | null) ?? [];
   const castSchedule = (od.cast_schedule as Array<Record<string, unknown>> | null) ?? [];
@@ -319,7 +327,7 @@ function buildModernoHtml(
         <td style="padding:7px 12px;border-bottom:1px solid #e5e7eb;color:#6b7280;">${esc(actor.character as string)}</td>
         <td style="padding:7px 12px;border-bottom:1px solid #e5e7eb;text-align:center;font-weight:bold;color:${brandColor};">${esc(actor.call_time as string) || '—'}</td>
         <td style="padding:7px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">${esc(actor.makeup_time as string) || '—'}</td>
-        <td style="padding:7px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">${esc(actor.set_time as string) || '—'}</td>
+        <td style="padding:7px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">${esc(actor.on_set_time as string) || '—'}</td>
         <td style="padding:7px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">${esc(actor.wrap_time as string) || '—'}</td>
       </tr>`;
   });
@@ -602,6 +610,8 @@ export async function handlePreview(
     headers: {
       ...getCorsHeaders(req),
       'Content-Type': 'text/html; charset=utf-8',
+      'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; img-src https: data:; script-src 'none';",
+      'X-Content-Type-Options': 'nosniff',
     },
   });
 }

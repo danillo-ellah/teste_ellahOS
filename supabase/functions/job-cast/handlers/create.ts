@@ -8,7 +8,7 @@ import type { AuthContext } from '../../_shared/auth.ts';
 const CreateSchema = z.object({
   job_id: z.string().uuid('job_id deve ser UUID valido'),
   name: z.string().min(1, 'Nome e obrigatorio'),
-  cast_category: z.string().default('ator'),
+  cast_category: z.string().default('ator_principal'),
   character_name: z.string().nullish(),
   cpf: z.string().nullish(),
   rg: z.string().nullish(),
@@ -83,7 +83,7 @@ export async function handleCreate(
       service_fee: validated.service_fee,
       image_rights_fee: validated.image_rights_fee,
       agency_fee: validated.agency_fee,
-      total_fee: validated.total_fee,
+      total_fee: validated.service_fee + validated.image_rights_fee + validated.agency_fee,
       num_days: validated.num_days,
       scenes_description: validated.scenes_description ?? null,
       casting_agency: validated.casting_agency ?? null,
