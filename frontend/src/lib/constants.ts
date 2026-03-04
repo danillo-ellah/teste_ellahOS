@@ -193,6 +193,7 @@ export type JobDetailTabId =
   | 'claquete'
   | 'storyboard'
   | 'elenco'
+  | 'ordem-do-dia'
   | 'diario'
   | 'figurino'
   | 'horas-extras'
@@ -523,6 +524,7 @@ export const JOB_TAB_GROUPS: JobTabGroup[] = [
       { id: 'locacoes', label: 'Locacoes', icon: 'MapPin' },
       { id: 'storyboard', label: 'Storyboard', icon: 'Film' },
       { id: 'elenco', label: 'Elenco', icon: 'Users' },
+      { id: 'ordem-do-dia', label: 'Ordem do Dia', icon: 'ClipboardList' },
       { id: 'diario', label: 'Diario', icon: 'BookOpen' },
       { id: 'figurino', label: 'Figurino/Arte', icon: 'Shirt' },
     ],
