@@ -176,8 +176,8 @@ export interface Job {
   updated_by: string | null
 
   // Relacionamentos expandidos (joins)
-  clients?: { id: string; name: string }
-  agencies?: { id: string; name: string }
+  clients?: { id: string; name: string; logo_url?: string | null }
+  agencies?: { id: string; name: string; logo_url?: string | null }
 }
 
 // Job com dados relacionados (retornado por GET /jobs/{id}?include=...)

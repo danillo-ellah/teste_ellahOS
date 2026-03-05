@@ -79,9 +79,14 @@ function setTextColor(doc: PDF, hex: string) {
   doc.setTextColor(r, g, b)
 }
 
-function setDrawColor(doc: PDF, hex: string) {
+function setDrawColor(doc: PDF, hex: string, opacity = 1) {
   const [r, g, b] = hexToRgb(hex)
-  doc.setDrawColor(r, g, b)
+  if (opacity < 1) {
+    const mix = (c: number) => Math.round(c * opacity + 255 * (1 - opacity))
+    doc.setDrawColor(mix(r), mix(g), mix(b))
+  } else {
+    doc.setDrawColor(r, g, b)
+  }
 }
 
 /** Escurece uma cor hex por um fator (0 = sem mudanca, 1 = preto) */
@@ -101,7 +106,7 @@ function darkenHex(hex: string, factor: number): string {
  */
 function preRenderEmojis(phases: Array<{ phase_emoji: string }>): Map<string, string> {
   const emojiMap = new Map<string, string>()
-  const sizePx = 64
+  const sizePx = 128
 
   phases.forEach((p) => {
     if (!p.phase_emoji || emojiMap.has(p.phase_emoji)) return
@@ -983,26 +988,26 @@ export async function generateCalendarioPdf(data: PhaseExportData): Promise<void
     // Area total do grid (titulo + header + semanas)
     const gridAreaH = contentEndY - contentStartY - legendH
 
-    // Titulo do mes
+    // Titulo do mes — com accent brand_color
     const titleH = 7
     doc.setFontSize(11 - fontReduction)
     doc.setFont('helvetica', 'bold')
-    setTextColor(doc, NEUTRAL_800)
+    setTextColor(doc, brandColor)
     doc.text(monthTitle, MARGIN_X, contentStartY + 5)
 
-    // Header dos dias
+    // Header dos dias — usa brand_color como fundo
     const dayHeaderH = 6
     const dayHeaderY = contentStartY + titleH
     const colW = CONTENT_W / 7
 
-    setFillColor(doc, NEUTRAL_100)
-    setDrawColor(doc, NEUTRAL_200)
+    setFillColor(doc, brandColor, 0.12)
+    setDrawColor(doc, brandColor, 0.3)
     doc.setLineWidth(0.2)
     doc.rect(MARGIN_X, dayHeaderY, CONTENT_W, dayHeaderH, 'FD')
 
     doc.setFontSize(8 - fontReduction)
     doc.setFont('helvetica', 'bold')
-    setTextColor(doc, NEUTRAL_600)
+    setTextColor(doc, darkenHex(brandColor, 0.2))
     DAY_NAMES.forEach((name, di) => {
       const cx = MARGIN_X + di * colW + colW / 2
       doc.text(name, cx, dayHeaderY + 4.2, { align: 'center' })

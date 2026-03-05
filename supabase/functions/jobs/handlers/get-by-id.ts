@@ -15,7 +15,7 @@ export async function getJobById(
   // Buscar job com JOINs para client e agency
   const { data: job, error: dbError } = await supabase
     .from('jobs')
-    .select('*, clients(id, name), agencies(id, name)')
+    .select('*, clients(id, name, logo_url), agencies(id, name, logo_url)')
     .eq('id', jobId)
     .is('deleted_at', null)
     .single();

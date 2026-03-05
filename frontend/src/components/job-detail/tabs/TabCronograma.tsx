@@ -211,9 +211,9 @@ export function TabCronograma({ job }: TabCronogramaProps) {
           code: job.job_code ?? '',
           title: job.title,
           client_name: job.clients?.name ?? '',
-          client_logo_url: null, // logo_url ainda nao esta na tabela clients
+          client_logo_url: job.clients?.logo_url ?? null,
           agency_name: job.agencies?.name ?? null,
-          agency_logo_url: null,
+          agency_logo_url: job.agencies?.logo_url ?? null,
         },
         phases,
         tenant,

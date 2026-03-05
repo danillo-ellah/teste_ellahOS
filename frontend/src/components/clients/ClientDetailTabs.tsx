@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ContactsSection } from '@/components/shared/ContactsSection'
+import { LogoUpload } from '@/components/shared/LogoUpload'
 import { CLIENT_SEGMENTS } from '@/types/clients'
 import { CLIENT_SEGMENT_LABELS } from '@/lib/constants'
 import type { Client, UpdateClientPayload, ClientSegment } from '@/types/clients'
@@ -81,6 +82,14 @@ export function ClientDetailTabs({
       <div className="py-6">
         {activeTab === 'dados' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 max-w-3xl">
+            <Field label="Logo" className="md:col-span-2">
+              <LogoUpload
+                table="clients"
+                recordId={client.id}
+                currentLogoUrl={client.logo_url}
+              />
+            </Field>
+
             <Field label="Razao Social">
               {isEditing ? (
                 <Input

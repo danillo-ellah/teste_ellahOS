@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { ContactsSection } from '@/components/shared/ContactsSection'
+import { LogoUpload } from '@/components/shared/LogoUpload'
 import type { Agency, UpdateAgencyPayload } from '@/types/clients'
 
 type TabId = 'dados' | 'contatos' | 'jobs'
@@ -70,6 +71,14 @@ export function AgencyDetailTabs({
       <div className="py-6">
         {activeTab === 'dados' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 max-w-3xl">
+            <Field label="Logo" className="md:col-span-2">
+              <LogoUpload
+                table="agencies"
+                recordId={agency.id}
+                currentLogoUrl={agency.logo_url}
+              />
+            </Field>
+
             <Field label="Razao Social">
               {isEditing ? (
                 <Input

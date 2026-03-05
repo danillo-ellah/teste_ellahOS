@@ -32,6 +32,7 @@ export interface Client {
   state: string | null
   cep: string | null
   website: string | null
+  logo_url: string | null
   notes: string | null
   is_active: boolean
   created_at: string
@@ -50,6 +51,7 @@ export interface Agency {
   state: string | null
   cep: string | null
   website: string | null
+  logo_url: string | null
   notes: string | null
   is_active: boolean
   created_at: string
