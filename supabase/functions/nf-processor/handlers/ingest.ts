@@ -123,7 +123,7 @@ async function trySmartAutoMatch(
       `)
       .eq('tenant_id', tenantId)
       .eq('vendor_email_snapshot', senderEmail)
-      .eq('jobs.code', paddedCode)
+      .like('jobs.code', `${paddedCode}_%`)
       .is('deleted_at', null)
       .is('nf_document_id', null)
       .eq('is_category_header', false)
@@ -141,7 +141,9 @@ async function trySmartAutoMatch(
     if (matches.length === 1) {
       // Match exato: 1 cost_item deste fornecedor neste job
       const m = matches[0];
-      console.log(`[ingest] smart-match ETAPA1: match unico! cost_item=${m.id} job_code=${paddedCode}`);
+      // deno-lint-ignore no-explicit-any
+      const matchedCode = (m.jobs as any)?.code ?? paddedCode;
+      console.log(`[ingest] smart-match ETAPA1: match unico! cost_item=${m.id} job_code=${matchedCode}`);
       return {
         autoLinkedCostItemId: m.id,
         matchMethod: 'auto_subject_email',
@@ -163,39 +165,7 @@ async function trySmartAutoMatch(
       };
     }
 
-    // Nenhum match por subject+email — tenta sem pad (codigo literal)
-    if (paddedCode !== jobCode) {
-      const { data: rawCodeMatches } = await serviceClient
-        .from('cost_items')
-        .select(`
-          id, service_description, total_value, vendor_email_snapshot, job_id,
-          jobs!inner(id, code, title)
-        `)
-        .eq('tenant_id', tenantId)
-        .eq('vendor_email_snapshot', senderEmail)
-        .eq('jobs.code', jobCode)
-        .is('deleted_at', null)
-        .is('nf_document_id', null)
-        .eq('is_category_header', false)
-        .gt('total_value', 0)
-        .in('nf_request_status', ['pedido', 'pendente', 'enviado'])
-        .limit(10);
-
-      if (rawCodeMatches && rawCodeMatches.length === 1) {
-        const m = rawCodeMatches[0];
-        console.log(`[ingest] smart-match ETAPA1 (raw code): match unico! cost_item=${m.id} job_code=${jobCode}`);
-        return {
-          autoLinkedCostItemId: m.id,
-          matchMethod: 'auto_subject_email',
-          candidateCount: 1,
-          jobCode,
-          // deno-lint-ignore no-explicit-any
-          matchedJobId: (m.jobs as any)?.id ?? m.job_id,
-        };
-      }
-    }
-
-    console.log(`[ingest] smart-match ETAPA1: nenhum match por subject code=${paddedCode} + email`);
+    console.log(`[ingest] smart-match ETAPA1: nenhum match por subject code=${paddedCode}* + email`);
   }
 
   // ETAPA 2: Sem codigo no subject ou nao encontrou — busca so por email
