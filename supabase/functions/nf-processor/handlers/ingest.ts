@@ -251,7 +251,9 @@ export async function ingestNf(req: Request): Promise<Response> {
 
   console.log(`[ingest] NF criada: id=${newDoc.id} status=${newDoc.status}`);
 
-  // 6.5. Match secundario com cost_items
+  // 6.5. Buscar cost_items candidatos (apenas log, NAO vincula automaticamente)
+  // A vinculacao ao cost_item correto e feita pelo usuario na tela de validacao.
+  // Auto-vincular pode ligar ao cost_item errado quando o vendor tem multiplos itens.
   try {
     const { data: matchedCostItems, error: costFetchError } = await serviceClient
       .from('cost_items')
@@ -268,33 +270,10 @@ export async function ingestNf(req: Request): Promise<Response> {
       console.error('[ingest] cost_items fetch erro:', costFetchError.message);
     } else {
       const found = matchedCostItems?.length ?? 0;
-
-      if (found > 0) {
-        const targetItem = matchedCostItems![0];
-
-        const { error: costUpdateError } = await serviceClient
-          .from('cost_items')
-          .update({
-            nf_document_id: newDoc.id,
-            nf_request_status: 'recebido',
-            nf_drive_url: input.drive_url,
-          })
-          .eq('id', targetItem.id)
-          .eq('tenant_id', input.tenant_id);
-
-        const updated = costUpdateError ? 0 : 1;
-
-        if (costUpdateError) {
-          console.error('[ingest] cost_items update erro:', costUpdateError.message);
-        }
-
-        console.log(`[ingest] cost_items sync: email=${input.sender_email} found=${found} updated=${updated}`);
-      } else {
-        console.log(`[ingest] cost_items sync: email=${input.sender_email} found=0 updated=0`);
-      }
+      console.log(`[ingest] cost_items candidatos: email=${input.sender_email} found=${found} (vinculacao manual na validacao)`);
     }
   } catch (costSyncErr) {
-    console.error('[ingest] cost_items sync excecao (nao bloqueia):', costSyncErr);
+    console.error('[ingest] cost_items candidatos excecao (nao bloqueia):', costSyncErr);
   }
 
   // 7. Tornar arquivo acessivel via link (fire-and-forget)
