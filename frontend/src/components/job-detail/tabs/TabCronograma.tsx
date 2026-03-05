@@ -185,6 +185,10 @@ export function TabCronograma({ job }: TabCronogramaProps) {
     bulkCreate({ job_id: job.id })
   }
 
+  function handlePhaseDrag(phaseId: string, payload: UpdatePhasePayload) {
+    updatePhase({ id: phaseId, payload })
+  }
+
   async function handleExportPdf() {
     if (phases.length === 0) {
       toast.error('Nenhuma fase para exportar.')
@@ -364,6 +368,7 @@ export function TabCronograma({ job }: TabCronogramaProps) {
           <GanttChart
             phases={phases}
             onPhaseClick={handleOpenEdit}
+            onPhaseDrag={handlePhaseDrag}
           />
         </div>
       )}

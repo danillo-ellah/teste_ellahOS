@@ -1,12 +1,29 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { parseISO, differenceInCalendarDays, format, isSameDay } from 'date-fns'
+import { useState, useRef, useCallback } from 'react'
+import { parseISO, differenceInCalendarDays, format, isSameDay, addDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { getDaysInRange, getGanttBarColumn, formatDateBR, countWorkingDays } from '@/lib/cronograma-utils'
 import { PHASE_STATUS_CONFIG } from '@/types/cronograma'
-import type { JobPhase } from '@/types/cronograma'
+import type { JobPhase, UpdatePhasePayload } from '@/types/cronograma'
+
+// --- Drag types ---
+
+type DragMode = 'move' | 'resize-start' | 'resize-end'
+
+interface DragState {
+  phaseId: string
+  mode: DragMode
+  /** Mouse X at drag start */
+  startMouseX: number
+  /** Original start_date ISO */
+  origStart: string
+  /** Original end_date ISO */
+  origEnd: string
+  /** Current day delta from drag start */
+  dayDelta: number
+}
 
 // --- Tooltip ---
 
@@ -54,17 +71,41 @@ function GanttTooltip({ data }: { data: TooltipData }) {
   )
 }
 
+// --- Drag hint tooltip (shows new dates during drag) ---
+
+function DragHint({ startDate, endDate, x, y }: { startDate: string; endDate: string; x: number; y: number }) {
+  return (
+    <div
+      className="fixed z-[60] pointer-events-none"
+      style={{ left: x, top: y - 32 }}
+    >
+      <div className="bg-neutral-800 text-white rounded-md px-2.5 py-1 shadow-lg text-xs font-medium whitespace-nowrap">
+        {formatDateBR(startDate)} &rarr; {formatDateBR(endDate)}
+      </div>
+    </div>
+  )
+}
+
 // --- Props ---
 
 interface GanttChartProps {
   phases: JobPhase[]
   onPhaseClick?: (phase: JobPhase) => void
+  onPhaseDrag?: (phaseId: string, payload: UpdatePhasePayload) => void
+}
+
+// --- Helpers ---
+
+function shiftDate(isoDate: string, days: number): string {
+  return format(addDays(parseISO(isoDate), days), 'yyyy-MM-dd')
 }
 
 // --- Componente principal ---
 
-export function GanttChart({ phases, onPhaseClick }: GanttChartProps) {
+export function GanttChart({ phases, onPhaseClick, onPhaseDrag }: GanttChartProps) {
   const [tooltip, setTooltip] = useState<TooltipData | null>(null)
+  const [drag, setDrag] = useState<DragState | null>(null)
+  const [dragMousePos, setDragMousePos] = useState<{ x: number; y: number } | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Filtrar fases que possuem datas definidas (fases sem datas nao aparecem no gantt)
@@ -107,14 +148,117 @@ export function GanttChart({ phases, onPhaseClick }: GanttChartProps) {
 
   const totalWidth = LABEL_COL_WIDTH + allDays.length * COL_WIDTH
 
+  // --- Drag handlers ---
+
+  const handleDragStart = (e: React.MouseEvent, phase: JobPhase, mode: DragMode) => {
+    if (!phase.start_date || !phase.end_date || !onPhaseDrag) return
+    e.preventDefault()
+    e.stopPropagation()
+    setTooltip(null)
+    setDrag({
+      phaseId: phase.id,
+      mode,
+      startMouseX: e.clientX,
+      origStart: phase.start_date,
+      origEnd: phase.end_date,
+      dayDelta: 0,
+    })
+    setDragMousePos({ x: e.clientX, y: e.clientY })
+  }
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!drag) return
+    const deltaX = e.clientX - drag.startMouseX
+    const dayDelta = Math.round(deltaX / COL_WIDTH)
+    if (dayDelta !== drag.dayDelta) {
+      setDrag((prev) => prev ? { ...prev, dayDelta } : null)
+    }
+    setDragMousePos({ x: e.clientX, y: e.clientY })
+  }, [drag])
+
+  const handleMouseUp = useCallback(() => {
+    if (!drag || drag.dayDelta === 0 || !onPhaseDrag) {
+      setDrag(null)
+      setDragMousePos(null)
+      return
+    }
+
+    const { mode, origStart, origEnd, dayDelta } = drag
+    let newStart = origStart
+    let newEnd = origEnd
+
+    if (mode === 'move') {
+      newStart = shiftDate(origStart, dayDelta)
+      newEnd = shiftDate(origEnd, dayDelta)
+    } else if (mode === 'resize-end') {
+      newEnd = shiftDate(origEnd, dayDelta)
+      // Garantir que end >= start
+      if (newEnd < origStart) newEnd = origStart
+    } else if (mode === 'resize-start') {
+      newStart = shiftDate(origStart, dayDelta)
+      // Garantir que start <= end
+      if (newStart > origEnd) newStart = origEnd
+    }
+
+    onPhaseDrag(drag.phaseId, { start_date: newStart, end_date: newEnd })
+    setDrag(null)
+    setDragMousePos(null)
+  }, [drag, onPhaseDrag])
+
+  // Calcular datas de preview durante drag
+  function getDragPreview(phase: JobPhase): { startDate: string; endDate: string; barLeft: number; barWidth: number } | null {
+    if (!drag || drag.phaseId !== phase.id || !phase.start_date || !phase.end_date) return null
+    const { mode, origStart, origEnd, dayDelta } = drag
+    if (dayDelta === 0) return null
+
+    let newStart = origStart
+    let newEnd = origEnd
+
+    if (mode === 'move') {
+      newStart = shiftDate(origStart, dayDelta)
+      newEnd = shiftDate(origEnd, dayDelta)
+    } else if (mode === 'resize-end') {
+      newEnd = shiftDate(origEnd, dayDelta)
+      if (newEnd < origStart) newEnd = origStart
+    } else if (mode === 'resize-start') {
+      newStart = shiftDate(origStart, dayDelta)
+      if (newStart > origEnd) newStart = origEnd
+    }
+
+    const { colStart, colSpan } = getGanttBarColumn(newStart, newEnd, minDate)
+    const barLeft = (colStart - 2) * COL_WIDTH
+    const barWidth = colSpan * COL_WIDTH
+
+    return { startDate: newStart, endDate: newEnd, barLeft, barWidth }
+  }
+
   return (
     <div
       ref={containerRef}
-      className="relative overflow-x-auto rounded-lg border border-border bg-neutral-50 dark:bg-neutral-900"
-      onMouseLeave={() => setTooltip(null)}
+      className={cn(
+        'relative overflow-x-auto rounded-lg border border-border bg-neutral-50 dark:bg-neutral-900',
+        drag && 'cursor-grabbing',
+      )}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={() => {
+        if (drag) {
+          handleMouseUp()
+        }
+        setTooltip(null)
+      }}
     >
       {/* Tooltip */}
-      {tooltip && <GanttTooltip data={tooltip} />}
+      {!drag && tooltip && <GanttTooltip data={tooltip} />}
+
+      {/* Drag hint */}
+      {drag && drag.dayDelta !== 0 && dragMousePos && (() => {
+        const phase = datedPhases.find((p) => p.id === drag.phaseId)
+        if (!phase) return null
+        const preview = getDragPreview(phase)
+        if (!preview) return null
+        return <DragHint startDate={preview.startDate} endDate={preview.endDate} x={dragMousePos.x} y={dragMousePos.y} />
+      })()}
 
       <div style={{ minWidth: totalWidth }} className="select-none">
         {/* Header: meses */}
@@ -184,10 +328,12 @@ export function GanttChart({ phases, onPhaseClick }: GanttChartProps) {
               phase.skip_weekends,
             )
             const isCurrentPhase = phase.status === 'in_progress'
+            const isDragging = drag?.phaseId === phase.id && drag.dayDelta !== 0
 
-            // Posicao absoluta da barra dentro do grid de dias
-            const barLeft = (colStart - 2) * COL_WIDTH  // colStart-2 remove a col de label
-            const barWidth = colSpan * COL_WIDTH
+            // Posicao da barra (usa preview se arrastando)
+            const preview = getDragPreview(phase)
+            const barLeft = preview ? preview.barLeft : (colStart - 2) * COL_WIDTH
+            const barWidth = preview ? preview.barWidth : colSpan * COL_WIDTH
 
             return (
               <div
@@ -229,9 +375,11 @@ export function GanttChart({ phases, onPhaseClick }: GanttChartProps) {
                   {/* Barra da fase */}
                   <div
                     className={cn(
-                      'absolute top-3 cursor-pointer transition-all duration-150',
+                      'absolute top-3 transition-all duration-150 group',
                       'rounded-lg border',
                       isCurrentPhase && 'ring-2',
+                      isDragging && 'opacity-80 shadow-lg ring-2 ring-primary/30 !transition-none',
+                      !drag && onPhaseDrag ? 'cursor-grab' : drag?.phaseId === phase.id ? 'cursor-grabbing' : 'cursor-pointer',
                     )}
                     style={{
                       left: barLeft,
@@ -245,22 +393,44 @@ export function GanttChart({ phases, onPhaseClick }: GanttChartProps) {
                         borderLeftWidth: '4px',
                         ringColor: `${phase.phase_color}40`,
                       } : {}),
+                      ...(!drag ? { transition: 'left 0.15s, width 0.15s' } : {}),
                     }}
                     onMouseEnter={(e) => {
+                      if (drag) return
                       const rect = e.currentTarget.getBoundingClientRect()
-                      setTooltip({
-                        phase,
-                        x: rect.left,
-                        y: rect.top,
-                      })
+                      setTooltip({ phase, x: rect.left, y: rect.top })
                     }}
                     onMouseMove={(e) => {
+                      if (drag) return
                       setTooltip((prev) =>
                         prev ? { ...prev, x: e.clientX, y: e.clientY } : null,
                       )
                     }}
-                    onMouseLeave={() => setTooltip(null)}
-                    onClick={() => onPhaseClick?.(phase)}
+                    onMouseLeave={() => { if (!drag) setTooltip(null) }}
+                    onMouseDown={(e) => {
+                      if (!onPhaseDrag) {
+                        // No drag support, just click
+                        return
+                      }
+                      // Check if clicking on resize handles
+                      const rect = e.currentTarget.getBoundingClientRect()
+                      const relX = e.clientX - rect.left
+                      const handleZone = 8 // px from edge
+
+                      if (relX <= handleZone) {
+                        handleDragStart(e, phase, 'resize-start')
+                      } else if (relX >= rect.width - handleZone) {
+                        handleDragStart(e, phase, 'resize-end')
+                      } else {
+                        handleDragStart(e, phase, 'move')
+                      }
+                    }}
+                    onClick={(e) => {
+                      // Only fire click if not dragging
+                      if (drag) return
+                      e.stopPropagation()
+                      onPhaseClick?.(phase)
+                    }}
                     role="button"
                     tabIndex={0}
                     aria-label={`${phase.phase_emoji} ${phase.phase_label}: ${formatDateBR(phase.start_date)} ate ${formatDateBR(phase.end_date)}, ${workingDays} dias`}
@@ -268,6 +438,14 @@ export function GanttChart({ phases, onPhaseClick }: GanttChartProps) {
                       if (e.key === 'Enter' || e.key === ' ') onPhaseClick?.(phase)
                     }}
                   >
+                    {/* Resize handle esquerdo */}
+                    {onPhaseDrag && (
+                      <div
+                        className="absolute left-0 top-0 bottom-0 w-2 cursor-col-resize opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        style={{ borderLeft: `2px solid ${phase.phase_color}` }}
+                      />
+                    )}
+
                     {/* Texto dentro da barra (so mostra se ha espaco) */}
                     {barWidth >= 64 && (
                       <div className="flex flex-col justify-center h-full px-2 overflow-hidden">
@@ -275,9 +453,19 @@ export function GanttChart({ phases, onPhaseClick }: GanttChartProps) {
                           className="text-[11px] font-semibold truncate leading-none"
                           style={{ color: phase.phase_color }}
                         >
-                          {workingDays}d
+                          {isDragging && preview
+                            ? `${countWorkingDays(preview.startDate, preview.endDate, phase.skip_weekends)}d`
+                            : `${workingDays}d`}
                         </span>
                       </div>
+                    )}
+
+                    {/* Resize handle direito */}
+                    {onPhaseDrag && (
+                      <div
+                        className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        style={{ borderRight: `2px solid ${phase.phase_color}` }}
+                      />
                     )}
                   </div>
                 </div>
