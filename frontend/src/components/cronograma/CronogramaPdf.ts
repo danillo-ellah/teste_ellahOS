@@ -1002,41 +1002,30 @@ export async function generateCalendarioPdf(data: PhaseExportData): Promise<void
         if (visiblePhases.length >= 5) pillFontSize = minPillFontSize
 
         visiblePhases.forEach((phase, pi) => {
-          const pillY = rowY + 5.5 + pi * pillLineH
+          const pillY = rowY + 5 + pi * pillLineH
+          const pillH = pillLineH - 0.5
+          const pillX = cellX + 1
+          const pillW = colW - 2
 
-          // Truncar texto para caber na celula (max chars baseado na largura)
-          const maxChars = Math.floor(colW / 1.8)
+          // Background da pill (cor da fase a 15% opacidade)
+          setFillColor(doc, phase.phase_color, 0.15)
+          doc.roundedRect(pillX, pillY, pillW, pillH, 0.5, 0.5, 'F')
+
+          // Borda esquerda da pill (cor solida)
+          setFillColor(doc, phase.phase_color)
+          doc.rect(pillX, pillY, 0.8, pillH, 'F')
+
+          // Truncar texto para caber na pill
+          const maxChars = Math.floor((colW - 4) / 1.6)
           const baseText = `${phase.phase_emoji} ${phase.phase_label}`
-          const fullText = phase.complement ? `${baseText} - ${phase.complement}` : baseText
-
-          // Primeira parte: emoji + nome (normal)
           const nameText = baseText.length > maxChars
             ? baseText.substring(0, maxChars - 1) + '…'
             : baseText
 
           doc.setFontSize(pillFontSize)
-          doc.setFont('helvetica', 'normal')
+          doc.setFont('helvetica', 'bold')
           setTextColor(doc, phase.phase_color)
-          doc.text(nameText, cellX + 1.5, pillY)
-
-          // Complemento em italico na mesma linha, se couber
-          if (phase.complement && fullText.length <= maxChars + 8) {
-            const nameWidth = doc.getTextWidth(nameText)
-            const separatorWidth = doc.getTextWidth(' - ')
-            const compX = cellX + 1.5 + nameWidth + separatorWidth
-
-            doc.setFont('helvetica', 'italic')
-            setTextColor(doc, phase.phase_color)
-
-            const remainingW = colW - 3 - nameWidth - separatorWidth
-            const compTrunc = phase.complement.length > Math.floor(remainingW / 1.4)
-              ? phase.complement.substring(0, Math.max(2, Math.floor(remainingW / 1.4) - 1)) + '…'
-              : phase.complement
-
-            if (compX + doc.getTextWidth(compTrunc) < cellX + colW - 1) {
-              doc.text(` - ${compTrunc}`, cellX + 1.5 + nameWidth, pillY, {})
-            }
-          }
+          doc.text(nameText, pillX + 1.5, pillY + pillH - 0.8)
         })
 
         // Indicador de fases ocultadas
@@ -1079,24 +1068,41 @@ export async function generateCalendarioPdf(data: PhaseExportData): Promise<void
     doc.setLineWidth(0.3)
     doc.line(MARGIN_X, legendY - 1, PAGE_W - MARGIN_X, legendY - 1)
 
+    const statusLabels: Record<string, string> = {
+      pending: 'Nao iniciado',
+      in_progress: 'Em andamento',
+      completed: 'Concluido',
+    }
+
     uniquePhasesThisMonth.forEach((phase, li) => {
       const col = li % 3
       const row = Math.floor(li / 3)
       const lx = MARGIN_X + col * legendItemW
       const ly = legendY + row * (legendSquare + 2)
 
-      // Quadrado de cor
+      // Pill mini com cor de fundo
+      const pillW = 50
+      const pillH = legendSquare
+      setFillColor(doc, phase.phase_color, 0.15)
+      doc.roundedRect(lx, ly, pillW, pillH, 0.5, 0.5, 'F')
+
+      // Borda esquerda solida
       setFillColor(doc, phase.phase_color)
-      setDrawColor(doc, phase.phase_color)
-      doc.rect(lx, ly, legendSquare, legendSquare, 'F')
+      doc.rect(lx, ly, 0.8, pillH, 'F')
 
       // Nome da fase
       doc.setFontSize(legendFontSize)
-      doc.setFont('helvetica', 'normal')
-      setTextColor(doc, NEUTRAL_600)
+      doc.setFont('helvetica', 'bold')
+      setTextColor(doc, phase.phase_color)
       const labelText = `${phase.phase_emoji} ${phase.phase_label}`
-      const truncated = labelText.length > 28 ? labelText.substring(0, 26) + '…' : labelText
-      doc.text(truncated, lx + legendSquare + 2, ly + legendSquare - 0.5)
+      const truncated = labelText.length > 22 ? labelText.substring(0, 20) + '…' : labelText
+      doc.text(truncated, lx + 2, ly + legendSquare - 0.5)
+
+      // Status ao lado
+      doc.setFont('helvetica', 'normal')
+      setTextColor(doc, NEUTRAL_400)
+      doc.setFontSize(6)
+      doc.text(statusLabels[phase.status] ?? phase.status, lx + pillW + 2, ly + legendSquare - 0.5)
     })
   })
 

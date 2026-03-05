@@ -38,7 +38,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
-import { PHASE_COLOR_PALETTE, PHASE_STATUS_CONFIG } from '@/types/cronograma'
+import { PHASE_COLOR_PALETTE, PHASE_STATUS_CONFIG, PHASE_TEMPLATES } from '@/types/cronograma'
 import { countWorkingDays } from '@/lib/cronograma-utils'
 import { suggestEmojis } from '@/lib/groq-emoji'
 import { EmojiPicker } from '@/components/cronograma/EmojiPicker'
@@ -222,8 +222,59 @@ function PhaseForm({
     }
   }
 
+  // --- Templates rapidos ---
+
+  const [showAllTemplates, setShowAllTemplates] = useState(false)
+  const visibleTemplates = showAllTemplates ? PHASE_TEMPLATES : PHASE_TEMPLATES.slice(0, 8)
+
+  function applyTemplate(tpl: typeof PHASE_TEMPLATES[0]) {
+    setValue('phase_label', tpl.phase_label)
+    setValue('phase_emoji', tpl.phase_emoji)
+    setValue('phase_color', tpl.phase_color)
+    setSuggestedEmojis([])
+  }
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+      {/* Templates rapidos — so no modo criacao */}
+      {!isEditing && (
+        <div className="flex flex-col gap-2">
+          <Label className="text-xs text-muted-foreground">Fases comuns (clique para preencher)</Label>
+          <div className="flex flex-wrap gap-1.5">
+            {visibleTemplates.map((tpl) => (
+              <button
+                key={tpl.phase_key}
+                type="button"
+                onClick={() => applyTemplate(tpl)}
+                className={cn(
+                  'inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium border transition-all',
+                  'hover:scale-105 hover:shadow-sm',
+                  watchedLabel === tpl.phase_label
+                    ? 'ring-2 ring-ring ring-offset-1'
+                    : 'border-input bg-background hover:bg-accent',
+                )}
+                style={{
+                  backgroundColor: watchedLabel === tpl.phase_label ? `${tpl.phase_color}20` : undefined,
+                  borderColor: watchedLabel === tpl.phase_label ? tpl.phase_color : undefined,
+                }}
+              >
+                <span>{tpl.phase_emoji}</span>
+                <span>{tpl.phase_label}</span>
+              </button>
+            ))}
+            {PHASE_TEMPLATES.length > 8 && (
+              <button
+                type="button"
+                onClick={() => setShowAllTemplates(!showAllTemplates)}
+                className="inline-flex items-center px-2 py-1 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                {showAllTemplates ? 'Menos' : `+${PHASE_TEMPLATES.length - 8} mais`}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Preview da cor */}
       <div
         className="h-1 rounded-full"

@@ -32,7 +32,7 @@ import { GanttChart } from '@/components/cronograma/GanttChart'
 import { PhaseList } from '@/components/cronograma/PhaseList'
 import { PhaseDialog } from '@/components/cronograma/PhaseDialog'
 import { CalendarView } from '@/components/cronograma/CalendarView'
-import { generateCronogramaPdf } from '@/components/cronograma/CronogramaPdf'
+import { generateCronogramaPdf, generateCalendarioPdf } from '@/components/cronograma/CronogramaPdf'
 import type { JobDetail } from '@/types/jobs'
 import type {
   JobPhase,
@@ -206,7 +206,7 @@ export function TabCronograma({ job }: TabCronogramaProps) {
         brand_color: null,
       }
 
-      await generateCronogramaPdf({
+      const exportData = {
         job: {
           code: job.job_code ?? '',
           title: job.title,
@@ -218,7 +218,13 @@ export function TabCronograma({ job }: TabCronogramaProps) {
         phases,
         tenant,
         generated_at: new Date().toISOString(),
-      })
+      }
+
+      if (viewMode === 'calendar') {
+        await generateCalendarioPdf(exportData)
+      } else {
+        await generateCronogramaPdf(exportData)
+      }
 
       toast.success('PDF exportado com sucesso')
     } catch (err) {

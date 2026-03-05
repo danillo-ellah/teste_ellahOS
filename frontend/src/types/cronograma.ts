@@ -74,6 +74,33 @@ export interface ReorderPayload {
   items: Array<{ id: string; sort_order: number }>
 }
 
+// Templates de fases comuns em producao audiovisual
+export interface PhaseTemplate {
+  phase_key: string
+  phase_label: string
+  phase_emoji: string
+  phase_color: string
+}
+
+export const PHASE_TEMPLATES: PhaseTemplate[] = [
+  { phase_key: 'orcamento', phase_label: 'Orcamento', phase_emoji: '\ud83d\udcb0', phase_color: '#F59E0B' },
+  { phase_key: 'briefing', phase_label: 'Briefing', phase_emoji: '\ud83d\udccb', phase_color: '#8B5CF6' },
+  { phase_key: 'pre_producao', phase_label: 'Pre-Producao', phase_emoji: '\ud83d\udcc5', phase_color: '#3B82F6' },
+  { phase_key: 'ppm', phase_label: 'PPM', phase_emoji: '\ud83e\udd1d', phase_color: '#06B6D4' },
+  { phase_key: 'filmagem', phase_label: 'Filmagem', phase_emoji: '\ud83c\udfa5', phase_color: '#EF4444' },
+  { phase_key: 'pos_producao', phase_label: 'Pos-Producao', phase_emoji: '\ud83c\udfac', phase_color: '#A855F7' },
+  { phase_key: 'color', phase_label: 'Color', phase_emoji: '\ud83c\udfa8', phase_color: '#F472B6' },
+  { phase_key: 'entrega', phase_label: 'Entrega', phase_emoji: '\ud83d\udce6', phase_color: '#22C55E' },
+  { phase_key: 'aprovacao_cliente', phase_label: 'Aprovacao do Cliente', phase_emoji: '\u2705', phase_color: '#10B981' },
+  { phase_key: 'edicao', phase_label: 'Edicao', phase_emoji: '\u2702\ufe0f', phase_color: '#64748B' },
+  { phase_key: 'casting', phase_label: 'Casting/Elenco', phase_emoji: '\ud83c\udfad', phase_color: '#F43F5E' },
+  { phase_key: 'locacao', phase_label: 'Locacao', phase_emoji: '\ud83d\udccd', phase_color: '#14B8A6' },
+  { phase_key: 'figurino', phase_label: 'Figurino', phase_emoji: '\ud83d\udc57', phase_color: '#EC4899' },
+  { phase_key: 'sound_design', phase_label: 'Sound Design', phase_emoji: '\ud83c\udfa7', phase_color: '#6366F1' },
+  { phase_key: 'vfx', phase_label: 'VFX', phase_emoji: '\u2728', phase_color: '#8B5CF6' },
+  { phase_key: 'motion', phase_label: 'Motion Graphics', phase_emoji: '\ud83c\udf1f', phase_color: '#0EA5E9' },
+]
+
 // Paleta de cores padrao por fase
 export const PHASE_COLOR_PALETTE = [
   { label: 'Amber', value: '#F59E0B' },
