@@ -19,7 +19,8 @@ const WEEK_DAYS = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB']
 // ---------------------------------------------------------------------------
 
 interface DayTotals {
-  payable: number
+  pendingPayable: number
+  paidPayable: number
   receivable: number
   overduePayable: number
   count: number
@@ -54,18 +55,24 @@ export function PaymentCalendarSummary({
   const totalsByDate = useMemo(() => {
     const map = new Map<string, DayTotals>()
 
+    const empty = (): DayTotals => ({ pendingPayable: 0, paidPayable: 0, receivable: 0, overduePayable: 0, count: 0 })
+
     for (const p of payables) {
       const key = p.date
-      const existing = map.get(key) ?? { payable: 0, receivable: 0, overduePayable: 0, count: 0 }
-      existing.payable += p.amount
+      const existing = map.get(key) ?? empty()
+      if (p.status === 'pago') {
+        existing.paidPayable += p.amount
+      } else {
+        existing.pendingPayable += p.amount
+        if (p.is_overdue) existing.overduePayable += p.amount
+      }
       existing.count++
-      if (p.is_overdue) existing.overduePayable += p.amount
       map.set(key, existing)
     }
 
     for (const r of receivables) {
       const key = r.date
-      const existing = map.get(key) ?? { payable: 0, receivable: 0, overduePayable: 0, count: 0 }
+      const existing = map.get(key) ?? empty()
       existing.receivable += r.amount
       existing.count++
       map.set(key, existing)
@@ -128,7 +135,7 @@ export function PaymentCalendarSummary({
                   )}
                   title={
                     hasData
-                      ? `${format(day, "dd/MM", { locale: ptBR })} — Pagar: ${formatCurrency(totals.payable)} | Receber: ${formatCurrency(totals.receivable)}`
+                      ? `${format(day, "dd/MM", { locale: ptBR })} — Pagar: ${formatCurrency(totals.pendingPayable)} | Pago: ${formatCurrency(totals.paidPayable)} | Receber: ${formatCurrency(totals.receivable)}`
                       : undefined
                   }
                 >
@@ -148,7 +155,16 @@ export function PaymentCalendarSummary({
                   {/* Blocos coloridos com valor centralizado */}
                   {hasData && (
                     <div className="flex-1 flex flex-col gap-0.5 min-h-0">
-                      {totals.payable > 0 && (
+                      {/* Pago — azul/slate riscado */}
+                      {totals.paidPayable > 0 && (
+                        <div className="flex-1 rounded-md flex items-center justify-center min-h-[20px] px-0.5 bg-blue-50 dark:bg-blue-950/40">
+                          <span className="text-[10px] font-semibold tabular-nums leading-none truncate text-blue-400 dark:text-blue-500 line-through">
+                            {fmtShort(totals.paidPayable)}
+                          </span>
+                        </div>
+                      )}
+                      {/* Pendente — amber ou vermelho se vencido */}
+                      {totals.pendingPayable > 0 && (
                         <div
                           className={cn(
                             'flex-1 rounded-md flex items-center justify-center min-h-[22px] px-0.5',
@@ -165,10 +181,11 @@ export function PaymentCalendarSummary({
                                 : 'text-amber-700 dark:text-amber-300',
                             )}
                           >
-                            {fmtShort(totals.payable)}
+                            {fmtShort(totals.pendingPayable)}
                           </span>
                         </div>
                       )}
+                      {/* A receber — verde */}
                       {totals.receivable > 0 && (
                         <div className="flex-1 rounded-md flex items-center justify-center min-h-[22px] px-0.5 bg-emerald-100 dark:bg-emerald-950/60">
                           <span className="text-[11px] font-bold tabular-nums leading-none truncate text-emerald-700 dark:text-emerald-300">
@@ -187,6 +204,10 @@ export function PaymentCalendarSummary({
 
       {/* Legenda */}
       <div className="flex gap-4 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800" />
+          <span className="line-through">Pago</span>
+        </span>
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded bg-amber-100 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700" />
           A Pagar
