@@ -695,7 +695,7 @@ export function ODDialog({ open, onOpenChange, jobId, od }: ODDialogProps) {
 
             {form.crew_calls.length === 0 && (
               <p className="text-xs text-muted-foreground">
-                Nenhum departamento adicionado. Clique em "Adicionar departamento" para comecar.
+                Nenhum departamento adicionado. Clique em &ldquo;Adicionar departamento&rdquo; para comecar.
               </p>
             )}
 
@@ -748,7 +748,7 @@ export function ODDialog({ open, onOpenChange, jobId, od }: ODDialogProps) {
 
             {form.filming_blocks.length === 0 && (
               <p className="text-xs text-muted-foreground">
-                Nenhum bloco de filmagem. Clique em "Adicionar bloco" para organizar o dia por periodo.
+                Nenhum bloco de filmagem. Clique em &ldquo;Adicionar bloco&rdquo; para organizar o dia por periodo.
               </p>
             )}
 
@@ -880,7 +880,7 @@ export function ODDialog({ open, onOpenChange, jobId, od }: ODDialogProps) {
 
             {form.cast_schedule.length === 0 && (
               <p className="text-xs text-muted-foreground">
-                Nenhum ator adicionado. Clique em "Adicionar ator" ou use o auto-preenchimento.
+                Nenhum ator adicionado. Clique em &ldquo;Adicionar ator&rdquo; ou use o auto-preenchimento.
               </p>
             )}
 

@@ -414,7 +414,6 @@ export default function JobFinancialDashboardPage({ params }: PageProps) {
             <UpcomingPaymentsList
               entries={dashboard.payment_calendar.filter(e => {
                 const dueDate = new Date(e.payment_due_date)
-                const today = new Date()
                 const in15 = new Date()
                 in15.setDate(in15.getDate() + 15)
                 return dueDate <= in15 && e.items_pending > 0

@@ -29,6 +29,7 @@ const ADMIN_PASSWORD = 'Ellah2026!';
 // Token de portal publico real — sera preenchido durante os testes de admin
 // Se o banco ja tem uma sessao ativa, substitua aqui para rodar a suite B isolada
 let capturedPortalToken = '';
+// eslint-disable-next-line prefer-const
 let capturedSessionId = '';
 
 // ---------------------------------------------------------------------------

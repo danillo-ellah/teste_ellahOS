@@ -5,6 +5,7 @@ import { error, fromAppError } from '../_shared/response.ts';
 import { AppError } from '../_shared/errors.ts';
 
 import { handleJobDashboard } from './handlers/job-dashboard.ts';
+import { handleJobDashboardCharts } from './handlers/job-dashboard-charts.ts';
 import { handleTenantDashboard } from './handlers/tenant-dashboard.ts';
 
 Deno.serve(async (req: Request) => {
@@ -25,9 +26,17 @@ Deno.serve(async (req: Request) => {
     const segment2 = fnIndex >= 0 && pathSegments.length > fnIndex + 2
       ? pathSegments[fnIndex + 2]
       : null;
+    const segment3 = fnIndex >= 0 && pathSegments.length > fnIndex + 3
+      ? pathSegments[fnIndex + 3]
+      : null;
+
+    // GET /financial-dashboard/job/:jobId/charts
+    if (segment1 === 'job' && segment2 && segment3 === 'charts' && method === 'GET') {
+      return await handleJobDashboardCharts(req, auth, segment2);
+    }
 
     // GET /financial-dashboard/job/:jobId
-    if (segment1 === 'job' && segment2 && method === 'GET') {
+    if (segment1 === 'job' && segment2 && !segment3 && method === 'GET') {
       return await handleJobDashboard(req, auth, segment2);
     }
 

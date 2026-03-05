@@ -350,6 +350,7 @@ export async function generateCronogramaPdf(data: PhaseExportData): Promise<void
         // Separador de mes
         setDrawColor(doc, NEUTRAL_200)
         doc.setLineWidth(0.2);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (doc as any).setLineDash([1, 1]);
         doc.line(
           MARGIN_X + GANTT_LABEL_W + 2 + d * dayW,
@@ -357,6 +358,7 @@ export async function generateCronogramaPdf(data: PhaseExportData): Promise<void
           MARGIN_X + GANTT_LABEL_W + 2 + d * dayW,
           ganttStartY + ganttH - 1,
         );
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (doc as any).setLineDash([])
       }
       setTextColor(doc, NEUTRAL_400)
@@ -387,10 +389,12 @@ export async function generateCronogramaPdf(data: PhaseExportData): Promise<void
   const todayOffset = differenceInCalendarDays(today, minDate)
   if (todayOffset >= 0 && todayOffset < totalDays) {
     const todayX = MARGIN_X + GANTT_LABEL_W + 2 + todayOffset * dayW + dayW / 2
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(doc as any).setLineDash([0.5, 0.5])
     setDrawColor(doc, '#F43F5E')
     doc.setLineWidth(0.4)
     doc.line(todayX, ganttStartY + monthHeaderH + 4, todayX, ganttStartY + ganttH - 1)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(doc as any).setLineDash([])
 
     setTextColor(doc, '#F43F5E')
