@@ -22,5 +22,6 @@ export async function listFolders(
     return success({ data: [], meta: { total: 0 } });
   }
 
-  return success(folders || []);
+  const list = folders || [];
+  return success({ data: list, meta: { total: list.length } });
 }
