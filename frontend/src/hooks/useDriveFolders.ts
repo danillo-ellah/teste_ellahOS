@@ -85,3 +85,28 @@ export function useRecreateDriveStructure() {
     isPending: mutation.isPending,
   }
 }
+
+// --- Delete structure ---
+
+export function useDeleteDriveStructure() {
+  const queryClient = useQueryClient()
+
+  const mutation = useMutation({
+    mutationFn: (jobId: string) =>
+      apiMutate<{ deleted: number; total: number; errors?: string[] }>(
+        'drive-integration',
+        'DELETE',
+        undefined,
+        `${jobId}/delete-structure`,
+      ),
+    onSuccess: (_data, jobId) => {
+      queryClient.invalidateQueries({ queryKey: driveFolderKeys.folders(jobId) })
+      queryClient.invalidateQueries({ queryKey: jobKeys.detail(jobId) })
+    },
+  })
+
+  return {
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  }
+}

@@ -9,6 +9,7 @@ import {
   ChevronDown,
   ChevronRight,
   FolderPlus,
+  Trash2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -32,6 +33,7 @@ import {
   useDriveFolders,
   useCreateDriveStructure,
   useRecreateDriveStructure,
+  useDeleteDriveStructure,
 } from '@/hooks/useDriveFolders'
 import { ApiRequestError } from '@/lib/api'
 import type { JobDetail } from '@/types/jobs'
@@ -107,6 +109,8 @@ export function DriveSection({ job }: DriveSectionProps) {
     useCreateDriveStructure()
   const { mutateAsync: recreateStructure, isPending: isRecreating } =
     useRecreateDriveStructure()
+  const { mutateAsync: deleteStructure, isPending: isDeleting } =
+    useDeleteDriveStructure()
 
   const hasFolders = total > 0
   const rootFolder = folders.find((f) => f.folder_key === 'root')
@@ -143,6 +147,18 @@ export function DriveSection({ job }: DriveSectionProps) {
     } catch (err) {
       const msg =
         err instanceof ApiRequestError ? err.message : 'Erro ao recriar pastas'
+      toast.error(msg)
+    }
+  }
+
+  const handleDelete = async () => {
+    try {
+      const result = await deleteStructure(job.id)
+      const deleted = result.data?.deleted ?? 0
+      toast.success(`${deleted} pasta(s) movida(s) para a lixeira do Drive`)
+    } catch (err) {
+      const msg =
+        err instanceof ApiRequestError ? err.message : 'Erro ao excluir pastas'
       toast.error(msg)
     }
   }
@@ -200,38 +216,77 @@ export function DriveSection({ job }: DriveSectionProps) {
           )}
 
           {hasFolders && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={isRecreating}
-                >
-                  {isRecreating ? (
-                    <RefreshCw className="size-3.5 mr-1.5 animate-spin" />
-                  ) : (
-                    <RefreshCw className="size-3.5 mr-1.5" />
-                  )}
-                  Recriar
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Recriar pastas do Drive?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Os registros locais serao apagados e novas pastas serao
-                    criadas no Google Drive. As pastas antigas no Drive NAO serao
-                    deletadas.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleRecreate}>
+            <>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={isRecreating || isDeleting}
+                  >
+                    {isRecreating ? (
+                      <RefreshCw className="size-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="size-3.5 mr-1.5" />
+                    )}
                     Recriar
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Recriar pastas do Drive?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Os registros locais serao apagados e novas pastas serao
+                      criadas no Google Drive. As pastas antigas no Drive NAO serao
+                      deletadas.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleRecreate}>
+                      Recriar
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={isDeleting || isRecreating}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    {isDeleting ? (
+                      <RefreshCw className="size-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="size-3.5 mr-1.5" />
+                    )}
+                    Excluir
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Excluir pastas do Drive?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Todas as {total} pastas deste job serao movidas para a lixeira
+                      do Google Drive. Voce pode restaura-las na lixeira do Drive em
+                      ate 30 dias.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Excluir pastas
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
           )}
         </div>
       </div>

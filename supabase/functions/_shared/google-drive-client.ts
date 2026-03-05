@@ -422,6 +422,35 @@ export async function setPermission(
   }
 }
 
+// Deleta um arquivo/pasta do Google Drive (move para lixeira)
+// Usa o token da SA que e owner — necessario quando usuario nao tem permissao de delete
+export async function trashFile(
+  token: string,
+  fileId: string,
+  opts?: DriveOptions,
+): Promise<boolean> {
+  let url = `${DRIVE_API}/files/${fileId}`;
+  if (opts?.driveType === 'shared_drive') {
+    url += '?supportsAllDrives=true';
+  }
+
+  const resp = await driveFetchWithRetry(url, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ trashed: true }),
+  }, `trashFile ${fileId}`);
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    console.error(`[google-drive] trashFile ${fileId}: HTTP ${resp.status} — ${text.slice(0, 200)}`);
+    return false;
+  }
+  return true;
+}
+
 // Define permissao "qualquer pessoa com o link pode visualizar" em um arquivo
 // Usado para NF PDFs que precisam ser visualizados no iframe do frontend
 export async function setPublicReadPermission(
@@ -674,16 +703,25 @@ export async function buildDriveStructure(
   }
 
   // 6. Transferir ownership das pastas para o admin do tenant
-  // SA cria como owner, mas o usuario precisa ter controle total
+  // SA cria como owner, mas o usuario precisa ter controle total.
+  // Se transferOwnership falhar (cross-domain), faz fallback para writer com
+  // permittedActions de organizer — permite mover, renomear e excluir pastas.
   const ownerEmail = driveConfig.owner_email as string;
   if (ownerEmail) {
     console.log(`[google-drive] Transferindo ownership para ${ownerEmail}...`);
     let transferred = 0;
-    for (const [key, folder] of Object.entries(folderMap)) {
+    let fallbacks = 0;
+    for (const [_key, folder] of Object.entries(folderMap)) {
       const ok = await transferOwnership(token!, folder.driveId, ownerEmail, driveOpts);
-      if (ok) transferred++;
+      if (ok) {
+        transferred++;
+      } else {
+        // Fallback: dar writer permission (permite editar, mover para lixeira)
+        await setPermission(token!, folder.driveId, ownerEmail, 'writer', driveOpts);
+        fallbacks++;
+      }
     }
-    console.log(`[google-drive] Ownership transferido: ${transferred}/${Object.keys(folderMap).length} pastas`);
+    console.log(`[google-drive] Ownership: ${transferred} transferidos, ${fallbacks} fallback (writer) de ${Object.keys(folderMap).length} pastas`);
   } else {
     console.log('[google-drive] owner_email nao configurado — SA permanece como owner das pastas');
   }

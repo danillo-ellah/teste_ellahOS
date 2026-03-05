@@ -8,14 +8,16 @@ import { createStructure } from './handlers/create-structure.ts';
 import { recreateStructure } from './handlers/recreate.ts';
 import { syncUrls } from './handlers/sync-urls.ts';
 import { handleCopyTemplates } from './handlers/copy-templates.ts';
+import { deleteStructure } from './handlers/delete-structure.ts';
 
 // ========================================================
 // drive-integration — CRUD pastas Google Drive por job
-// POST /:jobId/create-structure  — criar estrutura de pastas (admin/ceo)
-// POST /:jobId/recreate          — recriar pastas (admin/ceo)
-// POST /:jobId/sync-urls         — callback do n8n (webhook)
-// POST /:jobId/copy-templates    — copiar templates para pastas do job (admin/ceo/pe)
-// GET  /:jobId/folders           — listar pastas do job
+// POST   /:jobId/create-structure  — criar estrutura de pastas (admin/ceo)
+// POST   /:jobId/recreate          — recriar pastas (admin/ceo)
+// POST   /:jobId/sync-urls         — callback do n8n (webhook)
+// POST   /:jobId/copy-templates    — copiar templates para pastas do job (admin/ceo/pe)
+// DELETE /:jobId/delete-structure   — excluir pastas do Drive (admin/ceo)
+// GET    /:jobId/folders            — listar pastas do job
 // ========================================================
 
 Deno.serve(async (req: Request) => {
@@ -70,6 +72,15 @@ Deno.serve(async (req: Request) => {
           // Permitido para admin, ceo e produtor_executivo
           // (verificacao de role granular feita dentro do handler)
           return await handleCopyTemplates(req, auth, jobId);
+        }
+        break;
+
+      case 'DELETE':
+        if (segment2 === 'delete-structure') {
+          if (!['admin', 'ceo'].includes(auth.role)) {
+            throw new AppError('FORBIDDEN', 'Apenas admin/ceo podem excluir pastas', 403);
+          }
+          return await deleteStructure(req, auth, jobId);
         }
         break;
     }
