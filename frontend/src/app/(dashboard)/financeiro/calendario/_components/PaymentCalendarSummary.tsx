@@ -74,14 +74,13 @@ export function PaymentCalendarSummary({
     return map
   }, [payables, receivables])
 
-  // Maior valor para escala relativa das barras
-  const maxAmount = useMemo(() => {
-    let max = 0
-    for (const t of totalsByDate.values()) {
-      max = Math.max(max, t.payable, t.receivable)
-    }
-    return max || 1
-  }, [totalsByDate])
+
+  // Formata valor abreviado legivel
+  function fmtShort(value: number): string {
+    if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`
+    if (value >= 1_000) return `${(value / 1_000).toFixed(0)}k`
+    return formatCurrency(value)
+  }
 
   return (
     <div className="space-y-2">
@@ -96,7 +95,7 @@ export function PaymentCalendarSummary({
             <div
               key={d}
               className={cn(
-                'h-6 flex items-center justify-center text-[10px] font-semibold uppercase tracking-wide',
+                'h-7 flex items-center justify-center text-[11px] font-semibold uppercase tracking-wide',
                 idx === 0 || idx === 6
                   ? 'text-muted-foreground/60'
                   : 'text-muted-foreground',
@@ -117,17 +116,13 @@ export function PaymentCalendarSummary({
               const dateStr = format(day, 'yyyy-MM-dd')
               const totals = isCurrentMonth ? totalsByDate.get(dateStr) : undefined
               const hasData = totals && totals.count > 0
-
-              // Altura proporcional das barras (relativa ao max)
-              const payBarH = totals ? Math.max(2, Math.round((totals.payable / maxAmount) * 16)) : 0
-              const recBarH = totals ? Math.max(2, Math.round((totals.receivable / maxAmount) * 16)) : 0
               const hasOverdue = (totals?.overduePayable ?? 0) > 0
 
               return (
                 <div
                   key={dateStr}
                   className={cn(
-                    'h-[56px] border-b border-r border-border p-0.5 flex flex-col',
+                    'h-[84px] border-b border-r border-border p-1 flex flex-col gap-0.5',
                     !isCurrentMonth && 'bg-muted/20',
                     isWeekend && isCurrentMonth && 'bg-neutral-50/50 dark:bg-neutral-900/30',
                   )}
@@ -140,7 +135,7 @@ export function PaymentCalendarSummary({
                   {/* Numero do dia */}
                   <span
                     className={cn(
-                      'text-[10px] font-semibold leading-none w-4 h-4 flex items-center justify-center rounded-full self-start',
+                      'text-[11px] font-semibold leading-none w-5 h-5 flex items-center justify-center rounded-full shrink-0',
                       !isCurrentMonth && 'text-muted-foreground/30',
                       isWeekend && isCurrentMonth && 'text-muted-foreground/60',
                       !isWeekend && isCurrentMonth && 'text-foreground',
@@ -150,50 +145,36 @@ export function PaymentCalendarSummary({
                     {day.getDate()}
                   </span>
 
-                  {/* Barras de totais */}
+                  {/* Blocos coloridos com valor centralizado */}
                   {hasData && (
-                    <div className="flex-1 flex items-end gap-px px-0.5 pb-0.5">
+                    <div className="flex-1 flex flex-col gap-0.5 min-h-0">
                       {totals.payable > 0 && (
                         <div
                           className={cn(
-                            'flex-1 rounded-sm min-h-[2px] transition-all',
+                            'flex-1 rounded-md flex items-center justify-center min-h-[22px] px-0.5',
                             hasOverdue
-                              ? 'bg-red-400 dark:bg-red-500'
-                              : 'bg-amber-400 dark:bg-amber-500',
+                              ? 'bg-red-100 dark:bg-red-950/60'
+                              : 'bg-amber-100 dark:bg-amber-950/60',
                           )}
-                          style={{ height: `${payBarH}px` }}
-                        />
+                        >
+                          <span
+                            className={cn(
+                              'text-[11px] font-bold tabular-nums leading-none truncate',
+                              hasOverdue
+                                ? 'text-red-700 dark:text-red-300'
+                                : 'text-amber-700 dark:text-amber-300',
+                            )}
+                          >
+                            {fmtShort(totals.payable)}
+                          </span>
+                        </div>
                       )}
                       {totals.receivable > 0 && (
-                        <div
-                          className="flex-1 rounded-sm bg-emerald-400 dark:bg-emerald-500 min-h-[2px] transition-all"
-                          style={{ height: `${recBarH}px` }}
-                        />
-                      )}
-                    </div>
-                  )}
-
-                  {/* Valor total compacto */}
-                  {hasData && (
-                    <div className="px-0.5">
-                      {totals.payable > 0 && (
-                        <p className={cn(
-                          'text-[8px] font-bold tabular-nums leading-tight truncate',
-                          hasOverdue
-                            ? 'text-red-600 dark:text-red-400'
-                            : 'text-amber-600 dark:text-amber-400',
-                        )}>
-                          {totals.payable >= 1000
-                            ? `${(totals.payable / 1000).toFixed(0)}k`
-                            : formatCurrency(totals.payable)}
-                        </p>
-                      )}
-                      {totals.receivable > 0 && (
-                        <p className="text-[8px] font-bold tabular-nums leading-tight truncate text-emerald-600 dark:text-emerald-400">
-                          {totals.receivable >= 1000
-                            ? `+${(totals.receivable / 1000).toFixed(0)}k`
-                            : `+${formatCurrency(totals.receivable)}`}
-                        </p>
+                        <div className="flex-1 rounded-md flex items-center justify-center min-h-[22px] px-0.5 bg-emerald-100 dark:bg-emerald-950/60">
+                          <span className="text-[11px] font-bold tabular-nums leading-none truncate text-emerald-700 dark:text-emerald-300">
+                            +{fmtShort(totals.receivable)}
+                          </span>
+                        </div>
                       )}
                     </div>
                   )}
@@ -204,18 +185,18 @@ export function PaymentCalendarSummary({
         ))}
       </div>
 
-      {/* Legenda compacta */}
-      <div className="flex gap-4 text-[10px] text-muted-foreground">
-        <span className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 rounded-sm bg-amber-400 dark:bg-amber-500" />
+      {/* Legenda */}
+      <div className="flex gap-4 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded bg-amber-100 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700" />
           A Pagar
         </span>
-        <span className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 rounded-sm bg-red-400 dark:bg-red-500" />
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded bg-red-100 dark:bg-red-950/60 border border-red-300 dark:border-red-700" />
           Vencido
         </span>
-        <span className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 rounded-sm bg-emerald-400 dark:bg-emerald-500" />
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700" />
           A Receber
         </span>
       </div>
