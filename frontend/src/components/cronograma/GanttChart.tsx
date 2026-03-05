@@ -110,64 +110,10 @@ export function GanttChart({ phases, onPhaseClick, onPhaseDrag }: GanttChartProp
   /** Tracks if a drag with actual movement occurred — used to suppress click after drag */
   const didDragRef = useRef(false)
 
-  // Filtrar fases que possuem datas definidas (fases sem datas nao aparecem no gantt)
-  const datedPhases = phases.filter((p) => p.start_date && p.end_date)
-  if (datedPhases.length === 0) return null
-
-  // Calcular intervalo total do cronograma
-  const sortedPhases = [...datedPhases].sort((a, b) =>
-    a.start_date!.localeCompare(b.start_date!),
-  )
-  const minDate = sortedPhases[0].start_date!
-  const maxDate = [...datedPhases].sort((a, b) =>
-    b.end_date!.localeCompare(a.end_date!),
-  )[0].end_date!
-
-  const allDays = getDaysInRange(minDate, maxDate)
-  if (allDays.length === 0) return null
-
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  const todayOffset = differenceInCalendarDays(today, parseISO(minDate))
-  const showTodayLine = todayOffset >= 0 && todayOffset < allDays.length
-
   // Largura de cada coluna de dia (px)
   const COL_WIDTH = 32
-  const LABEL_COL_WIDTH = 192 // 12rem
 
-  // Agrupar dias por mes para o header
-  const monthGroups: Array<{ label: string; startIdx: number; count: number }> = []
-  allDays.forEach((day, idx) => {
-    const label = format(day, 'MMM yyyy', { locale: ptBR }).toUpperCase()
-    const last = monthGroups[monthGroups.length - 1]
-    if (last && last.label === label) {
-      last.count++
-    } else {
-      monthGroups.push({ label, startIdx: idx, count: 1 })
-    }
-  })
-
-  const totalWidth = LABEL_COL_WIDTH + allDays.length * COL_WIDTH
-
-  // --- Drag handlers ---
-
-  const handleDragStart = (e: React.MouseEvent, phase: JobPhase, mode: DragMode) => {
-    if (!phase.start_date || !phase.end_date || !onPhaseDrag) return
-    e.preventDefault()
-    e.stopPropagation()
-    setTooltip(null)
-    didDragRef.current = false
-    setDrag({
-      phaseId: phase.id,
-      mode,
-      startMouseX: e.clientX,
-      origStart: phase.start_date,
-      origEnd: phase.end_date,
-      dayDelta: 0,
-    })
-    setDragMousePos({ x: e.clientX, y: e.clientY })
-  }
+  // --- Drag handlers (hooks must be before early returns) ---
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!drag) return
@@ -196,11 +142,9 @@ export function GanttChart({ phases, onPhaseClick, onPhaseDrag }: GanttChartProp
       newEnd = shiftDate(origEnd, dayDelta)
     } else if (mode === 'resize-end') {
       newEnd = shiftDate(origEnd, dayDelta)
-      // Garantir que end >= start
       if (newEnd < origStart) newEnd = origStart
     } else if (mode === 'resize-start') {
       newStart = shiftDate(origStart, dayDelta)
-      // Garantir que start <= end
       if (newStart > origEnd) newStart = origEnd
     }
 
@@ -208,6 +152,63 @@ export function GanttChart({ phases, onPhaseClick, onPhaseDrag }: GanttChartProp
     setDrag(null)
     setDragMousePos(null)
   }, [drag, onPhaseDrag])
+
+  // Filtrar fases que possuem datas definidas (fases sem datas nao aparecem no gantt)
+  const datedPhases = phases.filter((p) => p.start_date && p.end_date)
+  if (datedPhases.length === 0) return null
+
+  // Calcular intervalo total do cronograma
+  const sortedPhases = [...datedPhases].sort((a, b) =>
+    a.start_date!.localeCompare(b.start_date!),
+  )
+  const minDate = sortedPhases[0].start_date!
+  const maxDate = [...datedPhases].sort((a, b) =>
+    b.end_date!.localeCompare(a.end_date!),
+  )[0].end_date!
+
+  const allDays = getDaysInRange(minDate, maxDate)
+  if (allDays.length === 0) return null
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const todayOffset = differenceInCalendarDays(today, parseISO(minDate))
+  const showTodayLine = todayOffset >= 0 && todayOffset < allDays.length
+
+  const LABEL_COL_WIDTH = 192 // 12rem
+
+  // Agrupar dias por mes para o header
+  const monthGroups: Array<{ label: string; startIdx: number; count: number }> = []
+  allDays.forEach((day, idx) => {
+    const label = format(day, 'MMM yyyy', { locale: ptBR }).toUpperCase()
+    const last = monthGroups[monthGroups.length - 1]
+    if (last && last.label === label) {
+      last.count++
+    } else {
+      monthGroups.push({ label, startIdx: idx, count: 1 })
+    }
+  })
+
+  const totalWidth = LABEL_COL_WIDTH + allDays.length * COL_WIDTH
+
+  // --- Drag start handler (not a hook, can be after early returns) ---
+
+  const handleDragStart = (e: React.MouseEvent, phase: JobPhase, mode: DragMode) => {
+    if (!phase.start_date || !phase.end_date || !onPhaseDrag) return
+    e.preventDefault()
+    e.stopPropagation()
+    setTooltip(null)
+    didDragRef.current = false
+    setDrag({
+      phaseId: phase.id,
+      mode,
+      startMouseX: e.clientX,
+      origStart: phase.start_date,
+      origEnd: phase.end_date,
+      dayDelta: 0,
+    })
+    setDragMousePos({ x: e.clientX, y: e.clientY })
+  }
 
   // Calcular datas de preview durante drag
   function getDragPreview(phase: JobPhase): { startDate: string; endDate: string; barLeft: number; barWidth: number } | null {
