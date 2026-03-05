@@ -631,7 +631,37 @@ export async function buildDriveStructure(
     .replace('{TITLE}', job.title || 'SEM-TITULO')
     .replace('{CLIENT}', clientName || 'SEM-CLIENTE');
 
-  // 5. Criar arvore de pastas (sequencial para evitar rate limits)
+  // 5. Resolver pasta do ano (ex: "2026") dentro do root
+  // O Drive esta organizado por ano: root/2024/, root/2025/, root/2026/
+  // Se a pasta do ano nao existir, cria automaticamente.
+  const currentYear = new Date().getFullYear().toString();
+  let yearFolderId = rootFolderId; // fallback: criar direto no root
+
+  try {
+    // Verificar se ja existe pasta do ano
+    const existingYear = await findFolderByName(token, rootFolderId, currentYear, driveOpts);
+    if (existingYear) {
+      yearFolderId = existingYear.id;
+      console.log(`[google-drive] Pasta do ano "${currentYear}" encontrada: ${existingYear.id}`);
+    } else {
+      // Criar pasta do ano
+      const yearFolder = await createFolder(token, currentYear, rootFolderId, driveOpts);
+      yearFolderId = yearFolder.id;
+      console.log(`[google-drive] Pasta do ano "${currentYear}" criada: ${yearFolder.id}`);
+
+      // Dar permissao ao owner na pasta do ano
+      const ownerEmail = driveConfig.owner_email as string;
+      if (ownerEmail) {
+        await setPermission(token, yearFolder.id, ownerEmail, 'writer', driveOpts);
+      }
+    }
+  } catch (yearErr) {
+    const msg = `Aviso: falha ao resolver pasta do ano "${currentYear}": ${yearErr instanceof Error ? yearErr.message : String(yearErr)}`;
+    errors.push(msg);
+    console.error(`[google-drive] ${msg} — criando direto no root`);
+  }
+
+  // 6. Criar arvore de pastas (sequencial para evitar rate limits)
 
   // Map de folder_key → { driveId, dbId }
   const folderMap: Record<string, { driveId: string; url: string; dbId: string }> = {};
@@ -711,8 +741,8 @@ export async function buildDriveStructure(
     }
   }
 
-  // Criar pasta raiz
-  await createAndRecord('root', rootName, rootFolderId, null);
+  // Criar pasta raiz do job dentro da pasta do ano
+  await createAndRecord('root', rootName, yearFolderId, null);
 
   if (!folderMap['root']) {
     throw new Error('Falha ao criar pasta raiz no Drive');
