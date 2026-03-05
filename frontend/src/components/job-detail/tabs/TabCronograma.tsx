@@ -10,6 +10,7 @@ import {
   Loader2,
   AlertTriangle,
   CalendarRange,
+  CalendarDays,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -30,6 +31,7 @@ import { countWorkingDays } from '@/lib/cronograma-utils'
 import { GanttChart } from '@/components/cronograma/GanttChart'
 import { PhaseList } from '@/components/cronograma/PhaseList'
 import { PhaseDialog } from '@/components/cronograma/PhaseDialog'
+import { CalendarView } from '@/components/cronograma/CalendarView'
 import { generateCronogramaPdf } from '@/components/cronograma/CronogramaPdf'
 import type { JobDetail } from '@/types/jobs'
 import type {
@@ -111,7 +113,7 @@ interface TabCronogramaProps {
 // --- Componente principal ---
 
 export function TabCronograma({ job }: TabCronogramaProps) {
-  const [viewMode, setViewMode] = useState<'list' | 'gantt'>('list')
+  const [viewMode, setViewMode] = useState<'list' | 'gantt' | 'calendar'>('list')
   const [phaseDialogOpen, setPhaseDialogOpen] = useState(false)
   const [editingPhase, setEditingPhase] = useState<JobPhase | undefined>()
   const [deletingPhase, setDeletingPhase] = useState<JobPhase | null>(null)
@@ -135,7 +137,9 @@ export function TabCronograma({ job }: TabCronogramaProps) {
 
   // --- Handlers ---
 
-  function handleOpenCreate() {
+  // date: YYYY-MM-DD do click na celula do calendario (reservado para pre-preencher no dialog)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  function handleOpenCreate(_date?: string) {
     setEditingPhase(undefined)
     setPhaseDialogOpen(true)
   }
@@ -147,7 +151,9 @@ export function TabCronograma({ job }: TabCronogramaProps) {
 
   function handlePhaseDialogClose(open: boolean) {
     setPhaseDialogOpen(open)
-    if (!open) setEditingPhase(undefined)
+    if (!open) {
+      setEditingPhase(undefined)
+    }
   }
 
   function handleSavePhase(
@@ -278,7 +284,7 @@ export function TabCronograma({ job }: TabCronogramaProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Toggle lista / gantt */}
+          {/* Toggle lista / gantt / calendario */}
           <div className="hidden sm:flex items-center rounded-lg border border-border overflow-hidden">
             <button
               type="button"
@@ -297,7 +303,7 @@ export function TabCronograma({ job }: TabCronogramaProps) {
               type="button"
               onClick={() => setViewMode('gantt')}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
+                'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors border-x border-border',
                 viewMode === 'gantt'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted',
@@ -305,6 +311,19 @@ export function TabCronograma({ job }: TabCronogramaProps) {
             >
               <GanttChartIcon className="size-3.5" />
               Gantt
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('calendar')}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
+                viewMode === 'calendar'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+              )}
+            >
+              <CalendarDays className="size-3.5" />
+              Calendario
             </button>
           </div>
 
@@ -326,7 +345,7 @@ export function TabCronograma({ job }: TabCronogramaProps) {
           </Button>
 
           {/* Adicionar fase */}
-          <Button size="sm" onClick={handleOpenCreate}>
+          <Button size="sm" onClick={() => handleOpenCreate()}>
             <Plus className="size-4" />
             <span className="hidden sm:inline">Nova fase</span>
           </Button>
@@ -356,6 +375,17 @@ export function TabCronograma({ job }: TabCronogramaProps) {
         </div>
       )}
 
+      {/* Vista Calendario — desktop e tablet */}
+      {viewMode === 'calendar' && (
+        <div className="hidden sm:block">
+          <CalendarView
+            phases={phases}
+            onPhaseClick={handleOpenEdit}
+            onAddPhase={handleOpenCreate}
+          />
+        </div>
+      )}
+
       {/* Mobile: sempre mostra lista (independente de viewMode) */}
       <div className="sm:hidden">
         <PhaseList
@@ -367,7 +397,7 @@ export function TabCronograma({ job }: TabCronogramaProps) {
           isMobile
         />
         <p className="text-xs text-muted-foreground text-center mt-3">
-          Visualizacao Gantt disponivel na versao desktop.
+          Visualizacoes Gantt e Calendario disponiveis na versao desktop.
         </p>
       </div>
 

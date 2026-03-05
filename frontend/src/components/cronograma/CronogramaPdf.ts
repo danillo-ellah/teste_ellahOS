@@ -11,11 +11,21 @@
  * 6. Rodape
  */
 
-import { parseISO, differenceInCalendarDays, format } from 'date-fns'
+import {
+  parseISO,
+  differenceInCalendarDays,
+  format,
+  startOfMonth,
+  endOfMonth,
+  addMonths,
+  startOfWeek,
+  addDays,
+  isSameMonth,
+} from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import type { jsPDF as JsPDFType } from 'jspdf'
 import { countWorkingDays, getInitials, formatDateForFilename } from '@/lib/cronograma-utils'
-import type { PhaseExportData } from '@/types/cronograma'
+import type { PhaseExportData, JobPhase } from '@/types/cronograma'
 
 // ---------------------------------------------------------------------------
 // Constantes de layout (unidades: mm)
@@ -614,5 +624,486 @@ export async function generateCronogramaPdf(data: PhaseExportData): Promise<void
   // ---------------------------------------------------------------------------
 
   const filename = `cronograma-${(job.code || 'job').toLowerCase().replace(/\s+/g, '-')}-${formatDateForFilename()}.pdf`
+  doc.save(filename)
+}
+
+// ---------------------------------------------------------------------------
+// Helpers internos do calendario
+// ---------------------------------------------------------------------------
+
+/** Retorna string "YYYY-MM-DD" de um Date local (sem conversao UTC). */
+function toLocalDateStr(d: Date): string {
+  return format(d, 'yyyy-MM-dd')
+}
+
+/** Fases ativas num dia: start_date <= dayStr <= end_date */
+function getPhasesForDayPdf(phases: JobPhase[], day: Date): JobPhase[] {
+  const dayStr = toLocalDateStr(day)
+  return phases
+    .filter((p) => {
+      if (!p.start_date || !p.end_date) return false
+      return p.start_date <= dayStr && dayStr <= p.end_date
+    })
+    .sort((a, b) => a.sort_order - b.sort_order)
+}
+
+/**
+ * Retorna o grid do calendario para um mes: array de semanas (7 dias cada).
+ * Inclui dias dos meses adjacentes para completar a primeira e ultima semana.
+ * Nao gera semanas extras alem do necessario (pode retornar 4, 5 ou 6 semanas).
+ */
+function buildCalendarGrid(year: number, month: number): Date[][] {
+  const firstDay = new Date(year, month, 1)
+  const lastDay = endOfMonth(firstDay)
+  const gridStart = startOfWeek(firstDay, { weekStartsOn: 0 })
+
+  const weeks: Date[][] = []
+  let current = new Date(gridStart)
+
+  while (current <= lastDay || current.getDay() !== 0) {
+    const week: Date[] = []
+    for (let d = 0; d < 7; d++) {
+      week.push(new Date(current))
+      current = addDays(current, 1)
+    }
+    weeks.push(week)
+    // Parar quando o ultimo dia do mes ja foi incluido e completamos a semana
+    if (current > lastDay && current.getDay() === 0) break
+  }
+
+  return weeks
+}
+
+/**
+ * Desenha o header, faixa brand e sub-header identicos ao Gantt.
+ * Retorna o Y logo apos o separador do sub-header.
+ */
+function drawPageHeader(
+  doc: PDF,
+  data: PhaseExportData,
+  tenantLogoUrl: string | null,
+  clientLogoUrl: string | null,
+  brandColor: string,
+): number {
+  const { job, tenant } = data
+
+  const headerH = 22
+  const logoColW = 55
+  const centerX = MARGIN_X + logoColW
+  const centerW = CONTENT_W - logoColW * 2
+
+  // Background header
+  setFillColor(doc, NEUTRAL_50)
+  doc.rect(0, 0, PAGE_W, headerH, 'F')
+
+  // Logo produtora
+  drawLogoOrInitials(doc, tenantLogoUrl, tenant.company_name, MARGIN_X, 4, logoColW, 14, 'left')
+
+  // Titulo do job
+  const jobTitle = job.title.toUpperCase()
+  doc.setFontSize(12)
+  doc.setFont('helvetica', 'bold')
+  setTextColor(doc, NEUTRAL_800)
+  const titleLines = doc.splitTextToSize(jobTitle, centerW - 8)
+  const titleY = titleLines.length > 1 ? 8 : 10
+  doc.text(titleLines.slice(0, 2), centerX + centerW / 2, titleY, { align: 'center' })
+
+  // "CALENDARIO DE PRODUCAO"
+  doc.setFontSize(7.5)
+  doc.setFont('helvetica', 'normal')
+  doc.setCharSpace(1.5)
+  setTextColor(doc, brandColor)
+  const subtitleY = titleLines.length > 1 ? 15 : 14
+  doc.text('CALENDARIO DE PRODUCAO', centerX + centerW / 2, subtitleY, { align: 'center' })
+  doc.setCharSpace(0)
+
+  // Linha decorativa
+  setDrawColor(doc, brandColor)
+  doc.setLineWidth(0.5)
+  const lineW = 40
+  doc.line(
+    centerX + centerW / 2 - lineW / 2,
+    subtitleY + 1.5,
+    centerX + centerW / 2 + lineW / 2,
+    subtitleY + 1.5,
+  )
+
+  // Logo cliente
+  const clientName = job.client_name || job.agency_name || ''
+  drawLogoOrInitials(
+    doc,
+    clientLogoUrl,
+    clientName,
+    MARGIN_X + logoColW + centerW,
+    4,
+    logoColW,
+    14,
+    'right',
+  )
+
+  // Faixa brand color
+  const brandY = headerH
+  const brandH = 2.5
+  setFillColor(doc, brandColor)
+  doc.rect(0, brandY, PAGE_W * 0.6, brandH, 'F')
+  setFillColor(doc, brandColor, 0.4)
+  doc.rect(PAGE_W * 0.6, brandY, PAGE_W * 0.4, brandH, 'F')
+
+  // Sub-header — metadados
+  const metaY = brandY + brandH + 3
+  doc.setFontSize(7.5)
+  doc.setFont('helvetica', 'normal')
+  setTextColor(doc, NEUTRAL_600)
+
+  const metaItems = [
+    { label: 'Projeto', value: job.title },
+    { label: 'Codigo', value: job.code || '—' },
+    { label: 'Cliente', value: job.client_name || job.agency_name || '—' },
+    { label: 'Emitido em', value: formatDateExtended(new Date().toISOString().split('T')[0]) },
+  ]
+
+  const metaColW = CONTENT_W / metaItems.length
+  metaItems.forEach(({ label, value }, i) => {
+    const mx = MARGIN_X + i * metaColW
+    doc.setFont('helvetica', 'bold')
+    setTextColor(doc, NEUTRAL_800)
+    doc.text(`${label}:`, mx, metaY)
+
+    doc.setFont('helvetica', 'normal')
+    setTextColor(doc, NEUTRAL_600)
+    const truncated = value.length > 30 ? value.substring(0, 28) + '...' : value
+    doc.text(truncated, mx, metaY + 4)
+  })
+
+  // Separador
+  setDrawColor(doc, NEUTRAL_200)
+  doc.setLineWidth(0.3)
+  doc.line(MARGIN_X, metaY + 7, PAGE_W - MARGIN_X, metaY + 7)
+
+  // Retorna Y logo abaixo do separador
+  return metaY + 7
+}
+
+/**
+ * Desenha o rodape padrao na pagina atual.
+ */
+function drawPageFooter(doc: PDF): void {
+  const footerY = PAGE_H - 8
+
+  setDrawColor(doc, NEUTRAL_200)
+  doc.setLineWidth(0.3)
+  doc.line(MARGIN_X, footerY - 2, PAGE_W - MARGIN_X, footerY - 2)
+
+  doc.setFontSize(7)
+  doc.setFont('helvetica', 'normal')
+  setTextColor(doc, NEUTRAL_400)
+  doc.text('Gerado por ELLAHOS \u2022 ellahos.com.br', MARGIN_X, footerY + 2)
+
+  const todayLabel = formatDateExtended(new Date().toISOString().split('T')[0])
+  doc.text(todayLabel, PAGE_W - MARGIN_X, footerY + 2, { align: 'right' })
+}
+
+// ---------------------------------------------------------------------------
+// Funcao principal: calendario mensal
+// ---------------------------------------------------------------------------
+
+export async function generateCalendarioPdf(data: PhaseExportData): Promise<void> {
+  const { job, phases, tenant } = data
+  const brandColor = tenant.brand_color || DEFAULT_BRAND
+
+  const datedPhases = phases.filter((p) => p.start_date && p.end_date)
+  if (datedPhases.length === 0) return
+
+  // Pre-carregar logos
+  const [tenantLogoUrl, clientLogoUrl] = await Promise.all([
+    tenant.logo_url ? loadImageAsDataUrl(tenant.logo_url) : Promise.resolve(null),
+    job.client_logo_url
+      ? loadImageAsDataUrl(job.client_logo_url)
+      : job.agency_logo_url
+        ? loadImageAsDataUrl(job.agency_logo_url)
+        : Promise.resolve(null),
+  ])
+
+  // ---------------------------------------------------------------------------
+  // Determinar range de meses com fases ativas
+  // ---------------------------------------------------------------------------
+
+  const sortedByStart = [...datedPhases].sort((a, b) => a.start_date!.localeCompare(b.start_date!))
+  const sortedByEnd = [...datedPhases].sort((a, b) => b.end_date!.localeCompare(a.end_date!))
+  const globalStart = parseISO(sortedByStart[0].start_date!)
+  const globalEnd = parseISO(sortedByEnd[0].end_date!)
+
+  // Coletar todos os meses (ano, mes 0-indexed) do range
+  const activeMonths: Array<{ year: number; month: number }> = []
+  let cursor = startOfMonth(globalStart)
+  const rangeEnd = startOfMonth(globalEnd)
+
+  while (cursor <= rangeEnd) {
+    const y = cursor.getFullYear()
+    const m = cursor.getMonth()
+    // Verificar se ha ao menos 1 fase ativa neste mes
+    const hasActivePhase = datedPhases.some((p) => {
+      const phaseStart = parseISO(p.start_date!)
+      const phaseEnd = parseISO(p.end_date!)
+      const monthStart = startOfMonth(cursor)
+      const monthEnd = endOfMonth(cursor)
+      return phaseStart <= monthEnd && phaseEnd >= monthStart
+    })
+    if (hasActivePhase) activeMonths.push({ year: y, month: m })
+    cursor = startOfMonth(addMonths(cursor, 1))
+  }
+
+  if (activeMonths.length === 0) return
+
+  // ---------------------------------------------------------------------------
+  // Inicializar jsPDF
+  // ---------------------------------------------------------------------------
+
+  const { jsPDF } = await import('jspdf')
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  // Nomes dos dias da semana
+  const DAY_NAMES = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB']
+
+  // ---------------------------------------------------------------------------
+  // Gerar uma pagina por mes
+  // ---------------------------------------------------------------------------
+
+  activeMonths.forEach(({ year, month }, pageIndex) => {
+    if (pageIndex > 0) doc.addPage()
+
+    // 1. Header padrao
+    const headerBottom = drawPageHeader(doc, data, tenantLogoUrl, clientLogoUrl, brandColor)
+
+    // 2. Rodape
+    drawPageFooter(doc)
+
+    // 3. Area disponivel para o conteudo do calendario
+    // De headerBottom + 2 ate o inicio do rodape (PAGE_H - 8 - 2 - 3 = rodape separador y)
+    const contentStartY = headerBottom + 3
+    const footerLineY = PAGE_H - 8 - 2  // y da linha do rodape
+    const contentEndY = footerLineY - 2  // margem de 2mm acima da linha
+
+    // ---------------------------------------------------------------------------
+    // 4. Titulo do mes + header dos dias
+    // ---------------------------------------------------------------------------
+
+    const monthTitle = format(new Date(year, month, 1), 'MMMM yyyy', { locale: ptBR }).toUpperCase()
+    const grid = buildCalendarGrid(year, month)
+    const numWeeks = grid.length
+
+    // Fontes base — reduzir 1pt se 6 semanas
+    const fontReduction = numWeeks >= 6 ? 1 : 0
+
+    // Altura reservada para legenda (abaixo do grid): ~12mm
+    const legendH = 12
+    // Area total do grid (titulo + header + semanas)
+    const gridAreaH = contentEndY - contentStartY - legendH
+
+    // Titulo do mes
+    const titleH = 7
+    doc.setFontSize(11 - fontReduction)
+    doc.setFont('helvetica', 'bold')
+    setTextColor(doc, NEUTRAL_800)
+    doc.text(monthTitle, MARGIN_X, contentStartY + 5)
+
+    // Header dos dias
+    const dayHeaderH = 6
+    const dayHeaderY = contentStartY + titleH
+    const colW = CONTENT_W / 7
+
+    setFillColor(doc, NEUTRAL_100)
+    setDrawColor(doc, NEUTRAL_200)
+    doc.setLineWidth(0.2)
+    doc.rect(MARGIN_X, dayHeaderY, CONTENT_W, dayHeaderH, 'FD')
+
+    doc.setFontSize(8 - fontReduction)
+    doc.setFont('helvetica', 'bold')
+    setTextColor(doc, NEUTRAL_600)
+    DAY_NAMES.forEach((name, di) => {
+      const cx = MARGIN_X + di * colW + colW / 2
+      doc.text(name, cx, dayHeaderY + 4.2, { align: 'center' })
+    })
+
+    // ---------------------------------------------------------------------------
+    // 5. Grid das semanas
+    // ---------------------------------------------------------------------------
+
+    const weeksAreaH = gridAreaH - titleH - dayHeaderH
+    const rowH = weeksAreaH / numWeeks
+
+    // Tamanho da fonte para as pills de fases
+    const basePillFontSize = 7 - fontReduction
+    const minPillFontSize = 5
+
+    grid.forEach((week, wi) => {
+      const rowY = dayHeaderY + dayHeaderH + wi * rowH
+
+      week.forEach((day, di) => {
+        const cellX = MARGIN_X + di * colW
+        const isCurrentMonth = isSameMonth(day, new Date(year, month, 1))
+        const isWeekend = di === 0 || di === 6
+        const isToday = toLocalDateStr(day) === toLocalDateStr(today)
+
+        // Background da celula
+        if (isWeekend) {
+          setFillColor(doc, NEUTRAL_100)
+        } else {
+          setFillColor(doc, WHITE)
+        }
+        setDrawColor(doc, NEUTRAL_200)
+        doc.setLineWidth(0.15)
+        doc.rect(cellX, rowY, colW, rowH, 'FD')
+
+        // Numero do dia
+        const dayNum = day.getDate().toString()
+        const numX = cellX + colW - 2
+        const numY = rowY + 4
+
+        if (isToday) {
+          // Circulo rose ao redor do numero
+          const circleR = 2.8
+          const circleX = numX - 1.2
+          const circleY = numY - 2
+          setFillColor(doc, '#F43F5E')
+          doc.circle(circleX, circleY, circleR, 'F')
+          doc.setFontSize(7 - fontReduction)
+          doc.setFont('helvetica', 'bold')
+          setTextColor(doc, WHITE)
+          doc.text(dayNum, numX, numY, { align: 'right' })
+        } else {
+          doc.setFontSize(7 - fontReduction)
+          doc.setFont('helvetica', 'bold')
+          setTextColor(doc, isCurrentMonth ? NEUTRAL_600 : NEUTRAL_400)
+          doc.text(dayNum, numX, numY, { align: 'right' })
+        }
+
+        // Fases ativas — apenas dias do mes atual
+        if (!isCurrentMonth) return
+
+        const activePhasesForDay = getPhasesForDayPdf(datedPhases, day)
+        if (activePhasesForDay.length === 0) return
+
+        // Calcular quantas fases cabem na altura da celula
+        // Espaco disponivel: rowH - numero (4mm) - padding (1mm)
+        const pillAreaH = rowH - 5
+        const pillLineH = 3.5  // altura aproximada por linha de pill
+
+        const maxPillsVisible = Math.max(1, Math.floor(pillAreaH / pillLineH))
+        const visiblePhases = activePhasesForDay.slice(0, maxPillsVisible)
+        const hiddenCount = activePhasesForDay.length - visiblePhases.length
+
+        // Ajuste de font se muitas fases
+        let pillFontSize = basePillFontSize
+        if (visiblePhases.length >= 4) pillFontSize = Math.max(minPillFontSize, basePillFontSize - 1)
+        if (visiblePhases.length >= 5) pillFontSize = minPillFontSize
+
+        visiblePhases.forEach((phase, pi) => {
+          const pillY = rowY + 5.5 + pi * pillLineH
+
+          // Truncar texto para caber na celula (max chars baseado na largura)
+          const maxChars = Math.floor(colW / 1.8)
+          const baseText = `${phase.phase_emoji} ${phase.phase_label}`
+          const fullText = phase.complement ? `${baseText} - ${phase.complement}` : baseText
+
+          // Primeira parte: emoji + nome (normal)
+          const nameText = baseText.length > maxChars
+            ? baseText.substring(0, maxChars - 1) + '…'
+            : baseText
+
+          doc.setFontSize(pillFontSize)
+          doc.setFont('helvetica', 'normal')
+          setTextColor(doc, phase.phase_color)
+          doc.text(nameText, cellX + 1.5, pillY)
+
+          // Complemento em italico na mesma linha, se couber
+          if (phase.complement && fullText.length <= maxChars + 8) {
+            const nameWidth = doc.getTextWidth(nameText)
+            const separatorWidth = doc.getTextWidth(' - ')
+            const compX = cellX + 1.5 + nameWidth + separatorWidth
+
+            doc.setFont('helvetica', 'italic')
+            setTextColor(doc, phase.phase_color)
+
+            const remainingW = colW - 3 - nameWidth - separatorWidth
+            const compTrunc = phase.complement.length > Math.floor(remainingW / 1.4)
+              ? phase.complement.substring(0, Math.max(2, Math.floor(remainingW / 1.4) - 1)) + '…'
+              : phase.complement
+
+            if (compX + doc.getTextWidth(compTrunc) < cellX + colW - 1) {
+              doc.text(` - ${compTrunc}`, cellX + 1.5 + nameWidth, pillY, {})
+            }
+          }
+        })
+
+        // Indicador de fases ocultadas
+        if (hiddenCount > 0) {
+          const moreY = rowY + 5.5 + visiblePhases.length * pillLineH
+          doc.setFontSize(Math.max(4, pillFontSize - 1))
+          doc.setFont('helvetica', 'italic')
+          setTextColor(doc, NEUTRAL_400)
+          doc.text(`+${hiddenCount} mais`, cellX + 1.5, moreY)
+        }
+      })
+    })
+
+    // ---------------------------------------------------------------------------
+    // 6. Legenda das fases que aparecem neste mes
+    // ---------------------------------------------------------------------------
+
+    // Coletar fases unicas que aparecem neste mes
+    const monthStartDate = startOfMonth(new Date(year, month, 1))
+    const monthEndDate = endOfMonth(new Date(year, month, 1))
+
+    const phasesThisMonth = datedPhases.filter((p) => {
+      const phaseStart = parseISO(p.start_date!)
+      const phaseEnd = parseISO(p.end_date!)
+      return phaseStart <= monthEndDate && phaseEnd >= monthStartDate
+    })
+
+    // Deduplicar por phase_key
+    const uniquePhasesThisMonth = phasesThisMonth.filter(
+      (p, idx, arr) => arr.findIndex((q) => q.phase_key === p.phase_key) === idx,
+    ).sort((a, b) => a.sort_order - b.sort_order)
+
+    const legendY = contentEndY - legendH + 2
+    const legendSquare = 4
+    const legendFontSize = 7
+    const legendItemW = CONTENT_W / 3  // 3 por linha
+
+    // Linha separadora acima da legenda
+    setDrawColor(doc, NEUTRAL_200)
+    doc.setLineWidth(0.3)
+    doc.line(MARGIN_X, legendY - 1, PAGE_W - MARGIN_X, legendY - 1)
+
+    uniquePhasesThisMonth.forEach((phase, li) => {
+      const col = li % 3
+      const row = Math.floor(li / 3)
+      const lx = MARGIN_X + col * legendItemW
+      const ly = legendY + row * (legendSquare + 2)
+
+      // Quadrado de cor
+      setFillColor(doc, phase.phase_color)
+      setDrawColor(doc, phase.phase_color)
+      doc.rect(lx, ly, legendSquare, legendSquare, 'F')
+
+      // Nome da fase
+      doc.setFontSize(legendFontSize)
+      doc.setFont('helvetica', 'normal')
+      setTextColor(doc, NEUTRAL_600)
+      const labelText = `${phase.phase_emoji} ${phase.phase_label}`
+      const truncated = labelText.length > 28 ? labelText.substring(0, 26) + '…' : labelText
+      doc.text(truncated, lx + legendSquare + 2, ly + legendSquare - 0.5)
+    })
+  })
+
+  // ---------------------------------------------------------------------------
+  // Salvar
+  // ---------------------------------------------------------------------------
+
+  const filename = `calendario-${(job.code || 'job').toLowerCase().replace(/\s+/g, '-')}.pdf`
   doc.save(filename)
 }

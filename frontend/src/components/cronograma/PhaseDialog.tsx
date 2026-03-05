@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { CalendarIcon, Loader2 } from 'lucide-react'
+import { CalendarIcon, Loader2, Sparkles } from 'lucide-react'
+import { toast } from 'sonner'
 import {
   Dialog,
   DialogContent,
@@ -39,14 +40,9 @@ import {
 import { cn } from '@/lib/utils'
 import { PHASE_COLOR_PALETTE, PHASE_STATUS_CONFIG } from '@/types/cronograma'
 import { countWorkingDays } from '@/lib/cronograma-utils'
+import { suggestEmojis } from '@/lib/groq-emoji'
+import { EmojiPicker } from '@/components/cronograma/EmojiPicker'
 import type { JobPhase, CreatePhasePayload, UpdatePhasePayload, PhaseStatus } from '@/types/cronograma'
-
-// --- Emojis sugeridos ---
-
-const SUGGESTED_EMOJIS = [
-  '💰', '🗓️', '📋', '📅', '🎬', '✂️', '🎨', '🎵', '✅', '🤝', '🏁',
-  '📌', '🚀', '🎯', '📝', '🔍', '📞', '🎤', '🏗️', '📦',
-]
 
 // --- Schema Zod ---
 
@@ -171,11 +167,43 @@ function PhaseForm({
   const watchedSkip = watch('skip_weekends')
   const watchedColor = watch('phase_color')
   const watchedEmoji = watch('phase_emoji')
+  const watchedLabel = watch('phase_label')
 
   const workingDays =
     watchedStart && watchedEnd
       ? countWorkingDays(watchedStart, watchedEnd, watchedSkip)
       : null
+
+  // --- Sugestao IA ---
+
+  const [isSuggestingEmojis, setIsSuggestingEmojis] = useState(false)
+  const [suggestedEmojis, setSuggestedEmojis] = useState<string[]>([])
+
+  const handleSuggestEmojis = useCallback(async () => {
+    const label = watchedLabel.trim()
+    if (!label) {
+      toast.error('Digite o nome da fase primeiro')
+      return
+    }
+
+    setIsSuggestingEmojis(true)
+    setSuggestedEmojis([])
+
+    try {
+      const emojis = await suggestEmojis(label)
+      if (emojis.length === 0) {
+        toast.error('Nao foi possivel sugerir emojis. Tente novamente.')
+        return
+      }
+      setSuggestedEmojis(emojis)
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Erro ao sugerir emojis'
+      toast.error(message)
+    } finally {
+      setIsSuggestingEmojis(false)
+    }
+  }, [watchedLabel])
 
   function onSubmit(values: PhaseFormValues) {
     if (isEditing && phase) {
@@ -203,37 +231,74 @@ function PhaseForm({
       />
 
       {/* Emoji + Nome */}
-      <div className="flex gap-3">
-        <div className="flex flex-col gap-1.5 w-28 shrink-0">
-          <Label htmlFor="phase_emoji" className="text-xs">Emoji</Label>
-          <Controller
-            control={control}
-            name="phase_emoji"
-            render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger id="phase_emoji" className="text-base">
-                  <SelectValue placeholder="Emoji" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SUGGESTED_EMOJIS.map((e) => (
-                    <SelectItem key={e} value={e}>
-                      {e}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-          {/* Campo customizado para emoji digitado */}
-          <Input
-            placeholder="Ou digitar"
-            value={watchedEmoji}
-            onChange={(e) => setValue('phase_emoji', e.target.value)}
-            className="text-base h-8 text-center"
-            maxLength={4}
-          />
+      <div className="flex gap-3 items-start">
+        {/* Coluna do emoji */}
+        <div className="flex flex-col gap-1.5 shrink-0">
+          <Label className="text-xs">Emoji</Label>
+
+          {/* Picker + botao sugerir na mesma linha */}
+          <div className="flex items-center gap-1.5">
+            <Controller
+              control={control}
+              name="phase_emoji"
+              render={({ field }) => (
+                <EmojiPicker
+                  value={field.value}
+                  onChange={(emoji) => {
+                    field.onChange(emoji)
+                    setSuggestedEmojis([])
+                  }}
+                />
+              )}
+            />
+
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 shrink-0"
+              onClick={handleSuggestEmojis}
+              disabled={isSuggestingEmojis}
+              title="Sugerir emoji com IA"
+              aria-label="Sugerir emoji com IA"
+            >
+              {isSuggestingEmojis ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Sparkles className="size-4" />
+              )}
+            </Button>
+          </div>
+
+          {/* Sugestoes da IA */}
+          {suggestedEmojis.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <p className="text-[10px] text-muted-foreground">Sugestoes IA:</p>
+              <div className="flex gap-1">
+                {suggestedEmojis.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    title={`Usar ${emoji}`}
+                    onClick={() => {
+                      setValue('phase_emoji', emoji)
+                      setSuggestedEmojis([])
+                    }}
+                    className={cn(
+                      'h-8 w-8 text-lg flex items-center justify-center rounded-md border border-input bg-background',
+                      'hover:bg-accent transition-colors',
+                      'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+                    )}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
+        {/* Nome da fase */}
         <div className="flex flex-col gap-1.5 flex-1">
           <Label htmlFor="phase_label" className="text-xs">Nome da fase</Label>
           <Input
