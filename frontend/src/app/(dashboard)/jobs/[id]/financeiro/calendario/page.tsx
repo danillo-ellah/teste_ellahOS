@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, use } from 'react'
 import { startOfMonth, endOfMonth, format, addMonths, subMonths } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
@@ -10,15 +10,14 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
-import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/format'
 import { PaymentDialog } from '@/components/financial/PaymentDialog'
-import { PaymentCalendarKpis } from './_components/PaymentCalendarKpis'
-import { PaymentCalendarView } from './_components/PaymentCalendarView'
-import { PaymentListView } from './_components/PaymentListView'
-import { PostponeDialog } from './_components/PostponeDialog'
+import { PaymentCalendarKpis } from '@/app/(dashboard)/financeiro/calendario/_components/PaymentCalendarKpis'
+import { PaymentCalendarView } from '@/app/(dashboard)/financeiro/calendario/_components/PaymentCalendarView'
+import { PaymentListView } from '@/app/(dashboard)/financeiro/calendario/_components/PaymentListView'
+import { PostponeDialog } from '@/app/(dashboard)/financeiro/calendario/_components/PostponeDialog'
 import { usePaymentCalendarEvents, usePaymentCalendarKpis } from '@/hooks/usePaymentCalendar'
 import type { PayableEvent } from '@/types/payment-calendar'
 
@@ -29,7 +28,7 @@ import type { PayableEvent } from '@/types/payment-calendar'
 type ViewMode = 'calendar' | 'list'
 
 // ---------------------------------------------------------------------------
-// BatchPayBar — fixo no bottom quando ha itens selecionados
+// BatchPayBar
 // ---------------------------------------------------------------------------
 
 interface BatchPayBarProps {
@@ -66,26 +65,27 @@ function BatchPayBar({ count, total, onPay, onPostpone, onClear }: BatchPayBarPr
 }
 
 // ---------------------------------------------------------------------------
-// Page
+// Page — wrapper per-job que filtra todos os componentes pelo jobId
 // ---------------------------------------------------------------------------
 
-export default function PaymentCalendarPage() {
+interface Props {
+  params: Promise<{ id: string }>
+}
+
+export default function JobPaymentCalendarPage({ params }: Props) {
+  const { id: jobId } = use(params)
+
   const [currentMonth, setCurrentMonth] = useState<Date>(() => {
     const d = new Date()
     return new Date(d.getFullYear(), d.getMonth(), 1)
   })
   const [viewMode, setViewMode] = useState<ViewMode>('list')
 
-  // Selecao de items (somente payables)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-
-  // Dialogs
   const [paymentOpen, setPaymentOpen] = useState(false)
   const [postponeOpen, setPostponeOpen] = useState(false)
-  /** IDs para o PostponeDialog — pode ser batch (selectedIds) ou item unico */
   const [postponeIds, setPostponeIds] = useState<string[]>([])
 
-  // Range do mes selecionado (YYYY-MM-DD)
   const startDate = useMemo(
     () => format(startOfMonth(currentMonth), 'yyyy-MM-dd'),
     [currentMonth],
@@ -95,29 +95,27 @@ export default function PaymentCalendarPage() {
     [currentMonth],
   )
 
-  // Queries da EF payment-calendar
-  const {
-    data: eventsData,
-    isLoading: eventsLoading,
-  } = usePaymentCalendarEvents(startDate, endDate)
-
-  const {
-    data: kpisData,
-    isLoading: kpisLoading,
-  } = usePaymentCalendarKpis(startDate, endDate)
+  // Queries filtradas pelo jobId
+  const { data: eventsData, isLoading: eventsLoading } = usePaymentCalendarEvents(
+    startDate,
+    endDate,
+    jobId,
+  )
+  const { data: kpisData, isLoading: kpisLoading } = usePaymentCalendarKpis(
+    startDate,
+    endDate,
+    jobId,
+  )
 
   const payables = eventsData?.data?.payables ?? []
   const receivables = eventsData?.data?.receivables ?? []
   const kpis = kpisData?.data
 
-  // Total dos itens selecionados para BatchPayBar
-  const selectedTotal = useMemo(() => {
-    return payables
-      .filter(p => selectedIds.has(p.id))
-      .reduce((sum, p) => sum + p.amount, 0)
-  }, [payables, selectedIds])
+  const selectedTotal = useMemo(
+    () => payables.filter(p => selectedIds.has(p.id)).reduce((sum, p) => sum + p.amount, 0),
+    [payables, selectedIds],
+  )
 
-  // Handlers de selecao
   const handleToggleSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
       const next = new Set(prev)
@@ -138,7 +136,6 @@ export default function PaymentCalendarPage() {
     })
   }, [])
 
-  // Ao clicar num payable no calendario, seleciona e abre pagamento
   function handlePayableClickCalendar(item: PayableEvent) {
     if (item.status === 'pago') return
     setSelectedIds(prev => {
@@ -149,13 +146,11 @@ export default function PaymentCalendarPage() {
     setPaymentOpen(true)
   }
 
-  // Prorrogar um item individual (botao na lista)
   function handlePostponeSingle(costItemId: string) {
     setPostponeIds([costItemId])
     setPostponeOpen(true)
   }
 
-  // Prorrogar batch (BatchPayBar)
   function handlePostponeBatch() {
     setPostponeIds(Array.from(selectedIds))
     setPostponeOpen(true)
@@ -169,50 +164,42 @@ export default function PaymentCalendarPage() {
     setSelectedIds(new Set())
   }
 
-  // Navegacao de mes (usada pelo header — nao pelo PaymentCalendarView que tem seus proprios botoes)
-  function handlePrevMonth() {
-    setCurrentMonth(prev => subMonths(prev, 1))
-  }
-  function handleNextMonth() {
-    setCurrentMonth(prev => addMonths(prev, 1))
-  }
-
   const monthTitle = format(currentMonth, 'MMMM yyyy', { locale: ptBR })
 
   return (
     <div className={cn('space-y-5', selectedIds.size > 0 && 'pb-20')}>
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Link href="/financeiro" className="hover:text-foreground transition-colors">
-          Financeiro
-        </Link>
-        <span>/</span>
-        <span className="text-foreground font-medium">Calendario de Pagamentos</span>
-      </nav>
-
-      {/* Header */}
+      {/* Header da sub-pagina */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <CalendarDays className="h-5 w-5 text-muted-foreground shrink-0" />
-          <h1 className="text-xl font-semibold">Calendario de Pagamentos</h1>
+        <div className="flex items-center gap-2">
+          <CalendarDays className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-base font-semibold">Calendario de Pagamentos</h2>
         </div>
 
-        {/* Navegacao de mes + toggle de view */}
         <div className="flex items-center gap-2">
-          {/* Navegacao — visivel em ambas as views (no calendar view os botoes duplicam, mas sao semanticamente diferentes) */}
+          {/* Navegacao de mes */}
           <div className="flex items-center gap-1 border rounded-md px-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handlePrevMonth}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setCurrentMonth(prev => subMonths(prev, 1))}
+            >
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <span className="text-sm font-medium capitalize min-w-[120px] text-center">
               {monthTitle}
             </span>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleNextMonth}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setCurrentMonth(prev => addMonths(prev, 1))}
+            >
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
 
-          {/* Toggle Calendario / Lista */}
+          {/* Toggle view */}
           <div className="flex border rounded-md overflow-hidden">
             <Button
               variant="ghost"
@@ -244,7 +231,7 @@ export default function PaymentCalendarPage() {
         </div>
       </div>
 
-      {/* KPIs */}
+      {/* KPIs filtrados por job */}
       <PaymentCalendarKpis kpis={kpis} isLoading={kpisLoading} />
 
       {/* Conteudo principal */}
@@ -268,7 +255,7 @@ export default function PaymentCalendarPage() {
         />
       )}
 
-      {/* BatchPayBar — fixo no bottom quando ha selecao */}
+      {/* BatchPayBar */}
       {selectedIds.size > 0 && (
         <BatchPayBar
           count={selectedIds.size}
@@ -279,7 +266,7 @@ export default function PaymentCalendarPage() {
         />
       )}
 
-      {/* Dialog de pagamento */}
+      {/* Dialogs */}
       <PaymentDialog
         open={paymentOpen}
         onOpenChange={setPaymentOpen}
@@ -287,7 +274,6 @@ export default function PaymentCalendarPage() {
         onSuccess={handlePaymentSuccess}
       />
 
-      {/* Dialog de prorrogacao */}
       <PostponeDialog
         open={postponeOpen}
         onOpenChange={setPostponeOpen}

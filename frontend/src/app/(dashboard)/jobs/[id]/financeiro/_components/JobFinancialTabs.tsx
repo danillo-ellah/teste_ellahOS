@@ -13,6 +13,7 @@ const TABS = [
   { label: 'Dashboard', href: 'dashboard' },
   { label: 'Orcamento', href: 'orcamento' },
   { label: 'Verbas', href: 'verbas' },
+  { label: 'Calendario', href: 'calendario' },
 ]
 
 export function JobFinancialTabs({ jobId }: JobFinancialTabsProps) {

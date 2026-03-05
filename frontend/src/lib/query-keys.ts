@@ -296,3 +296,11 @@ export const bankReconciliationKeys = {
   transactionList: (statementId: string, filters: Record<string, string>) =>
     [...bankReconciliationKeys.transactions(statementId), filters] as const,
 }
+
+export const paymentCalendarKeys = {
+  all: ['payment-calendar'] as const,
+  events: (start: string, end: string, jobId?: string) =>
+    [...paymentCalendarKeys.all, 'events', start, end, jobId] as const,
+  kpis: (start: string, end: string, jobId?: string) =>
+    [...paymentCalendarKeys.all, 'kpis', start, end, jobId] as const,
+}
