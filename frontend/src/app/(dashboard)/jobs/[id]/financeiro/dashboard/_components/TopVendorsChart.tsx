@@ -5,6 +5,7 @@ import {
   Bar,
   XAxis,
   YAxis,
+  Cell,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
@@ -19,9 +20,15 @@ const formatBRL = (value: number) =>
 const truncate = (str: string, maxLen: number) =>
   str.length > maxLen ? str.slice(0, maxLen - 1) + '…' : str
 
+// Paleta de cores para barras de fornecedores
+const VENDOR_COLORS = [
+  '#3b82f6', '#8b5cf6', '#06b6d4', '#f59e0b', '#ec4899',
+  '#10b981', '#6366f1', '#f97316', '#14b8a6', '#a855f7',
+]
+
 interface TooltipProps {
   active?: boolean
-  payload?: Array<{ value: number; payload: TopVendorEntry }>
+  payload?: Array<{ value: number; payload: TopVendorEntry & { _color: string } }>
   label?: string
 }
 
@@ -30,11 +37,14 @@ function VendorTooltip({ active, payload }: TooltipProps) {
   const entry = payload[0].payload
 
   return (
-    <div className="rounded-md border border-border bg-background p-3 shadow-md text-sm max-w-[240px]">
-      <p className="font-semibold mb-1 break-words">{entry.vendor_name}</p>
-      <p className="tabular-nums">{formatBRL(entry.total)}</p>
-      <p className="text-muted-foreground">
-        {entry.items_count} item(s) &bull; {entry.pct_of_total.toFixed(1)}% do total
+    <div className="rounded-md border border-border bg-background p-3 shadow-md text-sm max-w-[260px]">
+      <div className="flex items-center gap-2 mb-1">
+        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: entry._color }} />
+        <p className="font-semibold break-words">{entry.vendor_name}</p>
+      </div>
+      <p className="tabular-nums text-base font-bold">{formatBRL(entry.total)}</p>
+      <p className="text-muted-foreground mt-0.5">
+        {entry.items_count} item(s) &middot; {entry.pct_of_total.toFixed(1)}% do total
       </p>
     </div>
   )
@@ -59,13 +69,14 @@ export function TopVendorsChart({ data }: Props) {
   }
 
   // Limitar a 10 fornecedores e preparar dados com nome truncado para eixo
-  const chartData = data.slice(0, 10).map(entry => ({
+  const chartData = data.slice(0, 10).map((entry, i) => ({
     ...entry,
-    vendor_label: truncate(entry.vendor_name, 20),
+    vendor_label: truncate(entry.vendor_name, 25),
+    _color: VENDOR_COLORS[i % VENDOR_COLORS.length],
   }))
 
   // Altura dinamica proporcional ao numero de itens
-  const height = Math.max(200, chartData.length * 40)
+  const height = Math.max(220, chartData.length * 44)
 
   return (
     <Card className="p-4">
@@ -99,17 +110,17 @@ export function TopVendorsChart({ data }: Props) {
           <YAxis
             type="category"
             dataKey="vendor_label"
-            width={140}
+            width={160}
             tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
             tickLine={false}
             axisLine={false}
           />
           <Tooltip content={<VendorTooltip />} />
-          <Bar
-            dataKey="total"
-            fill="#3b82f6"
-            radius={[0, 4, 4, 0]}
-          />
+          <Bar dataKey="total" radius={[0, 4, 4, 0]}>
+            {chartData.map((entry, idx) => (
+              <Cell key={idx} fill={entry._color} />
+            ))}
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </Card>

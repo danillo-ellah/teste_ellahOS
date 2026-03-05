@@ -29,27 +29,45 @@ interface ReferenceJobCardProps {
   job: ReferenceJob
 }
 
+const STATUS_COLORS: Record<string, string> = {
+  orcamento: '#f59e0b',
+  pre_producao: '#3b82f6',
+  producao: '#8b5cf6',
+  pos_producao: '#6366f1',
+  entregue: '#22c55e',
+  finalizado: '#10b981',
+  cancelado: '#ef4444',
+}
+
 function ReferenceJobCard({ job }: ReferenceJobCardProps) {
+  const accentColor = STATUS_COLORS[job.status] ?? '#94a3b8'
+  const pctPaid = job.total_estimated > 0 ? (job.total_paid / job.total_estimated) * 100 : 0
+
   return (
-    <Card className="p-4">
+    <Card className="p-4 relative overflow-hidden">
+      <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: accentColor }} />
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-mono font-semibold text-muted-foreground">
               {job.code}
             </span>
-            <Badge variant="secondary" className="text-xs">
-              {job.status}
+            <Badge
+              variant="outline"
+              className="text-[10px] shrink-0"
+              style={{ borderColor: accentColor, color: accentColor }}
+            >
+              {job.status.replace(/_/g, ' ')}
             </Badge>
           </div>
-          <p className="text-sm font-medium mt-0.5 truncate">{job.title}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Criado em {formatDate(job.created_at)} &mdash; {job.cost_items_count} item(s) de custo
+          <p className="text-sm font-medium mt-1 line-clamp-2">{job.title}</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {formatDate(job.created_at)} &middot; {job.cost_items_count} item(s) de custo
           </p>
         </div>
         <a
           href={`/jobs/${job.id}/financeiro/orcamento`}
-          className="text-muted-foreground hover:text-foreground shrink-0 mt-0.5"
+          className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Abrir job de referencia"
@@ -58,21 +76,32 @@ function ReferenceJobCard({ job }: ReferenceJobCardProps) {
         </a>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+      <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+        {job.closed_value != null && (
+          <div>
+            <p className="text-muted-foreground">OC</p>
+            <p className="font-semibold tabular-nums text-blue-600 dark:text-blue-400">{formatCurrency(job.closed_value)}</p>
+          </div>
+        )}
         <div>
           <p className="text-muted-foreground">Estimado</p>
-          <p className="font-semibold tabular-nums">{formatCurrency(job.total_estimated)}</p>
+          <p className="font-semibold tabular-nums text-amber-600 dark:text-amber-400">{formatCurrency(job.total_estimated)}</p>
         </div>
         <div>
           <p className="text-muted-foreground">Pago</p>
-          <p className="font-semibold tabular-nums">{formatCurrency(job.total_paid)}</p>
+          <p className="font-semibold tabular-nums text-green-600 dark:text-green-400">{formatCurrency(job.total_paid)}</p>
         </div>
-        {job.closed_value != null && (
-          <div className="col-span-2">
-            <p className="text-muted-foreground">OC / Faturamento</p>
-            <p className="font-semibold tabular-nums">{formatCurrency(job.closed_value)}</p>
-          </div>
-        )}
+      </div>
+
+      {/* Barra de progresso pago vs estimado */}
+      <div className="mt-2 h-1.5 w-full rounded-full bg-muted overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all"
+          style={{
+            width: `${Math.min(100, pctPaid)}%`,
+            backgroundColor: pctPaid >= 80 ? '#22c55e' : '#f59e0b',
+          }}
+        />
       </div>
     </Card>
   )

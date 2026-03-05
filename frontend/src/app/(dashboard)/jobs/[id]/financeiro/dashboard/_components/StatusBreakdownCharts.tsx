@@ -220,7 +220,7 @@ export function StatusBreakdownCharts({ paymentStatusData, itemStatusData }: Pro
               <YAxis
                 type="category"
                 dataKey="label"
-                width={90}
+                width={110}
                 tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                 tickLine={false}
                 axisLine={false}

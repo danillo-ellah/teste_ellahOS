@@ -1,7 +1,7 @@
 'use client'
 
 import { use, useState } from 'react'
-import { AlertTriangle, TrendingUp, TrendingDown, DollarSign, CalendarClock } from 'lucide-react'
+import { AlertTriangle, TrendingUp, TrendingDown, DollarSign, CalendarClock, Wallet, Receipt, PiggyBank } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -25,22 +25,41 @@ interface KPICardProps {
   label: string
   value: string
   subtitle?: string
-  variant?: 'default' | 'success' | 'danger'
+  variant?: 'default' | 'success' | 'danger' | 'warning' | 'info'
   icon?: React.ReactNode
+  accentColor?: string
 }
 
-function KPICard({ label, value, subtitle, variant = 'default', icon }: KPICardProps) {
+function KPICard({ label, value, subtitle, variant = 'default', icon, accentColor }: KPICardProps) {
   return (
-    <Card className="p-4 flex flex-col gap-1">
+    <Card className="p-4 flex flex-col gap-1 relative overflow-hidden">
+      {accentColor && (
+        <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: accentColor }} />
+      )}
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
-        {icon && <span className="text-muted-foreground">{icon}</span>}
+        {icon && (
+          <span
+            className={cn(
+              'rounded-md p-1.5',
+              variant === 'success' && 'bg-green-100 text-green-600 dark:bg-green-950 dark:text-green-400',
+              variant === 'danger' && 'bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400',
+              variant === 'warning' && 'bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400',
+              variant === 'info' && 'bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400',
+              variant === 'default' && 'bg-muted text-muted-foreground',
+            )}
+          >
+            {icon}
+          </span>
+        )}
       </div>
       <p
         className={cn(
-          'text-2xl font-bold',
-          variant === 'success' && 'text-green-600',
-          variant === 'danger' && 'text-red-600',
+          'text-2xl font-bold tabular-nums',
+          variant === 'success' && 'text-green-600 dark:text-green-400',
+          variant === 'danger' && 'text-red-600 dark:text-red-400',
+          variant === 'warning' && 'text-amber-600 dark:text-amber-400',
+          variant === 'info' && 'text-blue-600 dark:text-blue-400',
         )}
       >
         {value}
@@ -54,29 +73,39 @@ function KPICard({ label, value, subtitle, variant = 'default', icon }: KPICardP
 
 function MarginProgressCard({ pct }: { pct: number }) {
   const clamped = Math.min(100, Math.max(0, pct))
-  const variant = pct >= 30 ? 'success' : pct >= 10 ? 'default' : 'danger'
+  const variant = pct >= 30 ? 'success' : pct >= 10 ? 'warning' : 'danger'
+  const barColor = variant === 'success' ? '#22c55e' : variant === 'warning' ? '#f59e0b' : '#ef4444'
 
   return (
-    <Card className="p-4 flex flex-col gap-1">
-      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Margem %</p>
+    <Card className="p-4 flex flex-col gap-1 relative overflow-hidden">
+      <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: barColor }} />
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Margem %</p>
+        <span
+          className={cn(
+            'rounded-md p-1.5',
+            variant === 'success' && 'bg-green-100 text-green-600 dark:bg-green-950 dark:text-green-400',
+            variant === 'warning' && 'bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400',
+            variant === 'danger' && 'bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400',
+          )}
+        >
+          <PiggyBank className="h-4 w-4" />
+        </span>
+      </div>
       <p
         className={cn(
-          'text-2xl font-bold',
-          variant === 'success' && 'text-green-600',
-          variant === 'danger' && 'text-red-600',
+          'text-2xl font-bold tabular-nums',
+          variant === 'success' && 'text-green-600 dark:text-green-400',
+          variant === 'warning' && 'text-amber-600 dark:text-amber-400',
+          variant === 'danger' && 'text-red-600 dark:text-red-400',
         )}
       >
         {formatPercentage(pct)}
       </p>
-      <div className="mt-1 h-1.5 w-full rounded-full bg-muted overflow-hidden">
+      <div className="mt-1 h-2 w-full rounded-full bg-muted overflow-hidden">
         <div
-          className={cn(
-            'h-full rounded-full transition-all',
-            variant === 'success' && 'bg-green-500',
-            variant === 'default' && 'bg-yellow-500',
-            variant === 'danger' && 'bg-red-500',
-          )}
-          style={{ width: `${clamped}%` }}
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${clamped}%`, backgroundColor: barColor }}
         />
       </div>
     </Card>
@@ -85,20 +114,26 @@ function MarginProgressCard({ pct }: { pct: number }) {
 
 // ============ Alert Card ============
 
+const ALERT_TYPE_LABELS: Record<string, string> = {
+  overdue: 'Pagamento vencido',
+  nf_stale: 'NF pendente',
+  value_divergence: 'Divergencia de valor',
+}
+
 function AlertCard({ alert }: { alert: FinancialDashboardAlert }) {
   const severity = alert.severity ?? 'low'
   return (
     <div
       className={cn(
-        'flex items-start gap-3 rounded-md border px-4 py-3 text-sm',
-        severity === 'high' && 'border-red-200 bg-red-50 text-red-800',
-        severity === 'medium' && 'border-yellow-200 bg-yellow-50 text-yellow-800',
-        severity === 'low' && 'border-blue-200 bg-blue-50 text-blue-800',
+        'flex items-start gap-3 rounded-lg border px-4 py-3 text-sm',
+        severity === 'high' && 'border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300',
+        severity === 'medium' && 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-300',
+        severity === 'low' && 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-300',
       )}
     >
       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
       <div>
-        <span className="font-medium capitalize">{alert.type.replace(/_/g, ' ')}</span>
+        <span className="font-semibold">{ALERT_TYPE_LABELS[alert.type] ?? alert.type}</span>
         {' — '}
         {alert.message}
       </div>
@@ -139,15 +174,26 @@ function CategoryTable({ rows }: { rows: CostCategorySummary[] }) {
               <td className="px-4 py-2 text-right tabular-nums">{formatCurrency(row.total_budgeted)}</td>
               <td className="px-4 py-2 text-right tabular-nums">{formatCurrency(row.total_paid)}</td>
               <td className="px-4 py-2 text-right tabular-nums">
-                <span
-                  className={cn(
-                    'font-medium',
-                    row.pct_paid >= 80 && 'text-green-600',
-                    row.pct_paid > 0 && row.pct_paid < 80 && 'text-yellow-600',
-                  )}
-                >
-                  {formatPercentage(row.pct_paid)}
-                </span>
+                <div className="flex items-center justify-end gap-2">
+                  <div className="hidden sm:block w-16 h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${Math.min(100, row.pct_paid)}%`,
+                        backgroundColor: row.pct_paid >= 80 ? '#22c55e' : row.pct_paid > 0 ? '#f59e0b' : '#94a3b8',
+                      }}
+                    />
+                  </div>
+                  <span
+                    className={cn(
+                      'font-medium text-xs',
+                      row.pct_paid >= 80 && 'text-green-600 dark:text-green-400',
+                      row.pct_paid > 0 && row.pct_paid < 80 && 'text-amber-600 dark:text-amber-400',
+                    )}
+                  >
+                    {formatPercentage(row.pct_paid)}
+                  </span>
+                </div>
               </td>
             </tr>
           ))}
@@ -191,7 +237,14 @@ function UpcomingPaymentsList({ entries }: { entries: PaymentCalendarEntry[] }) 
           )}
         >
           <div className="flex items-center gap-3">
-            <CalendarClock className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className={cn(
+              'rounded-md p-1.5 shrink-0',
+              entry.is_overdue
+                ? 'bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400'
+                : 'bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400',
+            )}>
+              <CalendarClock className="h-4 w-4" />
+            </div>
             <div>
               <p className="text-sm font-medium">{formatDate(entry.payment_due_date)}</p>
               <p className="text-xs text-muted-foreground">
@@ -203,7 +256,10 @@ function UpcomingPaymentsList({ entries }: { entries: PaymentCalendarEntry[] }) 
             {entry.is_overdue && (
               <Badge variant="destructive" className="text-xs">Vencido</Badge>
             )}
-            <span className="text-sm font-semibold tabular-nums">
+            <span className={cn(
+              'text-sm font-semibold tabular-nums',
+              entry.is_overdue && 'text-red-600 dark:text-red-400',
+            )}>
               {formatCurrency(entry.total_pending)}
             </span>
           </div>
@@ -286,25 +342,33 @@ export default function JobFinancialDashboardPage({ params }: PageProps) {
               label="OC / Faturamento"
               value={formatCurrency(dashboard.summary.budget_value)}
               icon={<DollarSign className="h-4 w-4" />}
+              variant="info"
+              accentColor="#3b82f6"
             />
             <KPICard
               label="Total Estimado"
               value={formatCurrency(dashboard.summary.total_estimated)}
+              icon={<Receipt className="h-4 w-4" />}
+              variant="warning"
+              accentColor="#f59e0b"
             />
             <KPICard
               label="Total Pago"
               value={formatCurrency(dashboard.summary.total_paid)}
+              icon={<Wallet className="h-4 w-4" />}
               variant="success"
+              accentColor="#22c55e"
             />
             <KPICard
               label="Saldo"
               value={formatCurrency(dashboard.summary.balance)}
               variant={dashboard.summary.balance >= 0 ? 'success' : 'danger'}
+              accentColor={dashboard.summary.balance >= 0 ? '#22c55e' : '#ef4444'}
               icon={
                 dashboard.summary.balance >= 0 ? (
-                  <TrendingUp className="h-4 w-4 text-green-600" />
+                  <TrendingUp className="h-4 w-4" />
                 ) : (
-                  <TrendingDown className="h-4 w-4 text-red-600" />
+                  <TrendingDown className="h-4 w-4" />
                 )
               }
             />
@@ -312,6 +376,8 @@ export default function JobFinancialDashboardPage({ params }: PageProps) {
               label="Margem Bruta"
               value={formatCurrency(dashboard.summary.margin_gross)}
               variant={dashboard.summary.margin_gross >= 0 ? 'success' : 'danger'}
+              accentColor={dashboard.summary.margin_gross >= 0 ? '#22c55e' : '#ef4444'}
+              icon={<PiggyBank className="h-4 w-4" />}
             />
             <MarginProgressCard pct={dashboard.summary.margin_pct} />
           </div>

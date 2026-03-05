@@ -98,7 +98,7 @@ export function BudgetVsActualChart({ data }: Props) {
   // Preparar dados com nomes truncados para o eixo X
   const chartData = data.map(entry => ({
     ...entry,
-    item_label: truncate(entry.item_name, 15),
+    item_label: truncate(entry.item_name, 22),
   }))
 
   return (
@@ -140,13 +140,13 @@ export function BudgetVsActualChart({ data }: Props) {
           />
 
           {/* Barra azul: estimado/orcado */}
-          <Bar dataKey="budgeted" name="Estimado" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="budgeted" name="Estimado" fill="#6366f1" radius={[4, 4, 0, 0]} />
 
-          {/* Barra verde: pago real, com label de variacao acima */}
+          {/* Barra verde-teal: pago real, com label de variacao acima */}
           <Bar
             dataKey="actual_paid"
             name="Pago"
-            fill="#22c55e"
+            fill="#14b8a6"
             radius={[4, 4, 0, 0]}
             label={<VarianceLabel />}
           />
