@@ -183,31 +183,43 @@ function formatDateExtended(dateStr: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Carregamento de imagem com fallback de CORS
+// Carregamento de imagem via fetch (evita problema de tainted canvas com CORS)
 // ---------------------------------------------------------------------------
 
-async function loadImageAsDataUrl(url: string): Promise<string | null> {
-  return new Promise((resolve) => {
-    if (!url) return resolve(null)
+interface LoadedImage {
+  dataUrl: string
+  width: number
+  height: number
+}
 
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
-    img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas')
-        canvas.width = img.naturalWidth || 160
-        canvas.height = img.naturalHeight || 56
-        const ctx = canvas.getContext('2d')
-        if (!ctx) return resolve(null)
-        ctx.drawImage(img, 0, 0)
-        resolve(canvas.toDataURL('image/png'))
-      } catch {
-        resolve(null)
-      }
-    }
-    img.onerror = () => resolve(null)
-    img.src = url
-  })
+async function loadImageAsDataUrl(url: string): Promise<LoadedImage | null> {
+  if (!url) return null
+  try {
+    // fetch() lida melhor com CORS que Image+canvas para Supabase Storage
+    const response = await fetch(url)
+    if (!response.ok) return null
+    const blob = await response.blob()
+
+    // Converter blob para data URL
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+
+    // Obter dimensoes reais da imagem para escala proporcional
+    const dims = await new Promise<{ w: number; h: number }>((resolve) => {
+      const img = new Image()
+      img.onload = () => resolve({ w: img.naturalWidth || 160, h: img.naturalHeight || 60 })
+      img.onerror = () => resolve({ w: 160, h: 60 })
+      img.src = dataUrl
+    })
+
+    return { dataUrl, width: dims.w, height: dims.h }
+  } catch {
+    return null
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -216,7 +228,7 @@ async function loadImageAsDataUrl(url: string): Promise<string | null> {
 
 function drawLogoOrInitials(
   doc: PDF,
-  dataUrl: string | null,
+  loaded: LoadedImage | null,
   name: string,
   x: number,
   y: number,
@@ -224,41 +236,109 @@ function drawLogoOrInitials(
   maxH: number,
   align: 'left' | 'right' = 'left',
 ) {
-  if (dataUrl) {
-    // Calcular dimensoes proporcional
-    const targetW = Math.min(maxW, 50)
-    const targetH = Math.min(maxH, 14)
+  if (loaded) {
+    // Escalar proporcionalmente para caber no bounding box
+    const aspect = loaded.width / loaded.height
+    let drawW = maxW
+    let drawH = drawW / aspect
+    if (drawH > maxH) {
+      drawH = maxH
+      drawW = drawH * aspect
+    }
+    // Limitar para nao ficar gigante
+    drawW = Math.min(drawW, 45)
+    drawH = Math.min(drawH, 13)
 
-    const xPos = align === 'right' ? x + maxW - targetW : x
-    doc.addImage(dataUrl, 'PNG', xPos, y, targetW, targetH)
+    const xPos = align === 'right' ? x + maxW - drawW : x
+    const yPos = y + (maxH - drawH) / 2 // centralizar verticalmente
+    try {
+      doc.addImage(loaded.dataUrl, 'PNG', xPos, yPos, drawW, drawH)
+    } catch {
+      // Fallback se addImage falhar
+      drawInitialsBadge(doc, name, x, y, maxW, maxH, align)
+    }
   } else if (name) {
-    // Fallback: badge retangular com iniciais
-    const initials = getInitials(name)
-    const badgeW = 18
-    const badgeH = 8
-    const xPos = align === 'right' ? x + maxW - badgeW : x
-
-    setFillColor(doc, NEUTRAL_100)
-    setDrawColor(doc, NEUTRAL_300)
-    doc.setLineWidth(0.3)
-    doc.roundedRect(xPos, y + (maxH - badgeH) / 2, badgeW, badgeH, 2, 2, 'FD')
-
-    setTextColor(doc, NEUTRAL_600)
-    doc.setFontSize(8)
-    doc.setFont('helvetica', 'bold')
-    doc.text(initials, xPos + badgeW / 2, y + maxH / 2 + 0.5, { align: 'center' })
-
-    // Nome abaixo do badge
-    doc.setFontSize(7)
-    doc.setFont('helvetica', 'normal')
-    setTextColor(doc, NEUTRAL_400)
-    doc.text(
-      name.length > 20 ? name.substring(0, 18) + '...' : name,
-      xPos + badgeW / 2,
-      y + maxH / 2 + 5,
-      { align: 'center' },
-    )
+    drawInitialsBadge(doc, name, x, y, maxW, maxH, align)
   }
+}
+
+function drawInitialsBadge(
+  doc: PDF,
+  name: string,
+  x: number,
+  y: number,
+  maxW: number,
+  maxH: number,
+  align: 'left' | 'right',
+) {
+  const initials = getInitials(name)
+  const badgeW = 18
+  const badgeH = 8
+  const xPos = align === 'right' ? x + maxW - badgeW : x
+
+  setFillColor(doc, NEUTRAL_100)
+  setDrawColor(doc, NEUTRAL_300)
+  doc.setLineWidth(0.3)
+  doc.roundedRect(xPos, y + (maxH - badgeH) / 2, badgeW, badgeH, 2, 2, 'FD')
+
+  setTextColor(doc, NEUTRAL_600)
+  doc.setFontSize(8)
+  doc.setFont('helvetica', 'bold')
+  doc.text(initials, xPos + badgeW / 2, y + maxH / 2 + 0.5, { align: 'center' })
+
+  doc.setFontSize(7)
+  doc.setFont('helvetica', 'normal')
+  setTextColor(doc, NEUTRAL_400)
+  doc.text(
+    name.length > 20 ? name.substring(0, 18) + '...' : name,
+    xPos + badgeW / 2,
+    y + maxH / 2 + 5,
+    { align: 'center' },
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Desenhar logos de cliente/agencia (lado direito do header)
+// Cenarios:
+// 1. Apenas cliente → logo/iniciais do cliente, alinhado direita
+// 2. Cliente + agencia → logo do cliente, "via Agencia" abaixo (sutil)
+// 3. Apenas agencia → logo/iniciais da agencia
+// 4. Nenhum → nada
+// ---------------------------------------------------------------------------
+
+function drawClientAgencyLogos(
+  doc: PDF,
+  clientLogo: LoadedImage | null,
+  agencyLogo: LoadedImage | null,
+  clientName: string,
+  agencyName: string | null,
+  x: number,
+  y: number,
+  maxW: number,
+  maxH: number,
+) {
+  const hasClient = Boolean(clientName)
+  const hasAgency = Boolean(agencyName)
+
+  if (hasClient && hasAgency) {
+    // Cliente + Agencia: logo do cliente (area maior) + "via Agency" sutil abaixo
+    const clientAreaH = maxH - 4
+    drawLogoOrInitials(doc, clientLogo, clientName, x, y, maxW, clientAreaH, 'right')
+
+    // "via Agencia" — texto discreto
+    doc.setFontSize(6)
+    doc.setFont('helvetica', 'italic')
+    setTextColor(doc, NEUTRAL_400)
+    const viaText = `via ${agencyName!.length > 22 ? agencyName!.substring(0, 20) + '...' : agencyName}`
+    doc.text(viaText, x + maxW, y + clientAreaH + 3, { align: 'right' })
+  } else if (hasClient) {
+    // Apenas cliente
+    drawLogoOrInitials(doc, clientLogo, clientName, x, y, maxW, maxH, 'right')
+  } else if (hasAgency) {
+    // Apenas agencia (raro, mas possivel)
+    drawLogoOrInitials(doc, agencyLogo, agencyName!, x, y, maxW, maxH, 'right')
+  }
+  // Nenhum: nao desenha nada
 }
 
 // ---------------------------------------------------------------------------
@@ -271,14 +351,11 @@ export async function generateCronogramaPdf(data: PhaseExportData): Promise<void
 
   if (phases.length === 0) return
 
-  // Pre-carregar logos
-  const [tenantLogoUrl, clientLogoUrl] = await Promise.all([
+  // Pre-carregar logos (produtora, cliente e agencia separados)
+  const [tenantLogo, clientLogo, agencyLogo] = await Promise.all([
     tenant.logo_url ? loadImageAsDataUrl(tenant.logo_url) : Promise.resolve(null),
-    job.client_logo_url
-      ? loadImageAsDataUrl(job.client_logo_url)
-      : job.agency_logo_url
-        ? loadImageAsDataUrl(job.agency_logo_url)
-        : Promise.resolve(null),
+    job.client_logo_url ? loadImageAsDataUrl(job.client_logo_url) : Promise.resolve(null),
+    job.agency_logo_url ? loadImageAsDataUrl(job.agency_logo_url) : Promise.resolve(null),
   ])
 
   // Pre-renderizar emojis como imagens
@@ -301,16 +378,7 @@ export async function generateCronogramaPdf(data: PhaseExportData): Promise<void
   doc.rect(0, 0, PAGE_W, headerH, 'F')
 
   // Logo produtora (esquerda)
-  drawLogoOrInitials(
-    doc,
-    tenantLogoUrl,
-    tenant.company_name,
-    MARGIN_X,
-    4,
-    logoColW,
-    14,
-    'left',
-  )
+  drawLogoOrInitials(doc, tenantLogo, tenant.company_name, MARGIN_X, 4, logoColW, 14, 'left')
 
   // Centro: titulo do job
   const jobTitle = job.title.toUpperCase()
@@ -341,18 +409,9 @@ export async function generateCronogramaPdf(data: PhaseExportData): Promise<void
     subtitleY + 1.5,
   )
 
-  // Logo cliente (direita)
-  const clientName = job.client_name || job.agency_name || ''
-  drawLogoOrInitials(
-    doc,
-    clientLogoUrl,
-    clientName,
-    MARGIN_X + logoColW + centerW,
-    4,
-    logoColW,
-    14,
-    'right',
-  )
+  // Logo cliente/agencia (direita) — design limpo
+  const rightLogoX = MARGIN_X + logoColW + centerW
+  drawClientAgencyLogos(doc, clientLogo, agencyLogo, job.client_name, job.agency_name ?? null, rightLogoX, 3, logoColW, 16)
 
   // ---------------------------------------------------------------------------
   // 2. Faixa brand color (y: 22 → 24.5mm)
@@ -762,8 +821,9 @@ function buildCalendarGrid(year: number, month: number): Date[][] {
 function drawPageHeader(
   doc: PDF,
   data: PhaseExportData,
-  tenantLogoUrl: string | null,
-  clientLogoUrl: string | null,
+  tenantLogo: LoadedImage | null,
+  clientLogo: LoadedImage | null,
+  agencyLogo: LoadedImage | null,
   brandColor: string,
 ): number {
   const { job, tenant } = data
@@ -778,7 +838,7 @@ function drawPageHeader(
   doc.rect(0, 0, PAGE_W, headerH, 'F')
 
   // Logo produtora
-  drawLogoOrInitials(doc, tenantLogoUrl, tenant.company_name, MARGIN_X, 4, logoColW, 14, 'left')
+  drawLogoOrInitials(doc, tenantLogo, tenant.company_name, MARGIN_X, 4, logoColW, 14, 'left')
 
   // Titulo do job
   const jobTitle = job.title.toUpperCase()
@@ -809,18 +869,9 @@ function drawPageHeader(
     subtitleY + 1.5,
   )
 
-  // Logo cliente
-  const clientName = job.client_name || job.agency_name || ''
-  drawLogoOrInitials(
-    doc,
-    clientLogoUrl,
-    clientName,
-    MARGIN_X + logoColW + centerW,
-    4,
-    logoColW,
-    14,
-    'right',
-  )
+  // Logo cliente/agencia (direita)
+  const rightLogoX = MARGIN_X + logoColW + centerW
+  drawClientAgencyLogos(doc, clientLogo, agencyLogo, job.client_name, job.agency_name ?? null, rightLogoX, 3, logoColW, 16)
 
   // Faixa brand color
   const brandY = headerH
@@ -896,14 +947,11 @@ export async function generateCalendarioPdf(data: PhaseExportData): Promise<void
   const datedPhases = phases.filter((p) => p.start_date && p.end_date)
   if (datedPhases.length === 0) return
 
-  // Pre-carregar logos
-  const [tenantLogoUrl, clientLogoUrl] = await Promise.all([
+  // Pre-carregar logos (produtora, cliente e agencia separados)
+  const [tenantLogo, clientLogo, agencyLogo] = await Promise.all([
     tenant.logo_url ? loadImageAsDataUrl(tenant.logo_url) : Promise.resolve(null),
-    job.client_logo_url
-      ? loadImageAsDataUrl(job.client_logo_url)
-      : job.agency_logo_url
-        ? loadImageAsDataUrl(job.agency_logo_url)
-        : Promise.resolve(null),
+    job.client_logo_url ? loadImageAsDataUrl(job.client_logo_url) : Promise.resolve(null),
+    job.agency_logo_url ? loadImageAsDataUrl(job.agency_logo_url) : Promise.resolve(null),
   ])
 
   // ---------------------------------------------------------------------------
@@ -961,7 +1009,7 @@ export async function generateCalendarioPdf(data: PhaseExportData): Promise<void
     if (pageIndex > 0) doc.addPage()
 
     // 1. Header padrao
-    const headerBottom = drawPageHeader(doc, data, tenantLogoUrl, clientLogoUrl, brandColor)
+    const headerBottom = drawPageHeader(doc, data, tenantLogo, clientLogo, agencyLogo, brandColor)
 
     // 2. Rodape com paginacao
     drawPageFooter(doc, pageIndex + 1, activeMonths.length)
