@@ -26,12 +26,46 @@ export default defineConfig({
     },
     {
       name: 'authenticated',
-      testMatch: /dashboard-pages\.spec\.ts|forms-and-interactions\.spec\.ts|screenshots\.spec\.ts|storyboard\.spec\.ts|admin-pages\.spec\.ts/,
+      testMatch: /dashboard-pages\.spec\.ts|forms-and-interactions\.spec\.ts|screenshots\.spec\.ts|storyboard\.spec\.ts|admin-pages\.spec\.ts|elenco-od-e2e\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
         storageState: 'tests/.auth/user.json',
       },
       dependencies: ['setup'],
+    },
+    // Portal do Cliente — chaos tests (Suites A-F)
+    // Suite A e F requerem auth (storageState)
+    // Suites B, C, D, E sao publicas ou via API direta
+    {
+      name: 'portal-admin',
+      testMatch: /portal-e2e\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'tests/.auth/user.json',
+        baseURL: 'https://teste-ellah-os.vercel.app',
+        screenshot: 'only-on-failure',
+        video: 'retain-on-failure',
+      },
+      dependencies: ['setup'],
+    },
+    {
+      name: 'portal-public',
+      testMatch: /portal-e2e\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: 'https://teste-ellah-os.vercel.app',
+        screenshot: 'only-on-failure',
+        video: 'retain-on-failure',
+      },
+    },
+    {
+      name: 'portal-mobile',
+      testMatch: /portal-e2e\.spec\.ts/,
+      use: {
+        ...devices['iPhone 13'],
+        baseURL: 'https://teste-ellah-os.vercel.app',
+        screenshot: 'only-on-failure',
+      },
     },
   ],
 });

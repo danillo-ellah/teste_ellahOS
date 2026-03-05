@@ -57,3 +57,8 @@ test-results/
 .claude/settings.local.json
 .test-token.txt
 .env.supabase
+
+# Google Service Account key (NUNCA commitar)
+src/pagamentofornecedor*.json
+*.p12
+*-credentials.json
