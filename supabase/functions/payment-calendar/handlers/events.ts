@@ -106,7 +106,7 @@ export async function eventsHandler(req: Request, auth: AuthContext): Promise<Re
         ? (() => {
             let q = client
               .from('jobs')
-              .select('id, code, title, payment_date, closed_value, clients(company_name)')
+              .select('id, code, title, payment_date, closed_value, clients(name)')
               .eq('tenant_id', auth.tenantId)
               .is('deleted_at', null)
               .gte('payment_date', start_date)
@@ -181,7 +181,7 @@ export async function eventsHandler(req: Request, auth: AuthContext): Promise<Re
         amount: (job.closed_value as number) ?? 0,
         status: 'pendente',
         description: `Recebimento - ${job.title as string}`,
-        client_name: (clients.company_name as string | null) ?? null,
+        client_name: (clients.name as string | null) ?? null,
         job_id: job.id as string,
         job_code: job.code as string,
         job_title: job.title as string,
