@@ -51,6 +51,18 @@ function verifyCronSecret(req: Request): void {
   }
 }
 
+// Extrai o codigo do job do assunto do email.
+// Formato do assunto original: "038 - Senac - Titulo / Fornecedor / SOLICITAÇÃO DE NOTA"
+// Quando o fornecedor responde: "Re: 038 - Senac - Titulo / Fornecedor / SOLICITAÇÃO DE NOTA"
+// O codigo e um numero de 3 digitos no inicio (apos "Re:" opcional)
+function extractJobCodeFromSubject(subject: string): string | null {
+  // Remove prefixos de resposta (Re:, Fwd:, Enc:, RES:, ENC:) e espacos
+  const cleaned = subject.replace(/^(Re|Fwd|Enc|RES|ENC|Res|Fw):\s*/gi, '').trim();
+  // Extrai o codigo numerico no inicio (1-4 digitos)
+  const match = cleaned.match(/^(\d{1,4})\b/);
+  return match ? match[1] : null;
+}
+
 // Busca perfis de usuarios com roles financeiro/admin/ceo para notificar
 async function getUsersToNotify(
   serviceClient: ReturnType<typeof getServiceClient>,
@@ -71,81 +83,148 @@ async function getUsersToNotify(
   return (profiles ?? []).map((p: { id: string }) => p.id);
 }
 
-// Tenta match automatico da NF com financial_records do tenant
-// Retorna { matchedId, confidence, matchCount } baseado na logica da spec
-async function tryAutoMatch(
+// Auto-match inteligente em 2 etapas (baseado no Apps Script existente):
+//
+// ETAPA 1: Subject contém codigo do job → busca cost_items por job.code + vendor_email
+//   Se 1 match → vincula automaticamente (confianca alta, fornecedor seguiu as regras)
+//   Se multiplos → nao vincula (review manual)
+//
+// ETAPA 2: Sem codigo no subject → busca cost_items por vendor_email apenas
+//   Nunca vincula automaticamente (pode ser job errado)
+//   Apenas retorna candidatos para review manual na tela
+//
+// deno-lint-ignore no-explicit-any
+async function trySmartAutoMatch(
   serviceClient: ReturnType<typeof getServiceClient>,
   tenantId: string,
   senderEmail: string,
-): Promise<{ matchedId: string | null; confidence: number; matchCount: number; matchData: Record<string, unknown> | null }> {
-  // Busca financial_records onde supplier_email = sender_email
-  const { data: directMatches, error: directError } = await serviceClient
-    .from('financial_records')
-    .select('id, description, amount, supplier_email, person_id, nf_request_status')
-    .eq('tenant_id', tenantId)
-    .eq('supplier_email', senderEmail)
-    .in('nf_request_status', ['enviado', 'enviado_confirmado'])
-    .eq('status', 'pendente')
-    .is('deleted_at', null);
+  subject: string,
+): Promise<{
+  autoLinkedCostItemId: string | null;
+  matchMethod: string | null;
+  candidateCount: number;
+  jobCode: string | null;
+  matchedJobId: string | null;
+}> {
+  const jobCode = extractJobCodeFromSubject(subject);
 
-  if (directError) {
-    console.error('[ingest] falha ao buscar financial_records por supplier_email:', directError.message);
-  }
+  console.log(`[ingest] smart-match: subject="${subject}" extracted_code="${jobCode}" email="${senderEmail}"`);
 
-  let matches = directMatches ?? [];
+  // ETAPA 1: Se tem codigo do job no assunto, busca por job.code + email
+  if (jobCode) {
+    // Pad do codigo para 3 digitos (ex: "38" → "038") para comparar com jobs.code
+    const paddedCode = jobCode.padStart(3, '0');
 
-  // Se nao achou por supplier_email, tenta via people.email
-  if (matches.length === 0) {
-    const { data: peopleMatches, error: peopleError } = await serviceClient
-      .from('financial_records')
+    const { data: subjectMatches, error: subjectError } = await serviceClient
+      .from('cost_items')
       .select(`
-        id, description, amount, supplier_email, person_id, nf_request_status,
-        people!inner(email)
+        id, service_description, total_value, vendor_email_snapshot, job_id,
+        jobs!inner(id, code, title)
       `)
       .eq('tenant_id', tenantId)
-      .eq('people.email', senderEmail)
-      .in('nf_request_status', ['enviado', 'enviado_confirmado'])
-      .eq('status', 'pendente')
-      .is('deleted_at', null);
+      .eq('vendor_email_snapshot', senderEmail)
+      .eq('jobs.code', paddedCode)
+      .is('deleted_at', null)
+      .is('nf_document_id', null)
+      .eq('is_category_header', false)
+      .gt('total_value', 0)
+      .in('nf_request_status', ['pedido', 'pendente', 'enviado'])
+      .order('created_at', { ascending: true })
+      .limit(10);
 
-    if (peopleError) {
-      console.error('[ingest] falha ao buscar financial_records por people.email:', peopleError.message);
+    if (subjectError) {
+      console.error('[ingest] smart-match etapa1 erro:', subjectError.message);
     }
 
-    matches = peopleMatches ?? [];
+    const matches = subjectMatches ?? [];
+
+    if (matches.length === 1) {
+      // Match exato: 1 cost_item deste fornecedor neste job
+      const m = matches[0];
+      console.log(`[ingest] smart-match ETAPA1: match unico! cost_item=${m.id} job_code=${paddedCode}`);
+      return {
+        autoLinkedCostItemId: m.id,
+        matchMethod: 'auto_subject_email',
+        candidateCount: 1,
+        jobCode: paddedCode,
+        // deno-lint-ignore no-explicit-any
+        matchedJobId: (m.jobs as any)?.id ?? m.job_id,
+      };
+    }
+
+    if (matches.length > 1) {
+      console.log(`[ingest] smart-match ETAPA1: ${matches.length} candidatos no job ${paddedCode} — review manual`);
+      return {
+        autoLinkedCostItemId: null,
+        matchMethod: null,
+        candidateCount: matches.length,
+        jobCode: paddedCode,
+        matchedJobId: null,
+      };
+    }
+
+    // Nenhum match por subject+email — tenta sem pad (codigo literal)
+    if (paddedCode !== jobCode) {
+      const { data: rawCodeMatches } = await serviceClient
+        .from('cost_items')
+        .select(`
+          id, service_description, total_value, vendor_email_snapshot, job_id,
+          jobs!inner(id, code, title)
+        `)
+        .eq('tenant_id', tenantId)
+        .eq('vendor_email_snapshot', senderEmail)
+        .eq('jobs.code', jobCode)
+        .is('deleted_at', null)
+        .is('nf_document_id', null)
+        .eq('is_category_header', false)
+        .gt('total_value', 0)
+        .in('nf_request_status', ['pedido', 'pendente', 'enviado'])
+        .limit(10);
+
+      if (rawCodeMatches && rawCodeMatches.length === 1) {
+        const m = rawCodeMatches[0];
+        console.log(`[ingest] smart-match ETAPA1 (raw code): match unico! cost_item=${m.id} job_code=${jobCode}`);
+        return {
+          autoLinkedCostItemId: m.id,
+          matchMethod: 'auto_subject_email',
+          candidateCount: 1,
+          jobCode,
+          // deno-lint-ignore no-explicit-any
+          matchedJobId: (m.jobs as any)?.id ?? m.job_id,
+        };
+      }
+    }
+
+    console.log(`[ingest] smart-match ETAPA1: nenhum match por subject code=${paddedCode} + email`);
   }
 
-  if (matches.length === 0) {
-    return { matchedId: null, confidence: 0.0, matchCount: 0, matchData: null };
+  // ETAPA 2: Sem codigo no subject ou nao encontrou — busca so por email
+  // NAO vincula automaticamente (pode ser do job errado)
+  const { data: emailMatches, error: emailError } = await serviceClient
+    .from('cost_items')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('vendor_email_snapshot', senderEmail)
+    .is('deleted_at', null)
+    .is('nf_document_id', null)
+    .eq('is_category_header', false)
+    .gt('total_value', 0)
+    .in('nf_request_status', ['pedido', 'pendente', 'enviado'])
+    .limit(10);
+
+  if (emailError) {
+    console.error('[ingest] smart-match etapa2 erro:', emailError.message);
   }
 
-  if (matches.length === 1) {
-    const m = matches[0];
-    return {
-      matchedId: m.id,
-      confidence: 0.95,
-      matchCount: 1,
-      matchData: {
-        financial_record_id: m.id,
-        description: m.description,
-        amount: m.amount,
-        confidence: 0.95,
-      },
-    };
-  }
+  const emailCandidates = emailMatches?.length ?? 0;
+  console.log(`[ingest] smart-match ETAPA2: ${emailCandidates} candidatos por email (vinculacao manual)`);
 
-  // Multiplos matches: retorna o primeiro mas com baixa confianca
-  const m = matches[0];
   return {
-    matchedId: m.id,
-    confidence: 0.50,
-    matchCount: matches.length,
-    matchData: {
-      financial_record_id: m.id,
-      description: m.description,
-      amount: m.amount,
-      confidence: 0.50,
-    },
+    autoLinkedCostItemId: null,
+    matchMethod: null,
+    candidateCount: emailCandidates,
+    jobCode: jobCode ? jobCode.padStart(3, '0') : null,
+    matchedJobId: null,
   };
 }
 
@@ -195,25 +274,25 @@ export async function ingestNf(req: Request): Promise<Response> {
     });
   }
 
-  // 4. Tentar match automatico
-  const { matchedId, confidence, matchCount, matchData } = await tryAutoMatch(
+  // 4. Smart auto-match: por subject (codigo do job) + email do fornecedor
+  const smartMatch = await trySmartAutoMatch(
     serviceClient,
     input.tenant_id,
     input.sender_email,
+    input.subject,
   );
 
-  // 5. Determinar status inicial baseado no resultado do match
+  // 5. Determinar status e vincular cost_item se auto-matched
   let docStatus: string;
-  let matchMethod: string | null = null;
+  let matchedCostItemId: string | null = null;
+  let matchedJobId: string | null = null;
 
-  if (matchedId && confidence >= 0.90) {
+  if (smartMatch.autoLinkedCostItemId) {
     docStatus = 'auto_matched';
-    matchMethod = 'auto_value_supplier';
+    matchedCostItemId = smartMatch.autoLinkedCostItemId;
+    matchedJobId = smartMatch.matchedJobId;
   } else {
     docStatus = 'pending_review';
-    if (matchedId) {
-      matchMethod = 'auto_value_supplier';
-    }
   }
 
   // 6. Criar registro em nf_documents
@@ -233,12 +312,14 @@ export async function ingestNf(req: Request): Promise<Response> {
       drive_file_id: input.drive_file_id,
       drive_url: input.drive_url,
       status: docStatus,
-      matched_financial_record_id: matchedId ?? null,
-      match_confidence: confidence > 0 ? confidence : null,
-      match_method: matchMethod,
+      match_confidence: smartMatch.autoLinkedCostItemId ? 0.95 : null,
+      match_method: smartMatch.matchMethod,
       metadata: {
         ingested_at: new Date().toISOString(),
-        match_count: matchCount,
+        candidate_count: smartMatch.candidateCount,
+        extracted_job_code: smartMatch.jobCode,
+        matched_cost_item_id: matchedCostItemId,
+        matched_job_id: matchedJobId,
       },
     })
     .select('id, status')
@@ -251,29 +332,27 @@ export async function ingestNf(req: Request): Promise<Response> {
 
   console.log(`[ingest] NF criada: id=${newDoc.id} status=${newDoc.status}`);
 
-  // 6.5. Buscar cost_items candidatos (apenas log, NAO vincula automaticamente)
-  // A vinculacao ao cost_item correto e feita pelo usuario na tela de validacao.
-  // Auto-vincular pode ligar ao cost_item errado quando o vendor tem multiplos itens.
-  try {
-    const { data: matchedCostItems, error: costFetchError } = await serviceClient
-      .from('cost_items')
-      .select('id')
-      .eq('vendor_email_snapshot', input.sender_email)
-      .eq('tenant_id', input.tenant_id)
-      .is('deleted_at', null)
-      .is('nf_document_id', null)
-      .in('nf_request_status', ['pedido', 'pendente'])
-      .order('created_at', { ascending: true })
-      .limit(10);
+  // 6.5. Se auto-matched, vincular o cost_item
+  if (matchedCostItemId) {
+    try {
+      const { error: linkError } = await serviceClient
+        .from('cost_items')
+        .update({
+          nf_document_id: newDoc.id,
+          nf_request_status: 'recebido',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', matchedCostItemId)
+        .is('nf_document_id', null); // Safety: so vincula se ainda nao tem NF
 
-    if (costFetchError) {
-      console.error('[ingest] cost_items fetch erro:', costFetchError.message);
-    } else {
-      const found = matchedCostItems?.length ?? 0;
-      console.log(`[ingest] cost_items candidatos: email=${input.sender_email} found=${found} (vinculacao manual na validacao)`);
+      if (linkError) {
+        console.error(`[ingest] falha ao vincular cost_item ${matchedCostItemId}:`, linkError.message);
+      } else {
+        console.log(`[ingest] cost_item ${matchedCostItemId} vinculado automaticamente (nf_request_status=recebido)`);
+      }
+    } catch (linkErr) {
+      console.error('[ingest] excecao ao vincular cost_item (nao bloqueia):', linkErr);
     }
-  } catch (costSyncErr) {
-    console.error('[ingest] cost_items candidatos excecao (nao bloqueia):', costSyncErr);
   }
 
   // 7. Tornar arquivo acessivel via link (fire-and-forget)
@@ -288,16 +367,17 @@ export async function ingestNf(req: Request): Promise<Response> {
     }
   } catch (permErr) {
     console.error('[ingest] falha ao definir permissao publica no Drive:', permErr);
-    // Nao bloqueia a operacao principal
   }
 
-  // 8. Criar notificacoes para roles financeiro/admin/ceo (fire-and-forget)
+  // 8. Criar notificacoes para roles financeiro/admin/ceo
   try {
     const userIds = await getUsersToNotify(serviceClient, input.tenant_id);
     const notifTitle = docStatus === 'auto_matched'
-      ? 'NF recebida e associada automaticamente'
+      ? 'NF recebida e vinculada automaticamente'
       : 'Nova NF recebida — validacao necessaria';
-    const notifBody = `NF de "${input.sender_name}" (${input.sender_email}) recebida. Arquivo: ${input.file_name}`;
+    const notifBody = docStatus === 'auto_matched'
+      ? `NF de "${input.sender_name}" vinculada ao job ${smartMatch.jobCode ?? '?'}. Arquivo: ${input.file_name}`
+      : `NF de "${input.sender_name}" (${input.sender_email}) recebida. Arquivo: ${input.file_name}`;
 
     for (const userId of userIds) {
       await createNotification(serviceClient, {
@@ -312,19 +392,22 @@ export async function ingestNf(req: Request): Promise<Response> {
           sender_email: input.sender_email,
           file_name: input.file_name,
           status: docStatus,
+          job_code: smartMatch.jobCode,
         },
         action_url: `/financial/nf-validation?id=${newDoc.id}`,
       });
     }
   } catch (notifErr) {
     console.error('[ingest] falha ao criar notificacoes:', notifErr);
-    // Nao bloqueia a operacao principal
   }
 
   return created({
     nf_document_id: newDoc.id,
     status: newDoc.status,
-    match: matchData ?? undefined,
+    auto_linked: !!matchedCostItemId,
+    matched_cost_item_id: matchedCostItemId,
+    matched_job_code: smartMatch.jobCode,
+    candidate_count: smartMatch.candidateCount,
     is_duplicate: false,
   });
 }
