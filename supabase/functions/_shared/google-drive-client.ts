@@ -189,15 +189,21 @@ export const DEFAULT_FOLDER_TEMPLATE: FolderTemplateNode = {
 // ========================================================
 
 // Gera access token usando Service Account JWT RS256 via WebCrypto
+// scopes: array de escopos OAuth2 (default: drive). Passar escopos extras
+// quando precisar acessar APIs especificas (Sheets, Docs, Slides).
 export async function getGoogleAccessToken(
   sa: { client_email: string; private_key: string },
+  scopes?: string[],
 ): Promise<string | null> {
   try {
     const now = Math.floor(Date.now() / 1000);
     const header = { alg: 'RS256', typ: 'JWT' };
+    const scopeStr = (scopes && scopes.length > 0)
+      ? scopes.join(' ')
+      : 'https://www.googleapis.com/auth/drive';
     const payload = {
       iss: sa.client_email,
-      scope: 'https://www.googleapis.com/auth/drive',
+      scope: scopeStr,
       aud: 'https://oauth2.googleapis.com/token',
       iat: now,
       exp: now + 3600,
