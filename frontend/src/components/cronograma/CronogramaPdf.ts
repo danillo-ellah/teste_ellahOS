@@ -570,6 +570,9 @@ export async function generateCronogramaPdf(data: PhaseExportData): Promise<void
   const barH = baseRowH * 0.5
   const barsStartY = ganttStartY + monthHeaderH + 5
 
+  // maxChars real baseado na largura da coluna de labels
+  const ganttLabelMaxChars = Math.floor((GANTT_LABEL_W - 6) / 1.6)
+
   sortedPhases.forEach((phase, i) => {
     const rowY = barsStartY + i * baseRowH
     if (!phase.start_date || !phase.end_date) return
@@ -581,35 +584,27 @@ export async function generateCronogramaPdf(data: PhaseExportData): Promise<void
     const barX = MARGIN_X + GANTT_LABEL_W + 2 + startOffset * dayW
     const barW = Math.max(spanDays * dayW, 1)
 
-    // Label da fase (esquerda) — incluir complemento inline quando cabe
-    const labelText = phase.complement
-      ? `${phase.phase_label} · ${phase.complement}`
-      : phase.phase_label
-    const maxLabelChars = Math.floor((GANTT_LABEL_W - 4) / 1.8)
-    const truncLabel = labelText.length > maxLabelChars
-      ? labelText.substring(0, maxLabelChars - 1) + '…'
-      : labelText
-
     doc.setFontSize(5.5)
     doc.setFont('helvetica', 'normal')
     setTextColor(doc, NEUTRAL_800)
 
-    if (phase.complement) {
-      // Renderizar label+complemento com complemento em italico
-      const labelOnly = phase.phase_label
-      drawEmojiText(doc, emojiMap, phase.phase_emoji, labelOnly, MARGIN_X + 2, rowY + barH * 0.7, 5.5, 16)
-      // Complemento abaixo em italico (so se cabe na row)
-      if (baseRowH >= 5.5) {
-        doc.setFontSize(4.5)
-        doc.setFont('helvetica', 'italic')
-        setTextColor(doc, NEUTRAL_400)
-        const compTruncated = phase.complement.length > 22
-          ? phase.complement.substring(0, 20) + '…'
-          : phase.complement
-        doc.text(`· ${compTruncated}`, MARGIN_X + 2, rowY + barH * 0.7 + 2.5)
-      }
+    if (phase.complement && baseRowH >= 6) {
+      // Duas linhas: label + complemento abaixo
+      drawEmojiText(doc, emojiMap, phase.phase_emoji, phase.phase_label, MARGIN_X + 2, rowY + barH * 0.55, 5.5, ganttLabelMaxChars)
+      doc.setFontSize(4.5)
+      doc.setFont('helvetica', 'italic')
+      setTextColor(doc, NEUTRAL_400)
+      const compMaxChars = Math.floor((GANTT_LABEL_W - 4) / 1.4)
+      const compTruncated = phase.complement.length > compMaxChars
+        ? phase.complement.substring(0, compMaxChars - 1) + '…'
+        : phase.complement
+      doc.text(compTruncated, MARGIN_X + 2, rowY + barH * 0.55 + 2.8)
+    } else if (phase.complement) {
+      // Uma unica linha: label + complemento juntos
+      const combined = `${phase.phase_label} · ${phase.complement}`
+      drawEmojiText(doc, emojiMap, phase.phase_emoji, combined, MARGIN_X + 2, rowY + barH * 0.7, 5.5, ganttLabelMaxChars)
     } else {
-      drawEmojiText(doc, emojiMap, phase.phase_emoji, phase.phase_label, MARGIN_X + 2, rowY + barH * 0.7, 5.5, 16)
+      drawEmojiText(doc, emojiMap, phase.phase_emoji, phase.phase_label, MARGIN_X + 2, rowY + barH * 0.7, 5.5, ganttLabelMaxChars)
     }
 
     // Barra
@@ -719,15 +714,17 @@ export async function generateCronogramaPdf(data: PhaseExportData): Promise<void
     setTextColor(doc, NEUTRAL_800)
 
     // Col 0: Fase (emoji + nome)
-    drawEmojiText(doc, emojiMap, phase.phase_emoji, phase.phase_label, MARGIN_X + 1.5 + 3, textY, 8, 26)
+    const tablePhaseMaxChars = Math.floor((colWidths[0] - 6) / 1.8)
+    drawEmojiText(doc, emojiMap, phase.phase_emoji, phase.phase_label, MARGIN_X + 1.5 + 3, textY, 8, tablePhaseMaxChars)
 
     // Complemento em segunda linha
     if (hasComplement) {
       doc.setFontSize(6.5)
       doc.setFont('helvetica', 'italic')
       setTextColor(doc, NEUTRAL_400)
-      const compTruncated = phase.complement!.length > 35
-        ? phase.complement!.substring(0, 33) + '...'
+      const compMaxChars = Math.floor((colWidths[0] - 6) / 1.4)
+      const compTruncated = phase.complement!.length > compMaxChars
+        ? phase.complement!.substring(0, compMaxChars - 1) + '…'
         : phase.complement!
       doc.text(compTruncated, MARGIN_X + 1.5 + 3, textY + 3.5)
     }
@@ -1206,24 +1203,27 @@ export async function generateCalendarioPdf(data: PhaseExportData): Promise<void
         // Se tem 1 unica fase: texto centralizado na celula (sem pill, fundo ja e colorido)
         if (activePhasesForDay.length === 1) {
           const phase = activePhasesForDay[0]
-          const maxChars = Math.floor((colW - 4) / 1.8)
           const singleFontSize = Math.min(8, basePillFontSize + 0.5) - fontReduction
+          const singleMaxChars = Math.floor((colW - 4) / 1.5)
 
           doc.setFontSize(singleFontSize)
           doc.setFont('helvetica', 'bold')
           setTextColor(doc, darkenHex(phase.phase_color, 0.3))
-          drawEmojiText(doc, emojiMap, phase.phase_emoji, phase.phase_label, cellX + 2, rowY + 5 + pillAreaH / 2, singleFontSize, maxChars)
 
-          // Complemento abaixo
           if (phase.complement) {
-            doc.setFontSize(Math.max(5, basePillFontSize - 1.5))
+            // Label na primeira linha, complemento na segunda
+            drawEmojiText(doc, emojiMap, phase.phase_emoji, phase.phase_label, cellX + 2, rowY + 5 + pillAreaH / 2 - 1.5, singleFontSize, singleMaxChars)
+            const compFontSize = Math.max(5, singleFontSize - 1)
+            doc.setFontSize(compFontSize)
             doc.setFont('helvetica', 'italic')
             setTextColor(doc, darkenHex(phase.phase_color, 0.15))
-            const compMax = Math.floor((colW - 4) / 1.8)
-            const compText = phase.complement.length > compMax
-              ? phase.complement.substring(0, compMax - 1) + '…'
+            const compMaxChars = Math.floor((colW - 4) / 1.3)
+            const compText = phase.complement.length > compMaxChars
+              ? phase.complement.substring(0, compMaxChars - 1) + '…'
               : phase.complement
-            doc.text(compText, cellX + 2, rowY + 5 + pillAreaH / 2 + 3.5)
+            doc.text(compText, cellX + 2, rowY + 5 + pillAreaH / 2 + 2)
+          } else {
+            drawEmojiText(doc, emojiMap, phase.phase_emoji, phase.phase_label, cellX + 2, rowY + 5 + pillAreaH / 2, singleFontSize, singleMaxChars)
           }
           return
         }
@@ -1247,11 +1247,15 @@ export async function generateCalendarioPdf(data: PhaseExportData): Promise<void
           const pillLabel = phase.complement
             ? `${phase.phase_label} · ${phase.complement}`
             : phase.phase_label
-          const maxChars = Math.floor((colW - 5) / 1.6)
-          doc.setFontSize(pillFontSize)
+          // Font menor quando tem complemento para caber o texto inteiro
+          const effectivePillFont = phase.complement
+            ? Math.max(minPillFontSize, pillFontSize - 0.5)
+            : pillFontSize
+          const maxChars = Math.floor((colW - 5) / 1.3)
+          doc.setFontSize(effectivePillFont)
           doc.setFont('helvetica', 'bold')
           setTextColor(doc, darkenHex(phase.phase_color, 0.3))
-          drawEmojiText(doc, emojiMap, phase.phase_emoji, pillLabel, pillX + 1.8, pillY + pillH - 0.6, pillFontSize, maxChars)
+          drawEmojiText(doc, emojiMap, phase.phase_emoji, pillLabel, pillX + 1.8, pillY + pillH - 0.6, effectivePillFont, maxChars)
         })
 
         if (hiddenCount > 0) {
@@ -1310,7 +1314,8 @@ export async function generateCalendarioPdf(data: PhaseExportData): Promise<void
       doc.setFontSize(legendFontSize)
       doc.setFont('helvetica', 'bold')
       setTextColor(doc, NEUTRAL_800)
-      drawEmojiText(doc, emojiMap, phase.phase_emoji, legendLabel, lx + legendSquare + 1.5, ly + legendSquare - 0.5, legendFontSize, 28)
+      const legendMaxChars = Math.floor((itemW - legendSquare - 3) / 1.4)
+      drawEmojiText(doc, emojiMap, phase.phase_emoji, legendLabel, lx + legendSquare + 1.5, ly + legendSquare - 0.5, legendFontSize, legendMaxChars)
     })
   })
 
