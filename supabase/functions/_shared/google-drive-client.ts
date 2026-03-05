@@ -328,6 +328,39 @@ export async function createFolder(
   };
 }
 
+// Busca uma pasta pelo nome exato dentro de um parentId (anti-duplicata)
+// Retorna o primeiro match ou null se nao existir
+export async function findFolderByName(
+  token: string,
+  parentId: string,
+  folderName: string,
+  opts?: DriveOptions,
+): Promise<{ id: string; name: string } | null> {
+  const safeName = folderName.replace(/'/g, "\\'");
+  const q = encodeURIComponent(
+    `'${parentId}' in parents and name = '${safeName}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
+  );
+  let url = `${DRIVE_API}/files?q=${q}&fields=files(id,name)&pageSize=1`;
+  url += sharedDriveParams(opts);
+
+  if (opts?.driveType === 'shared_drive' && opts.sharedDriveId) {
+    url += `&driveId=${opts.sharedDriveId}&corpora=drive`;
+  }
+
+  const resp = await driveFetchWithRetry(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  }, `findFolderByName "${folderName}"`);
+
+  if (!resp.ok) {
+    console.warn(`[google-drive] findFolderByName falhou: HTTP ${resp.status}`);
+    return null;
+  }
+
+  const data = await resp.json();
+  const files = data.files || [];
+  return files.length > 0 ? { id: files[0].id, name: files[0].name } : null;
+}
+
 // Lista arquivos/pastas filhos de um parentId
 export async function listChildren(
   token: string,
@@ -604,6 +637,10 @@ export async function buildDriveStructure(
   const folderMap: Record<string, { driveId: string; url: string; dbId: string }> = {};
 
   // Helper: cria pasta no Drive e registra no banco
+  // Protecao anti-duplicata em 2 niveis:
+  //   1. Verifica se ja existe no banco (drive_folders)
+  //   2. Se nao existe no banco, verifica no Drive real pelo nome exato
+  //   3. So cria se nao encontrou em nenhum dos dois
   async function createAndRecord(
     key: string,
     name: string,
@@ -611,7 +648,7 @@ export async function buildDriveStructure(
     parentDbId: string | null,
   ): Promise<void> {
     try {
-      // Verificar se ja existe no banco (idempotencia)
+      // Nivel 1: Verificar se ja existe no banco (idempotencia)
       const { data: existing } = await serviceClient
         .from('drive_folders')
         .select('id, google_drive_id, url')
@@ -621,7 +658,7 @@ export async function buildDriveStructure(
         .maybeSingle();
 
       if (existing?.google_drive_id) {
-        // Ja existe — pular criacao, registrar no map
+        // Ja existe no banco — pular criacao, registrar no map
         folderMap[key] = {
           driveId: existing.google_drive_id,
           url: existing.url || buildFolderUrl(existing.google_drive_id),
@@ -630,8 +667,19 @@ export async function buildDriveStructure(
         return;
       }
 
-      // Criar pasta no Drive
-      const result = await createFolder(token!, name, parentDriveId, driveOpts);
+      // Nivel 2: Verificar se ja existe no Drive real pelo nome
+      // (protege contra: banco limpo mas pasta ainda existe no Drive)
+      const safeName = sanitizeFolderName(name);
+      const existingInDrive = await findFolderByName(token!, parentDriveId, safeName, driveOpts);
+
+      let result: CreateFolderResult;
+      if (existingInDrive) {
+        console.log(`[google-drive] Pasta "${safeName}" ja existe no Drive (${existingInDrive.id}) — reutilizando`);
+        result = { id: existingInDrive.id, url: buildFolderUrl(existingInDrive.id) };
+      } else {
+        // Criar pasta no Drive
+        result = await createFolder(token!, name, parentDriveId, driveOpts);
+      }
 
       // Inserir no banco
       const { data: row } = await serviceClient
@@ -655,7 +703,7 @@ export async function buildDriveStructure(
         url: result.url,
         dbId: row?.id || '',
       };
-      foldersCreated++;
+      if (!existingInDrive) foldersCreated++;
     } catch (err) {
       const msg = `Erro criando pasta "${key}": ${err instanceof Error ? err.message : String(err)}`;
       errors.push(msg);
