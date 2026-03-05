@@ -15,6 +15,7 @@ const ALLOWED_ROLES = ['admin', 'ceo', 'financeiro'];
 const ValidateSchema = z.object({
   nf_document_id: z.string().uuid('nf_document_id deve ser UUID valido'),
   financial_record_id: z.string().uuid('financial_record_id deve ser UUID valido').optional().nullable(),
+  cost_item_id: z.string().uuid('cost_item_id deve ser UUID valido').optional().nullable(),
   nf_number: z.string().max(50).optional().nullable(),
   nf_value: z.number().positive('nf_value deve ser positivo').optional().nullable(),
   nf_issuer_cnpj: z.string().max(20).optional().nullable(),
@@ -53,7 +54,7 @@ export async function validateNf(req: Request, auth: AuthContext): Promise<Respo
   // 1. Buscar documento atual para verificar existencia e obter dados anteriores
   const { data: doc, error: fetchError } = await supabase
     .from('nf_documents')
-    .select('id, status, job_id, matched_financial_record_id, file_name, sender_email, tenant_id, drive_file_id')
+    .select('id, status, job_id, matched_financial_record_id, file_name, sender_email, tenant_id, drive_file_id, drive_url')
     .eq('id', input.nf_document_id)
     .eq('tenant_id', auth.tenantId)
     .is('deleted_at', null)
@@ -196,9 +197,66 @@ export async function validateNf(req: Request, auth: AuthContext): Promise<Respo
     }
   }
 
-  // 6.5. Sincronizar com cost_items (SECUNDARIO — nao bloqueia se falhar)
-  const resolvedJobId = updatedDoc.job_id ?? doc.job_id;
-  if (doc.sender_email && resolvedJobId) {
+  // 5.5. Se cost_item_id informado, vincular NF diretamente ao cost_item (PRIMARIO)
+  let directCostItemLinked = false;
+  let resolvedJobId = updatedDoc.job_id ?? doc.job_id;
+
+  if (input.cost_item_id) {
+    try {
+      // Buscar cost_item para obter job_id
+      const { data: costItem } = await supabase
+        .from('cost_items')
+        .select('id, job_id')
+        .eq('id', input.cost_item_id)
+        .eq('tenant_id', auth.tenantId)
+        .is('deleted_at', null)
+        .single();
+
+      if (costItem) {
+        const costItemUpdate: Record<string, unknown> = {
+          nf_document_id: input.nf_document_id,
+          nf_request_status: 'aprovado',
+          nf_validation_ok: true,
+        };
+
+        if (doc.drive_url) {
+          costItemUpdate.nf_drive_url = doc.drive_url;
+        }
+
+        if (doc.file_name) {
+          costItemUpdate.nf_filename = doc.file_name;
+        }
+
+        const nfVal = input.nf_value;
+        if (nfVal != null) {
+          costItemUpdate.nf_extracted_value = nfVal;
+        }
+
+        const { error: costUpdateError } = await supabase
+          .from('cost_items')
+          .update(costItemUpdate)
+          .eq('id', input.cost_item_id)
+          .eq('tenant_id', auth.tenantId);
+
+        if (costUpdateError) {
+          console.error('[validate] cost_item direct link erro:', costUpdateError.message);
+        } else {
+          directCostItemLinked = true;
+          console.log(`[validate] cost_item vinculado diretamente: ${input.cost_item_id}`);
+        }
+
+        // Usar job_id do cost_item se nao temos ainda
+        if (costItem.job_id && !resolvedJobId) {
+          resolvedJobId = costItem.job_id;
+        }
+      }
+    } catch (costLinkErr) {
+      console.error('[validate] cost_item direct link excecao:', costLinkErr);
+    }
+  }
+
+  // 6.5. Sincronizar com cost_items por email (SECUNDARIO — so se nao vinculou diretamente)
+  if (!directCostItemLinked && doc.sender_email && resolvedJobId) {
     try {
       const { data: matchedCostItems } = await supabase
         .from('cost_items')

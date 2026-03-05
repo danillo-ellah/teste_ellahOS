@@ -89,6 +89,7 @@ export interface NfFilters {
 export interface ValidateNfPayload {
   nf_document_id: string
   financial_record_id?: string
+  cost_item_id?: string
   nf_number?: string
   nf_value?: number
   nf_issuer_cnpj?: string
@@ -139,6 +140,23 @@ export interface FinancialRecordMatch {
   job_title: string | null
   due_date: string | null
   nf_status: 'sem_nf' | 'enviado' | 'confirmado'
+}
+
+// --- Cost item match para vinculacao de NF ---
+
+export interface CostItemMatch {
+  id: string
+  service_description: string
+  total_value: number
+  vendor_name: string | null
+  vendor_email: string | null
+  nf_request_status: string
+  nf_document_id: string | null
+  payment_due_date: string | null
+  item_number: number
+  job_id: string | null
+  job_code: string | null
+  job_title: string | null
 }
 
 // ---------------------------------------------------------------------------

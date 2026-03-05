@@ -12,6 +12,7 @@ import type {
   ReassignNfPayload,
   ReassignNfResult,
   FinancialRecordMatch,
+  CostItemMatch,
   OcrAnalyzeResult,
 } from '@/types/nf'
 import type { PaginationMeta } from '@/types/jobs'
@@ -104,6 +105,33 @@ export function useFinancialRecordMatches(search: string, jobId?: string) {
     queryFn: () => apiGet<FinancialRecordMatch[]>('nf-processor', params, 'financial-records'),
     staleTime: 15_000,
     enabled: search.trim().length >= 2 || !!jobId,
+  })
+
+  return {
+    data: query.data?.data ?? [],
+    isLoading: query.isLoading,
+  }
+}
+
+// --- Busca de cost items para vinculacao de NF ---
+
+export function useCostItemMatches(
+  search: string,
+  opts?: { email?: string; jobId?: string; linkedToNf?: string },
+) {
+  const params: Record<string, string> = {}
+  if (search.trim()) params.search = search.trim()
+  if (opts?.email) params.email = opts.email
+  if (opts?.jobId) params.job_id = opts.jobId
+  if (opts?.linkedToNf) params.linked_to_nf = opts.linkedToNf
+
+  const hasQuery = search.trim().length >= 2 || !!opts?.email || !!opts?.jobId || !!opts?.linkedToNf
+
+  const query = useQuery({
+    queryKey: ['nf-cost-item-matches', params],
+    queryFn: () => apiGet<CostItemMatch[]>('nf-processor', params, 'cost-items-search'),
+    staleTime: 15_000,
+    enabled: hasQuery,
   })
 
   return {

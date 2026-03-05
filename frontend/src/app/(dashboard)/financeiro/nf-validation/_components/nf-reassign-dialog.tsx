@@ -15,30 +15,38 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { formatCurrency, formatDate } from '@/lib/format'
-import { useFinancialRecordMatches } from '@/hooks/useNf'
-import type { FinancialRecordMatch } from '@/types/nf'
+import { useCostItemMatches } from '@/hooks/useNf'
+import type { CostItemMatch } from '@/types/nf'
 
-const NF_STATUS_LABEL: Record<FinancialRecordMatch['nf_status'], string> = {
-  sem_nf: 'Sem NF',
+const NF_STATUS_LABEL: Record<string, string> = {
+  nao_aplicavel: 'N/A',
+  pendente: 'Pendente',
+  pedido: 'Pedido',
   enviado: 'Enviado',
-  confirmado: 'Confirmado',
+  recebido: 'Recebido',
+  aprovado: 'Aprovado',
+  cancelado: 'Cancelado',
 }
 
-const NF_STATUS_CLASS: Record<FinancialRecordMatch['nf_status'], string> = {
-  sem_nf: 'text-amber-700 bg-amber-100 dark:text-amber-400 dark:bg-amber-500/10',
+const NF_STATUS_CLASS: Record<string, string> = {
+  nao_aplicavel: 'text-zinc-500 bg-zinc-100 dark:text-zinc-400 dark:bg-zinc-500/10',
+  pendente: 'text-amber-700 bg-amber-100 dark:text-amber-400 dark:bg-amber-500/10',
+  pedido: 'text-blue-700 bg-blue-100 dark:text-blue-400 dark:bg-blue-500/10',
   enviado: 'text-blue-700 bg-blue-100 dark:text-blue-400 dark:bg-blue-500/10',
-  confirmado: 'text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-500/10',
+  recebido: 'text-indigo-700 bg-indigo-100 dark:text-indigo-400 dark:bg-indigo-500/10',
+  aprovado: 'text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-500/10',
+  cancelado: 'text-red-700 bg-red-100 dark:text-red-400 dark:bg-red-500/10',
 }
 
 // --- Item de resultado ---
 
-interface RecordItemProps {
-  record: FinancialRecordMatch
+interface CostItemRowProps {
+  item: CostItemMatch
   isSelected: boolean
   onSelect: () => void
 }
 
-function RecordItem({ record, isSelected, onSelect }: RecordItemProps) {
+function CostItemRow({ item, isSelected, onSelect }: CostItemRowProps) {
   return (
     <button
       type="button"
@@ -53,7 +61,7 @@ function RecordItem({ record, isSelected, onSelect }: RecordItemProps) {
           className={cn(
             'mt-1 h-4 w-4 shrink-0 rounded-full border-2 transition-colors',
             isSelected
-              ? 'border-rose-600 bg-rose-600 dark:border-rose-400 dark:bg-rose-400'
+              ? 'border-emerald-600 bg-emerald-600 dark:border-emerald-400 dark:bg-emerald-400'
               : 'border-zinc-300 dark:border-zinc-600',
           )}
         >
@@ -62,23 +70,34 @@ function RecordItem({ record, isSelected, onSelect }: RecordItemProps) {
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-foreground">{record.description}</p>
-          <p className="mt-0.5 text-xs text-zinc-500">
-            {record.job_code && (
-              <span className="font-mono">{record.job_code}</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-sm font-medium text-foreground">
+              {item.vendor_name ?? 'Fornecedor desconhecido'}
+            </p>
+            {item.job_code && (
+              <Badge variant="outline" className="text-[10px] font-mono shrink-0">
+                {item.job_code}
+              </Badge>
             )}
-            {record.job_code && ' · '}
-            <span className="font-mono">{formatCurrency(record.amount)}</span>
-            {record.due_date && ` · ${formatDate(record.due_date)}`}
+          </div>
+          <p className="mt-0.5 text-xs text-zinc-500 line-clamp-1">
+            {item.service_description}
+          </p>
+          <p className="mt-0.5 text-xs text-zinc-500">
+            <span className="font-mono">{formatCurrency(item.total_value)}</span>
+            {item.payment_due_date && ` · Venc. ${formatDate(item.payment_due_date)}`}
+            {item.vendor_email && (
+              <span className="ml-1 text-zinc-400">· {item.vendor_email}</span>
+            )}
           </p>
         </div>
         <span
           className={cn(
             'shrink-0 rounded-full px-2 py-0.5 text-xs font-medium',
-            NF_STATUS_CLASS[record.nf_status],
+            NF_STATUS_CLASS[item.nf_request_status] ?? NF_STATUS_CLASS.pendente,
           )}
         >
-          {NF_STATUS_LABEL[record.nf_status]}
+          {NF_STATUS_LABEL[item.nf_request_status] ?? item.nf_request_status}
         </span>
       </div>
     </button>
@@ -90,8 +109,10 @@ function RecordItem({ record, isSelected, onSelect }: RecordItemProps) {
 interface NfReassignDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSelect: (record: FinancialRecordMatch) => void
+  onSelect: (item: CostItemMatch) => void
   currentJobId?: string | null
+  senderEmail?: string | null
+  nfDocumentId?: string | null
 }
 
 export function NfReassignDialog({
@@ -99,6 +120,8 @@ export function NfReassignDialog({
   onOpenChange,
   onSelect,
   currentJobId,
+  senderEmail,
+  nfDocumentId,
 }: NfReassignDialogProps) {
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -121,10 +144,27 @@ export function NfReassignDialog({
     }
   }, [open])
 
-  const { data: records, isLoading } = useFinancialRecordMatches(
+  // Busca por texto quando usuario digita
+  const { data: searchResults, isLoading: searchLoading } = useCostItemMatches(
     debouncedSearch,
-    currentJobId ?? undefined,
+    {
+      jobId: currentJobId ?? undefined,
+      linkedToNf: nfDocumentId ?? undefined,
+    },
   )
+
+  // Busca automatica por email do remetente (quando nao tem busca manual)
+  const { data: emailResults, isLoading: emailLoading } = useCostItemMatches(
+    '',
+    {
+      email: senderEmail && !debouncedSearch ? senderEmail : undefined,
+      linkedToNf: nfDocumentId ?? undefined,
+    },
+  )
+
+  // Mostrar resultados da busca manual ou sugestoes por email
+  const records = debouncedSearch ? searchResults : emailResults
+  const isLoading = debouncedSearch ? searchLoading : emailLoading
 
   const selectedRecord = records.find((r) => r.id === selectedId)
 
@@ -142,7 +182,7 @@ export function NfReassignDialog({
         aria-modal="true"
       >
         <DialogHeader>
-          <DialogTitle id="nf-reassign-title">Buscar Lancamento</DialogTitle>
+          <DialogTitle id="nf-reassign-title">Vincular ao Item de Custo</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-3">
@@ -151,12 +191,19 @@ export function NfReassignDialog({
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
             <Input
               ref={inputRef}
-              placeholder="Buscar por descricao, valor ou job..."
+              placeholder="Buscar por fornecedor, descricao ou job..."
               className="pl-9"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+
+          {/* Hint: sugestoes por email */}
+          {!debouncedSearch && senderEmail && emailResults.length > 0 && (
+            <p className="text-xs text-zinc-500 px-1">
+              Sugestoes para <span className="font-mono font-medium">{senderEmail}</span>:
+            </p>
+          )}
 
           {/* Lista de resultados */}
           <div className="max-h-80 overflow-y-auto rounded-md border border-border">
@@ -173,27 +220,27 @@ export function NfReassignDialog({
               <div className="flex flex-col items-center justify-center py-10">
                 <Search className="h-8 w-8 text-zinc-300" />
                 <p className="mt-2 text-sm font-medium text-foreground">
-                  Nenhum lancamento encontrado
+                  Nenhum item de custo encontrado
                 </p>
                 <p className="mt-1 text-xs text-zinc-500">
-                  Tente buscar por valor ou descricao diferente
+                  Tente buscar por nome do fornecedor ou descricao
                 </p>
               </div>
             ) : (
               <div className="divide-y divide-border">
-                {records.map((record) => (
-                  <RecordItem
-                    key={record.id}
-                    record={record}
-                    isSelected={selectedId === record.id}
-                    onSelect={() => setSelectedId(record.id)}
+                {records.map((item) => (
+                  <CostItemRow
+                    key={item.id}
+                    item={item}
+                    isSelected={selectedId === item.id}
+                    onSelect={() => setSelectedId(item.id)}
                   />
                 ))}
               </div>
             )}
           </div>
 
-          {debouncedSearch.trim().length < 2 && !currentJobId && (
+          {!debouncedSearch && !senderEmail && (
             <p className="text-center text-xs text-zinc-400">
               Digite ao menos 2 caracteres para buscar
             </p>
@@ -208,7 +255,7 @@ export function NfReassignDialog({
             disabled={!selectedId}
             onClick={handleSelect}
           >
-            Selecionar
+            Vincular
           </Button>
         </DialogFooter>
       </DialogContent>

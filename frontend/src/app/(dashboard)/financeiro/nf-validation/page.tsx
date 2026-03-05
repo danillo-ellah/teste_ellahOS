@@ -20,9 +20,9 @@ import { NfStatsCards } from './_components/nf-stats-cards'
 import { NfDocumentTable } from './_components/nf-document-table'
 import { NfValidationDialog } from './_components/nf-validation-dialog'
 import { NfReassignDialog } from './_components/nf-reassign-dialog'
-import { useNfList, useNfStats, useReassignNf, useRejectNf } from '@/hooks/useNf'
+import { useNfList, useNfStats, useRejectNf } from '@/hooks/useNf'
 import { toast } from 'sonner'
-import type { NfDocument, NfFilters, NfStatus, FinancialRecordMatch } from '@/types/nf'
+import type { NfDocument, NfFilters, NfStatus, CostItemMatch } from '@/types/nf'
 
 const DEFAULT_FILTERS: NfFilters = {
   page: 1,
@@ -80,7 +80,6 @@ export default function NfValidationPage() {
   const [reassignOpen, setReassignOpen] = useState(false)
 
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
-  const { mutateAsync: reassignNf } = useReassignNf()
   const { mutateAsync: rejectNf } = useRejectNf()
 
   // Debounce busca 300ms
@@ -145,19 +144,16 @@ export default function NfValidationPage() {
     }
   }
 
-  async function handleReassignSelect(record: FinancialRecordMatch) {
-    if (!reassignTarget) return
-    try {
-      await reassignNf({
-        nf_document_id: reassignTarget.id,
-        financial_record_id: record.id,
-        job_id: record.job_id ?? undefined,
-      })
-      toast.success('NF reclassificada com sucesso')
-      setReassignTarget(null)
-    } catch {
-      toast.error('Erro ao reclassificar NF. Tente novamente.')
+  function handleReassignSelect(_item: CostItemMatch) {
+    // Ao selecionar um cost item da tabela, abrimos o dialog de validacao
+    // para que o usuario confirme a NF com o cost item selecionado
+    if (reassignTarget) {
+      setValidationTarget(reassignTarget)
+      setValidationOpen(true)
     }
+    setReassignTarget(null)
+    setReassignOpen(false)
+    toast.info('Abra a NF para validar e vincular ao item de custo.')
   }
 
   // Filtros ativos (para chips e botao limpar)
@@ -355,7 +351,7 @@ export default function NfValidationPage() {
         }}
       />
 
-      {/* Modal de reclassificacao direto da tabela */}
+      {/* Modal de vinculacao a item de custo direto da tabela */}
       <NfReassignDialog
         open={reassignOpen}
         onOpenChange={(open) => {
@@ -364,6 +360,8 @@ export default function NfValidationPage() {
         }}
         onSelect={handleReassignSelect}
         currentJobId={reassignTarget?.matched_job_id}
+        senderEmail={reassignTarget?.email_from}
+        nfDocumentId={reassignTarget?.id}
       />
     </div>
   )

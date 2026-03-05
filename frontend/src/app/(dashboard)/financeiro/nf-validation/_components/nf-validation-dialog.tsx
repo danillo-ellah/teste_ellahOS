@@ -49,8 +49,8 @@ import { formatCurrency, formatDate } from '@/lib/format'
 import { toast } from 'sonner'
 import { NfReassignDialog } from './nf-reassign-dialog'
 import { NfStatusBadge } from './nf-status-badge'
-import { useValidateNf, useRejectNf, useOcrAnalyze } from '@/hooks/useNf'
-import type { NfDocument, FinancialRecordMatch, OcrAnalyzeResult, OcrFieldConfidence } from '@/types/nf'
+import { useValidateNf, useRejectNf, useOcrAnalyze, useCostItemMatches } from '@/hooks/useNf'
+import type { NfDocument, CostItemMatch, OcrAnalyzeResult, OcrFieldConfidence } from '@/types/nf'
 
 // --- Responsive hook (evita renderizar Dialog+Sheet simultaneamente) ---
 
@@ -319,7 +319,7 @@ function NfValidationContent({
   )
   const [issueDate, setIssueDate] = useState(nf.nf_issue_date ?? nf.extracted_issue_date ?? '')
   const [competencia, setCompetencia] = useState(nf.extracted_competencia ?? '')
-  const [selectedMatch, setSelectedMatch] = useState<FinancialRecordMatch | null>(null)
+  const [selectedCostItem, setSelectedCostItem] = useState<CostItemMatch | null>(null)
   const [reassignOpen, setReassignOpen] = useState(false)
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
   const [rejectionReason, setRejectionReason] = useState('')
@@ -437,30 +437,32 @@ function NfValidationContent({
     return !!(preOcrValues[fieldKey])
   }
 
-  // Usa match existente da NF ou o selecionado manualmente
-  const hasAutoMatch =
-    nf.status === 'auto_matched' && nf.matched_financial_record_id
-  const matchFinancialRecordId =
-    selectedMatch?.id ?? (hasAutoMatch ? nf.matched_financial_record_id : null)
+  // --- Auto-sugestao de cost items por email do remetente ---
+  const { data: autoSuggestions } = useCostItemMatches('', {
+    email: nf.email_from ?? undefined,
+    linkedToNf: nf.id,
+  })
+
+  // Cost item vinculado: selecionado manualmente ou auto-sugerido (unico)
+  const autoLinkedItem = autoSuggestions.find(ci => ci.nf_document_id === nf.id)
+  const singleAutoMatch = !autoLinkedItem && autoSuggestions.length === 1 ? autoSuggestions[0] : null
+  const effectiveCostItem = selectedCostItem ?? autoLinkedItem ?? singleAutoMatch
 
   const canConfirm = !!(
     (issuerName.trim() || nfNumber.trim()) &&
-    nfValue.trim() &&
-    matchFinancialRecordId
+    nfValue.trim()
   )
 
-  const confirmDisabledReason = !matchFinancialRecordId
-    ? 'Selecione um lancamento financeiro'
-    : !nfValue.trim()
-      ? 'Informe o valor da NF'
-      : 'Preencha o fornecedor ou numero da NF'
+  const confirmDisabledReason = !nfValue.trim()
+    ? 'Informe o valor da NF'
+    : 'Preencha o fornecedor ou numero da NF'
 
   async function handleConfirm() {
     try {
       const value = parseFloat(nfValue.replace(',', '.'))
       await validateNf({
         nf_document_id: nf.id,
-        financial_record_id: matchFinancialRecordId ?? undefined,
+        cost_item_id: effectiveCostItem?.id ?? undefined,
         nf_number: nfNumber.trim() || undefined,
         nf_value: isNaN(value) ? undefined : value,
         nf_issuer_cnpj: issuerCnpj.trim() || undefined,
@@ -514,17 +516,17 @@ function NfValidationContent({
           {/* Painel direito: dados */}
           <div className="flex-1 overflow-y-auto p-6 md:w-2/5">
 
-            {/* ZONA A — Match Sugerido (ponto de decisao — vem primeiro) */}
+            {/* ZONA A — Item de Custo Vinculado */}
             <p className="text-[11px] font-medium uppercase tracking-widest text-zinc-400">
-              Match Sugerido
+              Item de Custo
             </p>
 
-            {hasAutoMatch || selectedMatch ? (
+            {effectiveCostItem ? (
               <div
                 className={cn(
                   'mt-2 rounded-lg border p-4',
                   'border-l-4',
-                  selectedMatch
+                  selectedCostItem
                     ? 'border-amber-200 border-l-amber-500 bg-amber-50/50 dark:border-amber-800 dark:border-l-amber-500 dark:bg-amber-950/20'
                     : 'border-emerald-200 border-l-emerald-500 bg-emerald-50 dark:border-emerald-800 dark:border-l-emerald-500 dark:bg-emerald-950/40',
                 )}
@@ -532,7 +534,7 @@ function NfValidationContent({
                 <div className="flex items-center gap-1.5">
                   <Zap className="h-3.5 w-3.5 text-emerald-500" />
                   <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                    {selectedMatch ? 'Vinculado manualmente' : 'Auto-matched'}
+                    {selectedCostItem ? 'Vinculado manualmente' : autoLinkedItem ? 'Vinculado automaticamente' : 'Unica sugestao'}
                   </span>
                   <Button
                     variant="ghost"
@@ -545,33 +547,38 @@ function NfValidationContent({
                 </div>
                 <div className="mt-2 flex items-center gap-2">
                   <p className="text-sm font-semibold text-foreground">
-                    {selectedMatch?.description ?? nf.matched_record_description ?? '\u2014'}
+                    {effectiveCostItem.vendor_name ?? 'Fornecedor desconhecido'}
                   </p>
-                  {(selectedMatch?.job_code ?? nf.matched_job_code) && (
-                    <Badge variant="secondary" className="text-xs">
-                      {selectedMatch?.job_code ?? nf.matched_job_code}
+                  {effectiveCostItem.job_code && (
+                    <Badge variant="secondary" className="text-xs font-mono">
+                      {effectiveCostItem.job_code}
                     </Badge>
                   )}
                 </div>
+                <p className="mt-0.5 text-xs text-zinc-500 line-clamp-1">
+                  {effectiveCostItem.service_description}
+                </p>
                 <p className="mt-1 text-sm text-zinc-500">
                   <span className="font-mono text-zinc-700 dark:text-zinc-300">
-                    {formatCurrency(
-                      selectedMatch?.amount ?? nf.matched_record_amount,
-                    )}
+                    {formatCurrency(effectiveCostItem.total_value)}
                   </span>
-                  {' \u00b7 '}
-                  {formatDate(selectedMatch?.due_date ?? nf.matched_record_date)}
+                  {effectiveCostItem.payment_due_date && (
+                    <>
+                      {' \u00b7 '}
+                      Venc. {formatDate(effectiveCostItem.payment_due_date)}
+                    </>
+                  )}
                 </p>
               </div>
-            ) : (
-              <div className="mt-2 rounded-lg border-2 border-dashed border-zinc-300 bg-transparent p-4 dark:border-zinc-600">
+            ) : autoSuggestions.length > 1 ? (
+              <div className="mt-2 rounded-lg border-2 border-dashed border-amber-300 bg-amber-50/30 p-4 dark:border-amber-700 dark:bg-amber-950/20">
                 <div className="flex flex-col items-center gap-2 text-center">
                   <AlertCircle className="h-5 w-5 text-amber-500" />
                   <p className="text-sm font-medium text-foreground">
-                    Lancamento nao encontrado automaticamente
+                    {autoSuggestions.length} itens de custo encontrados para este email
                   </p>
                   <p className="text-xs text-zinc-500">
-                    Vincule manualmente ao lancamento correto para confirmar esta NF.
+                    Selecione qual item de custo corresponde a esta NF.
                   </p>
                   <Button
                     size="sm"
@@ -579,7 +586,28 @@ function NfValidationContent({
                     onClick={() => setReassignOpen(true)}
                   >
                     <Search className="h-3.5 w-3.5 mr-1.5" />
-                    Buscar lancamento financeiro
+                    Escolher item de custo
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-2 rounded-lg border-2 border-dashed border-zinc-300 bg-transparent p-4 dark:border-zinc-600">
+                <div className="flex flex-col items-center gap-2 text-center">
+                  <AlertCircle className="h-5 w-5 text-zinc-400" />
+                  <p className="text-sm font-medium text-foreground">
+                    Nenhum item de custo vinculado
+                  </p>
+                  <p className="text-xs text-zinc-500">
+                    Vincule ao item de custo correto, ou confirme sem vincular.
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-1"
+                    onClick={() => setReassignOpen(true)}
+                  >
+                    <Search className="h-3.5 w-3.5 mr-1.5" />
+                    Buscar item de custo
                   </Button>
                 </div>
               </div>
@@ -808,15 +836,17 @@ function NfValidationContent({
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Dialog de reclassificacao */}
+        {/* Dialog de vinculacao a item de custo */}
         <NfReassignDialog
           open={reassignOpen}
           onOpenChange={setReassignOpen}
-          onSelect={(record) => {
-            setSelectedMatch(record)
+          onSelect={(item) => {
+            setSelectedCostItem(item)
             setReassignOpen(false)
           }}
           currentJobId={nf.matched_job_id}
+          senderEmail={nf.email_from}
+          nfDocumentId={nf.id}
         />
       </div>
     </TooltipProvider>
