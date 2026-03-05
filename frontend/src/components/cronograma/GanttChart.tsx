@@ -107,6 +107,8 @@ export function GanttChart({ phases, onPhaseClick, onPhaseDrag }: GanttChartProp
   const [drag, setDrag] = useState<DragState | null>(null)
   const [dragMousePos, setDragMousePos] = useState<{ x: number; y: number } | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  /** Tracks if a drag with actual movement occurred — used to suppress click after drag */
+  const didDragRef = useRef(false)
 
   // Filtrar fases que possuem datas definidas (fases sem datas nao aparecem no gantt)
   const datedPhases = phases.filter((p) => p.start_date && p.end_date)
@@ -155,6 +157,7 @@ export function GanttChart({ phases, onPhaseClick, onPhaseDrag }: GanttChartProp
     e.preventDefault()
     e.stopPropagation()
     setTooltip(null)
+    didDragRef.current = false
     setDrag({
       phaseId: phase.id,
       mode,
@@ -172,6 +175,7 @@ export function GanttChart({ phases, onPhaseClick, onPhaseDrag }: GanttChartProp
     const dayDelta = Math.round(deltaX / COL_WIDTH)
     if (dayDelta !== drag.dayDelta) {
       setDrag((prev) => prev ? { ...prev, dayDelta } : null)
+      if (dayDelta !== 0) didDragRef.current = true
     }
     setDragMousePos({ x: e.clientX, y: e.clientY })
   }, [drag])
@@ -426,8 +430,11 @@ export function GanttChart({ phases, onPhaseClick, onPhaseDrag }: GanttChartProp
                       }
                     }}
                     onClick={(e) => {
-                      // Only fire click if not dragging
-                      if (drag) return
+                      // Suppress click if a drag with movement just happened
+                      if (didDragRef.current) {
+                        didDragRef.current = false
+                        return
+                      }
                       e.stopPropagation()
                       onPhaseClick?.(phase)
                     }}
