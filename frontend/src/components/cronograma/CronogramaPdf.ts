@@ -300,9 +300,9 @@ function drawInitialsBadge(
 // ---------------------------------------------------------------------------
 // Desenhar logos de cliente/agencia (lado direito do header)
 // Cenarios:
-// 1. Apenas cliente → logo/iniciais do cliente, alinhado direita
-// 2. Cliente + agencia → logo do cliente, "via Agencia" abaixo (sutil)
-// 3. Apenas agencia → logo/iniciais da agencia
+// 1. Cliente + agencia → lado a lado, dividindo o espaco (ambos tem destaque)
+// 2. Apenas cliente → logo/iniciais do cliente, alinhado direita
+// 3. Apenas agencia → logo/iniciais da agencia, alinhado direita
 // 4. Nenhum → nada
 // ---------------------------------------------------------------------------
 
@@ -321,24 +321,30 @@ function drawClientAgencyLogos(
   const hasAgency = Boolean(agencyName)
 
   if (hasClient && hasAgency) {
-    // Cliente + Agencia: logo do cliente (area maior) + "via Agency" sutil abaixo
-    const clientAreaH = maxH - 4
-    drawLogoOrInitials(doc, clientLogo, clientName, x, y, maxW, clientAreaH, 'right')
+    // Ambos presentes — lado a lado com separador sutil
+    const gap = 2
+    const halfW = (maxW - gap) / 2
 
-    // "via Agencia" — texto discreto
-    doc.setFontSize(6)
-    doc.setFont('helvetica', 'italic')
-    setTextColor(doc, NEUTRAL_400)
-    const viaText = `via ${agencyName!.length > 22 ? agencyName!.substring(0, 20) + '...' : agencyName}`
-    doc.text(viaText, x + maxW, y + clientAreaH + 3, { align: 'right' })
+    // Cliente (esquerda da area direita)
+    drawLogoOrInitials(doc, clientLogo, clientName, x, y, halfW, maxH, 'right')
+
+    // Separador vertical pontilhado
+    const sepX = x + halfW + gap / 2
+    setDrawColor(doc, NEUTRAL_300)
+    doc.setLineWidth(0.2)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(doc as any).setLineDash([1, 1])
+    doc.line(sepX, y + 1, sepX, y + maxH - 1)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(doc as any).setLineDash([])
+
+    // Agencia (direita da area direita)
+    drawLogoOrInitials(doc, agencyLogo, agencyName!, x + halfW + gap, y, halfW, maxH, 'right')
   } else if (hasClient) {
-    // Apenas cliente
     drawLogoOrInitials(doc, clientLogo, clientName, x, y, maxW, maxH, 'right')
   } else if (hasAgency) {
-    // Apenas agencia (raro, mas possivel)
     drawLogoOrInitials(doc, agencyLogo, agencyName!, x, y, maxW, maxH, 'right')
   }
-  // Nenhum: nao desenha nada
 }
 
 // ---------------------------------------------------------------------------
@@ -435,12 +441,16 @@ export async function generateCronogramaPdf(data: PhaseExportData): Promise<void
   doc.setFont('helvetica', 'normal')
   setTextColor(doc, NEUTRAL_600)
 
-  const metaItems = [
+  // Montar meta items — incluir agencia se presente
+  const metaItems: Array<{ label: string; value: string }> = [
     { label: 'Projeto', value: job.title },
     { label: 'Codigo', value: job.code || '—' },
-    { label: 'Cliente', value: job.client_name || job.agency_name || '—' },
-    { label: 'Emitido em', value: formatDateExtended(new Date().toISOString().split('T')[0]) },
+    { label: 'Cliente', value: job.client_name || '—' },
   ]
+  if (job.agency_name) {
+    metaItems.push({ label: 'Agencia', value: job.agency_name })
+  }
+  metaItems.push({ label: 'Emitido em', value: formatDateExtended(new Date().toISOString().split('T')[0]) })
 
   const metaColW = CONTENT_W / metaItems.length
   metaItems.forEach(({ label, value }, i) => {
@@ -451,7 +461,8 @@ export async function generateCronogramaPdf(data: PhaseExportData): Promise<void
 
     doc.setFont('helvetica', 'normal')
     setTextColor(doc, NEUTRAL_600)
-    const truncated = value.length > 30 ? value.substring(0, 28) + '...' : value
+    const maxLen = Math.floor(metaColW / 1.8)
+    const truncated = value.length > maxLen ? value.substring(0, maxLen - 2) + '...' : value
     doc.text(truncated, mx, metaY + 4)
   })
 
@@ -887,12 +898,16 @@ function drawPageHeader(
   doc.setFont('helvetica', 'normal')
   setTextColor(doc, NEUTRAL_600)
 
-  const metaItems = [
+  // Montar meta items — incluir agencia se presente
+  const metaItems: Array<{ label: string; value: string }> = [
     { label: 'Projeto', value: job.title },
     { label: 'Codigo', value: job.code || '—' },
-    { label: 'Cliente', value: job.client_name || job.agency_name || '—' },
-    { label: 'Emitido em', value: formatDateExtended(new Date().toISOString().split('T')[0]) },
+    { label: 'Cliente', value: job.client_name || '—' },
   ]
+  if (job.agency_name) {
+    metaItems.push({ label: 'Agencia', value: job.agency_name })
+  }
+  metaItems.push({ label: 'Emitido em', value: formatDateExtended(new Date().toISOString().split('T')[0]) })
 
   const metaColW = CONTENT_W / metaItems.length
   metaItems.forEach(({ label, value }, i) => {
@@ -903,7 +918,8 @@ function drawPageHeader(
 
     doc.setFont('helvetica', 'normal')
     setTextColor(doc, NEUTRAL_600)
-    const truncated = value.length > 30 ? value.substring(0, 28) + '...' : value
+    const maxLen = Math.floor(metaColW / 1.8)
+    const truncated = value.length > maxLen ? value.substring(0, maxLen - 2) + '...' : value
     doc.text(truncated, mx, metaY + 4)
   })
 
