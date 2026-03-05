@@ -84,6 +84,13 @@ function setDrawColor(doc: PDF, hex: string) {
   doc.setDrawColor(r, g, b)
 }
 
+/** Escurece uma cor hex por um fator (0 = sem mudanca, 1 = preto) */
+function darkenHex(hex: string, factor: number): string {
+  const [r, g, b] = hexToRgb(hex)
+  const d = (c: number) => Math.round(c * (1 - factor))
+  return `#${d(r).toString(16).padStart(2, '0')}${d(g).toString(16).padStart(2, '0')}${d(b).toString(16).padStart(2, '0')}`
+}
+
 function formatDateLabel(dateStr: string): string {
   try {
     return format(parseISO(dateStr), "dd MMM yyyy", { locale: ptBR })
@@ -787,7 +794,7 @@ function drawPageHeader(
 /**
  * Desenha o rodape padrao na pagina atual.
  */
-function drawPageFooter(doc: PDF): void {
+function drawPageFooter(doc: PDF, pageNum?: number, totalPages?: number): void {
   const footerY = PAGE_H - 8
 
   setDrawColor(doc, NEUTRAL_200)
@@ -800,7 +807,8 @@ function drawPageFooter(doc: PDF): void {
   doc.text('Gerado por ELLAHOS \u2022 ellahos.com.br', MARGIN_X, footerY + 2)
 
   const todayLabel = formatDateExtended(new Date().toISOString().split('T')[0])
-  doc.text(todayLabel, PAGE_W - MARGIN_X, footerY + 2, { align: 'right' })
+  const pageLabel = pageNum && totalPages ? `${todayLabel}  |  Pagina ${pageNum} de ${totalPages}` : todayLabel
+  doc.text(pageLabel, PAGE_W - MARGIN_X, footerY + 2, { align: 'right' })
 }
 
 // ---------------------------------------------------------------------------
@@ -878,8 +886,8 @@ export async function generateCalendarioPdf(data: PhaseExportData): Promise<void
     // 1. Header padrao
     const headerBottom = drawPageHeader(doc, data, tenantLogoUrl, clientLogoUrl, brandColor)
 
-    // 2. Rodape
-    drawPageFooter(doc)
+    // 2. Rodape com paginacao
+    drawPageFooter(doc, pageIndex + 1, activeMonths.length)
 
     // 3. Area disponivel para o conteudo do calendario
     // De headerBottom + 2 ate o inicio do rodape (PAGE_H - 8 - 2 - 3 = rodape separador y)
@@ -948,9 +956,17 @@ export async function generateCalendarioPdf(data: PhaseExportData): Promise<void
         const isWeekend = di === 0 || di === 6
         const isToday = toLocalDateStr(day) === toLocalDateStr(today)
 
-        // Background da celula
-        if (isWeekend) {
+        const activePhasesForDay = isCurrentMonth ? getPhasesForDayPdf(datedPhases, day) : []
+        const hasPhases = activePhasesForDay.length > 0
+
+        // --- Background da celula ---
+        // Se tem 1 unica fase: preencher celula inteira com a cor da fase (25% opacidade)
+        if (hasPhases && activePhasesForDay.length === 1) {
+          setFillColor(doc, activePhasesForDay[0].phase_color, 0.2)
+        } else if (isWeekend && isCurrentMonth) {
           setFillColor(doc, NEUTRAL_100)
+        } else if (!isCurrentMonth) {
+          setFillColor(doc, NEUTRAL_50)
         } else {
           setFillColor(doc, WHITE)
         }
@@ -958,65 +974,94 @@ export async function generateCalendarioPdf(data: PhaseExportData): Promise<void
         doc.setLineWidth(0.15)
         doc.rect(cellX, rowY, colW, rowH, 'FD')
 
-        // Numero do dia
+        // Borda esquerda colorida se celula com 1 fase
+        if (hasPhases && activePhasesForDay.length === 1) {
+          setFillColor(doc, activePhasesForDay[0].phase_color)
+          doc.rect(cellX, rowY, 1.2, rowH, 'F')
+        }
+
+        // Hoje: borda vermelha destaque
+        if (isToday) {
+          setDrawColor(doc, '#F43F5E')
+          doc.setLineWidth(0.6)
+          doc.rect(cellX + 0.3, rowY + 0.3, colW - 0.6, rowH - 0.6, 'S')
+        }
+
+        // --- Numero do dia (topo esquerdo) ---
         const dayNum = day.getDate().toString()
-        const numX = cellX + colW - 2
+        const numX = cellX + 2.5
         const numY = rowY + 4
 
         if (isToday) {
-          // Circulo rose ao redor do numero
-          const circleR = 2.8
-          const circleX = numX - 1.2
-          const circleY = numY - 2
           setFillColor(doc, '#F43F5E')
-          doc.circle(circleX, circleY, circleR, 'F')
+          doc.circle(numX + 1, numY - 1.5, 2.5, 'F')
           doc.setFontSize(7 - fontReduction)
           doc.setFont('helvetica', 'bold')
           setTextColor(doc, WHITE)
-          doc.text(dayNum, numX, numY, { align: 'right' })
+          doc.text(dayNum, numX + 1, numY, { align: 'center' })
         } else {
           doc.setFontSize(7 - fontReduction)
           doc.setFont('helvetica', 'bold')
-          setTextColor(doc, isCurrentMonth ? NEUTRAL_600 : NEUTRAL_400)
-          doc.text(dayNum, numX, numY, { align: 'right' })
+          setTextColor(doc, isCurrentMonth ? NEUTRAL_800 : NEUTRAL_300)
+          doc.text(dayNum, numX, numY)
         }
 
-        // Fases ativas — apenas dias do mes atual
-        if (!isCurrentMonth) return
+        if (!isCurrentMonth || !hasPhases) return
 
-        const activePhasesForDay = getPhasesForDayPdf(datedPhases, day)
-        if (activePhasesForDay.length === 0) return
-
-        // Calcular quantas fases cabem na altura da celula
-        // Espaco disponivel: rowH - numero (4mm) - padding (1mm)
-        const pillAreaH = rowH - 5
-        const pillLineH = 3.5  // altura aproximada por linha de pill
-
+        // --- Fases na celula ---
+        const pillAreaH = rowH - 5.5
+        const pillLineH = Math.min(4, pillAreaH / Math.min(activePhasesForDay.length, 4))
         const maxPillsVisible = Math.max(1, Math.floor(pillAreaH / pillLineH))
         const visiblePhases = activePhasesForDay.slice(0, maxPillsVisible)
         const hiddenCount = activePhasesForDay.length - visiblePhases.length
 
-        // Ajuste de font se muitas fases
         let pillFontSize = basePillFontSize
         if (visiblePhases.length >= 4) pillFontSize = Math.max(minPillFontSize, basePillFontSize - 1)
-        if (visiblePhases.length >= 5) pillFontSize = minPillFontSize
 
+        // Se tem 1 unica fase: texto centralizado na celula (sem pill, fundo ja e colorido)
+        if (activePhasesForDay.length === 1) {
+          const phase = activePhasesForDay[0]
+          const maxChars = Math.floor((colW - 4) / 1.8)
+          const label = `${phase.phase_emoji} ${phase.phase_label}`
+          const truncLabel = label.length > maxChars ? label.substring(0, maxChars - 1) + '…' : label
+
+          doc.setFontSize(Math.min(8, basePillFontSize + 0.5) - fontReduction)
+          doc.setFont('helvetica', 'bold')
+          // Usar cor mais escura para legibilidade sobre fundo tintado
+          setTextColor(doc, darkenHex(phase.phase_color, 0.3))
+          doc.text(truncLabel, cellX + 2, rowY + 5 + pillAreaH / 2)
+
+          // Complemento abaixo
+          if (phase.complement) {
+            doc.setFontSize(Math.max(5, basePillFontSize - 1.5))
+            doc.setFont('helvetica', 'italic')
+            setTextColor(doc, darkenHex(phase.phase_color, 0.15))
+            const compMax = Math.floor((colW - 4) / 1.8)
+            const compText = phase.complement.length > compMax
+              ? phase.complement.substring(0, compMax - 1) + '…'
+              : phase.complement
+            doc.text(compText, cellX + 2, rowY + 5 + pillAreaH / 2 + 3.5)
+          }
+          return
+        }
+
+        // Multiplas fases: pills empilhados
         visiblePhases.forEach((phase, pi) => {
-          const pillY = rowY + 5 + pi * pillLineH
-          const pillH = pillLineH - 0.5
-          const pillX = cellX + 1
-          const pillW = colW - 2
+          const pillY = rowY + 5.5 + pi * pillLineH
+          const pillH = pillLineH - 0.8
+          const pillX = cellX + 0.8
+          const pillW = colW - 1.6
 
-          // Background da pill (cor da fase a 15% opacidade)
-          setFillColor(doc, phase.phase_color, 0.15)
+          // Background pill (30% opacidade — mais visivel para impressao)
+          setFillColor(doc, phase.phase_color, 0.3)
           doc.roundedRect(pillX, pillY, pillW, pillH, 0.5, 0.5, 'F')
 
-          // Borda esquerda da pill (cor solida)
+          // Borda esquerda solida
           setFillColor(doc, phase.phase_color)
-          doc.rect(pillX, pillY, 0.8, pillH, 'F')
+          doc.rect(pillX, pillY, 1, pillH, 'F')
 
-          // Truncar texto para caber na pill
-          const maxChars = Math.floor((colW - 4) / 1.6)
+          // Texto
+          const maxChars = Math.floor((colW - 5) / 1.6)
           const baseText = `${phase.phase_emoji} ${phase.phase_label}`
           const nameText = baseText.length > maxChars
             ? baseText.substring(0, maxChars - 1) + '…'
@@ -1024,17 +1069,16 @@ export async function generateCalendarioPdf(data: PhaseExportData): Promise<void
 
           doc.setFontSize(pillFontSize)
           doc.setFont('helvetica', 'bold')
-          setTextColor(doc, phase.phase_color)
-          doc.text(nameText, pillX + 1.5, pillY + pillH - 0.8)
+          setTextColor(doc, darkenHex(phase.phase_color, 0.3))
+          doc.text(nameText, pillX + 1.8, pillY + pillH - 0.6)
         })
 
-        // Indicador de fases ocultadas
         if (hiddenCount > 0) {
-          const moreY = rowY + 5.5 + visiblePhases.length * pillLineH
-          doc.setFontSize(Math.max(4, pillFontSize - 1))
-          doc.setFont('helvetica', 'italic')
-          setTextColor(doc, NEUTRAL_400)
-          doc.text(`+${hiddenCount} mais`, cellX + 1.5, moreY)
+          const moreY = rowY + 5.5 + visiblePhases.length * pillLineH + 1
+          doc.setFontSize(Math.max(5, pillFontSize - 0.5))
+          doc.setFont('helvetica', 'bold')
+          setTextColor(doc, NEUTRAL_600)
+          doc.text(`+${hiddenCount}`, cellX + 1.5, moreY)
         }
       })
     })
@@ -1059,50 +1103,32 @@ export async function generateCalendarioPdf(data: PhaseExportData): Promise<void
     ).sort((a, b) => a.sort_order - b.sort_order)
 
     const legendY = contentEndY - legendH + 2
-    const legendSquare = 4
-    const legendFontSize = 7
-    const legendItemW = CONTENT_W / 3  // 3 por linha
+    const legendSquare = 3.5
+    const legendFontSize = 6.5
 
     // Linha separadora acima da legenda
     setDrawColor(doc, NEUTRAL_200)
     doc.setLineWidth(0.3)
     doc.line(MARGIN_X, legendY - 1, PAGE_W - MARGIN_X, legendY - 1)
 
-    const statusLabels: Record<string, string> = {
-      pending: 'Nao iniciado',
-      in_progress: 'Em andamento',
-      completed: 'Concluido',
-    }
-
     uniquePhasesThisMonth.forEach((phase, li) => {
-      const col = li % 3
-      const row = Math.floor(li / 3)
-      const lx = MARGIN_X + col * legendItemW
+      const col = li % 4
+      const row = Math.floor(li / 4)
+      const itemW = CONTENT_W / 4
+      const lx = MARGIN_X + col * itemW
       const ly = legendY + row * (legendSquare + 2)
 
-      // Pill mini com cor de fundo
-      const pillW = 50
-      const pillH = legendSquare
-      setFillColor(doc, phase.phase_color, 0.15)
-      doc.roundedRect(lx, ly, pillW, pillH, 0.5, 0.5, 'F')
-
-      // Borda esquerda solida
+      // Quadrado de cor solida
       setFillColor(doc, phase.phase_color)
-      doc.rect(lx, ly, 0.8, pillH, 'F')
+      doc.roundedRect(lx, ly, legendSquare, legendSquare, 0.5, 0.5, 'F')
 
       // Nome da fase
       doc.setFontSize(legendFontSize)
       doc.setFont('helvetica', 'bold')
-      setTextColor(doc, phase.phase_color)
+      setTextColor(doc, NEUTRAL_800)
       const labelText = `${phase.phase_emoji} ${phase.phase_label}`
-      const truncated = labelText.length > 22 ? labelText.substring(0, 20) + '…' : labelText
-      doc.text(truncated, lx + 2, ly + legendSquare - 0.5)
-
-      // Status ao lado
-      doc.setFont('helvetica', 'normal')
-      setTextColor(doc, NEUTRAL_400)
-      doc.setFontSize(6)
-      doc.text(statusLabels[phase.status] ?? phase.status, lx + pillW + 2, ly + legendSquare - 0.5)
+      const truncated = labelText.length > 24 ? labelText.substring(0, 22) + '…' : labelText
+      doc.text(truncated, lx + legendSquare + 1.5, ly + legendSquare - 0.5)
     })
   })
 
