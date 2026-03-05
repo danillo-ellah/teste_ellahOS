@@ -1,14 +1,18 @@
 'use client'
 
-import { use } from 'react'
+import { use, useState } from 'react'
 import { AlertTriangle, TrendingUp, TrendingDown, DollarSign, CalendarClock } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { JobFinancialTabs } from '../_components/JobFinancialTabs'
-import { useJobFinancialDashboard } from '@/hooks/useFinancialDashboard'
+import { useJobFinancialDashboard, useJobFinancialCharts } from '@/hooks/useFinancialDashboard'
 import { formatCurrency, formatPercentage, formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { SpendingTimelineChart } from './_components/SpendingTimelineChart'
+import { StatusBreakdownCharts } from './_components/StatusBreakdownCharts'
+import { TopVendorsChart } from './_components/TopVendorsChart'
+import { BudgetVsActualChart } from './_components/BudgetVsActualChart'
 import type { FinancialDashboardAlert, CostCategorySummary, PaymentCalendarEntry } from '@/types/cost-management'
 
 interface PageProps {
@@ -232,10 +236,35 @@ function DashboardSkeleton() {
 
 // ============ Page ============
 
+// Skeleton para graficos individuais
+function ChartSkeleton() {
+  return (
+    <Card className="p-4">
+      <Skeleton className="h-3 w-40 mb-4" />
+      <Skeleton className="h-[300px] w-full" />
+    </Card>
+  )
+}
+
+// Skeleton menor para o par de donut+barras (altura 220)
+function ChartSkeletonSmall() {
+  return (
+    <Card className="p-4">
+      <Skeleton className="h-3 w-36 mb-4" />
+      <Skeleton className="h-[220px] w-full" />
+    </Card>
+  )
+}
+
 export default function JobFinancialDashboardPage({ params }: PageProps) {
   const { id: jobId } = use(params)
   const { data, isLoading, isError } = useJobFinancialDashboard(jobId)
   const dashboard = data?.data
+
+  // Controle de periodo dos graficos
+  const [period, setPeriod] = useState<'monthly' | 'weekly'>('monthly')
+  const { data: chartsData, isLoading: isChartsLoading } = useJobFinancialCharts(jobId, period)
+  const charts = chartsData?.data
 
   return (
     <div className="space-y-6">
@@ -300,6 +329,72 @@ export default function JobFinancialDashboardPage({ params }: PageProps) {
               </div>
             </div>
           )}
+
+          {/* Secao de Graficos */}
+          <div className="space-y-4">
+            {/* Controle de periodo */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPeriod('monthly')}
+                className={cn(
+                  'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                  period === 'monthly'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80',
+                )}
+              >
+                Mensal
+              </button>
+              <button
+                onClick={() => setPeriod('weekly')}
+                className={cn(
+                  'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                  period === 'weekly'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80',
+                )}
+              >
+                Semanal
+              </button>
+            </div>
+
+            {/* Timeline de Gastos (largura total) */}
+            {isChartsLoading ? (
+              <ChartSkeleton />
+            ) : charts ? (
+              <SpendingTimelineChart
+                data={charts.spending_timeline}
+                budgetLine={charts.budget_reference_line}
+              />
+            ) : null}
+
+            {/* Status Breakdown (2 colunas) */}
+            {isChartsLoading ? (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <ChartSkeletonSmall />
+                <ChartSkeletonSmall />
+              </div>
+            ) : charts ? (
+              <StatusBreakdownCharts
+                paymentStatusData={charts.payment_status_breakdown}
+                itemStatusData={charts.item_status_breakdown}
+              />
+            ) : null}
+
+            {/* Top 10 Fornecedores (largura total) */}
+            {isChartsLoading ? (
+              <ChartSkeleton />
+            ) : charts ? (
+              <TopVendorsChart data={charts.top_vendors} />
+            ) : null}
+
+            {/* Orcado vs Real (largura total) */}
+            {isChartsLoading ? (
+              <ChartSkeleton />
+            ) : charts ? (
+              <BudgetVsActualChart data={charts.budget_vs_actual} />
+            ) : null}
+          </div>
 
           {/* Resumo por Categoria */}
           {dashboard.by_category.length > 0 && (

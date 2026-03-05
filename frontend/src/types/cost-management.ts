@@ -339,6 +339,49 @@ export interface TenantFinancialDashboard {
   }
 }
 
+// ============ Financial Dashboard Charts ============
+
+export interface SpendingTimelineEntry {
+  period: string
+  period_label: string
+  estimated_cumulative: number
+  paid_cumulative: number
+  paid_in_period: number
+  items_paid_in_period: number
+}
+
+export interface StatusBreakdownEntry {
+  status: string
+  count: number
+  total: number
+}
+
+export interface TopVendorEntry {
+  vendor_id: string
+  vendor_name: string
+  total: number
+  items_count: number
+  pct_of_total: number
+}
+
+export interface BudgetVsActualEntry {
+  item_number: number
+  item_name: string
+  budgeted: number
+  actual_paid: number
+  actual_estimated: number
+  variance_pct: number
+}
+
+export interface JobFinancialCharts {
+  spending_timeline: SpendingTimelineEntry[]
+  budget_reference_line: number
+  payment_status_breakdown: StatusBreakdownEntry[]
+  item_status_breakdown: StatusBreakdownEntry[]
+  top_vendors: TopVendorEntry[]
+  budget_vs_actual: BudgetVsActualEntry[]
+}
+
 // ============ Cash Advances ============
 
 export type CashAdvanceStatus = 'aberta' | 'encerrada' | 'aprovada'

@@ -224,6 +224,8 @@ export const paymentKeys = {
 export const finDashboardKeys = {
   all: ['financial-dashboard'] as const,
   job: (jobId: string) => [...finDashboardKeys.all, 'job', jobId] as const,
+  jobCharts: (jobId: string, period?: string) =>
+    [...finDashboardKeys.all, 'job', jobId, 'charts', period] as const,
   tenant: () => [...finDashboardKeys.all, 'tenant'] as const,
 }
 
