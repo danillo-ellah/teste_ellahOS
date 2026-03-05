@@ -247,7 +247,10 @@ export function GanttChart({ phases, onPhaseClick, onPhaseDrag }: GanttChartProp
       onMouseUp={handleMouseUp}
       onMouseLeave={() => {
         if (drag) {
-          handleMouseUp()
+          // Cancelar drag em vez de confirmar — evita mudancas acidentais
+          setDrag(null)
+          setDragMousePos(null)
+          didDragRef.current = false
         }
         setTooltip(null)
       }}

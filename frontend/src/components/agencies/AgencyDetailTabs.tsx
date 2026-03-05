@@ -76,6 +76,8 @@ export function AgencyDetailTabs({
                 table="agencies"
                 recordId={agency.id}
                 currentLogoUrl={agency.logo_url}
+                onUploaded={(url) => onEditChange({ ...editData, logo_url: url })}
+                onRemoved={() => onEditChange({ ...editData, logo_url: null })}
               />
             </Field>
 

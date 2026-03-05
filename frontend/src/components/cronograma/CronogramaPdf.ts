@@ -24,7 +24,7 @@ import {
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import type { jsPDF as JsPDFType } from 'jspdf'
-import { countWorkingDays, getInitials, formatDateForFilename } from '@/lib/cronograma-utils'
+import { countWorkingDays, getInitials, formatDateForFilename, formatDateExtended } from '@/lib/cronograma-utils'
 import type { PhaseExportData, JobPhase } from '@/types/cronograma'
 
 // ---------------------------------------------------------------------------
@@ -169,14 +169,6 @@ function drawEmojiText(
 function formatDateLabel(dateStr: string): string {
   try {
     return format(parseISO(dateStr), "dd MMM yyyy", { locale: ptBR })
-  } catch {
-    return dateStr
-  }
-}
-
-function formatDateExtended(dateStr: string): string {
-  try {
-    return format(parseISO(dateStr), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
   } catch {
     return dateStr
   }
@@ -486,7 +478,7 @@ export async function generateCronogramaPdf(data: PhaseExportData): Promise<void
 
   // Calcular range de datas
   const datedPhases = phases.filter((p) => p.start_date && p.end_date)
-  if (datedPhases.length === 0) return // nada para desenhar no gantt
+  if (datedPhases.length === 0) throw new Error('Nenhuma fase com datas definidas para exportar.')
   const sortedByStart = [...datedPhases].sort((a, b) => a.start_date!.localeCompare(b.start_date!))
   const sortedByEnd = [...datedPhases].sort((a, b) => b.end_date!.localeCompare(a.end_date!))
   const minDateStr = sortedByStart[0].start_date!
@@ -503,7 +495,6 @@ export async function generateCronogramaPdf(data: PhaseExportData): Promise<void
   // Eixo X: meses
   const monthHeaderH = 5
   let lastMonth = ''
-  let monthStartX = MARGIN_X + GANTT_LABEL_W + 2
 
   doc.setFontSize(6.5)
   doc.setFont('helvetica', 'bold')
@@ -531,7 +522,6 @@ export async function generateCronogramaPdf(data: PhaseExportData): Promise<void
       setTextColor(doc, NEUTRAL_400)
       doc.text(monthLabel, MARGIN_X + GANTT_LABEL_W + 2 + d * dayW + 1, ganttStartY + monthHeaderH - 0.5)
       lastMonth = monthLabel
-      monthStartX = MARGIN_X + GANTT_LABEL_W + 2 + d * dayW
     }
   }
 
@@ -646,11 +636,48 @@ export async function generateCronogramaPdf(data: PhaseExportData): Promise<void
   })
   doc.setCharSpace(0)
 
-  // Linhas de dados
+  // Linhas de dados (com paginacao automatica)
+  const PAGE_BOTTOM = PAGE_H - 16 // espaco para total + rodape
+  let currentTableY = tableStartY + rowHeight // apos header
+
+  const statusLabels: Record<string, string> = {
+    pending: 'Nao iniciado',
+    in_progress: 'Em andamento',
+    completed: 'Concluido',
+  }
+  const statusColors: Record<string, string> = {
+    pending: '#64748B',
+    in_progress: '#3B82F6',
+    completed: '#22C55E',
+  }
+
   sortedPhases.forEach((phase, ri) => {
-    const rowY = tableStartY + rowHeight + ri * rowHeight
     const hasComplement = Boolean(phase.complement)
     const actualRowH = hasComplement ? rowHeight + 3 : rowHeight
+
+    // Verificar se a linha cabe na pagina (com margem para total row)
+    if (currentTableY + actualRowH + rowHeight > PAGE_BOTTOM) {
+      doc.addPage()
+      currentTableY = MARGIN_X
+      // Redesenhar header da tabela na nova pagina
+      setFillColor(doc, NEUTRAL_100)
+      setDrawColor(doc, NEUTRAL_200)
+      doc.setLineWidth(0.2)
+      doc.rect(MARGIN_X, currentTableY, tableW, rowHeight, 'FD')
+      doc.setFontSize(7)
+      doc.setFont('helvetica', 'bold')
+      doc.setCharSpace(0.5)
+      setTextColor(doc, NEUTRAL_600)
+      let hColX = MARGIN_X
+      colLabels.forEach((label, ci) => {
+        doc.text(label, hColX + 3, currentTableY + 5.2)
+        hColX += colWidths[ci]
+      })
+      doc.setCharSpace(0)
+      currentTableY += rowHeight
+    }
+
+    const rowY = currentTableY
 
     // Fundo alternado
     if (ri % 2 === 0) {
@@ -709,16 +736,6 @@ export async function generateCronogramaPdf(data: PhaseExportData): Promise<void
     )
 
     // Col 4: Status
-    const statusLabels: Record<string, string> = {
-      pending: 'Nao iniciado',
-      in_progress: 'Em andamento',
-      completed: 'Concluido',
-    }
-    const statusColors: Record<string, string> = {
-      pending: '#64748B',
-      in_progress: '#3B82F6',
-      completed: '#22C55E',
-    }
     doc.setFontSize(7)
     doc.setFont('helvetica', 'normal')
     const sColor = statusColors[phase.status] || '#64748B'
@@ -728,10 +745,12 @@ export async function generateCronogramaPdf(data: PhaseExportData): Promise<void
       MARGIN_X + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + 3,
       textY,
     )
+
+    currentTableY += actualRowH
   })
 
   // Linha total
-  const totalY = tableStartY + rowHeight + sortedPhases.length * rowHeight
+  const totalY = currentTableY
   const totalWorkingDays = sortedPhases.reduce(
     (acc, p) => acc + countWorkingDays(p.start_date, p.end_date, p.skip_weekends),
     0,

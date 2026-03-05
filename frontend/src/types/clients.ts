@@ -101,6 +101,7 @@ export interface UpdateClientPayload {
   website?: string | null
   notes?: string | null
   is_active?: boolean
+  logo_url?: string | null
 }
 
 export interface CreateAgencyPayload {
@@ -126,6 +127,7 @@ export interface UpdateAgencyPayload {
   website?: string | null
   notes?: string | null
   is_active?: boolean
+  logo_url?: string | null
 }
 
 export interface CreateContactPayload {

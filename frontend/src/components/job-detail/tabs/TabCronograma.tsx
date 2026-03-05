@@ -137,10 +137,11 @@ export function TabCronograma({ job }: TabCronogramaProps) {
 
   // --- Handlers ---
 
-  // date: YYYY-MM-DD do click na celula do calendario (reservado para pre-preencher no dialog)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  function handleOpenCreate(_date?: string) {
+  const [prefillStartDate, setPrefillStartDate] = useState<string | undefined>()
+
+  function handleOpenCreate(date?: string) {
     setEditingPhase(undefined)
+    setPrefillStartDate(date)
     setPhaseDialogOpen(true)
   }
 
@@ -153,6 +154,7 @@ export function TabCronograma({ job }: TabCronogramaProps) {
     setPhaseDialogOpen(open)
     if (!open) {
       setEditingPhase(undefined)
+      setPrefillStartDate(undefined)
     }
   }
 
@@ -270,14 +272,23 @@ export function TabCronograma({ job }: TabCronogramaProps) {
           phase={editingPhase}
           onSave={handleSavePhase}
           isSaving={isCreating || isUpdating}
+          defaultStartDate={prefillStartDate}
         />
       </>
     )
   }
 
-  const totalWorkingDays = phases.reduce((acc, p) => {
-    return acc + countWorkingDays(p.start_date, p.end_date, p.skip_weekends)
-  }, 0)
+  // Duracao real do projeto: da primeira data a ultima data
+  const datedPhases = phases.filter((p) => p.start_date && p.end_date)
+  const projectStart = datedPhases.length > 0
+    ? datedPhases.reduce((min, p) => p.start_date! < min ? p.start_date! : min, datedPhases[0].start_date!)
+    : null
+  const projectEnd = datedPhases.length > 0
+    ? datedPhases.reduce((max, p) => p.end_date! > max ? p.end_date! : max, datedPhases[0].end_date!)
+    : null
+  const totalWorkingDays = projectStart && projectEnd
+    ? countWorkingDays(projectStart, projectEnd, false)
+    : 0
 
   return (
     <>

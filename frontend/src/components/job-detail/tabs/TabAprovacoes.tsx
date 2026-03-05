@@ -84,7 +84,11 @@ export function TabAprovacoes({ job }: TabApprovacoesProps) {
   const { mutateAsync: approveInternal } = useApproveInternal()
   const { mutateAsync: rejectInternal } = useRejectInternal()
 
-  const [createOpen, setCreateOpen] = useState(false)
+  const [createOpen, setCreateOpenRaw] = useState(false)
+  const setCreateOpen = (open: boolean) => {
+    setCreateOpenRaw(open)
+    if (!open) resetCreateForm()
+  }
   const [rejectDialogId, setRejectDialogId] = useState<string | null>(null)
   const [rejectComment, setRejectComment] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)

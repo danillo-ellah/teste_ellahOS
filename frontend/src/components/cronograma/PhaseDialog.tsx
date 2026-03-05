@@ -55,6 +55,9 @@ const phaseSchema = z.object({
   complement: z.string().max(500).optional().nullable(),
   skip_weekends: z.boolean(),
   status: z.enum(['pending', 'in_progress', 'completed']),
+}).refine((data) => data.end_date >= data.start_date, {
+  message: 'Data de fim deve ser igual ou posterior a data de inicio',
+  path: ['end_date'],
 })
 
 type PhaseFormValues = z.infer<typeof phaseSchema>
@@ -69,6 +72,8 @@ interface PhaseDialogProps {
   onSave: (payload: CreatePhasePayload | (UpdatePhasePayload & { id: string })) => void
   isSaving?: boolean
   isMobile?: boolean
+  /** Pre-preenche data de inicio ao criar (YYYY-MM-DD) */
+  defaultStartDate?: string
 }
 
 // --- DatePicker helper ---
@@ -132,12 +137,14 @@ function PhaseForm({
   onSave,
   isSaving,
   onCancel,
+  defaultStartDate,
 }: {
   phase?: JobPhase
   jobId: string
   onSave: (payload: CreatePhasePayload | (UpdatePhasePayload & { id: string })) => void
   isSaving?: boolean
   onCancel: () => void
+  defaultStartDate?: string
 }) {
   const isEditing = Boolean(phase)
 
@@ -154,7 +161,7 @@ function PhaseForm({
       phase_label: phase?.phase_label ?? '',
       phase_emoji: phase?.phase_emoji ?? '📋',
       phase_color: phase?.phase_color ?? '#3B82F6',
-      start_date: phase?.start_date ?? '',
+      start_date: phase?.start_date ?? defaultStartDate ?? '',
       end_date: phase?.end_date ?? '',
       complement: phase?.complement ?? '',
       skip_weekends: phase?.skip_weekends ?? true,
@@ -404,6 +411,14 @@ function PhaseForm({
         />
       </div>
 
+      {/* Erros de data */}
+      {errors.start_date && (
+        <p className="text-xs text-destructive">{errors.start_date.message}</p>
+      )}
+      {errors.end_date && (
+        <p className="text-xs text-destructive">{errors.end_date.message}</p>
+      )}
+
       {/* Dias calculados */}
       {workingDays !== null && (
         <p className="text-xs text-muted-foreground bg-muted/50 rounded px-3 py-2">
@@ -454,11 +469,14 @@ function PhaseForm({
             />
           ))}
         </div>
-        {/* Input hex customizado */}
+        {/* Color picker + input hex */}
         <div className="flex items-center gap-2 mt-1">
-          <div
-            className="h-6 w-6 rounded-full border border-border shrink-0"
-            style={{ backgroundColor: watchedColor }}
+          <input
+            type="color"
+            value={watchedColor || '#3B82F6'}
+            onChange={(e) => setValue('phase_color', e.target.value)}
+            className="h-8 w-8 rounded-full border border-border cursor-pointer shrink-0 p-0 appearance-none bg-transparent [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-0 [&::-moz-color-swatch]:rounded-full [&::-moz-color-swatch]:border-0"
+            title="Escolher cor personalizada"
           />
           <Input
             placeholder="#3B82F6"
@@ -522,6 +540,7 @@ export function PhaseDialog({
   onSave,
   isSaving,
   isMobile = false,
+  defaultStartDate,
 }: PhaseDialogProps) {
   const title = phase ? `Editar fase: ${phase.phase_emoji} ${phase.phase_label}` : 'Nova fase'
 
@@ -545,6 +564,7 @@ export function PhaseDialog({
               }}
               isSaving={isSaving}
               onCancel={handleClose}
+              defaultStartDate={defaultStartDate}
             />
           </div>
         </SheetContent>
@@ -566,6 +586,7 @@ export function PhaseDialog({
           }}
           isSaving={isSaving}
           onCancel={handleClose}
+          defaultStartDate={defaultStartDate}
         />
       </DialogContent>
     </Dialog>

@@ -42,7 +42,8 @@ function PhaseCardMobile({ phase, onEdit, onDelete }: PhaseCardMobileProps) {
   const progress = computePhaseProgress(phase.start_date, phase.end_date)
   const statusConfig = PHASE_STATUS_CONFIG[phase.status]
 
-  const isToday = phase.status === 'in_progress'
+  const today = new Date().toISOString().slice(0, 10)
+  const isActive = phase.start_date && phase.end_date && phase.start_date <= today && today <= phase.end_date
 
   return (
     <div
@@ -59,7 +60,7 @@ function PhaseCardMobile({ phase, onEdit, onDelete }: PhaseCardMobileProps) {
               variant="outline"
               className={cn('text-[10px] shrink-0', statusConfig.className)}
             >
-              {isToday && <span className="h-1.5 w-1.5 rounded-full bg-current inline-block mr-1" />}
+              {isActive && <span className="h-1.5 w-1.5 rounded-full bg-current inline-block mr-1 animate-pulse" />}
               {statusConfig.label}
             </Badge>
           </div>
