@@ -236,12 +236,25 @@ Deno.serve(async (req: Request) => {
       throw new AppError('METHOD_NOT_ALLOWED', 'Apenas GET permitido', 405);
     }
 
-    // Auth — requer JWT valido
-    const auth = await getAuthContext(req);
+    // Auth — JWT valido OU service-role key via header (para chamadas internas/CLI)
+    const serviceClient = getServiceClient();
+    let tenantId: string;
+
+    const serviceKey = req.headers.get('x-service-key');
+    const envServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (serviceKey && envServiceKey && serviceKey === envServiceKey) {
+      // Auth interna — usar tenant_id da query string
+      tenantId = url.searchParams.get('tenant_id') || '';
+      if (!tenantId) {
+        throw new AppError('VALIDATION_ERROR', 'tenant_id obrigatorio na query string para auth interna', 400);
+      }
+    } else {
+      const auth = await getAuthContext(req);
+      tenantId = auth.tenantId;
+    }
 
     // Buscar SA credentials do Vault
-    const serviceClient = getServiceClient();
-    const saJson = await getSecret(serviceClient, `${auth.tenantId}_gdrive_service_account`);
+    const saJson = await getSecret(serviceClient, `${tenantId}_gdrive_service_account`);
 
     if (!saJson) {
       throw new AppError(
