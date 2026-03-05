@@ -67,16 +67,18 @@ export function GanttChart({ phases, onPhaseClick }: GanttChartProps) {
   const [tooltip, setTooltip] = useState<TooltipData | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  if (phases.length === 0) return null
+  // Filtrar fases que possuem datas definidas (fases sem datas nao aparecem no gantt)
+  const datedPhases = phases.filter((p) => p.start_date && p.end_date)
+  if (datedPhases.length === 0) return null
 
   // Calcular intervalo total do cronograma
-  const sortedPhases = [...phases].sort((a, b) =>
-    a.start_date.localeCompare(b.start_date),
+  const sortedPhases = [...datedPhases].sort((a, b) =>
+    a.start_date!.localeCompare(b.start_date!),
   )
-  const minDate = sortedPhases[0].start_date
-  const maxDate = [...phases].sort((a, b) =>
-    b.end_date.localeCompare(a.end_date),
-  )[0].end_date
+  const minDate = sortedPhases[0].start_date!
+  const maxDate = [...datedPhases].sort((a, b) =>
+    b.end_date!.localeCompare(a.end_date!),
+  )[0].end_date!
 
   const allDays = getDaysInRange(minDate, maxDate)
   if (allDays.length === 0) return null
@@ -167,8 +169,8 @@ export function GanttChart({ phases, onPhaseClick }: GanttChartProps) {
           })}
         </div>
 
-        {/* Linhas de fase */}
-        {[...phases]
+        {/* Linhas de fase (somente fases com datas) */}
+        {[...datedPhases]
           .sort((a, b) => a.sort_order - b.sort_order)
           .map((phase, rowIdx) => {
             const { colStart, colSpan } = getGanttBarColumn(
@@ -288,7 +290,7 @@ export function GanttChart({ phases, onPhaseClick }: GanttChartProps) {
           className="flex items-center gap-4 px-4 py-2 border-t border-border bg-background text-xs text-muted-foreground"
         >
           <span>
-            <strong className="text-foreground">{phases.length}</strong> fases
+            <strong className="text-foreground">{datedPhases.length}</strong> fases
           </span>
           <span className="text-border">|</span>
           <span>

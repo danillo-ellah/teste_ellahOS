@@ -8,8 +8,8 @@ export interface JobPhase {
   phase_label: string
   phase_emoji: string
   phase_color: string
-  start_date: string   // YYYY-MM-DD
-  end_date: string     // YYYY-MM-DD
+  start_date: string | null   // YYYY-MM-DD ou null (template sem datas)
+  end_date: string | null     // YYYY-MM-DD ou null (template sem datas)
   complement: string | null
   skip_weekends: boolean
   status: PhaseStatus

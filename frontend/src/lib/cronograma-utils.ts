@@ -3,15 +3,19 @@ import { ptBR } from 'date-fns/locale'
 
 /**
  * Conta dias uteis (seg-sex) ou dias corridos entre duas datas.
+ * Retorna 0 se alguma data for nula/invalida.
  */
 export function countWorkingDays(
-  startDate: Date | string,
-  endDate: Date | string,
+  startDate: Date | string | null | undefined,
+  endDate: Date | string | null | undefined,
   skipWeekends: boolean,
 ): number {
+  if (!startDate || !endDate) return 0
+
   const start = typeof startDate === 'string' ? parseISO(startDate) : startDate
   const end = typeof endDate === 'string' ? parseISO(endDate) : endDate
 
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0
   if (end < start) return 0
 
   if (!skipWeekends) {
@@ -40,9 +44,11 @@ export function formatWorkingDays(days: number): string {
  * Formata data ISO para exibicao no padrao brasileiro.
  * Ex: "2026-01-05" => "05 jan 2026"
  */
-export function formatDateBR(dateStr: string): string {
+export function formatDateBR(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—'
   try {
     const d = parseISO(dateStr)
+    if (isNaN(d.getTime())) return '—'
     return format(d, "dd MMM yyyy", { locale: ptBR })
   } catch {
     return dateStr
@@ -53,9 +59,11 @@ export function formatDateBR(dateStr: string): string {
  * Formata data ISO para exibicao curta.
  * Ex: "2026-01-05" => "05/01"
  */
-export function formatDateShort(dateStr: string): string {
+export function formatDateShort(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—'
   try {
     const d = parseISO(dateStr)
+    if (isNaN(d.getTime())) return '—'
     return format(d, "dd/MM")
   } catch {
     return dateStr
@@ -93,14 +101,18 @@ export function getDaysInRange(startDate: string, endDate: string): Date[] {
  * Detecta o status automatico de uma fase baseado na data atual.
  */
 export function computePhaseStatus(
-  startDate: string,
-  endDate: string,
+  startDate: string | null | undefined,
+  endDate: string | null | undefined,
 ): 'pending' | 'in_progress' | 'completed' {
+  if (!startDate || !endDate) return 'pending'
+
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
   const start = parseISO(startDate)
   const end = parseISO(endDate)
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return 'pending'
 
   if (today > end) return 'completed'
   if (today >= start) return 'in_progress'
@@ -112,15 +124,18 @@ export function computePhaseStatus(
  * Usado para barra de progresso no card mobile.
  */
 export function computePhaseProgress(
-  startDate: string,
-  endDate: string,
+  startDate: string | null | undefined,
+  endDate: string | null | undefined,
 ): number {
+  if (!startDate || !endDate) return 0
+
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
   const start = parseISO(startDate)
   const end = parseISO(endDate)
 
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0
   if (today < start) return 0
   if (today > end) return 100
 
@@ -134,10 +149,12 @@ export function computePhaseProgress(
  * Retorna gridColumn CSS string.
  */
 export function getGanttBarColumn(
-  phaseStart: string,
-  phaseEnd: string,
+  phaseStart: string | null | undefined,
+  phaseEnd: string | null | undefined,
   timelineStart: string,
 ): { colStart: number; colSpan: number } {
+  if (!phaseStart || !phaseEnd) return { colStart: 2, colSpan: 1 }
+
   const start = parseISO(phaseStart)
   const end = parseISO(phaseEnd)
   const timeStart = parseISO(timelineStart)

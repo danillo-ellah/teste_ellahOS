@@ -320,10 +320,12 @@ export async function generateCronogramaPdf(data: PhaseExportData): Promise<void
   doc.roundedRect(MARGIN_X, ganttStartY, CONTENT_W, ganttH, 1, 1, 'FD')
 
   // Calcular range de datas
-  const sortedByStart = [...phases].sort((a, b) => a.start_date.localeCompare(b.start_date))
-  const sortedByEnd = [...phases].sort((a, b) => b.end_date.localeCompare(a.end_date))
-  const minDateStr = sortedByStart[0].start_date
-  const maxDateStr = sortedByEnd[0].end_date
+  const datedPhases = phases.filter((p) => p.start_date && p.end_date)
+  if (datedPhases.length === 0) return // nada para desenhar no gantt
+  const sortedByStart = [...datedPhases].sort((a, b) => a.start_date!.localeCompare(b.start_date!))
+  const sortedByEnd = [...datedPhases].sort((a, b) => b.end_date!.localeCompare(a.end_date!))
+  const minDateStr = sortedByStart[0].start_date!
+  const maxDateStr = sortedByEnd[0].end_date!
   const minDate = parseISO(minDateStr)
   const maxDate = parseISO(maxDateStr)
   const totalDays = differenceInCalendarDays(maxDate, minDate) + 1
@@ -413,6 +415,7 @@ export async function generateCronogramaPdf(data: PhaseExportData): Promise<void
 
   sortedPhases.forEach((phase, i) => {
     const rowY = barsStartY + i * barRowH
+    if (!phase.start_date || !phase.end_date) return
     const phaseStart = parseISO(phase.start_date)
     const phaseEnd = parseISO(phase.end_date)
     const startOffset = differenceInCalendarDays(phaseStart, minDate)
@@ -529,10 +532,10 @@ export async function generateCronogramaPdf(data: PhaseExportData): Promise<void
     doc.setFontSize(7.5)
     doc.setFont('helvetica', 'normal')
     setTextColor(doc, NEUTRAL_600)
-    doc.text(formatDateLabel(phase.start_date), MARGIN_X + colWidths[0] + 3, textY)
+    doc.text(formatDateLabel(phase.start_date ?? ''), MARGIN_X + colWidths[0] + 3, textY)
 
     // Col 2: Fim
-    doc.text(formatDateLabel(phase.end_date), MARGIN_X + colWidths[0] + colWidths[1] + 3, textY)
+    doc.text(formatDateLabel(phase.end_date ?? ''), MARGIN_X + colWidths[0] + colWidths[1] + 3, textY)
 
     // Col 3: Dias
     const wdays = countWorkingDays(phase.start_date, phase.end_date, phase.skip_weekends)
