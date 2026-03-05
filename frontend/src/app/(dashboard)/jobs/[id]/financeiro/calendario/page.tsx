@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/format'
 import { PaymentDialog } from '@/components/financial/PaymentDialog'
 import { PaymentCalendarKpis } from '@/app/(dashboard)/financeiro/calendario/_components/PaymentCalendarKpis'
+import { PaymentCalendarSummary } from '@/app/(dashboard)/financeiro/calendario/_components/PaymentCalendarSummary'
 import { PaymentCalendarView } from '@/app/(dashboard)/financeiro/calendario/_components/PaymentCalendarView'
 import { PaymentListView } from '@/app/(dashboard)/financeiro/calendario/_components/PaymentListView'
 import { PostponeDialog } from '@/app/(dashboard)/financeiro/calendario/_components/PostponeDialog'
@@ -236,13 +237,20 @@ export default function JobPaymentCalendarPage({ params }: Props) {
 
       {/* Conteudo principal */}
       {viewMode === 'calendar' ? (
-        <PaymentCalendarView
-          payables={payables}
-          receivables={receivables}
-          currentMonth={currentMonth}
-          onMonthChange={setCurrentMonth}
-          onPayableClick={handlePayableClickCalendar}
-        />
+        <div className="space-y-6">
+          <PaymentCalendarSummary
+            payables={payables}
+            receivables={receivables}
+            currentMonth={currentMonth}
+          />
+          <PaymentCalendarView
+            payables={payables}
+            receivables={receivables}
+            currentMonth={currentMonth}
+            onMonthChange={setCurrentMonth}
+            onPayableClick={handlePayableClickCalendar}
+          />
+        </div>
       ) : (
         <PaymentListView
           payables={payables}

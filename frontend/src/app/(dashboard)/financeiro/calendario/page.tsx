@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/format'
 import { PaymentDialog } from '@/components/financial/PaymentDialog'
 import { PaymentCalendarKpis } from './_components/PaymentCalendarKpis'
+import { PaymentCalendarSummary } from './_components/PaymentCalendarSummary'
 import { PaymentCalendarView } from './_components/PaymentCalendarView'
 import { PaymentListView } from './_components/PaymentListView'
 import { PostponeDialog } from './_components/PostponeDialog'
@@ -249,13 +250,23 @@ export default function PaymentCalendarPage() {
 
       {/* Conteudo principal */}
       {viewMode === 'calendar' ? (
-        <PaymentCalendarView
-          payables={payables}
-          receivables={receivables}
-          currentMonth={currentMonth}
-          onMonthChange={setCurrentMonth}
-          onPayableClick={handlePayableClickCalendar}
-        />
+        <div className="space-y-6">
+          {/* Calendario compacto com totais por dia */}
+          <PaymentCalendarSummary
+            payables={payables}
+            receivables={receivables}
+            currentMonth={currentMonth}
+          />
+
+          {/* Calendario detalhado com pills individuais */}
+          <PaymentCalendarView
+            payables={payables}
+            receivables={receivables}
+            currentMonth={currentMonth}
+            onMonthChange={setCurrentMonth}
+            onPayableClick={handlePayableClickCalendar}
+          />
+        </div>
       ) : (
         <PaymentListView
           payables={payables}
