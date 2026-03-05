@@ -91,6 +91,76 @@ function darkenHex(hex: string, factor: number): string {
   return `#${d(r).toString(16).padStart(2, '0')}${d(g).toString(16).padStart(2, '0')}${d(b).toString(16).padStart(2, '0')}`
 }
 
+// ---------------------------------------------------------------------------
+// Emoji → imagem PNG (jsPDF nao suporta emojis Unicode com Helvetica)
+// ---------------------------------------------------------------------------
+
+/**
+ * Pre-renderiza todos os emojis unicos das fases como imagens PNG via canvas.
+ * Retorna Map<emoji, dataUrl>.
+ */
+function preRenderEmojis(phases: Array<{ phase_emoji: string }>): Map<string, string> {
+  const emojiMap = new Map<string, string>()
+  const sizePx = 64
+
+  phases.forEach((p) => {
+    if (!p.phase_emoji || emojiMap.has(p.phase_emoji)) return
+    try {
+      const canvas = document.createElement('canvas')
+      canvas.width = sizePx
+      canvas.height = sizePx
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+
+      ctx.font = `${sizePx * 0.75}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.clearRect(0, 0, sizePx, sizePx)
+      ctx.fillText(p.phase_emoji, sizePx / 2, sizePx / 2)
+
+      emojiMap.set(p.phase_emoji, canvas.toDataURL('image/png'))
+    } catch {
+      // Ignora — emoji sera omitido no PDF
+    }
+  })
+
+  return emojiMap
+}
+
+/**
+ * Desenha emoji como imagem inline + texto ao lado.
+ * Se o emoji nao esta no mapa, desenha apenas o texto.
+ */
+function drawEmojiText(
+  doc: PDF,
+  emojiMap: Map<string, string>,
+  emoji: string,
+  text: string,
+  x: number,
+  y: number,
+  fontSizePt: number,
+  maxChars?: number,
+): void {
+  const emojiUrl = emojiMap.get(emoji)
+  const emojiSizeMm = fontSizePt * 0.38
+
+  let displayText = text
+  if (maxChars && text.length > maxChars) {
+    displayText = text.substring(0, maxChars - 1) + '\u2026'
+  }
+
+  if (emojiUrl) {
+    try {
+      doc.addImage(emojiUrl, 'PNG', x, y - emojiSizeMm * 0.85, emojiSizeMm, emojiSizeMm)
+      doc.text(displayText, x + emojiSizeMm + 0.8, y)
+    } catch {
+      doc.text(displayText, x, y)
+    }
+  } else {
+    doc.text(displayText, x, y)
+  }
+}
+
 function formatDateLabel(dateStr: string): string {
   try {
     return format(parseISO(dateStr), "dd MMM yyyy", { locale: ptBR })
@@ -205,6 +275,9 @@ export async function generateCronogramaPdf(data: PhaseExportData): Promise<void
         ? loadImageAsDataUrl(job.agency_logo_url)
         : Promise.resolve(null),
   ])
+
+  // Pre-renderizar emojis como imagens
+  const emojiMap = preRenderEmojis(phases)
 
   const { jsPDF } = await import('jspdf')
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
@@ -445,9 +518,7 @@ export async function generateCronogramaPdf(data: PhaseExportData): Promise<void
     doc.setFontSize(5.5)
     doc.setFont('helvetica', 'normal')
     setTextColor(doc, NEUTRAL_800)
-    const labelText = `${phase.phase_emoji} ${phase.phase_label}`
-    const labelTruncated = labelText.length > 18 ? labelText.substring(0, 16) + '...' : labelText
-    doc.text(labelTruncated, MARGIN_X + 2, rowY + barH * 0.7)
+    drawEmojiText(doc, emojiMap, phase.phase_emoji, phase.phase_label, MARGIN_X + 2, rowY + barH * 0.7, 5.5, 16)
 
     // Complemento em italico
     if (phase.complement) {
@@ -530,9 +601,7 @@ export async function generateCronogramaPdf(data: PhaseExportData): Promise<void
     setTextColor(doc, NEUTRAL_800)
 
     // Col 0: Fase (emoji + nome)
-    const phaseText = `${phase.phase_emoji} ${phase.phase_label}`
-    const phaseTruncated = phaseText.length > 30 ? phaseText.substring(0, 28) + '...' : phaseText
-    doc.text(phaseTruncated, MARGIN_X + 1.5 + 3, textY)
+    drawEmojiText(doc, emojiMap, phase.phase_emoji, phase.phase_label, MARGIN_X + 1.5 + 3, textY, 8, 26)
 
     // Complemento em segunda linha
     if (hasComplement) {
@@ -863,6 +932,9 @@ export async function generateCalendarioPdf(data: PhaseExportData): Promise<void
 
   if (activeMonths.length === 0) return
 
+  // Pre-renderizar emojis como imagens
+  const emojiMap = preRenderEmojis(datedPhases)
+
   // ---------------------------------------------------------------------------
   // Inicializar jsPDF
   // ---------------------------------------------------------------------------
@@ -1022,14 +1094,12 @@ export async function generateCalendarioPdf(data: PhaseExportData): Promise<void
         if (activePhasesForDay.length === 1) {
           const phase = activePhasesForDay[0]
           const maxChars = Math.floor((colW - 4) / 1.8)
-          const label = `${phase.phase_emoji} ${phase.phase_label}`
-          const truncLabel = label.length > maxChars ? label.substring(0, maxChars - 1) + '…' : label
+          const singleFontSize = Math.min(8, basePillFontSize + 0.5) - fontReduction
 
-          doc.setFontSize(Math.min(8, basePillFontSize + 0.5) - fontReduction)
+          doc.setFontSize(singleFontSize)
           doc.setFont('helvetica', 'bold')
-          // Usar cor mais escura para legibilidade sobre fundo tintado
           setTextColor(doc, darkenHex(phase.phase_color, 0.3))
-          doc.text(truncLabel, cellX + 2, rowY + 5 + pillAreaH / 2)
+          drawEmojiText(doc, emojiMap, phase.phase_emoji, phase.phase_label, cellX + 2, rowY + 5 + pillAreaH / 2, singleFontSize, maxChars)
 
           // Complemento abaixo
           if (phase.complement) {
@@ -1062,15 +1132,10 @@ export async function generateCalendarioPdf(data: PhaseExportData): Promise<void
 
           // Texto
           const maxChars = Math.floor((colW - 5) / 1.6)
-          const baseText = `${phase.phase_emoji} ${phase.phase_label}`
-          const nameText = baseText.length > maxChars
-            ? baseText.substring(0, maxChars - 1) + '…'
-            : baseText
-
           doc.setFontSize(pillFontSize)
           doc.setFont('helvetica', 'bold')
           setTextColor(doc, darkenHex(phase.phase_color, 0.3))
-          doc.text(nameText, pillX + 1.8, pillY + pillH - 0.6)
+          drawEmojiText(doc, emojiMap, phase.phase_emoji, phase.phase_label, pillX + 1.8, pillY + pillH - 0.6, pillFontSize, maxChars)
         })
 
         if (hiddenCount > 0) {
@@ -1126,9 +1191,7 @@ export async function generateCalendarioPdf(data: PhaseExportData): Promise<void
       doc.setFontSize(legendFontSize)
       doc.setFont('helvetica', 'bold')
       setTextColor(doc, NEUTRAL_800)
-      const labelText = `${phase.phase_emoji} ${phase.phase_label}`
-      const truncated = labelText.length > 24 ? labelText.substring(0, 22) + '…' : labelText
-      doc.text(truncated, lx + legendSquare + 1.5, ly + legendSquare - 0.5)
+      drawEmojiText(doc, emojiMap, phase.phase_emoji, phase.phase_label, lx + legendSquare + 1.5, ly + legendSquare - 0.5, legendFontSize, 20)
     })
   })
 
