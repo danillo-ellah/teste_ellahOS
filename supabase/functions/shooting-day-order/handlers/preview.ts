@@ -537,21 +537,7 @@ export async function handlePreview(
   const [jobResult, tenantResult, shootingDateResult] = await Promise.all([
     client
       .from('jobs')
-      .select(`
-        id,
-        code,
-        job_aba,
-        title,
-        director,
-        clients!client_id (
-          id,
-          name
-        ),
-        agencies!agency_id (
-          id,
-          name
-        )
-      `)
+      .select('id, code, job_aba, title, director, clients(id, name), agencies(id, name)')
       .eq('id', jobId)
       .eq('tenant_id', auth.tenantId)
       .maybeSingle(),
@@ -582,6 +568,10 @@ export async function handlePreview(
 
   if (!jobResult.data) {
     throw new AppError('NOT_FOUND', 'Job nao encontrado', 404);
+  }
+
+  if (tenantResult.error) {
+    console.error('[shooting-day-order/preview] erro ao buscar tenant:', tenantResult.error.message);
   }
 
   const job = jobResult.data as Record<string, unknown>;

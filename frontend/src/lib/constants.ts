@@ -190,6 +190,7 @@ export type JobDetailTabId =
   | 'aprovacoes'
   | 'contratos'
   | 'ppm'
+  | 'cronograma'
   | 'claquete'
   | 'storyboard'
   | 'elenco'
@@ -534,6 +535,7 @@ export const JOB_TAB_GROUPS: JobTabGroup[] = [
     area: 'financeiro',
     tabs: [
       { id: 'financeiro', label: 'Financeiro', icon: 'DollarSign' },
+      { id: 'cronograma', label: 'Cronograma', icon: 'GanttChartSquare' },
       { id: 'aprovacoes', label: 'Aprovacoes', icon: 'CheckSquare' },
       { id: 'contratos', label: 'Contratos', icon: 'PenLine' },
       { id: 'claquete', label: 'Claquete', icon: 'Clapperboard' },

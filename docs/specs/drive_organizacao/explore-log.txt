@@ -1,0 +1,218 @@
+============================================================
+Drive Explorer - 2026-03-04T19:44:07.890380
+============================================================
+[OK] Authenticated
+
+=== PHASE 1: Flat listing of ALL files ===
+  Page 1: 460 files (total: 460)
+  Page 2: 460 files (total: 920)
+  Page 3: 460 files (total: 1380)
+  Page 4: 460 files (total: 1840)
+  Page 5: 460 files (total: 2300)
+  Page 6: 460 files (total: 2760)
+  Page 7: 460 files (total: 3220)
+  Page 8: 460 files (total: 3680)
+  Page 9: 460 files (total: 4140)
+  Page 10: 460 files (total: 4600)
+  Page 11: 460 files (total: 5060)
+  Page 12: 460 files (total: 5520)
+  Page 13: 460 files (total: 5980)
+  Page 14: 460 files (total: 6440)
+  Page 15: 460 files (total: 6900)
+  Page 16: 460 files (total: 7360)
+  Page 17: 460 files (total: 7820)
+  Page 18: 460 files (total: 8280)
+  Page 19: 460 files (total: 8740)
+  Page 20: 460 files (total: 9200)
+  Page 21: 460 files (total: 9660)
+  Page 22: 460 files (total: 10120)
+  Page 23: 460 files (total: 10580)
+  Page 24: 460 files (total: 11040)
+  Page 25: 460 files (total: 11500)
+  Page 26: 460 files (total: 11960)
+  Page 27: 460 files (total: 12420)
+  Page 28: 460 files (total: 12880)
+  Page 29: 460 files (total: 13340)
+  Page 30: 460 files (total: 13800)
+  Page 31: 460 files (total: 14260)
+  Page 32: 460 files (total: 14720)
+  Page 33: 460 files (total: 15180)
+  Page 34: 460 files (total: 15640)
+  Page 35: 460 files (total: 16100)
+  Page 36: 460 files (total: 16560)
+  Page 37: 460 files (total: 17020)
+  Page 38: 460 files (total: 17480)
+  Page 39: 460 files (total: 17940)
+  Page 40: 460 files (total: 18400)
+  Page 41: 460 files (total: 18860)
+  Page 42: 460 files (total: 19320)
+  Page 43: 460 files (total: 19780)
+  Page 44: 460 files (total: 20240)
+  Page 45: 460 files (total: 20700)
+  Page 46: 460 files (total: 21160)
+  Page 47: 460 files (total: 21620)
+  Page 48: 460 files (total: 22080)
+  Page 49: 460 files (total: 22540)
+  Page 50: 168 files (total: 22708)
+
+[PHASE 1] 22708 files in 48.1s
+
+=== Building folder tree ===
+Paths resolved for 22708 files
+   4800  video/quicktime
+   4098  application/vnd.google-apps.folder
+   3602  application/octet-stream
+   2670  video/mp4
+   2297  application/pdf
+   1622  text/xml
+   1331  audio/wav
+    799  image/jpeg
+    378  image/dng
+    193  application/vnd.google-apps.document
+    175  application/vnd.google-apps.spreadsheet
+    156  movie/x-braw
+    127  image/x-adobe-dng
+    107  application/vnd.openxmlformats-officedocument.wordprocessingml.document
+     70  image/png
+     54  application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+     51  image/tiff
+     35  application/vnd.google-apps.form
+     18  application/x-gzip
+     15  application/vnd.google-apps.presentation
+     13  audio/x-wav
+      9  audio/mpeg
+      8  text/csv
+      8  application/zip
+      8  application/x-font-otf
+      7  text/plain
+      7  application/vnd.ms-excel.sheet.macroenabled.12
+      7  application/macbinary
+      7  application/mxf
+      6  image/vnd.adobe.photoshop
+      6  application/x-font-ttf
+      4  image/heif
+      4  application/font-woff
+      3  application/x-cab
+      3  text/html
+      2  application/vnd.google-apps.script
+      2  application/vnd.google-apps.shortcut
+      2  image/gif
+      1  application/vnd.openxmlformats-officedocument.presentationml.presentation
+      1  image/x-photoshop
+      1  application/vnd.openxmlformats-officedocument.spreadsheetml.template
+      1  application/vnd.ms-excel
+[SAVED] C:\Users\danil\ellahos\scripts\..\docs\specs\drive_organizacao\drive-catalog.json
+
+=== PHASE 2: Read Google Sheets ===
+Found 175 sheets, reading up to 100
+  [1] CRIACAO PASTA E CONTROLE DE JOB: 13 sheets
+  [2] GG_038_Quer Fazer? Senac!_SENAC SP: 8 sheets
+  [3] GG_040_PURA_UNUM: 8 sheets
+  [4] CADASTRO_ELENCO_038_Quer Fazer? Senac!_SENAC SP: 4 sheets
+  [5] 038_Quer Fazer? Senac!_SENAC SP - EQUIPE_DO_JOB: 3 sheets
+  [6] GG_033_ILHAPURA_ORNARE_UNUM: 8 sheets
+  [7] 040_PURA_UNUM - EQUIPE_DO_JOB: 3 sheets
+  [8] CADASTRO_CLAQUETE: 2 sheets
+  [9] GG_037_BAHIA_REGIONAIS_PAC_POSICIONAMENTO_PROPEG: 8 sheets
+  [10]  📊 CRONOGRAMA 040_ Ilha Pura _ UNUM_PURA: 3 sheets
+  [ERR] CADASTRO_ELENCO_040_PURA_UNUM: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1fYMuJG7kIN968cBOwvbh7-OmOPnsRCdA30UstGJFNlY?alt=json returned "Quota exc
+  [ERR] 📊 CRONOGRAMA 040_PURA_UNUM: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1vdjYLC71ouSeEfD5COlI4S5tXpnGQyhoMoZmgC82l-I?alt=json returned "Quota exc
+  [ERR]  📊 Calendário: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1gDXNN2XJDwTpwIZ_jbQxFMjq7T8bMPbonPIJh84JuLI?alt=json returned "Quota exc
+  [ERR] CADASTRO_CLAQUETE: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1gf4eLuGXJ79pLXN-k59dboKSNMTyhq8Jgp5Ntt2lLNk?alt=json returned "Quota exc
+  [ERR] GG_039_FIM DE ANO | LINHA SIMPATIA_DEBRITO: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1chuzdhx-0dKAWD-kY4UTF3zqKR5pnggfkvb4C0bYf_w?alt=json returned "Quota exc
+  [ERR] 037_BAHIA_REGIONAIS_POSICIONAMENTO_PROPEG - EQUIPE_DO_JOB: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1gnt_mh5ZHx8BLzkijTH3YY6ty2qkUoZLCyATFN17_oI?alt=json returned "Quota exc
+  [ERR] ORC_ORC-2026-0003_Fotografia_-_Quer_fazer_Senac_Senac: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1-iXd9e1_ntnSOtxOZMo6ieCzd1CJ8qCYDddzuk_5CVY?alt=json returned "Quota exc
+  [ERR] ORC_ORC-2026-0003_Fotografia_-_Quer_fazer_Senac_Senac: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1kdiurc7thtAFlZ047d6VVRDMVx-j3S0d8c9NlSAn9GI?alt=json returned "Quota exc
+  [ERR] 039_FIM DE ANO | LINHA 1 | LINHA 2_DEBRITO - EQUIPE_DO_JOB: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1_N4QOa07pW5yoW8U4QuJ3CYWzF0cdsVsnJHthNhkIgk?alt=json returned "Quota exc
+  [ERR] ORC_ORC-2026-0004_Vinhetas_-_Quer_fazer_Senac_Senac: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1XduJSNxorMD5kbWA9fWeNvrOL-zVU3CFql9MpX8n-CQ?alt=json returned "Quota exc
+  [ERR] ORC_ORC-2026-0002_Elenco_Senac: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1N0z3mqy0IEe3eWg6NsZeOJr7WAzQ30jS4gPI5_lNAIE?alt=json returned "Quota exc
+  [ERR] CADASTRO_ELENCO_037_BAHIA_REGIONAIS_POSICIONAMENTO_PROPEG: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1SlY3d_oX-RWpzjtELv3INAs1kMGlAGNfnKPh4kH4z2g?alt=json returned "Quota exc
+  [ERR] GG_023_Respeita_Ellah_Propeg: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1IG2RHTVyF5M1XblnL0LhplJB14VSnLQ5P2eBW62OydQ?alt=json returned "Quota exc
+  [ERR] CADASTRO_ELENCO_039_FIM DE ANO | LINHA SIMPATIA_DEBRITO: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1YorNv1w76tNUNXIOjimYi-7e-LKuDmt6OXV3osdWhxc?alt=json returned "Quota exc
+  [ERR] ORC_ORC-2026-0001_20250054_POSICIONAMENTO_GOVERNO_PRESENTE_NOS_ESTADOS_JANEIRO2026_SECOM: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/12NAcxzKDyXZvyePLGjcDcxj6s8RZUSMbACi3SjD8CQ0?alt=json returned "Quota exc
+  [ERR] 📊 CRONOGRAMA 038_Quer Fazer? Senac!_SENAC SP: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/16_J1ovoMMWTSPlwaferNrwgrvOXp8ZXq0iPrQY5RjJo?alt=json returned "Quota exc
+  [11] GG_036_Simulacao de emergencia_Mene Portella: 8 sheets
+  [ERR] CADASTRO_CLAQUETE: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1-OP6PyNtBAL9LbnwQRdchO56K4EjINlQa9YiH25HnxY?alt=json returned "Quota exc
+  [ERR] ORC_ORC-2025-0003_QUAL_A_BOA_NA_BAHIA_2025_3_SECOM-BA: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/11J4f-J7nRGIEQPFVj2rntAR0uMRMZlXAcbh3XULniWo?alt=json returned "Quota exc
+  [ERR] 📊 CRONOGRAMA 037_BAHIA_REGIONAIS_POSICIONAMENTO_PROPEG: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1U-778nYQ_HjQTpudOpjKh57qmMAefPqH2Xj6Suf3gU8?alt=json returned "Quota exc
+  [ERR] DECUPADO_SIMPATIA_SEBRAE_2025: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1ALqX_Sf7aiWiZY5uOJEJliCSxvxBE_a07d-b-Ak7iIQ?alt=json returned "Quota exc
+  [12] 📊 CRONOGRAMA 039_FIM DE ANO | LINHA SIMPATIA_DEBRITO: 3 sheets
+  [ERR] DECUPADO_Locutor de Rua – Bahia - 1x60": <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1QfaaXP-Ib15SwMeAQz5hJ1BQbnSPmvTuqKWaaWa3IVU?alt=json returned "Quota exc
+  [ERR] DECUPADO_Locutor de Rua – Bahia - 2x30": <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1k0DfRJiGLMBpz1C4nsfgOVqH2zNzBeyDRq6ZbafUbqA?alt=json returned "Quota exc
+  [ERR] DECUPADO_DOLADODAGNT: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/16QdeEgevxmY43cCIw_FF8CEbsG7fdHXVwDiGYrBCOSs?alt=json returned "Quota exc
+  [ERR] LINHA SIMPATIA - SEBRAE: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1FOBQZys2JW0V44pbMpHfHZ4XMBbMXYTnHz2SN7O8Q0c?alt=json returned "Quota exc
+  [ERR] LINHA TEM QUE TER - SEBRAE: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1MX-2dCYAfMwUwX6daEiwC4uY3YHhLnGiojkkAYFRxGU?alt=json returned "Quota exc
+  [ERR] 📊 CRONOGRAMA 039_FIM DE ANO | LINHA TEM QUE TER_DEBRITO: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1ndMaNfdepE0WtRtvURBOx7ImlIaERcNcn6ETMQwhGcs?alt=json returned "Quota exc
+  [ERR] 📊 CRONOGRAMA 039_FIM DE ANO | LINHA SIMPATIA_DEBRITO: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1WtcIUAm0mITNK_MwZOmIX5cPHQJnbAmy1wtAGClUuLQ?alt=json returned "Quota exc
+  [ERR] CADASTRO_ELENCO: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1XmzJvoNJeX5ko0mQZzG1ohezluPA45J065rBxFUmPB8?alt=json returned "Quota exc
+  [13]  📊 Calendário: 3 sheets
+  [ERR] CADASTRO_CLAQUETE: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1b1ZkSzzqMqrJ7PlUEhbT_zm9IxnqtumSVjf5d0Xwhk4?alt=json returned "Quota exc
+  [ERR] ORC_ORC-2025-0005_Locutor_de_Rua_Governo_do_Brasil: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1D6A4BwFhKTd64m-z9DtvCz9CS0VZYEbu1anCiAIgz7g?alt=json returned "Quota exc
+  [ERR]  📊 Calendário: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1ioYktgxDNEtxVwk7VPX55HGubuQtQXcU4UDWMwF_6Do?alt=json returned "Quota exc
+  [ERR] 📊 CRONOGRAMA 036_Simulacao de emergencia_Mene Portella: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1MCfE2AEOdKXB0dWys_z1-M7sY9jaKgFJbXt2grX89xM?alt=json returned "Quota exc
+  [ERR] ORC_ORC-2025-0004_SAC_252002-001_-_OPERACIONAL_METRO_DE_SAO_PAULO: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1ymJNxN4YDvgrOIDw8bzWZ2VkHOTioFAgxj6V1H0vqZ0?alt=json returned "Quota exc
+  [ERR] CADASTRO_ELENCO_036_Simulacao de emergencia_Mene Portella: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1AXhD9koZJ-6kBKLprD3AvRYbAOZIxrIziuC-RO8IkOw?alt=json returned "Quota exc
+  [ERR] 036_Simulacao de emergencia_Mene Portella - EQUIPE_DO_JOB: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/11DKaZU7koPTIqm963Sbn0tD9IzZ0eUm0ConlxfulOIg?alt=json returned "Quota exc
+  [ERR]  📊 Calendário: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1K9dyDQnEamFS7zEg6iqql05KRwKjTVwW_GLBzAOI060?alt=json returned "Quota exc
+  [ERR] CADASTRO_CLAQUETE: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1moHSYLL4OsvyUqaevIAEibbdqkVaYAaZZQOuCi9i5XA?alt=json returned "Quota exc
+  [ERR] 📊 CRONOGRAMA: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1Fe7UY3i2T65TLlRavQtMlXKGNSZaJF_hoRb9lto5Jd8?alt=json returned "Quota exc
+  [ERR] GG_035_MONSTRO_DENGUE_2025_DEBRITTO: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1VleGTw0kXohCyi1dJsgs86Qc6wuKKPPHfMqZqStW-q8?alt=json returned "Quota exc
+  [ERR] CADASTRO_ELENCO_035_MONSTRO_DENGUE_2025_DEBRITTO: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1j0LWBJUiBWFPEd8wGxTqMoNL6CRedYl4EBxe215QmkY?alt=json returned "Quota exc
+  [ERR] 035_MONSTRO_DENGUE_2025_DEBRITTO - EQUIPE_DO_JOB: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/14i0oQt_vhLgE0NwTq2jwKBaBRGuFrK209N_KlufNWQ4?alt=json returned "Quota exc
+  [ERR] 📊 CRONOGRAMA 035_MONSTRO_DENGUE_2025_DEBRITTO: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1yhS48IWzNlKRb7LxEy0RTxKLIhw-6jNfOvHmmfLHMpw?alt=json returned "Quota exc
+  [ERR]  📊 Calendário: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1mspZR3wArkwGOpK_BADq6fA4Ame6sk1UYvTU3RtmKRA?alt=json returned "Quota exc
+  [ERR] CADASTRO_CLAQUETE: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1K6M6VuDtj53879e5dvW9JvtlcOVnEghEJVnm_zdvj28?alt=json returned "Quota exc
+  [ERR] GG_034_VERAORJ_VERSAO3_LEIAUTE: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1F2rAZtQGAJbL012hVmbGFgBqDKj9EWyCvI5PBkOSDQQ?alt=json returned "Quota exc
+  [ERR] DECUPADO: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1BC6Xa1vtJFQTEDKGUSNO5XNwsfIf6INInwLHPgcdWYs?alt=json returned "Quota exc
+  [ERR] ORC_ORC-2025-0002_Aulao_Enem_Cruzeiro_do_Sul_Cruzeiro_do_Sul: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1P5kYLAhE0jkFr3nSPaPBMk7AI9j-Idk-rFZOsMeN6sI?alt=json returned "Quota exc
+  [ERR] ORC_ORC-2025-0001_Proteses_de_silicone_Silimed: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1bIDBYVnLvm_XuDgu0cGXKcBTOzXSGPCjMgTgj4ECPxI?alt=json returned "Quota exc
+  [ERR] CADASTRO_CLAQUETE: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1r088favsMbWu6DzLdWLjBQdld1rz5p8jCCeG_a1H2d8?alt=json returned "Quota exc
+  [ERR] Job 009 - Ilha Pura - Artplan: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1tuI75p2Zu3XJzeh94zBYkyWkWTZ6LW3VopbYXcG3ehY?alt=json returned "Quota exc
+  [ERR] CADASTRO_ELENCO_034_VERAORJ_VERSAO3_LEIAUTE: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1IauSS-eU1IGTIWzCG0ShRPwVdDR8cN33OzSJy-EVpJo?alt=json returned "Quota exc
+  [ERR] 033_ILHAPURA_ORNARE_UNUM - EQUIPE_DO_JOB: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1oX-7cyNtBTdO70N0TN3USoVg7VDTbQSnQbdpeKn_REs?alt=json returned "Quota exc
+  [ERR] 034_VERAORJ_VERSAO3_LEIAUTE - EQUIPE_DO_JOB: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1FDEl1kR7ADQ8IzcZlA7J9GKKD-HSowV75xuHPJm5A7Y?alt=json returned "Quota exc
+  [ERR] 📊 CRONOGRAMA 034_VERAORJ_VERSAO3_LEIAUTE: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1XK7RUuCaWOWJdjw2-x6_7AwBVgfqTF9Gb-8P1R5Uums?alt=json returned "Quota exc
+  [ERR]  📊 Calendário: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1NrmRZ5wuKdTBki2Sw_DtCC-nWLNVOvj-OmUXNoW6ikU?alt=json returned "Quota exc
+  [ERR] CADASTRO_CLAQUETE: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1lpsS2RwdKD9mWUFRzeH5aNcKnxko8f3Ky69zLOv2O3I?alt=json returned "Quota exc
+  [ERR] 005 - PROPEG - PETROBRAS - REGIONAIS: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1ivT-B88pUyBRUlbn3jVXIRNp9SbqULGoCSWu7dh43YA?alt=json returned "Quota exc
+  [ERR] 📊 CRONOGRAMA 033_ILHAPURA_ORNARE_UNUM 08.07: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1pUOl24oHzDkiXfY7Y9jeHuiDEXLfAVFQOE_rQa8j13Y?alt=json returned "Quota exc
+  [ERR] GG_028_COMLURB_PMRJ_Agencia3: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1QvI9Jxh1YXpM1PfOjO6mK4g59gIu3oiQEOBCRqGvkKc?alt=json returned "Quota exc
+  [ERR] CADASTRO_ELENCO_033_ILHAPURA_ORNARE_UNUM: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1IzRJGr1NU0HwxXtexPGfKm2ufqZLx7h_xGoMsr5_bbI?alt=json returned "Quota exc
+  [ERR] 📊 CRONOGRAMA 033_ILHAPURA_ORNARE_UNUM: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/16cxVe8in_viSw5FVULusRdzwSXmVcT-RcpvDS6IgRjM?alt=json returned "Quota exc
+  [ERR]  📊 Calendário: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1Lji5rHRXNqHjIi9rqJrtaH77pNQzfIPSpzlo7rwimLU?alt=json returned "Quota exc
+  [ERR] 📊 CRONOGRAMA _ROTAS DO VINHO_Ogilvy: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1mp1UuZoSHBBudeEBBOeGVMTXftS-M8Vd5bvUTb2lyAI?alt=json returned "Quota exc
+  [ERR] GG_099_CAMINHO_DOS_VINHOS_Ogilvy: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1hpaq4QjHHr1cZyCkq4AvUKsAgGph_NZW0PQejmfu_ag?alt=json returned "Quota exc
+  [ERR] 📊 Calendário 020_ILHAPURA_ASTRA_CONVENCAO: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1wmscLwyQziyUMHstTNmtxFPaNmwjB5Drco07a_7rE38?alt=json returned "Quota exc
+  [ERR] 028_COMLURB_PMRJ_Agencia3 - EQUIPE_DO_JOB: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1ZTK93aMiZaGg_bozXV7niJihlAmyDmOaaiftPfuIGrc?alt=json returned "Quota exc
+  [ERR] Cópia de 📊 CRONOGRAMA 031_SP PRA TODA OBRA_Ogilvy_v: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1lHiSvfdWuginTZKPsXFQaGXBdChUGssvmWBncBNAy0I?alt=json returned "Quota exc
+  [ERR] GG_021_ANIVERSARIO_PFSP_MENEPORTELA: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1NvFaFBf0EkAkACLKIR1FzkDiPvPXlaN00rQix5034Ks?alt=json returned "Quota exc
+  [ERR] CADASTRO_CLAQUETE: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1ekZJid9x6xybjeQHFuFpZYlr4sf-O7oY5szxQjoW_AY?alt=json returned "Quota exc
+  [ERR] OC_SECOM_MCMV: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1dTmwHRgFA48G3L2l1VXfXFoywCK7AG2u16Qig1bJh9E?alt=json returned "Quota exc
+  [ERR] Cópia de GG_011_FOTOSTILL_CRUZEIRO_DO_SUL_FCB: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1IuUtMjP5DsZAuAB8d--Nwwd0F7XDYbPHtsmBHZvks5Q?alt=json returned "Quota exc
+  [ERR] 📊 CRONOGRAMA 031_SP PRA TODA OBRA_Ogilvy_v: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1xsex_QESe-DADaHHYSZQzzrHJ3zcaY2SsbB_0fWH6u0?alt=json returned "Quota exc
+  [ERR] CADASTRO_CLAQUETE: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1owsZ9381oY2l3m2e5e-nEnNT7ZtfV_4ofLl6IrIdta4?alt=json returned "Quota exc
+  [14] 📊 CRONOGRAMA 031_SP PRA TODA OBRA_Ogilvy: 3 sheets
+  [15] GG_031_SP PRA TODA OBRA_Ogilvy: 9 sheets
+  [16] GG_011_FOTOSTILL_CRUZEIRO_DO_SUL_FCB: 8 sheets
+  [17] Cópia de 📊 CRONOGRAMA 031_SP PRA TODA OBRA_Ogilvy: 3 sheets
+  [18] CADASTRO_ELENCO_031_SP PRA TODA OBRA_Ogilvy: 2 sheets
+  [19] 031_SP PRA TODA OBRA_Ogilvy - EQUIPE_DO_JOB: 3 sheets
+  [20]  📊 Calendário: 3 sheets
+  [21] CADASTRO_CLAQUETE: 2 sheets
+  [22] Super Modelo  - NAO MEXER E NEM DELETAR: 8 sheets
+  [23] CADASTRO_EQUIPE: 2 sheets
+  [24] 📊 CRONOGRAMA 028_COMLURB_PRJ_Agencia3: 3 sheets
+  [25] GG_025_Monstro_INMETRO_BINDER: 7 sheets
+  [ERR] Cópia de 📊 CRONOGRAMA 028_COMLURB_PMRJ_Agencia3: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/1oA31GUaoSmdE70YdtSz3A-Y0MMDXP77BGDhLavPnJoA?alt=json returned "Quota exc
+  [ERR] 📊 CRONOGRAMA 028_COMLURB_PMRJ_Agencia3: <HttpError 429 when requesting https://sheets.googleapis.com/v4/spreadsheets/18Ora47qZHFMz1VhvVhpDiZpXoMiACxU1oLnnZHYM_Bk?alt=json returned "Quota exc
+[SHEETS DONE] 25 read
+[SAVED] C:\Users\danil\ellahos\scripts\..\docs\specs\drive_organizacao\drive-catalog.json
+
+=== PHASE 3: Read Google Docs ===
+Found 193 docs, reading up to 100
+[DOCS API NOT ENABLED] Stopping
+[DOCS DONE] 0 read
+[SAVED] C:\Users\danil\ellahos\scripts\..\docs\specs\drive_organizacao\drive-catalog.json
+
+=== Generating summary ===
+[SAVED] C:\Users\danil\ellahos\scripts\..\docs\specs\drive_organizacao\drive-summary.md

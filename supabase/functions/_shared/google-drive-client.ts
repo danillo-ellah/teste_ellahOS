@@ -355,6 +355,40 @@ export async function listChildren(
   return data.files || [];
 }
 
+// Transfere ownership de um arquivo/pasta para outro usuario
+// Apos transferir, a SA continua como writer automaticamente
+export async function transferOwnership(
+  token: string,
+  fileId: string,
+  newOwnerEmail: string,
+  opts?: DriveOptions,
+): Promise<boolean> {
+  let url = `${DRIVE_API}/files/${fileId}/permissions?transferOwnership=true`;
+  if (opts?.driveType === 'shared_drive') {
+    url += '&supportsAllDrives=true';
+  }
+
+  const resp = await driveFetchWithRetry(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      type: 'user',
+      role: 'owner',
+      emailAddress: newOwnerEmail,
+    }),
+  }, `transferOwnership to ${newOwnerEmail}`);
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    console.error(`[google-drive] transferOwnership para ${newOwnerEmail} em ${fileId}: HTTP ${resp.status} — ${text.slice(0, 200)}`);
+    return false;
+  }
+  return true;
+}
+
 // Define permissao em um arquivo/pasta
 export async function setPermission(
   token: string,
@@ -520,10 +554,10 @@ export async function buildDriveStructure(
   if (job.client_id) {
     const { data: client } = await serviceClient
       .from('clients')
-      .select('company_name')
+      .select('name')
       .eq('id', job.client_id)
       .single();
-    clientName = client?.company_name || '';
+    clientName = client?.name || '';
   }
 
   // 4. Resolver template (customizado do tenant ou default)
@@ -607,12 +641,13 @@ export async function buildDriveStructure(
     throw new Error('Falha ao criar pasta raiz no Drive');
   }
 
-  // Criar pastas nivel-1
+  // Criar pastas nivel-1 (prefixadas com nome do job, ex: "038_QuerFazerSenac_SenacSP - 01_DOCUMENTOS")
   if (template.children) {
     for (const child of template.children) {
-      await createAndRecord(child.key, child.name, folderMap['root'].driveId, folderMap['root'].dbId);
+      const childName = `${rootName} - ${child.name}`;
+      await createAndRecord(child.key, childName, folderMap['root'].driveId, folderMap['root'].dbId);
 
-      // Criar pastas nivel-2
+      // Criar pastas nivel-2 (sem prefixo — ex: "01_ROTEIRO")
       if (child.children && folderMap[child.key]) {
         for (const grandchild of child.children) {
           await createAndRecord(
@@ -621,12 +656,39 @@ export async function buildDriveStructure(
             folderMap[child.key].driveId,
             folderMap[child.key].dbId,
           );
+
+          // Criar pastas nivel-3 (ex: 01_PRE_PRODUCAO > 01_APROVACAO_INTERNA)
+          if (grandchild.children && folderMap[grandchild.key]) {
+            for (const greatGrandchild of grandchild.children) {
+              await createAndRecord(
+                greatGrandchild.key,
+                greatGrandchild.name,
+                folderMap[grandchild.key].driveId,
+                folderMap[grandchild.key].dbId,
+              );
+            }
+          }
         }
       }
     }
   }
 
-  // 6. Atualizar jobs.drive_folder_url
+  // 6. Transferir ownership das pastas para o admin do tenant
+  // SA cria como owner, mas o usuario precisa ter controle total
+  const ownerEmail = driveConfig.owner_email as string;
+  if (ownerEmail) {
+    console.log(`[google-drive] Transferindo ownership para ${ownerEmail}...`);
+    let transferred = 0;
+    for (const [key, folder] of Object.entries(folderMap)) {
+      const ok = await transferOwnership(token!, folder.driveId, ownerEmail, driveOpts);
+      if (ok) transferred++;
+    }
+    console.log(`[google-drive] Ownership transferido: ${transferred}/${Object.keys(folderMap).length} pastas`);
+  } else {
+    console.log('[google-drive] owner_email nao configurado — SA permanece como owner das pastas');
+  }
+
+  // 7. Atualizar jobs.drive_folder_url
   const rootUrl = folderMap['root']?.url || null;
   if (rootUrl) {
     await serviceClient
@@ -636,30 +698,38 @@ export async function buildDriveStructure(
   }
 
   // 7. Permissoes na pasta raiz para equipe do job
-  try {
-    const { data: teamMembers } = await serviceClient
-      .from('job_team')
-      .select('role, people!inner(email)')
-      .eq('job_id', jobId)
-      .is('deleted_at', null);
+  // DESABILITADO por seguranca — compartilhar pastas com emails externos
+  // deve ser uma acao explicita do admin, nao automatica.
+  // Para reativar: configurar drive_auto_share: true no tenant settings.
+  const autoShare = driveConfig.auto_share_team === true;
+  if (autoShare) {
+    try {
+      const { data: teamMembers } = await serviceClient
+        .from('job_team')
+        .select('role, people!inner(email)')
+        .eq('job_id', jobId)
+        .is('deleted_at', null);
 
-    if (teamMembers && teamMembers.length > 0 && folderMap['root']) {
-      for (const member of teamMembers) {
-        const email = (member as any).people?.email;
-        if (!email) continue;
+      if (teamMembers && teamMembers.length > 0 && folderMap['root']) {
+        for (const member of teamMembers) {
+          const email = (member as any).people?.email;
+          if (!email) continue;
 
-        // PE e coordenador = fileOrganizer, demais = writer
-        const role = ['produtor_executivo', 'coordenador_producao'].includes(member.role)
-          ? 'fileOrganizer' as const
-          : 'writer' as const;
+          // PE e coordenador = fileOrganizer, demais = writer
+          const role = ['produtor_executivo', 'coordenador_producao'].includes(member.role)
+            ? 'fileOrganizer' as const
+            : 'writer' as const;
 
-        await setPermission(token!, folderMap['root'].driveId, email, role, driveOpts);
+          await setPermission(token!, folderMap['root'].driveId, email, role, driveOpts);
+        }
       }
+    } catch (permErr) {
+      const msg = `Aviso: falha ao definir permissoes: ${permErr instanceof Error ? permErr.message : String(permErr)}`;
+      errors.push(msg);
+      console.error(`[google-drive] ${msg}`);
     }
-  } catch (permErr) {
-    const msg = `Aviso: falha ao definir permissoes: ${permErr instanceof Error ? permErr.message : String(permErr)}`;
-    errors.push(msg);
-    console.error(`[google-drive] ${msg}`);
+  } else {
+    console.log('[google-drive] Auto-share desabilitado. Pastas criadas sem permissoes extras.');
   }
 
   console.log(

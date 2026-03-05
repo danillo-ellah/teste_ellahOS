@@ -20,6 +20,7 @@ import {
   Shirt,
   Timer,
   ClipboardList,
+  GanttChartSquare,
 } from 'lucide-react'
 import {
   Tabs,
@@ -48,6 +49,7 @@ import { TabOvertime } from '@/components/job-detail/tabs/TabOvertime'
 import { TabStoryboard } from '@/components/job-detail/tabs/TabStoryboard'
 import { TabCast } from '@/components/job-detail/tabs/TabCast'
 import { TabOrdemDoDia } from '@/components/job-detail/tabs/TabOrdemDoDia'
+import { TabCronograma } from '@/components/job-detail/tabs/TabCronograma'
 import type { JobDetail } from '@/types/jobs'
 
 // --- Error Boundary para abas ---
@@ -107,6 +109,7 @@ const ICON_MAP: Record<string, typeof FileText> = {
   Shirt,
   Timer,
   ClipboardList,
+  GanttChartSquare,
 }
 
 interface JobDetailTabsProps {
@@ -272,6 +275,13 @@ export function JobDetailTabs({ job }: JobDetailTabsProps) {
         <TabsContent value="ordem-do-dia" className="mt-6">
           <TabErrorBoundary tabName="ordem-do-dia">
             <TabOrdemDoDia job={job} />
+          </TabErrorBoundary>
+        </TabsContent>
+
+        {/* Tab: Cronograma */}
+        <TabsContent value="cronograma" className="mt-6">
+          <TabErrorBoundary tabName="cronograma">
+            <TabCronograma job={job} />
           </TabErrorBoundary>
         </TabsContent>
 
