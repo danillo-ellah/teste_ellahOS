@@ -26,14 +26,14 @@ export function useJobPhases(jobId: string) {
   const query = useQuery({
     queryKey: jobPhasesKeys.all(jobId),
     queryFn: () =>
-      apiGet<JobPhase[]>('job-timeline', { job_id: jobId }, 'phases'),
+      apiGet<JobPhase[]>('job-timeline', undefined, `${jobId}/phases`),
     enabled: Boolean(jobId),
   })
 
   // Criar fase individual
   const createMutation = useMutation({
     mutationFn: (payload: CreatePhasePayload) =>
-      apiMutate<JobPhase>('job-timeline', 'POST', payload as unknown as Record<string, unknown>, 'phases'),
+      apiMutate<JobPhase>('job-timeline', 'POST', payload as unknown as Record<string, unknown>, `${jobId}/phases`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: jobPhasesKeys.all(jobId) })
       toast.success('Fase criada')
@@ -50,7 +50,7 @@ export function useJobPhases(jobId: string) {
         'job-timeline',
         'PATCH',
         payload as Record<string, unknown>,
-        `phases/${id}`,
+        `${jobId}/phases/${id}`,
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: jobPhasesKeys.all(jobId) })
@@ -64,7 +64,7 @@ export function useJobPhases(jobId: string) {
   // Deletar fase
   const deleteMutation = useMutation({
     mutationFn: (phaseId: string) =>
-      apiMutate('job-timeline', 'DELETE', undefined, `phases/${phaseId}`),
+      apiMutate('job-timeline', 'DELETE', undefined, `${jobId}/phases/${phaseId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: jobPhasesKeys.all(jobId) })
       toast.success('Fase removida')
@@ -77,7 +77,7 @@ export function useJobPhases(jobId: string) {
   // Reordenar fases
   const reorderMutation = useMutation({
     mutationFn: (payload: ReorderPayload) =>
-      apiMutate('job-timeline', 'PUT', payload as unknown as Record<string, unknown>, 'phases/reorder'),
+      apiMutate('job-timeline', 'PUT', payload as unknown as Record<string, unknown>, `${jobId}/phases/reorder`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: jobPhasesKeys.all(jobId) })
     },
@@ -93,7 +93,7 @@ export function useJobPhases(jobId: string) {
         'job-timeline',
         'POST',
         payload as unknown as Record<string, unknown>,
-        'phases/bulk',
+        `${jobId}/phases/bulk`,
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: jobPhasesKeys.all(jobId) })
