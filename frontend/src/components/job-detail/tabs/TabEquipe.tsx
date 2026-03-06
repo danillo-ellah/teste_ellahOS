@@ -32,6 +32,7 @@ import {
   useRemoveTeamMember,
 } from '@/hooks/useJobTeam'
 import { useUserRole, APPROVAL_PDF_ROLES } from '@/hooks/useUserRole'
+import { useJobAccess } from '@/hooks/useJobAccess'
 import { FEE_VIEW_ROLES } from '@/lib/access-control-map'
 import { ApiRequestError } from '@/lib/api'
 import { TEAM_ROLE_LABELS, HIRING_STATUS_LABELS } from '@/lib/constants'
@@ -55,11 +56,15 @@ export function TabEquipe({ job }: TabEquipeProps) {
   const [batchContractOpen, setBatchContractOpen] = useState(false)
   const [overrideMember, setOverrideMember] = useState<JobTeamMember | null>(null)
 
+  const { canEditTab: canEditTabFn } = useJobAccess(job)
+
   // Roles que podem gerar contratos em lote (mesmos do backend)
   const canGenerateContracts = userRole !== null && APPROVAL_PDF_ROLES.includes(userRole)
   const canViewFee = userRole !== null && FEE_VIEW_ROLES.includes(userRole)
   // PE/Admin podem configurar overrides de acesso
   const canManageAccess = userRole === 'admin' || userRole === 'ceo' || userRole === 'produtor_executivo'
+  // Permissao de edicao na aba Equipe (adicionar/editar/remover membros)
+  const canEditTeam = canEditTabFn('equipe')
 
   function handleOpenAdd() {
     setEditingMember(undefined)
@@ -161,9 +166,9 @@ export function TabEquipe({ job }: TabEquipeProps) {
         <EmptyTabState
           icon={Users}
           title="Nenhum membro na equipe"
-          description="Adicione os profissionais que vao trabalhar neste job."
-          actionLabel="Adicionar membro"
-          onAction={handleOpenAdd}
+          description={canEditTeam ? 'Adicione os profissionais que vao trabalhar neste job.' : 'Nenhum membro adicionado a equipe deste job ainda.'}
+          actionLabel={canEditTeam ? 'Adicionar membro' : undefined}
+          onAction={canEditTeam ? handleOpenAdd : undefined}
         />
         <TeamMemberDialog
           open={dialogOpen}
@@ -198,10 +203,12 @@ export function TabEquipe({ job }: TabEquipeProps) {
               Gerar Contratos
             </Button>
           )}
-          <Button size="sm" variant="outline" onClick={handleOpenAdd}>
-            <Plus className="size-4" />
-            Adicionar membro
-          </Button>
+          {canEditTeam && (
+            <Button size="sm" variant="outline" onClick={handleOpenAdd}>
+              <Plus className="size-4" />
+              Adicionar membro
+            </Button>
+          )}
         </div>
       </div>
 
@@ -266,37 +273,43 @@ export function TabEquipe({ job }: TabEquipeProps) {
                   )}
                 </TableCell>
                 <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="size-8" aria-label={`Acoes para ${m.person_name || 'membro'}`}>
-                        <MoreHorizontal className="size-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleOpenEdit(m)}>
-                        <Pencil className="size-4" />
-                        Editar
-                      </DropdownMenuItem>
-                      {canManageAccess && (
-                        <DropdownMenuItem onClick={() => setOverrideMember(m)}>
-                          <Shield className="size-4" />
-                          Permissoes
-                          {m.access_override && (
-                            <Badge variant="secondary" className="ml-auto text-[10px] px-1 py-0">
-                              {Object.keys(m.access_override.tabs).length}
-                            </Badge>
-                          )}
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuItem
-                        onClick={() => setDeletingMember(m)}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="size-4" />
-                        Remover
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  {(canEditTeam || canManageAccess) && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="size-8" aria-label={`Acoes para ${m.person_name || 'membro'}`}>
+                          <MoreHorizontal className="size-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {canEditTeam && (
+                          <DropdownMenuItem onClick={() => handleOpenEdit(m)}>
+                            <Pencil className="size-4" />
+                            Editar
+                          </DropdownMenuItem>
+                        )}
+                        {canManageAccess && (
+                          <DropdownMenuItem onClick={() => setOverrideMember(m)}>
+                            <Shield className="size-4" />
+                            Permissoes
+                            {m.access_override && (
+                              <Badge variant="secondary" className="ml-auto text-[10px] px-1 py-0">
+                                {Object.keys(m.access_override.tabs).length}
+                              </Badge>
+                            )}
+                          </DropdownMenuItem>
+                        )}
+                        {canEditTeam && (
+                          <DropdownMenuItem
+                            onClick={() => setDeletingMember(m)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="size-4" />
+                            Remover
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

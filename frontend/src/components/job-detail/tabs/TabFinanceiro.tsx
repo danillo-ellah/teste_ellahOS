@@ -13,6 +13,7 @@ import { formatCurrency, formatPercentage, formatBRNumber, parseBRNumber } from 
 import { cn } from '@/lib/utils'
 import { FinancialRecordsList } from './FinancialRecordsList'
 import { BudgetsList } from './BudgetsList'
+import { useJobAccess } from '@/hooks/useJobAccess'
 import type { JobDetail, UpdateJobPayload } from '@/types/jobs'
 import { useFinancialSummary } from '@/hooks/useFinancialRecords'
 
@@ -24,6 +25,10 @@ export function TabFinanceiro({ job }: TabFinanceiroProps) {
   const { mutateAsync: updateJob } = useUpdateJob()
   const [syncState, setSyncState] = useState<SyncState>('idle')
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const { getTabAccess } = useJobAccess(job)
+  const financialAccess = getTabAccess('financeiro')
+  const canEdit = financialAccess === 'view_edit'
+  const isRestricted = financialAccess === 'view_restricted'
 
   // Cleanup timers on unmount (BUG-006 fix)
   useEffect(() => () => clearTimeout(timerRef.current), [])
@@ -48,12 +53,39 @@ export function TabFinanceiro({ job }: TabFinanceiroProps) {
 
   const marginIsPositive = (job.margin_percentage ?? 0) >= 0
 
+  // Restricted view: DP/ATD see only budget approved card
+  if (isRestricted) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <SummaryCard
+            icon={DollarSign}
+            label="Orcamento aprovado"
+            value={formatCurrency(job.budget_approved)}
+            className="text-foreground"
+          />
+          <SummaryCard
+            icon={DollarSign}
+            label="Orcamento estimado"
+            value={formatCurrency(job.budget_estimated)}
+            className="text-muted-foreground"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground text-center py-4">
+          Voce tem acesso restrito ao financeiro deste job. Para mais detalhes, consulte o Produtor Executivo.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Indicador de sync */}
-      <div className="flex justify-end">
-        <SyncIndicator state={syncState} />
-      </div>
+      {canEdit && (
+        <div className="flex justify-end">
+          <SyncIndicator state={syncState} />
+        </div>
+      )}
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -111,32 +143,34 @@ export function TabFinanceiro({ job }: TabFinanceiroProps) {
         />
       </div>
 
-      {/* Campos editaveis - somente os que a API aceita */}
-      <section className="rounded-lg border border-border p-6">
-        <h3 className="text-sm font-semibold mb-4">Valores</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <CurrencyField
-            label="Valor fechado"
-            value={job.closed_value}
-            onChange={(v) => save({ closed_value: v })}
-          />
-          <CurrencyField
-            label="Custo de producao"
-            value={job.production_cost}
-            onChange={(v) => save({ production_cost: v })}
-          />
-          <CurrencyField
-            label="Outros custos"
-            value={job.other_costs}
-            onChange={(v) => save({ other_costs: v })}
-          />
-          <PercentField
-            label="% Impostos"
-            value={job.tax_percentage}
-            onChange={(v) => save({ tax_percentage: v })}
-          />
-        </div>
-      </section>
+      {/* Campos editaveis - somente se tem permissao de edicao */}
+      {canEdit && (
+        <section className="rounded-lg border border-border p-6">
+          <h3 className="text-sm font-semibold mb-4">Valores</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <CurrencyField
+              label="Valor fechado"
+              value={job.closed_value}
+              onChange={(v) => save({ closed_value: v })}
+            />
+            <CurrencyField
+              label="Custo de producao"
+              value={job.production_cost}
+              onChange={(v) => save({ production_cost: v })}
+            />
+            <CurrencyField
+              label="Outros custos"
+              value={job.other_costs}
+              onChange={(v) => save({ other_costs: v })}
+            />
+            <PercentField
+              label="% Impostos"
+              value={job.tax_percentage}
+              onChange={(v) => save({ tax_percentage: v })}
+            />
+          </div>
+        </section>
+      )}
 
       {/* Campos somente-leitura (nao aceitos pela API ou calculados) */}
       <section className="rounded-lg border border-border p-6 bg-muted/30">
