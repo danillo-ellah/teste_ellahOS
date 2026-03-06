@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Desabilitar source maps em producao para nao expor codigo fonte
+  productionBrowserSourceMaps: false,
+
+  // Desabilitar header x-powered-by que expoe tecnologia
+  poweredByHeader: false,
+
   async headers() {
     return [
       {
@@ -15,7 +21,7 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              "script-src 'self' 'unsafe-inline'",
               "worker-src 'self' blob:",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https:",
