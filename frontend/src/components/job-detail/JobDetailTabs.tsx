@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, Component, type ReactNode } from 'react'
+import { useMemo, useEffect, Component, type ReactNode } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import {
   FileText,
@@ -51,6 +51,7 @@ import { TabCast } from '@/components/job-detail/tabs/TabCast'
 import { TabOrdemDoDia } from '@/components/job-detail/tabs/TabOrdemDoDia'
 import { TabCronograma } from '@/components/job-detail/tabs/TabCronograma'
 import type { JobDetail } from '@/types/jobs'
+import { useJobAccess } from '@/hooks/useJobAccess'
 
 // --- Error Boundary para abas ---
 
@@ -145,10 +146,43 @@ export function JobDetailTabs({ job }: JobDetailTabsProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const currentTab = (searchParams.get('tab') as JobDetailTabId) || 'geral'
+  const { visibleTabs, isLoading: isAccessLoading } = useJobAccess(job)
+
+  // Filtra grupos: so mostra grupos que tenham pelo menos 1 tab visivel
+  const filteredGroups = useMemo(() => {
+    if (isAccessLoading || visibleTabs.length === 0) return JOB_TAB_GROUPS
+    return JOB_TAB_GROUPS
+      .map((group) => ({
+        ...group,
+        tabs: group.tabs.filter((t) => visibleTabs.includes(t.id)),
+      }))
+      .filter((group) => group.tabs.length > 0)
+  }, [visibleTabs, isAccessLoading])
 
   // Grupo ativo baseado na tab atual
-  const activeGroupIdx = useMemo(() => findGroupIndex(currentTab), [currentTab])
-  const activeGroup = JOB_TAB_GROUPS[activeGroupIdx]
+  const activeGroupIdx = useMemo(() => {
+    for (let i = 0; i < filteredGroups.length; i++) {
+      if (filteredGroups[i].tabs.some((t) => t.id === currentTab)) return i
+    }
+    return 0
+  }, [currentTab, filteredGroups])
+  const activeGroup = filteredGroups[activeGroupIdx]
+
+  // Redirect se a tab atual nao e visivel (URL direto ou mudanca de role)
+  useEffect(() => {
+    if (isAccessLoading || visibleTabs.length === 0) return
+    if (!visibleTabs.includes(currentTab)) {
+      const fallback = visibleTabs[0] ?? 'geral'
+      const params = new URLSearchParams(searchParams.toString())
+      if (fallback === 'geral') {
+        params.delete('tab')
+      } else {
+        params.set('tab', fallback)
+      }
+      const qs = params.toString()
+      router.replace(qs ? `?${qs}` : pathname, { scroll: false })
+    }
+  }, [isAccessLoading, visibleTabs, currentTab, router, pathname, searchParams])
 
   function handleTabChange(value: string) {
     const params = new URLSearchParams(searchParams.toString())
@@ -163,15 +197,17 @@ export function JobDetailTabs({ job }: JobDetailTabsProps) {
 
   // Ao clicar num grupo, navega pra primeira tab desse grupo
   function handleGroupClick(groupIdx: number) {
-    const firstTab = JOB_TAB_GROUPS[groupIdx].tabs[0].id
+    const firstTab = filteredGroups[groupIdx].tabs[0].id
     handleTabChange(firstTab)
   }
+
+  if (!activeGroup) return null
 
   return (
     <div className="mt-4">
       {/* Nivel 1: Seletores de grupo */}
       <div className="flex items-center gap-1.5 mb-2 overflow-x-auto pb-1">
-        {JOB_TAB_GROUPS.map((group, gIdx) => {
+        {filteredGroups.map((group, gIdx) => {
           const areaConfig = AREA_CONFIG[group.area]
           const isActive = gIdx === activeGroupIdx
 

@@ -1,8 +1,8 @@
 # RBAC System — Spec PM
 
-**Versao:** 1.0
-**Data:** 2026-03-05
-**Status:** RASCUNHO — aguardando revisao CEO
+**Versao:** 1.1
+**Data:** 2026-03-07
+**Status:** APROVADO — respostas CEO incorporadas (PO-01 a PO-07)
 **Autor:** PM (Claude Sonnet 4.6)
 **Origem:** Decisoes do CEO nas 31 perguntas de permissoes (06/03/2026) + auditoria do frontend
 
@@ -336,12 +336,14 @@ CA-01 a CA-14: ver user stories acima.
 
 ---
 
-## 16. Perguntas Abertas
+## 16. Perguntas Resolvidas (07/03/2026)
 
-**PO-01 [ALTA]:** CCO (comercial) = exclusivamente Telma? Ou pode haver outros?
-**PO-02 [ALTA]:** Dir. Producao pode EDITAR custos ou apenas visualizar?
-**PO-03 [MEDIA]:** Coord. Producao = sem acesso por padrao (como Drive)?
-**PO-04 [MEDIA]:** CCO precisa ser adicionado ao job_team por PE ou ve todos os jobs?
-**PO-05 [MEDIA]:** Juridico precisa ver fee/cache pra redigir contratos?
-**PO-06 [BAIXA]:** Finalizador = team_role separado ou flag no editor?
-**PO-07 [BAIXA]:** Atendimento pode criar sessoes no Portal?
+| # | Pergunta | Resposta CEO | Impacto |
+|---|----------|-------------|---------|
+| PO-01 | CCO = exclusivamente Telma? | Telma por 10+ anos, mas role generico | Sem mudanca |
+| PO-02 | Dir. Producao pode EDITAR custos? | Sim, ajuda montar orcamento e fechamento | Financeiro/Custos: V→VE |
+| PO-03 | Coord. = sem acesso padrao? | Sim, PE expande via override | Confirmado |
+| PO-04 | CCO ve todos os jobs? | Sim, e socia | Acesso global (GLOBAL_JOB_ROLES) |
+| PO-05 | Juridico ve fee/cache? | Sim, precisa pra contratos | Equipe: hidden→V |
+| PO-06 | Finalizador = role separado? | Sim, mas toda pos ve tudo | Roles separados, acesso unificado |
+| PO-07 | Atendimento cria sessoes Portal? | Sim, apos treinamento | Portal: V→VE |
