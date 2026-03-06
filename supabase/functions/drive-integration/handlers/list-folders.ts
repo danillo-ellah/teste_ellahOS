@@ -1,6 +1,7 @@
 import type { AuthContext } from '../../_shared/auth.ts';
 import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 import { success } from '../../_shared/response.ts';
+import { AppError } from '../../_shared/errors.ts';
 
 // GET /drive-integration/:jobId/folders
 // Lista todas as pastas Drive registradas para um job
@@ -10,6 +11,19 @@ export async function listFolders(
   jobId: string,
 ): Promise<Response> {
   const supabase = getSupabaseClient(auth.token);
+
+  // Verificar que o job pertence ao tenant do usuario autenticado
+  const { data: job, error: jobErr } = await supabase
+    .from('jobs')
+    .select('id')
+    .eq('id', jobId)
+    .eq('tenant_id', auth.tenantId)
+    .is('deleted_at', null)
+    .single();
+
+  if (jobErr || !job) {
+    throw new AppError('FORBIDDEN', 'Job nao encontrado ou sem permissao', 403);
+  }
 
   const { data: folders, error: queryError } = await supabase
     .from('drive_folders')
