@@ -603,3 +603,169 @@ Baseados nas 59 respostas do CEO + analise de risco:
 ---
 
 *Documento gerado a partir de 59 respostas diretas do CEO em 2026-03-07. Base para todas as decisoes de produto do EllaOS.*
+
+---
+
+## 9. Visao de Futuro — Roadmap Estrategico (Horizontes 1-3)
+
+### Horizonte 1: Features que mudam o jogo (6-12 meses)
+
+#### H1-01: Antecipacao de Recebiveis (Fintech Embutida)
+Cliente paga em 30/60/90/120 dias. Produtora precisa pagar equipe ANTES.
+EllaOS tem todos os dados: valor, parcelas, historico do cliente, NF emitida.
+- Botao "Antecipar recebivel" → calcula taxa → fintech parceira deposita em 24h
+- EllaOS fica com % da taxa como receita
+- **Potencial:** R$500k-2M ARR (maior que assinatura SaaS)
+
+#### H1-02: Empresa de IA — Hierarquia Completa por Departamento
+**VISAO DO CEO:** Nao e 1 chatbot generico. E uma EMPRESA de IA completa, com hierarquia real por departamento. Cada departamento tem Diretor IA + Analistas IA + Estagiarios IA, como uma equipe humana real.
+
+##### Departamento FINANCEIRO (IA)
+| Cargo IA | O que faz |
+|----------|-----------|
+| **Diretor Financeiro IA** | Visao macro: fluxo de caixa, alertas de risco, relatorio mensal, decisoes estrategicas. Reporta ao CEO |
+| **Analista de Contas a Pagar** | Monitora NFs pendentes, cobra fornecedores, valida se valores batem com orcamento |
+| **Analista de Contas a Receber** | Monitora parcelas do cliente, alerta atrasos, sugere cobranca, calcula juros |
+| **Analista de Orcamentos** | Compara orcamento vs realizado, alerta estouros, sugere cortes |
+| **Estagiario de Conciliacao** | Cruza extratos bancarios com pagamentos registrados, flagra divergencias |
+
+##### Departamento ATENDIMENTO (IA)
+| Cargo IA | O que faz |
+|----------|-----------|
+| **Diretor de Atendimento IA** | Visao de todos os jobs do atendimento, prioriza acoes, alerta riscos de escopo |
+| **Analista de Comunicacao** | Le grupos WA, extrai decisoes, resume contexto ("cliente pediu X no dia Y") |
+| **Analista de Escopo** | Detecta extras em conversas WA ("isso nao estava no briefing"), flagra pro CEO |
+| **Analista de Satisfacao** | Monitora tom das mensagens do cliente, alerta se sentimento ficou negativo |
+| **Estagiario de Logistica** | Rastreia passagens, hoteis, transfers. Confirma reservas, alerta pendencias |
+
+##### Departamento PRODUCAO (IA)
+| Cargo IA | O que faz |
+|----------|-----------|
+| **Diretor de Producao IA** | Visao de todos os jobs em pre/producao, conflitos de agenda, recursos compartilhados |
+| **Analista de Equipe** | Sugere freelas disponiveis por funcao + rating, alerta conflitos de agenda |
+| **Analista de Checklist** | Verifica se pre-producao esta completa antes da diaria, cobra pendencias |
+| **Estagiario de Documentos** | Organiza docs no Drive, garante que PPM foi registrado, OD foi assinado |
+
+##### Departamento POS-PRODUCAO (IA)
+| Cargo IA | O que faz |
+|----------|-----------|
+| **Diretor de Pos IA** | Visao do pipeline de 12 etapas de todos os jobs, identifica gargalos |
+| **Analista de Versoes** | Rastreia v1/v2/v3, compila feedback do cliente, detecta contradicoes |
+| **Analista de Prazos** | Monitora deadlines por etapa, alerta atrasos, sugere realocacao |
+| **Estagiario de Entrega** | Prepara copias/formatos/janelas, verifica specs, confirma upload |
+
+##### Departamento COMERCIAL (IA)
+| Cargo IA | O que faz |
+|----------|-----------|
+| **Diretor Comercial IA** | Taxa de conversao, pipeline, quais clientes reativar, previsao de receita |
+| **Analista de Propostas** | Auxilia montagem de orcamento, busca precos historicos, calcula risco |
+| **Analista de Pos-Venda** | Follow-up automatico 30/60/90 dias, NPS, sugestao de upsell |
+| **Estagiario de Pesquisa** | Monitora licitacoes publicas, editais, oportunidades de mercado |
+
+##### Departamento RH (IA)
+| Cargo IA | O que faz |
+|----------|-----------|
+| **Diretor de RH IA** | Alerta compliance CLT, visao de custos por pessoa, rotatividade |
+| **Analista de Contratos** | Gera contratos automaticos, cobra assinaturas pendentes |
+| **Estagiario de Onboarding** | Guia freela novo pelo cadastro, valida documentos, confirma dados bancarios |
+
+##### Como funciona tecnicamente
+- Cada "cargo IA" e um agente com prompt especializado + acesso a dados relevantes
+- Diretores: rodam 1x/dia (resumo diario, analise macro)
+- Analistas: rodam por evento (NF recebida, msg no WA, deadline proximo)
+- Estagiarios: rodam por trigger (novo cadastro, upload documento, etc.)
+- Todos reportam via WhatsApp e/ou notificacao no sistema
+- CEO ve "organograma IA" no dashboard: cada agente com status verde/amarelo/vermelho
+- **Custo estimado:** Groq free tier + Llama 3.3 70B cobre 90% dos agentes
+
+##### A visao revolucionaria
+Uma produtora de 1 pessoa (CEO) com o EllaOS tem, na pratica, uma equipe de ~25 "funcionarios IA" trabalhando 24/7. Isso permite:
+- CEO solo gerenciar 10+ jobs simultaneamente
+- Atendimento gerenciar 5+ clientes com qualidade
+- Zero informacao perdida (IA registra tudo)
+- Decisoes baseadas em dados, nao intuicao
+- **Nenhum sistema no mundo oferece isso para producao audiovisual**
+
+#### H1-03: App Mobile para Set
+- Logger registra cartoes/backups com foto
+- Diario de set: fotos, notas, ocorrencias
+- Atendimento registra decisoes do cliente em tempo real
+- Funciona offline (set rural) + sync quando volta
+
+#### H1-04: Portal do Cliente com Status em Tempo Real
+- Link magico (sem senha), ve status "etapa 5/12"
+- Barra de progresso visual
+- Historico de versoes + aprovacoes
+- Profissionalismo que impressiona o cliente
+
+### Horizonte 2: Network Effects (12-24 meses)
+
+#### H2-01: Marketplace de Talentos
+- Produtoras buscam freelas com rating de OUTRAS produtoras
+- Freela tem perfil publico com portfolio + avaliacoes
+- Network effect: mais produtoras = mais dados = mais valor
+- Receita: % sobre contratacao (R$300k-1M ARR)
+
+#### H2-02: Seguro de Producao Inteligente
+- EllaOS tem dados pra precificar risco melhor que qualquer seguradora
+- Cotacao instantanea dentro do sistema
+- Receita: comissao por apolice (R$200k-800k ARR)
+
+#### H2-03: Banco de Locacoes + Fornecedores Compartilhado
+- Avaliacao por produtoras (tipo Google Maps reviews)
+- Busca: "estudio ciclorama SP" → ranking custo-beneficio
+- Receita: freemium (R$100k-400k ARR)
+
+### Horizonte 3: Plataforma (24+ meses)
+
+#### H3-01: EllaOS Academy
+- Micro-cursos: "Como precificar", "Como controlar verba a vista"
+- Templates prontos: Carta Orcamento, Contrato, OD, Briefing
+- Comunidade de produtores
+
+#### H3-02: Integracao Governo (ANCINE, Rouanet, ISS)
+- Relatorios formatados pra ANCINE
+- Calculo ISS por municipio
+- Tracking Lei Rouanet / Lei do Audiovisual
+
+#### H3-03: Carbon Footprint (Pegada de Carbono)
+- Calculo automatico: km viajados, energia, materiais
+- Certificado "producao sustentavel"
+- Diferencial em licitacoes internacionais
+
+#### H3-04: Co-Producao entre Produtoras
+- Convida outro tenant pra co-produzir
+- Divide custos, equipe, entregaveis
+- Cada produtora ve so sua parte financeira
+
+#### H3-05: API Aberta + Ecossistema
+- API publica pra integradores
+- Integracoes: Frame.io, Drive, Vimeo, YouTube, Instagram
+- Parceiros constroem em cima do EllaOS
+
+### Mapa Completo de Receita (Projecao)
+```
+HOJE (Onda 0-2)
+  └── Assinatura SaaS ────────────────────── R$840k - R$4.2M ARR
+
+HORIZONTE 1 (6-12 meses)
+  ├── Antecipacao recebiveis (% taxa) ────── R$500k - R$2M ARR
+  ├── IA Premium (agentes avancados) ─────── R$200k - R$800k ARR
+  └── App mobile (incluso Pro/Enterprise)
+
+HORIZONTE 2 (12-24 meses)
+  ├── Marketplace talentos (% contratacao) ─ R$300k - R$1M ARR
+  ├── Seguro producao (comissao) ─────────── R$200k - R$800k ARR
+  └── Banco locacoes (freemium) ──────────── R$100k - R$400k ARR
+
+HORIZONTE 3 (24+ meses)
+  ├── Academy (cursos + templates) ────────── R$200k - R$600k ARR
+  ├── ANCINE/Rouanet compliance ──────────── R$300k - R$1M ARR
+  └── API/Plataforma (partnership) ────────── R$100k - R$500k ARR
+
+POTENCIAL TOTAL: R$2.7M - R$11.3M+ ARR
+```
+
+---
+
+*Visao de futuro registrada em 2026-03-07. A hierarquia completa de IA por departamento e a visao central do CEO para o EllaOS — nao apenas um SaaS, mas uma empresa de IA que funciona como equipe virtual completa.*
