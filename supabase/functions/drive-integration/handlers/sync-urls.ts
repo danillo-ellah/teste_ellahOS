@@ -1,13 +1,39 @@
 import { getServiceClient } from '../../_shared/supabase-client.ts';
 import { success, error } from '../../_shared/response.ts';
 
+// Comparacao timing-safe para evitar timing attacks em verificacao de secrets
+function timingSafeEqual(a: string, b: string): boolean {
+  const encoder = new TextEncoder();
+  const aBuf = encoder.encode(a);
+  const bBuf = encoder.encode(b);
+  if (aBuf.byteLength !== bBuf.byteLength) return false;
+  let diff = 0;
+  for (let i = 0; i < aBuf.byteLength; i++) {
+    diff |= aBuf[i] ^ bBuf[i];
+  }
+  return diff === 0;
+}
+
 // POST /drive-integration/:jobId/sync-urls
 // Callback do n8n para atualizar URLs das pastas Drive
-// Autenticacao: X-Webhook-Secret (HMAC opcional — se nao configurado, aceita qualquer request)
+// Autenticacao: X-Webhook-Secret obrigatorio (fail-closed — sem secret configurado, rejeita tudo)
 export async function syncUrls(
   req: Request,
   jobId: string,
 ): Promise<Response> {
+  // Verificar autenticacao via X-Webhook-Secret antes de qualquer operacao
+  const expectedSecret = Deno.env.get('DRIVE_SYNC_WEBHOOK_SECRET');
+  if (!expectedSecret) {
+    console.error('[sync-urls] DRIVE_SYNC_WEBHOOK_SECRET nao configurado — rejeitando request');
+    return error('CONFIG_ERROR', 'Webhook secret nao configurado', 503);
+  }
+
+  const providedSecret = req.headers.get('X-Webhook-Secret');
+  if (!providedSecret || !timingSafeEqual(providedSecret, expectedSecret)) {
+    console.warn(`[sync-urls] Tentativa com secret invalido — jobId=${jobId} ip=${req.headers.get('x-forwarded-for') ?? 'desconhecido'}`);
+    return error('UNAUTHORIZED', 'Secret invalido ou ausente', 401);
+  }
+
   const serviceClient = getServiceClient();
 
   // Validar metodo
