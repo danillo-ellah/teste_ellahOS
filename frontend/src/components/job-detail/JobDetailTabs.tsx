@@ -21,6 +21,7 @@ import {
   Timer,
   ClipboardList,
   GanttChartSquare,
+  Headset,
 } from 'lucide-react'
 import {
   Tabs,
@@ -50,6 +51,7 @@ import { TabStoryboard } from '@/components/job-detail/tabs/TabStoryboard'
 import { TabCast } from '@/components/job-detail/tabs/TabCast'
 import { TabOrdemDoDia } from '@/components/job-detail/tabs/TabOrdemDoDia'
 import { TabCronograma } from '@/components/job-detail/tabs/TabCronograma'
+import { TabAtendimento } from '@/components/job-detail/tabs/TabAtendimento'
 import type { JobDetail } from '@/types/jobs'
 import { useJobAccess } from '@/hooks/useJobAccess'
 
@@ -111,6 +113,7 @@ const ICON_MAP: Record<string, typeof FileText> = {
   Timer,
   ClipboardList,
   GanttChartSquare,
+  Headset,
 }
 
 interface JobDetailTabsProps {
@@ -324,6 +327,11 @@ export function JobDetailTabs({ job }: JobDetailTabsProps) {
         {/* Tab: Aprovacoes */}
         <TabsContent value="aprovacoes" className="mt-6">
           <TabErrorBoundary tabName="aprovacoes"><TabAprovacoes job={job} /></TabErrorBoundary>
+        </TabsContent>
+
+        {/* Tab: Atendimento */}
+        <TabsContent value="atendimento" className="mt-6">
+          <TabErrorBoundary tabName="atendimento"><TabAtendimento job={job} /></TabErrorBoundary>
         </TabsContent>
 
         {/* Tab: Contratos */}

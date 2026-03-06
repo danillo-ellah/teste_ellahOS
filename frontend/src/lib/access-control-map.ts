@@ -71,7 +71,7 @@ const ALL_TABS_VE: TabMap = {
   'storyboard': 'view_edit', 'elenco': 'view_edit', 'ordem-do-dia': 'view_edit',
   'diario': 'view_edit', 'figurino': 'view_edit', 'financeiro': 'view_edit',
   'cronograma': 'view_edit', 'aprovacoes': 'view_edit', 'contratos': 'view_edit',
-  'claquete': 'view_edit', 'horas-extras': 'view_edit',
+  'claquete': 'view_edit', 'atendimento': 'view_edit', 'horas-extras': 'view_edit',
   'historico': 'view_edit', 'portal': 'view_edit',
 }
 
@@ -84,14 +84,14 @@ const ACCESS_MAP: Record<RoleGroup, TabMap> = {
     'entregaveis': 'view', 'diarias': 'view', 'locacoes': 'view',
     'ordem-do-dia': 'view', 'diario': 'view',
     'financeiro': 'view_restricted', 'cronograma': 'view',
-    'aprovacoes': 'view', 'claquete': 'view', 'horas-extras': 'view',
+    'aprovacoes': 'view', 'claquete': 'view', 'atendimento': 'view', 'horas-extras': 'view',
   },
 
   coord: {
     'geral': 'view', 'equipe': 'view', 'entregaveis': 'view',
     'diarias': 'view', 'locacoes': 'view', 'ordem-do-dia': 'view',
     'diario': 'view', 'cronograma': 'view', 'aprovacoes': 'view',
-    'claquete': 'view', 'horas-extras': 'view',
+    'claquete': 'view', 'atendimento': 'view', 'horas-extras': 'view',
   },
 
   fin: {
@@ -109,6 +109,7 @@ const ACCESS_MAP: Record<RoleGroup, TabMap> = {
     'geral': 'view', 'equipe': 'view_restricted', 'entregaveis': 'view',
     'ppm': 'view', 'cronograma': 'view', 'aprovacoes': 'view',
     'claquete': 'view', 'financeiro': 'view_restricted',
+    'atendimento': 'view_edit', // Aba principal do atendimento
     'portal': 'view_edit', // PO-07: pode criar sessoes
   },
 
@@ -209,7 +210,7 @@ export function getVisibleTabs(
     'geral', 'equipe', 'entregaveis', 'ppm', 'diarias', 'locacoes',
     'storyboard', 'elenco', 'ordem-do-dia', 'diario', 'figurino',
     'financeiro', 'cronograma', 'aprovacoes', 'contratos', 'claquete',
-    'horas-extras', 'historico', 'portal',
+    'atendimento', 'horas-extras', 'historico', 'portal',
   ]
 
   return allTabs.filter(

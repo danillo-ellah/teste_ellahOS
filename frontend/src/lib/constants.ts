@@ -197,6 +197,7 @@ export type JobDetailTabId =
   | 'ordem-do-dia'
   | 'diario'
   | 'figurino'
+  | 'atendimento'
   | 'horas-extras'
   | 'historico'
   | 'portal'
@@ -541,6 +542,7 @@ export const JOB_TAB_GROUPS: JobTabGroup[] = [
       { id: 'aprovacoes', label: 'Aprovacoes', icon: 'CheckSquare' },
       { id: 'contratos', label: 'Contratos', icon: 'PenLine' },
       { id: 'claquete', label: 'Claquete', icon: 'Clapperboard' },
+      { id: 'atendimento', label: 'Atendimento', icon: 'Headset' },
       { id: 'horas-extras', label: 'Horas Extras', icon: 'Timer' },
     ],
   },
