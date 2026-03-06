@@ -46,6 +46,9 @@ export interface ContractData {
   // Datas
   shooting_dates: string[]; // array de datas DD/MM/YYYY
 
+  // Pagamento
+  is_public_client: boolean; // true = governo/publico (60-70 dias), false = privado (45 dias)
+
   // Metadata
   contract_date: string; // data do contrato DD/MM/YYYY
 }
@@ -216,11 +219,28 @@ function buildClauses(data: ContractData): string {
     },
     {
       titulo: 'CLÁUSULA 4 — CONDIÇÕES DE PAGAMENTO',
-      corpo: `
+      corpo: data.is_public_client
+        ? `
         O pagamento será realizado por meio de PIX, transferência bancária ou outro meio acordado
-        entre as partes.<br /><br />
-        <strong>§1º</strong> O pagamento será realizado na data programada pela PRODUÇÃO para o
-        respectivo projeto, conforme cronograma financeiro interno da produtora.<br />
+        entre as partes, em até <strong>60 (sessenta) a 70 (setenta) dias corridos</strong> após a
+        conclusão dos serviços, considerando que o presente projeto envolve cliente público, cujo
+        cronograma de repasse está sujeito a prazos administrativos específicos.<br /><br />
+        <strong>§1º</strong> O pagamento será realizado conforme cronograma financeiro interno da
+        produtora, condicionado ao recebimento do cliente final.<br />
+        <strong>§2º</strong> A data programada poderá variar conforme: fluxo financeiro da produção,
+        recebimento do cliente, prazos de licitação ou empenho, organização administrativa da
+        produtora, cronograma financeiro do projeto.<br />
+        <strong>§3º</strong> A data de pagamento poderá ser comunicada ao PROFISSIONAL por e-mail,
+        mensagem formal da produção ou sistema de gestão da produtora.<br />
+        <strong>§4º</strong> Eventuais ajustes na programação financeira poderão ocorrer por razões
+        operacionais da produção.
+      `
+        : `
+        O pagamento será realizado por meio de PIX, transferência bancária ou outro meio acordado
+        entre as partes, em até <strong>45 (quarenta e cinco) dias corridos</strong> após a conclusão
+        dos serviços.<br /><br />
+        <strong>§1º</strong> O pagamento será realizado conforme cronograma financeiro interno da
+        produtora.<br />
         <strong>§2º</strong> A data programada poderá variar conforme: fluxo financeiro da produção,
         recebimento do cliente, organização administrativa da produtora, cronograma financeiro do
         projeto.<br />

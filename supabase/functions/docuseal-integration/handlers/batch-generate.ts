@@ -120,7 +120,7 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
   // 1. Verificar que o job existe e pertence ao tenant, buscando dados extras
   const { data: job, error: jobError } = await supabase
     .from('jobs')
-    .select('id, code, title, tenant_id, client_id, agency_id')
+    .select('id, code, title, tenant_id, client_id, agency_id, segment')
     .eq('id', input.job_id)
     .eq('tenant_id', auth.tenantId)
     .is('deleted_at', null)
@@ -133,7 +133,7 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
   // 2. Buscar dados do tenant para contratante
   const { data: tenant, error: tenantError } = await serviceClient
     .from('tenants')
-    .select('id, name, settings')
+    .select('id, name, cnpj, settings')
     .eq('id', auth.tenantId)
     .single();
 
@@ -144,7 +144,7 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
   // Extrair dados da empresa do tenant.settings
   const tenantSettings = (tenant?.settings ?? {}) as Record<string, string | null>;
   const companyName: string = (tenant?.name as string) ?? 'Ellah Filmes';
-  const companyCnpj: string = (tenantSettings['company_cnpj'] as string) ?? '';
+  const companyCnpj: string = (tenant?.cnpj as string) ?? (tenantSettings['company_cnpj'] as string) ?? '';
   const companyAddress: string = (tenantSettings['company_address'] as string) ?? 'São Paulo, SP';
   const companyCity: string = (tenantSettings['company_city'] as string) ?? 'São Paulo';
   // Email de quem assina pela empresa — config no tenant ou fallback do usuario logado
@@ -158,7 +158,7 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
   // 3. Buscar cliente e agencia do job (queries paralelas)
   const [clientResult, agencyResult, shootingDatesResult] = await Promise.all([
     job.client_id
-      ? supabase.from('clients').select('name').eq('id', job.client_id).single()
+      ? supabase.from('clients').select('name, segment').eq('id', job.client_id).single()
       : Promise.resolve({ data: null, error: null }),
     job.agency_id
       ? supabase.from('agencies').select('name').eq('id', job.agency_id).single()
@@ -172,8 +172,15 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
       .order('shooting_date', { ascending: true }),
   ]);
 
-  const clientName: string | null = (clientResult.data as { name: string } | null)?.name ?? null;
+  const clientData = clientResult.data as { name: string; segment: string | null } | null;
+  const clientName: string | null = clientData?.name ?? null;
   const agencyName: string | null = (agencyResult.data as { name: string } | null)?.name ?? null;
+
+  // Determinar se e cliente publico: segmento 'governo' no job ou no cliente
+  const PUBLIC_SEGMENTS = ['governo'];
+  const jobSegment = (job as { segment?: string }).segment ?? null;
+  const clientSegment = clientData?.segment ?? null;
+  const isPublicClient = PUBLIC_SEGMENTS.includes(jobSegment ?? '') || PUBLIC_SEGMENTS.includes(clientSegment ?? '');
   const shootingDates: string[] = (
     (shootingDatesResult.data ?? []) as Array<{ shooting_date: string }>
   ).map((d) => isoToBR(d.shooting_date));
@@ -360,6 +367,9 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
 
       // Datas
       shooting_dates: shootingDates,
+
+      // Pagamento — cliente publico (governo): 60-70 dias, privado: 45 dias
+      is_public_client: isPublicClient,
 
       // Metadata
       contract_date: todayBR(),
