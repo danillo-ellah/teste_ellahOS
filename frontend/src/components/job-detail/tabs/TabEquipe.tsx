@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { Plus, MoreHorizontal, Pencil, Trash2, Users, Star, CalendarDays, FileSignature } from 'lucide-react'
+import { Plus, MoreHorizontal, Pencil, Trash2, Users, Star, CalendarDays, FileSignature, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -24,6 +24,7 @@ import { ConfirmDialog } from '@/components/jobs/ConfirmDialog'
 import { EmptyTabState } from '@/components/shared/EmptyTabState'
 import { TeamMemberDialog } from './TeamMemberDialog'
 import { BatchContractDialog } from './BatchContractDialog'
+import { AccessOverrideDialog } from './AccessOverrideDialog'
 import {
   useJobTeam,
   useAddTeamMember,
@@ -52,10 +53,13 @@ export function TabEquipe({ job }: TabEquipeProps) {
   const [editingMember, setEditingMember] = useState<JobTeamMember | undefined>()
   const [deletingMember, setDeletingMember] = useState<JobTeamMember | null>(null)
   const [batchContractOpen, setBatchContractOpen] = useState(false)
+  const [overrideMember, setOverrideMember] = useState<JobTeamMember | null>(null)
 
   // Roles que podem gerar contratos em lote (mesmos do backend)
   const canGenerateContracts = userRole !== null && APPROVAL_PDF_ROLES.includes(userRole)
   const canViewFee = userRole !== null && FEE_VIEW_ROLES.includes(userRole)
+  // PE/Admin podem configurar overrides de acesso
+  const canManageAccess = userRole === 'admin' || userRole === 'ceo' || userRole === 'produtor_executivo'
 
   function handleOpenAdd() {
     setEditingMember(undefined)
@@ -273,6 +277,17 @@ export function TabEquipe({ job }: TabEquipeProps) {
                         <Pencil className="size-4" />
                         Editar
                       </DropdownMenuItem>
+                      {canManageAccess && (
+                        <DropdownMenuItem onClick={() => setOverrideMember(m)}>
+                          <Shield className="size-4" />
+                          Permissoes
+                          {m.access_override && (
+                            <Badge variant="secondary" className="ml-auto text-[10px] px-1 py-0">
+                              {Object.keys(m.access_override.tabs).length}
+                            </Badge>
+                          )}
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem
                         onClick={() => setDeletingMember(m)}
                         className="text-destructive focus:text-destructive"
@@ -319,6 +334,18 @@ export function TabEquipe({ job }: TabEquipeProps) {
         onOpenChange={setBatchContractOpen}
         jobId={job.id}
       />
+
+      {/* Dialog de override de permissoes (PE/Admin) */}
+      {overrideMember && (
+        <AccessOverrideDialog
+          open={overrideMember !== null}
+          onOpenChange={(open) => {
+            if (!open) setOverrideMember(null)
+          }}
+          member={overrideMember}
+          jobId={job.id}
+        />
+      )}
     </>
   )
 }

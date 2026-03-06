@@ -177,6 +177,7 @@ export async function addMember(
     notes: member.notes,
     allocation_start: member.allocation_start ?? null,
     allocation_end: member.allocation_end ?? null,
+    access_override: member.access_override ?? null,
     created_at: member.created_at,
   };
 

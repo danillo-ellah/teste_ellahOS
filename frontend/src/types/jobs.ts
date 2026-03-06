@@ -189,6 +189,11 @@ export interface JobDetail extends Job {
   sub_jobs?: Array<{ id: string; job_code: string; title: string }>
 }
 
+// Override de acesso por aba (RBAC Fase 3)
+export interface AccessOverride {
+  tabs: Record<string, 'view_edit' | 'view' | 'view_restricted' | 'hidden'>
+}
+
 export interface JobTeamMember {
   id: string
   job_id: string
@@ -201,6 +206,7 @@ export interface JobTeamMember {
   notes: string | null
   allocation_start: string | null
   allocation_end: string | null
+  access_override: AccessOverride | null // RBAC Fase 3: PE/Admin configura
   created_at: string
   updated_at: string
 }

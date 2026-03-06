@@ -33,6 +33,7 @@ export async function listTeam(
     notes: m.notes,
     allocation_start: m.allocation_start ?? null,
     allocation_end: m.allocation_end ?? null,
+    access_override: m.access_override ?? null,
     created_at: m.created_at,
     updated_at: m.updated_at,
   }));

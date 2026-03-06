@@ -172,6 +172,11 @@ export const CreateTeamMemberSchema = z.object({
   allocation_end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
 });
 
+// Schema para access_override JSONB (RBAC Fase 3)
+const AccessOverrideSchema = z.object({
+  tabs: z.record(z.enum(['view_edit', 'view', 'view_restricted', 'hidden'])),
+}).nullable();
+
 export const UpdateTeamMemberSchema = z
   .object({
     role: z.enum(TEAM_ROLES),
@@ -181,6 +186,7 @@ export const UpdateTeamMemberSchema = z
     notes: z.string().nullable(),
     allocation_start: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
     allocation_end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+    access_override: AccessOverrideSchema,
   })
   .partial()
   .refine((data) => Object.keys(data).length > 0, {

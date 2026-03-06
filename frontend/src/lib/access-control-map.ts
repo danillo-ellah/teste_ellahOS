@@ -174,12 +174,16 @@ export function getTeamRoleGroup(teamRole: string): RoleGroup | null {
   return TEAM_ROLE_TO_GROUP[teamRole] ?? null
 }
 
-/** Acesso efetivo para uma aba = MAX(user_role, team_role) */
+/** Acesso efetivo para uma aba = override ?? MAX(user_role, team_role) */
 export function resolveTabAccess(
   userRole: UserRole,
   teamRole: string | null,
   tabId: JobDetailTabId,
+  override?: Record<string, TabAccessLevel> | null,
 ): TabAccessLevel {
+  // Override por job tem prioridade absoluta (PE/Admin configurou)
+  if (override?.[tabId]) return override[tabId]
+
   const userGroup = USER_ROLE_TO_GROUP[userRole]
   const userAccess = ACCESS_MAP[userGroup][tabId] ?? 'hidden'
 
@@ -199,6 +203,7 @@ export function resolveTabAccess(
 export function getVisibleTabs(
   userRole: UserRole,
   teamRole: string | null,
+  override?: Record<string, TabAccessLevel> | null,
 ): JobDetailTabId[] {
   const allTabs: JobDetailTabId[] = [
     'geral', 'equipe', 'entregaveis', 'ppm', 'diarias', 'locacoes',
@@ -208,7 +213,7 @@ export function getVisibleTabs(
   ]
 
   return allTabs.filter(
-    (tab) => resolveTabAccess(userRole, teamRole, tab) !== 'hidden',
+    (tab) => resolveTabAccess(userRole, teamRole, tab, override) !== 'hidden',
   )
 }
 
@@ -217,8 +222,9 @@ export function canEditTab(
   userRole: UserRole,
   teamRole: string | null,
   tabId: JobDetailTabId,
+  override?: Record<string, TabAccessLevel> | null,
 ): boolean {
-  return resolveTabAccess(userRole, teamRole, tabId) === 'view_edit'
+  return resolveTabAccess(userRole, teamRole, tabId, override) === 'view_edit'
 }
 
 /** Roles que veem TODOS os jobs sem precisar estar no job_team (PO-04: CCO e socia) */

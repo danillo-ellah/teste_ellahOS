@@ -66,6 +66,7 @@ interface UpdateTeamMemberParams {
   notes?: string | null
   allocation_start?: string | null
   allocation_end?: string | null
+  access_override?: { tabs: Record<string, string> } | null
 }
 
 export function useUpdateTeamMember() {

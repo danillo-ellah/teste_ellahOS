@@ -70,18 +70,20 @@ export function useJobAccess(job: JobDetail) {
     return () => { cancelled = true }
   }, [])
 
-  // Encontra o team_role do usuario neste job
-  const teamRole = useMemo(() => {
+  // Encontra o team member do usuario neste job
+  const teamMember = useMemo(() => {
     if (personId == null || !job.team) return null
-    const member = job.team.find((m) => m.person_id === personId)
-    return member?.role ?? null
+    return job.team.find((m) => m.person_id === personId) ?? null
   }, [personId, job.team])
+
+  const teamRole = teamMember?.role ?? null
+  const overrideTabs = teamMember?.access_override?.tabs ?? null
 
   // Calcula acesso efetivo
   const visibleTabs = useMemo(() => {
     if (!userRole) return [] as JobDetailTabId[]
-    return getVisibleTabs(userRole, teamRole)
-  }, [userRole, teamRole])
+    return getVisibleTabs(userRole, teamRole, overrideTabs)
+  }, [userRole, teamRole, overrideTabs])
 
   const isLoading = isRoleLoading || isPersonLoading
 
@@ -90,17 +92,18 @@ export function useJobAccess(job: JobDetail) {
     userRole,
     teamRole,
     visibleTabs,
+    hasOverride: overrideTabs !== null,
     canViewTab(tabId: JobDetailTabId): boolean {
       if (!userRole) return false
-      return resolveTabAccess(userRole, teamRole, tabId) !== 'hidden'
+      return resolveTabAccess(userRole, teamRole, tabId, overrideTabs) !== 'hidden'
     },
     canEditTab(tabId: JobDetailTabId): boolean {
       if (!userRole) return false
-      return canEditTab(userRole, teamRole, tabId)
+      return canEditTab(userRole, teamRole, tabId, overrideTabs)
     },
     getTabAccess(tabId: JobDetailTabId): TabAccessLevel {
       if (!userRole) return 'hidden'
-      return resolveTabAccess(userRole, teamRole, tabId)
+      return resolveTabAccess(userRole, teamRole, tabId, overrideTabs)
     },
   }
 }

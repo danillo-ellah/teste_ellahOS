@@ -54,6 +54,7 @@ export async function updateMember(
   if (validated.notes !== undefined) dbPayload.notes = validated.notes;
   if (validated.allocation_start !== undefined) dbPayload.allocation_start = validated.allocation_start;
   if (validated.allocation_end !== undefined) dbPayload.allocation_end = validated.allocation_end;
+  if (validated.access_override !== undefined) dbPayload.access_override = validated.access_override;
 
   // 5. Executar update
   const { data: updated, error: updateError } = await supabase
@@ -166,6 +167,7 @@ export async function updateMember(
     notes: updated.notes,
     allocation_start: updated.allocation_start ?? null,
     allocation_end: updated.allocation_end ?? null,
+    access_override: updated.access_override ?? null,
     updated_at: updated.updated_at,
   };
 
