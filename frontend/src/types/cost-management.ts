@@ -183,6 +183,8 @@ export interface CostItemFilters {
   search?: string
   payment_due_date_gte?: string
   payment_due_date_lte?: string
+  period_month_from?: string
+  period_month_to?: string
   page?: number
   per_page?: number
   sort_by?: string
@@ -204,6 +206,7 @@ export interface CreateCostItemPayload {
   payment_due_date?: string
   payment_method?: PaymentMethod
   vendor_id?: string
+  item_status?: ItemStatus
   notes?: string
 }
 

@@ -22,6 +22,8 @@ function filtersToParams(filters: CostItemFilters): Record<string, string> {
   if (filters.search?.trim()) params.search = filters.search.trim()
   if (filters.payment_due_date_gte) params.payment_due_date_gte = filters.payment_due_date_gte
   if (filters.payment_due_date_lte) params.payment_due_date_lte = filters.payment_due_date_lte
+  if (filters.period_month_from) params.period_month_from = filters.period_month_from
+  if (filters.period_month_to) params.period_month_to = filters.period_month_to
   if (filters.page !== undefined) params.page = String(filters.page)
   if (filters.per_page !== undefined) params.per_page = String(filters.per_page)
   if (filters.sort_by) params.sort_by = filters.sort_by
@@ -35,7 +37,7 @@ export function useCostItems(filters: CostItemFilters = {}) {
     queryKey: costItemKeys.list(params),
     queryFn: () => apiGet<CostItem[]>('cost-items', params),
     staleTime: 30_000,
-    enabled: !!filters.job_id || !!filters.payment_due_date_gte,
+    enabled: !!filters.job_id || !!filters.payment_due_date_gte || !!filters.period_month_from,
   })
 
   return {
