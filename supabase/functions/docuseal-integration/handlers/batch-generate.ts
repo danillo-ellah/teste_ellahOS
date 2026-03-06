@@ -26,6 +26,11 @@ const BatchGenerateSchema = z.object({
     .array(z.string().uuid('cada member_id deve ser UUID valido'))
     .min(1, 'Pelo menos um membro deve ser selecionado')
     .max(50, 'Maximo de 50 membros por lote'),
+  payment_deadline_days: z
+    .number()
+    .int('Prazo deve ser numero inteiro')
+    .min(1, 'Prazo minimo de 1 dia')
+    .max(365, 'Prazo maximo de 365 dias'),
 });
 
 type BatchGenerateInput = z.infer<typeof BatchGenerateSchema>;
@@ -120,7 +125,7 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
   // 1. Verificar que o job existe e pertence ao tenant, buscando dados extras
   const { data: job, error: jobError } = await supabase
     .from('jobs')
-    .select('id, code, title, tenant_id, client_id, agency_id, segment')
+    .select('id, code, title, tenant_id, client_id, agency_id')
     .eq('id', input.job_id)
     .eq('tenant_id', auth.tenantId)
     .is('deleted_at', null)
@@ -158,7 +163,7 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
   // 3. Buscar cliente e agencia do job (queries paralelas)
   const [clientResult, agencyResult, shootingDatesResult] = await Promise.all([
     job.client_id
-      ? supabase.from('clients').select('name, segment').eq('id', job.client_id).single()
+      ? supabase.from('clients').select('name').eq('id', job.client_id).single()
       : Promise.resolve({ data: null, error: null }),
     job.agency_id
       ? supabase.from('agencies').select('name').eq('id', job.agency_id).single()
@@ -172,15 +177,8 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
       .order('shooting_date', { ascending: true }),
   ]);
 
-  const clientData = clientResult.data as { name: string; segment: string | null } | null;
-  const clientName: string | null = clientData?.name ?? null;
+  const clientName: string | null = (clientResult.data as { name: string } | null)?.name ?? null;
   const agencyName: string | null = (agencyResult.data as { name: string } | null)?.name ?? null;
-
-  // Determinar se e cliente publico: segmento 'governo' no job ou no cliente
-  const PUBLIC_SEGMENTS = ['governo'];
-  const jobSegment = (job as { segment?: string }).segment ?? null;
-  const clientSegment = clientData?.segment ?? null;
-  const isPublicClient = PUBLIC_SEGMENTS.includes(jobSegment ?? '') || PUBLIC_SEGMENTS.includes(clientSegment ?? '');
   const shootingDates: string[] = (
     (shootingDatesResult.data ?? []) as Array<{ shooting_date: string }>
   ).map((d) => isoToBR(d.shooting_date));
@@ -368,8 +366,8 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
       // Datas
       shooting_dates: shootingDates,
 
-      // Pagamento — cliente publico (governo): 60-70 dias, privado: 45 dias
-      is_public_client: isPublicClient,
+      // Prazo de pagamento informado pelo usuario na geracao do contrato
+      payment_deadline_days: input.payment_deadline_days,
 
       // Metadata
       contract_date: todayBR(),
@@ -447,6 +445,7 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
         job_code: job.code,
         job_title: job.title,
         rate: member.rate,
+        payment_deadline_days: input.payment_deadline_days,
         shooting_dates: shootingDates,
       },
       signed_pdf_url: null,

@@ -55,7 +55,7 @@ function centenasToWords(n: number): string {
 }
 
 // Converte inteiro >= 0 em texto sem unidade monetaria
-function intToWords(n: number): string {
+export function intToWords(n: number): string {
   if (n === 0) return 'zero';
 
   const milhoes = Math.floor(n / 1_000_000);

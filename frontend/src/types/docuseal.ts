@@ -87,6 +87,8 @@ export interface BatchGeneratePayload {
   job_id: string
   template_type: ContractTemplateType
   member_ids: string[]
+  /** Prazo de pagamento em dias corridos (ex: 30, 45, 60, 70) */
+  payment_deadline_days: number
 }
 
 // Resposta de POST /docuseal-integration/batch-generate

@@ -12,6 +12,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -23,11 +24,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useJobTeam } from '@/hooks/useJobTeam'
-import { useDocuSealSubmissions, useDocuSealTemplates, useBatchGenerateContracts } from '@/hooks/useDocuSealSubmissions'
+import { useDocuSealSubmissions, useBatchGenerateContracts } from '@/hooks/useDocuSealSubmissions'
 import { ApiRequestError } from '@/lib/api'
 import { TEAM_ROLE_LABELS } from '@/lib/constants'
 import type { JobTeamMember } from '@/types/jobs'
-import type { ContractTemplateType, DocuSealTemplate } from '@/types/docuseal'
+import type { ContractTemplateType } from '@/types/docuseal'
 
 // Labels pt-BR para tipos de template
 const TEMPLATE_TYPE_LABELS: Record<ContractTemplateType, string> = {
@@ -35,6 +36,9 @@ const TEMPLATE_TYPE_LABELS: Record<ContractTemplateType, string> = {
   tecnico: 'Equipe Tecnica',
   pj: 'Pessoa Juridica (PJ)',
 }
+
+// Opcoes rapidas de prazo de pagamento
+const PAYMENT_DEADLINE_PRESETS = [30, 45, 60, 70] as const
 
 interface BatchContractDialogProps {
   open: boolean
@@ -49,39 +53,30 @@ export function BatchContractDialog({
 }: BatchContractDialogProps) {
   const { data: teamMembers, isLoading: loadingTeam } = useJobTeam(jobId)
   const { data: existingSubmissions, isLoading: loadingSubmissions } = useDocuSealSubmissions(jobId)
-  const { data: templatesData, isLoading: loadingTemplates, isError: templatesError } = useDocuSealTemplates()
   const { mutateAsync: batchGenerate, isPending } = useBatchGenerateContracts()
 
-  // Tipo de template selecionado
+  // Tipo de contrato selecionado
   const [selectedType, setSelectedType] = useState<ContractTemplateType | ''>('')
-  // IDs dos membros do job_team selecionados (nao person_id)
+  // IDs dos membros do job_team selecionados
   const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set())
+  // Prazo de pagamento em dias corridos
+  const [paymentDays, setPaymentDays] = useState<string>('45')
 
-  // Template escolhido baseado no tipo selecionado
-  const selectedTemplate = useMemo<DocuSealTemplate | null>(() => {
-    if (!selectedType || !templatesData?.templates) return null
-    // Prefere template classificado com o tipo correto; fallback: primeiro da lista
-    return (
-      templatesData.templates.find((t) => t.type === selectedType) ?? null
-    )
-  }, [selectedType, templatesData])
-
-  // Status que indicam contrato ativo por template (bloqueiam novo envio)
+  // Status que indicam contrato ativo (bloqueiam novo envio)
   const activeStatuses = new Set(['pending', 'sent', 'opened', 'partially_signed', 'signed'])
 
-  // Membros elegíveis: sem contrato ativo no template selecionado
+  // Membros elegiveis: sem contrato ativo para este tipo de contrato
   const eligibleMembers = useMemo(() => {
     if (!teamMembers) return []
-    if (!existingSubmissions || !selectedTemplate) return teamMembers
+    if (!existingSubmissions || !selectedType) return teamMembers
 
-    // Person IDs com contrato ativo neste template especifico
+    // Person IDs com contrato ativo (qualquer template)
     const personIdsWithActiveContract = new Set(
       existingSubmissions
         .filter(
           (s) =>
             activeStatuses.has(s.docuseal_status) &&
-            s.person_id &&
-            s.docuseal_template_id === selectedTemplate.id,
+            s.person_id,
         )
         .map((s) => s.person_id as string),
     )
@@ -89,16 +84,7 @@ export function BatchContractDialog({
     return teamMembers.filter(
       (m) => !personIdsWithActiveContract.has(m.person_id),
     )
-  }, [teamMembers, existingSubmissions, selectedTemplate])
-
-  // Membros sem email (dados incompletos — nao podem receber contrato)
-  // Obs: person_name nao expoe email — o backend verifica isso. Aqui filtramos
-  // apenas para mostrar aviso visual; a validacao definitiva e no backend.
-  const membersWithoutData = useMemo(() => {
-    // Como o frontend nao tem acesso ao email da person diretamente via job_team,
-    // usamos a lista elegivel integralmente. O backend irá pular os sem email.
-    return []
-  }, [])
+  }, [teamMembers, existingSubmissions, selectedType])
 
   function toggleMember(memberId: string) {
     setSelectedMemberIds((prev) => {
@@ -129,8 +115,12 @@ export function BatchContractDialog({
   function handleClose() {
     setSelectedType('')
     setSelectedMemberIds(new Set())
+    setPaymentDays('45')
     onOpenChange(false)
   }
+
+  const parsedPaymentDays = parseInt(paymentDays, 10)
+  const isValidPaymentDays = !isNaN(parsedPaymentDays) && parsedPaymentDays >= 1 && parsedPaymentDays <= 365
 
   async function handleSubmit() {
     if (!selectedType) {
@@ -143,11 +133,17 @@ export function BatchContractDialog({
       return
     }
 
+    if (!isValidPaymentDays) {
+      toast.error('Informe um prazo de pagamento valido (1 a 365 dias)')
+      return
+    }
+
     try {
       await batchGenerate({
         job_id: jobId,
         template_type: selectedType,
         member_ids: Array.from(selectedMemberIds),
+        payment_deadline_days: parsedPaymentDays,
       })
       handleClose()
     } catch (err) {
@@ -165,60 +161,72 @@ export function BatchContractDialog({
         <DialogHeader>
           <DialogTitle>Gerar Contratos em Lote</DialogTitle>
           <DialogDescription>
-            Selecione o tipo de contrato e os membros da equipe para enviar contratos de assinatura digital via DocuSeal.
+            Selecione o tipo de contrato, o prazo de pagamento e os membros da equipe para enviar contratos de assinatura digital via DocuSeal.
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-5">
-          {/* Selecao de tipo de template */}
+          {/* Selecao de tipo de contrato */}
           <div>
             <Label htmlFor="template-type">
               Tipo de Contrato <span className="text-destructive">*</span>
             </Label>
-            {loadingTemplates ? (
-              <Skeleton className="h-9 w-full mt-1.5" />
-            ) : templatesError ? (
-              <div className="mt-1.5 flex items-center gap-2 text-sm text-destructive">
-                <AlertCircle className="size-4" />
-                <span>Falha ao carregar templates. Verifique a conexao com o DocuSeal.</span>
+            <Select value={selectedType} onValueChange={handleTypeChange}>
+              <SelectTrigger id="template-type" className="mt-1.5">
+                <SelectValue placeholder="Selecione o tipo de contrato" />
+              </SelectTrigger>
+              <SelectContent>
+                {(['elenco', 'tecnico', 'pj'] as const).map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {TEMPLATE_TYPE_LABELS[type]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Prazo de pagamento */}
+          <div>
+            <Label htmlFor="payment-days">
+              Prazo de Pagamento (dias corridos) <span className="text-destructive">*</span>
+            </Label>
+            <div className="flex items-center gap-2 mt-1.5">
+              <Input
+                id="payment-days"
+                type="number"
+                min={1}
+                max={365}
+                value={paymentDays}
+                onChange={(e) => setPaymentDays(e.target.value)}
+                className="w-24"
+                placeholder="45"
+              />
+              <span className="text-sm text-muted-foreground">dias</span>
+              <div className="flex gap-1 ml-auto">
+                {PAYMENT_DEADLINE_PRESETS.map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setPaymentDays(String(preset))}
+                    className={`px-2 py-1 text-xs rounded-md border transition-colors ${
+                      paymentDays === String(preset)
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-background text-muted-foreground border-border hover:bg-muted'
+                    }`}
+                  >
+                    {preset}d
+                  </button>
+                ))}
               </div>
-            ) : (
-              <Select value={selectedType} onValueChange={handleTypeChange}>
-                <SelectTrigger id="template-type" className="mt-1.5">
-                  <SelectValue placeholder="Selecione o tipo de contrato" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(['elenco', 'tecnico', 'pj'] as const).map((type) => {
-                    const hasTemplate = templatesData?.templates.some((t) => t.type === type)
-                    return (
-                      <SelectItem
-                        key={type}
-                        value={type}
-                        disabled={!hasTemplate}
-                      >
-                        {TEMPLATE_TYPE_LABELS[type]}
-                        {!hasTemplate && (
-                          <span className="ml-2 text-xs text-muted-foreground">(sem template)</span>
-                        )}
-                      </SelectItem>
-                    )
-                  })}
-                </SelectContent>
-              </Select>
-            )}
-            {selectedTemplate && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Template: <span className="font-medium">{selectedTemplate.name}</span> (ID: {selectedTemplate.id})
-              </p>
-            )}
-            {selectedType && !selectedTemplate && !loadingTemplates && (
+            </div>
+            {paymentDays && !isValidPaymentDays && (
               <p className="text-xs text-destructive mt-1">
-                Nenhum template encontrado para este tipo no DocuSeal. Configure um template com &quot;{selectedType}&quot; no nome.
+                Informe um valor entre 1 e 365 dias.
               </p>
             )}
           </div>
 
-          {/* Lista de membros elegíveis */}
+          {/* Lista de membros elegiveis */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <Label>Selecionar Membros</Label>
@@ -253,14 +261,14 @@ export function BatchContractDialog({
             ) : !selectedType ? (
               <div className="rounded-lg border border-border py-8 flex flex-col items-center justify-center gap-2 text-center">
                 <p className="text-sm text-muted-foreground">
-                  Selecione o tipo de contrato para ver os membros disponíveis.
+                  Selecione o tipo de contrato para ver os membros disponiveis.
                 </p>
               </div>
             ) : eligibleMembers.length === 0 ? (
               <div className="rounded-lg border border-border py-8 flex flex-col items-center justify-center gap-2 text-center">
                 <UserCheck className="size-8 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
-                  Todos os membros ja possuem contratos ativos para este tipo.
+                  Todos os membros ja possuem contratos ativos.
                 </p>
               </div>
             ) : (
@@ -281,16 +289,6 @@ export function BatchContractDialog({
                 {selectedCount} membro(s) selecionado(s)
               </p>
             )}
-
-            {/* Aviso sobre membros sem dados completos */}
-            {membersWithoutData.length > 0 && (
-              <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
-                <AlertCircle className="size-3.5 mt-0.5 shrink-0" />
-                <span>
-                  Membros sem email cadastrado nao podem receber contrato e serao ignorados automaticamente.
-                </span>
-              </div>
-            )}
           </div>
         </div>
 
@@ -304,7 +302,7 @@ export function BatchContractDialog({
               isPending ||
               !selectedType ||
               selectedCount === 0 ||
-              !selectedTemplate
+              !isValidPaymentDays
             }
           >
             {isPending ? (

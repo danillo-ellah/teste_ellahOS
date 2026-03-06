@@ -4,7 +4,7 @@
 // Inclui tags DocuSeal para campos de assinatura, texto e data
 // ========================================================
 
-import { numberToWordsBR, formatValueBR } from '../../_shared/number-to-words-br.ts';
+import { numberToWordsBR, formatValueBR, intToWords } from '../../_shared/number-to-words-br.ts';
 
 // ========================================================
 // Interface de dados de entrada
@@ -47,7 +47,7 @@ export interface ContractData {
   shooting_dates: string[]; // array de datas DD/MM/YYYY
 
   // Pagamento
-  is_public_client: boolean; // true = governo/publico (60-70 dias), false = privado (45 dias)
+  payment_deadline_days: number; // prazo em dias corridos para pagamento (ex: 30, 45, 60, 70)
 
   // Metadata
   contract_date: string; // data do contrato DD/MM/YYYY
@@ -219,26 +219,13 @@ function buildClauses(data: ContractData): string {
     },
     {
       titulo: 'CLÁUSULA 4 — CONDIÇÕES DE PAGAMENTO',
-      corpo: data.is_public_client
-        ? `
+      corpo: (() => {
+        const dias = data.payment_deadline_days;
+        const diasExtenso = intToWords(dias);
+        return `
         O pagamento será realizado por meio de PIX, transferência bancária ou outro meio acordado
-        entre as partes, em até <strong>60 (sessenta) a 70 (setenta) dias corridos</strong> após a
-        conclusão dos serviços, considerando que o presente projeto envolve cliente público, cujo
-        cronograma de repasse está sujeito a prazos administrativos específicos.<br /><br />
-        <strong>§1º</strong> O pagamento será realizado conforme cronograma financeiro interno da
-        produtora, condicionado ao recebimento do cliente final.<br />
-        <strong>§2º</strong> A data programada poderá variar conforme: fluxo financeiro da produção,
-        recebimento do cliente, prazos de licitação ou empenho, organização administrativa da
-        produtora, cronograma financeiro do projeto.<br />
-        <strong>§3º</strong> A data de pagamento poderá ser comunicada ao PROFISSIONAL por e-mail,
-        mensagem formal da produção ou sistema de gestão da produtora.<br />
-        <strong>§4º</strong> Eventuais ajustes na programação financeira poderão ocorrer por razões
-        operacionais da produção.
-      `
-        : `
-        O pagamento será realizado por meio de PIX, transferência bancária ou outro meio acordado
-        entre as partes, em até <strong>45 (quarenta e cinco) dias corridos</strong> após a conclusão
-        dos serviços.<br /><br />
+        entre as partes, em até <strong>${dias} (${esc(diasExtenso)}) dias corridos</strong> após a
+        conclusão dos serviços.<br /><br />
         <strong>§1º</strong> O pagamento será realizado conforme cronograma financeiro interno da
         produtora.<br />
         <strong>§2º</strong> A data programada poderá variar conforme: fluxo financeiro da produção,
@@ -248,7 +235,8 @@ function buildClauses(data: ContractData): string {
         mensagem formal da produção ou sistema de gestão da produtora.<br />
         <strong>§4º</strong> Eventuais ajustes na programação financeira poderão ocorrer por razões
         operacionais da produção.
-      `,
+      `;
+      })(),
     },
     {
       titulo: 'CLÁUSULA 5 — EMISSÃO DE NOTA FISCAL (SE APLICÁVEL)',
