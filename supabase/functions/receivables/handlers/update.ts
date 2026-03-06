@@ -125,11 +125,10 @@ export async function handleUpdate(req: Request, auth: AuthContext, id: string):
         console.log('[receivables/update] received_date auto-set para hoje', { id });
       }
     } else if (current.status === 'recebido') {
-      // Saindo do status recebido: limpar received_date (a menos que o usuario tenha fornecido)
-      if (!('received_date' in updates)) {
-        receivedDateOverride = { received_date: null };
-        console.log('[receivables/update] received_date limpo ao sair de recebido', { id });
-      }
+      // Saindo do status recebido: SEMPRE limpar received_date
+      receivedDateOverride = { received_date: null };
+      delete (updates as Record<string, unknown>).received_date;
+      console.log('[receivables/update] received_date limpo ao sair de recebido', { id });
     }
   }
 

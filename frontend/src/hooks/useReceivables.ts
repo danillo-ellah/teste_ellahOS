@@ -58,7 +58,7 @@ export function useCreateReceivable() {
     mutationFn: (payload: CreateReceivablePayload) =>
       apiMutate<Receivable>('receivables', 'POST', payload as unknown as Record<string, unknown>),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: receivableKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: receivableKeys.all })
       queryClient.invalidateQueries({ queryKey: finDashboardKeys.all })
       queryClient.invalidateQueries({ queryKey: cashflowKeys.all })
     },
@@ -71,7 +71,7 @@ export function useUpdateReceivable() {
     mutationFn: ({ id, ...payload }: UpdateReceivablePayload & { id: string }) =>
       apiMutate<Receivable>('receivables', 'PATCH', payload as Record<string, unknown>, id),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: receivableKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: receivableKeys.all })
       queryClient.invalidateQueries({ queryKey: receivableKeys.detail(variables.id) })
       queryClient.invalidateQueries({ queryKey: finDashboardKeys.all })
       queryClient.invalidateQueries({ queryKey: cashflowKeys.all })
@@ -85,7 +85,7 @@ export function useDeleteReceivable() {
     mutationFn: (id: string) =>
       apiMutate<{ id: string; deleted: boolean }>('receivables', 'DELETE', undefined, id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: receivableKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: receivableKeys.all })
       queryClient.invalidateQueries({ queryKey: finDashboardKeys.all })
       queryClient.invalidateQueries({ queryKey: cashflowKeys.all })
     },
