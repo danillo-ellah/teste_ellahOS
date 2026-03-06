@@ -38,11 +38,19 @@ const UpdateSchema = z
     message: 'Pelo menos um campo deve ser enviado para atualizacao',
   });
 
+// Roles permitidos para operacoes de escrita no elenco
+const ALLOWED_ROLES_WRITE = ['admin', 'ceo', 'produtor_executivo', 'diretor'];
+
 export async function handleUpdate(
   req: Request,
   auth: AuthContext,
   memberId: string,
 ): Promise<Response> {
+  // Verificacao de RBAC: apenas roles autorizados podem atualizar membros do elenco
+  if (!ALLOWED_ROLES_WRITE.includes(auth.role)) {
+    throw new AppError('FORBIDDEN', 'Sem permissao para esta operacao', 403);
+  }
+
   console.log('[job-cast/update] atualizando membro do elenco', {
     memberId,
     userId: auth.userId,
@@ -98,8 +106,8 @@ export async function handleUpdate(
     .single();
 
   if (updateErr) {
-    console.error('[job-cast/update] erro ao atualizar membro:', updateErr);
-    throw new AppError('INTERNAL_ERROR', updateErr.message, 500);
+    console.error('[job-cast/update] erro ao atualizar membro:', updateErr.message);
+    throw new AppError('INTERNAL_ERROR', 'Erro ao atualizar membro do elenco', 500);
   }
 
   console.log('[job-cast/update] membro atualizado:', member.id);

@@ -14,10 +14,18 @@ const createSchema = z.object({
   pdf_template: z.enum(['classico', 'moderno']).default('classico'),
 });
 
+// Roles permitidos para operacoes de escrita na ordem do dia
+const ALLOWED_ROLES_WRITE = ['admin', 'ceo', 'produtor_executivo', 'diretor', 'assistente_direcao'];
+
 export async function handleCreate(
   req: Request,
   auth: AuthContext,
 ): Promise<Response> {
+  // Verificacao de RBAC: apenas roles autorizados podem criar ordens do dia
+  if (!ALLOWED_ROLES_WRITE.includes(auth.role)) {
+    throw new AppError('FORBIDDEN', 'Sem permissao para esta operacao', 403);
+  }
+
   console.log('[shooting-day-order/create] iniciando criacao de ordem do dia', {
     userId: auth.userId,
     tenantId: auth.tenantId,

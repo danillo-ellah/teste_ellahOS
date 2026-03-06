@@ -3,11 +3,19 @@ import { success } from '../../_shared/response.ts';
 import { AppError } from '../../_shared/errors.ts';
 import type { AuthContext } from '../../_shared/auth.ts';
 
+// Roles permitidos para operacoes de escrita na ordem do dia
+const ALLOWED_ROLES_WRITE = ['admin', 'ceo', 'produtor_executivo', 'diretor', 'assistente_direcao'];
+
 export async function handleDelete(
   req: Request,
   auth: AuthContext,
   odId: string,
 ): Promise<Response> {
+  // Verificacao de RBAC: apenas roles autorizados podem remover ordens do dia
+  if (!ALLOWED_ROLES_WRITE.includes(auth.role)) {
+    throw new AppError('FORBIDDEN', 'Sem permissao para esta operacao', 403);
+  }
+
   console.log('[shooting-day-order/delete] deletando ordem do dia', {
     odId,
     userId: auth.userId,

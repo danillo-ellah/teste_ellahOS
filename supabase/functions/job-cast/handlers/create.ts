@@ -34,10 +34,18 @@ const CreateSchema = z.object({
   notes: z.string().nullish(),
 });
 
+// Roles permitidos para operacoes de escrita no elenco
+const ALLOWED_ROLES_WRITE = ['admin', 'ceo', 'produtor_executivo', 'diretor'];
+
 export async function handleCreate(
   req: Request,
   auth: AuthContext,
 ): Promise<Response> {
+  // Verificacao de RBAC: apenas roles autorizados podem criar membros do elenco
+  if (!ALLOWED_ROLES_WRITE.includes(auth.role)) {
+    throw new AppError('FORBIDDEN', 'Sem permissao para esta operacao', 403);
+  }
+
   console.log('[job-cast/create] iniciando criacao de membro do elenco', {
     userId: auth.userId,
     tenantId: auth.tenantId,
@@ -97,8 +105,8 @@ export async function handleCreate(
     .single();
 
   if (insertErr) {
-    console.error('[job-cast/create] erro ao inserir membro:', insertErr);
-    throw new AppError('INTERNAL_ERROR', insertErr.message, 500);
+    console.error('[job-cast/create] erro ao inserir membro:', insertErr.message);
+    throw new AppError('INTERNAL_ERROR', 'Erro ao criar membro do elenco', 500);
   }
 
   console.log('[job-cast/create] membro criado:', member.id);

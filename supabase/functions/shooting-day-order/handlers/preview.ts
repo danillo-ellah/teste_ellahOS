@@ -4,13 +4,8 @@ import { getCorsHeaders } from '../../_shared/cors.ts';
 import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 
 // Escapa caracteres HTML para prevenir XSS no template inline
-function esc(str: string | null | undefined): string {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+function esc(val: unknown): string {
+  return String(val ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 // Formata data ISO (YYYY-MM-DD) para DD/MM/YYYY
@@ -75,7 +70,7 @@ function buildClassicoHtml(
           ${block.location ? `<span>Locacao: <b>${esc(block.location as string)}</b></span>` : ''}
         </div>
         ${block.cast_names ? `<div style="color:#555;font-size:13px;">Elenco: ${esc(block.cast_names as string)}</div>` : ''}
-        ${(block.adjustment_minutes as number) > 0 ? `<div style="color:#888;font-size:12px;">Ajuste: ${block.adjustment_minutes} min</div>` : ''}
+        ${(block.adjustment_minutes as number) > 0 ? `<div style="color:#888;font-size:12px;">Ajuste: ${esc(block.adjustment_minutes)} min</div>` : ''}
         ${block.notes ? `<div style="color:#444;font-size:13px;margin-top:4px;font-style:italic;">${esc(block.notes as string)}</div>` : ''}
       </div>`;
   });
@@ -189,7 +184,7 @@ function buildClassicoHtml(
     ${agencyObj?.name ? `<div class="meta-item"><span class="meta-label">Agencia:</span><span><b>${esc(agencyObj.name as string)}</b></span></div>` : ''}
     ${job.director ? `<div class="meta-item"><span class="meta-label">Direcao:</span><span><b>${esc(job.director as string)}</b></span></div>` : ''}
     ${od.shooting_date_id ? `<div class="meta-item"><span class="meta-label">Data:</span><span><b>${esc(formatDate(od.shooting_date as string))}</b></span></div>` : ''}
-    ${od.day_number ? `<div class="meta-item"><span class="meta-label">Dia:</span><span><b>${od.day_number}° dia de filmagem</b></span></div>` : ''}
+    ${od.day_number ? `<div class="meta-item"><span class="meta-label">Dia:</span><span><b>${esc(od.day_number)}° dia de filmagem</b></span></div>` : ''}
     ${od.general_location ? `<div class="meta-item"><span class="meta-label">Local:</span><span><b>${esc(od.general_location as string)}</b></span></div>` : ''}
     ${od.weather_summary ? `<div class="meta-item"><span class="meta-label">Clima:</span><span>${esc(od.weather_summary as string)}</span></div>` : ''}
     ${od.first_call ? `<div class="meta-item"><span class="meta-label">1a Chamada:</span><span><b>${formatTime(od.first_call as string)}</b></span></div>` : ''}
@@ -311,7 +306,7 @@ function buildModernoHtml(
           ${block.scenes_label ? `<span>Cenas: <b>${esc(block.scenes_label as string)}</b></span>` : ''}
           ${block.location ? `<span>Locacao: <b>${esc(block.location as string)}</b></span>` : ''}
           ${block.cast_names ? `<span>Elenco: ${esc(block.cast_names as string)}</span>` : ''}
-          ${(block.adjustment_minutes as number) > 0 ? `<span style="color:#9ca3af;">Ajuste: ${block.adjustment_minutes} min</span>` : ''}
+          ${(block.adjustment_minutes as number) > 0 ? `<span style="color:#9ca3af;">Ajuste: ${esc(block.adjustment_minutes)} min</span>` : ''}
         </div>
         ${block.notes ? `<div style="color:#6b7280;font-size:12px;margin-top:6px;font-style:italic;">${esc(block.notes as string)}</div>` : ''}
       </div>`;
@@ -409,7 +404,7 @@ function buildModernoHtml(
       </div>
     </div>
     <div style="text-align:right;color:rgba(255,255,255,0.8);font-size:12px;">
-      ${od.day_number ? `<div style="font-size:28px;font-weight:900;color:#fff;line-height:1;">Dia ${od.day_number}</div>` : ''}
+      ${od.day_number ? `<div style="font-size:28px;font-weight:900;color:#fff;line-height:1;">Dia ${esc(od.day_number)}</div>` : ''}
       ${od.shooting_date_id ? `<div style="margin-top:2px;">${esc(formatDate(od.shooting_date as string))}</div>` : ''}
     </div>
   </div>

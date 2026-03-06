@@ -3,11 +3,19 @@ import { success } from '../../_shared/response.ts';
 import { AppError } from '../../_shared/errors.ts';
 import type { AuthContext } from '../../_shared/auth.ts';
 
+// Roles permitidos para operacoes de escrita no elenco
+const ALLOWED_ROLES_WRITE = ['admin', 'ceo', 'produtor_executivo', 'diretor'];
+
 export async function handleDelete(
   req: Request,
   auth: AuthContext,
   memberId: string,
 ): Promise<Response> {
+  // Verificacao de RBAC: apenas roles autorizados podem remover membros do elenco
+  if (!ALLOWED_ROLES_WRITE.includes(auth.role)) {
+    throw new AppError('FORBIDDEN', 'Sem permissao para esta operacao', 403);
+  }
+
   console.log('[job-cast/delete] deletando membro do elenco', {
     memberId,
     userId: auth.userId,
@@ -37,8 +45,8 @@ export async function handleDelete(
     .eq('tenant_id', auth.tenantId);
 
   if (deleteErr) {
-    console.error('[job-cast/delete] erro ao deletar membro:', deleteErr);
-    throw new AppError('INTERNAL_ERROR', deleteErr.message, 500);
+    console.error('[job-cast/delete] erro ao deletar membro:', deleteErr.message);
+    throw new AppError('INTERNAL_ERROR', 'Erro ao remover membro do elenco', 500);
   }
 
   console.log('[job-cast/delete] membro deletado:', memberId);

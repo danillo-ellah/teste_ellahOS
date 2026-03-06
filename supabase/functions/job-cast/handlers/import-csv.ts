@@ -48,10 +48,18 @@ function parseCSVLine(line: string): string[] {
   return result;
 }
 
+// Roles permitidos para operacoes de escrita no elenco
+const ALLOWED_ROLES_WRITE = ['admin', 'ceo', 'produtor_executivo', 'diretor'];
+
 export async function handleImportCsv(
   req: Request,
   auth: AuthContext,
 ): Promise<Response> {
+  // Verificacao de RBAC: apenas roles autorizados podem importar elenco via CSV
+  if (!ALLOWED_ROLES_WRITE.includes(auth.role)) {
+    throw new AppError('FORBIDDEN', 'Sem permissao para esta operacao', 403);
+  }
+
   console.log('[job-cast/import-csv] iniciando importacao', {
     userId: auth.userId,
     tenantId: auth.tenantId,
@@ -189,8 +197,8 @@ export async function handleImportCsv(
     .select();
 
   if (insertErr) {
-    console.error('[job-cast/import-csv] erro ao inserir em lote:', insertErr);
-    throw new AppError('INTERNAL_ERROR', insertErr.message, 500);
+    console.error('[job-cast/import-csv] erro ao inserir em lote:', insertErr.message);
+    throw new AppError('INTERNAL_ERROR', 'Erro ao importar elenco', 500);
   }
 
   console.log('[job-cast/import-csv] importacao concluida:', data?.length, 'registros inseridos');

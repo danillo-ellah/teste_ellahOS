@@ -42,8 +42,8 @@ export async function handleList(
     .order('sort_order', { ascending: true });
 
   if (dbErr) {
-    console.error('[job-cast/list] erro na query:', dbErr);
-    throw new AppError('INTERNAL_ERROR', dbErr.message, 500);
+    console.error('[job-cast/list] erro na query:', dbErr.message);
+    throw new AppError('INTERNAL_ERROR', 'Erro ao listar elenco', 500);
   }
 
   console.log('[job-cast/list] retornando', members?.length ?? 0, 'membros');
