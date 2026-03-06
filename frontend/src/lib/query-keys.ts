@@ -319,3 +319,16 @@ export const receivableKeys = {
   detail: (id: string) => [...receivableKeys.details(), id] as const,
   summary: (jobId: string) => [...receivableKeys.all, 'summary', jobId] as const,
 }
+
+export const attendanceKeys = {
+  all: ['attendance'] as const,
+  communications: (jobId: string) => [...attendanceKeys.all, 'communications', jobId] as const,
+  communicationList: (jobId: string, filters: Record<string, string>) =>
+    [...attendanceKeys.communications(jobId), filters] as const,
+  scopeItems: (jobId: string) => [...attendanceKeys.all, 'scope-items', jobId] as const,
+  logistics: (jobId: string) => [...attendanceKeys.all, 'logistics', jobId] as const,
+  internalApproval: (jobId: string) => [...attendanceKeys.all, 'internal-approval', jobId] as const,
+  milestones: (jobId: string) => [...attendanceKeys.all, 'milestones', jobId] as const,
+  dashboardCounts: (jobIds: string[]) => [...attendanceKeys.all, 'dashboard-counts', jobIds] as const,
+  pendingExtras: () => [...attendanceKeys.all, 'pending-extras'] as const,
+}
