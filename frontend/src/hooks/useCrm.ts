@@ -195,6 +195,10 @@ export interface ConvertToJobPayload {
   project_type?: string | null
   client_id?: string | null
   agency_id?: string | null
+  closed_value?: number | null
+  description?: string | null
+  deliverable_format?: string | null
+  campaign_period?: string | null
 }
 
 // ---------------------------------------------------------------------------

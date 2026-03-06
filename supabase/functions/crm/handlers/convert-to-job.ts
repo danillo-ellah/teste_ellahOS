@@ -11,6 +11,11 @@ const ConvertToJobSchema = z.object({
   // Se nao informado, usa o cliente/agencia da oportunidade
   client_id: z.string().uuid().optional().nullable(),
   agency_id: z.string().uuid().optional().nullable(),
+  // Campos opcionais copiados da oportunidade (Onda 1.2)
+  closed_value: z.number().min(0).optional().nullable(),
+  description: z.string().max(5000).optional().nullable(),
+  deliverable_format: z.string().max(500).optional().nullable(),
+  campaign_period: z.string().max(200).optional().nullable(),
 });
 
 /**
@@ -70,6 +75,7 @@ export async function handleConvertToJob(
   }
 
   // Nao pode converter oportunidade que ja foi perdida ou ja tem job
+  // Onda 1.2: permitir conversao de qualquer stage exceto 'perdido'
   if (opp.stage === 'perdido') {
     throw new AppError(
       'BUSINESS_RULE_VIOLATION',
@@ -96,8 +102,8 @@ export async function handleConvertToJob(
 
   const nextSeq = (seqRow?.last_seq ?? 0) + 1;
 
-  // Criar o job minimo (campos obrigatorios do schema jobs)
-  const jobInsert = {
+  // Criar o job com campos da oportunidade (Onda 1.2: copiar mais campos)
+  const jobInsert: Record<string, unknown> = {
     tenant_id: auth.tenantId,
     title: data.job_title.trim(),
     project_type: data.project_type ?? opp.project_type ?? null,
@@ -107,7 +113,10 @@ export async function handleConvertToJob(
     priority_level: 'media',
     created_by: auth.userId,
     // Campos derivados da oportunidade
-    notes: opp.notes ?? null,
+    notes: data.description ?? opp.notes ?? null,
+    closed_value: data.closed_value ?? opp.estimated_value ?? null,
+    deliverable_format: data.deliverable_format ?? opp.deliverable_format ?? null,
+    campaign_period: data.campaign_period ?? opp.campaign_period ?? null,
   };
 
   const { data: createdJob, error: jobError } = await client

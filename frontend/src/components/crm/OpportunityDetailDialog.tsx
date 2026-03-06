@@ -48,6 +48,7 @@ import { cn } from '@/lib/utils'
 import { STAGE_CONFIG } from './CrmKanban'
 import { OpportunityDialog } from './OpportunityDialog'
 import { ProposalSection } from './ProposalSection'
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { useUserRole } from '@/hooks/useUserRole'
 
 const ACTIVITY_TYPE_OPTIONS: { value: AddActivityPayload['activity_type']; label: string }[] = [
@@ -117,6 +118,7 @@ export function OpportunityDetailDialog({
   const [lossReason, setLossReason] = useState('')
   const [winnerCompetitor, setWinnerCompetitor] = useState('')
   const [winnerValue, setWinnerValue] = useState('')
+  const [convertOpen, setConvertOpen] = useState(false)
 
   const { data: opportunity, isLoading } = useOpportunity(opportunityId)
   const { data: activities } = useOpportunityActivities(opportunityId, { enabled: !!opportunity })
@@ -177,15 +179,20 @@ export function OpportunityDetailDialog({
 
   async function handleConvertToJob() {
     if (!opportunity) return
-    const title = opportunity.title
     try {
       const result = await convertMutation.mutateAsync({
-        job_title: title,
+        job_title: opportunity.title,
         project_type: opportunity.project_type ?? undefined,
         client_id: opportunity.client_id ?? undefined,
         agency_id: opportunity.agency_id ?? undefined,
+        // Onda 1.2: copiar mais campos da oportunidade
+        closed_value: opportunity.estimated_value ?? undefined,
+        description: opportunity.notes ?? undefined,
+        deliverable_format: opportunity.deliverable_format ?? undefined,
+        campaign_period: opportunity.campaign_period ?? undefined,
       })
       toast.success(`Job "${result.data.job.title}" criado com sucesso`)
+      setConvertOpen(false)
       onOpenChange(false)
       router.push(`/jobs/${result.data.job.id}`)
     } catch (err) {
@@ -401,16 +408,15 @@ export function OpportunityDetailDialog({
                       </Button>
                     )}
 
-                    {canConvert && opportunity.stage === 'fechamento' && !opportunity.job_id && (
+                    {canConvert && opportunity.stage !== 'perdido' && opportunity.stage !== 'ganho' && !opportunity.job_id && (
                       <Button
                         size="sm"
                         variant="default"
-                        onClick={handleConvertToJob}
-                        disabled={convertMutation.isPending}
+                        onClick={() => setConvertOpen(true)}
                         className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"
                       >
                         <Briefcase className="size-3.5" />
-                        {convertMutation.isPending ? 'Convertendo...' : 'Converter em Job'}
+                        Converter em Job
                       </Button>
                     )}
                   </div>
@@ -580,6 +586,19 @@ export function OpportunityDetailDialog({
           onOpenChange={setEditOpen}
           mode="edit"
           opportunity={opportunity}
+        />
+      )}
+
+      {/* Confirmacao de conversao em job */}
+      {opportunity && (
+        <ConfirmDialog
+          open={convertOpen}
+          onOpenChange={setConvertOpen}
+          title="Converter em Job"
+          description={`Criar job "${opportunity.title}" a partir desta oportunidade?\n\nSerao copiados: titulo, cliente/agencia, tipo de projeto${opportunity.estimated_value ? `, valor estimado (${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(opportunity.estimated_value)})` : ''}, observacoes e formato de entrega.\n\nA oportunidade sera marcada como "ganho".`}
+          confirmLabel="Criar Job"
+          onConfirm={handleConvertToJob}
+          isPending={convertMutation.isPending}
         />
       )}
     </>
