@@ -6,6 +6,7 @@ export type CommunicationEntryType =
   | 'informacao'
   | 'aprovacao'
   | 'satisfacao_automatica'
+  | 'registro_set'
   | 'outro'
 
 export type CommunicationChannel =
@@ -21,6 +22,7 @@ export type ExtraStatus =
   | 'aprovado_gratuito'
   | 'cobrar_aditivo'
   | 'recusado'
+  | 'resolvido_atendimento'
 
 export type LogisticsItemType =
   | 'passagem_aerea'
@@ -41,6 +43,7 @@ export const ENTRY_TYPE_LABELS: Record<CommunicationEntryType, string> = {
   informacao: 'Informacao',
   aprovacao: 'Aprovacao',
   satisfacao_automatica: 'Satisfacao (auto)',
+  registro_set: 'Registro de Set',
   outro: 'Outro',
 }
 
@@ -58,6 +61,7 @@ export const EXTRA_STATUS_LABELS: Record<ExtraStatus, string> = {
   aprovado_gratuito: 'Aprovado (gratuito)',
   cobrar_aditivo: 'Cobrar aditivo',
   recusado: 'Recusado',
+  resolvido_atendimento: 'Resolvido (Atendimento)',
 }
 
 export const LOGISTICS_TYPE_LABELS: Record<LogisticsItemType, string> = {
@@ -91,6 +95,8 @@ export interface ClientCommunication {
   entry_type: CommunicationEntryType
   channel: CommunicationChannel
   description: string
+  shared_with_team: boolean
+  team_note: string | null
   created_by: string
   created_by_name?: string
   created_at: string
@@ -110,6 +116,7 @@ export interface ScopeItem {
   ceo_decision_by: string | null
   ceo_decision_at: string | null
   ceo_notes: string | null
+  estimated_value: number | null
   created_by: string
   created_by_name?: string
   created_at: string
@@ -191,6 +198,8 @@ export interface CreateCommunicationPayload {
   entry_type: CommunicationEntryType
   channel: CommunicationChannel
   description: string
+  shared_with_team?: boolean
+  team_note?: string | null
 }
 
 export interface UpdateCommunicationPayload {
@@ -198,6 +207,8 @@ export interface UpdateCommunicationPayload {
   entry_type?: CommunicationEntryType
   channel?: CommunicationChannel
   description?: string
+  shared_with_team?: boolean
+  team_note?: string | null
 }
 
 export interface CreateScopeItemPayload {
@@ -206,6 +217,7 @@ export interface CreateScopeItemPayload {
   is_extra?: boolean
   origin_channel?: CommunicationChannel
   requested_at?: string
+  estimated_value?: number | null
 }
 
 export interface DecideScopeItemPayload {

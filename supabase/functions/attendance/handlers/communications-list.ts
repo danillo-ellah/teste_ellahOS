@@ -49,6 +49,7 @@ export async function handleCommunicationsList(req: Request, auth: AuthContext):
     .from('client_communications')
     .select(
       `id, job_id, entry_date, entry_type, channel, description,
+       shared_with_team, team_note,
        created_by, created_at, updated_at,
        profiles!client_communications_created_by_fkey(full_name)`,
       { count: 'exact' },

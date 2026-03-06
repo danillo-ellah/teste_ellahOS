@@ -58,6 +58,7 @@ const STATUS_COLORS: Record<ExtraStatus, string> = {
   aprovado_gratuito: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   cobrar_aditivo: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   recusado: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  resolvido_atendimento: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
 }
 
 function ExtraStatusBadge({ status }: { status: ExtraStatus }) {
@@ -190,6 +191,11 @@ function ExtraItemCard({ item, jobId }: ExtraItemCardProps) {
                     {CHANNEL_LABELS[item.origin_channel]}
                   </Badge>
                 )}
+                {item.estimated_value != null && (
+                  <span className="text-xs text-muted-foreground">
+                    R$ {item.estimated_value.toFixed(2)}
+                  </span>
+                )}
               </div>
 
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -252,6 +258,7 @@ function AddScopeItemDialog({ jobId, open, onOpenChange }: AddScopeItemDialogPro
   const [isExtra, setIsExtra] = useState(false)
   const [channel, setChannel] = useState<CommunicationChannel | ''>('')
   const [requestedAt, setRequestedAt] = useState('')
+  const [estimatedValue, setEstimatedValue] = useState('')
 
   const { mutateAsync: create, isPending } = useCreateScopeItem()
 
@@ -260,6 +267,7 @@ function AddScopeItemDialog({ jobId, open, onOpenChange }: AddScopeItemDialogPro
     setIsExtra(false)
     setChannel('')
     setRequestedAt('')
+    setEstimatedValue('')
   }
 
   function handleOpenChange(open: boolean) {
@@ -277,6 +285,7 @@ function AddScopeItemDialog({ jobId, open, onOpenChange }: AddScopeItemDialogPro
         is_extra: isExtra,
         origin_channel: isExtra && channel ? channel : undefined,
         requested_at: isExtra && requestedAt ? requestedAt : undefined,
+        estimated_value: isExtra && estimatedValue ? Number(estimatedValue) : undefined,
       })
       toast.success(isExtra ? 'Extra adicionado' : 'Item de escopo adicionado')
       handleOpenChange(false)
@@ -350,6 +359,25 @@ function AddScopeItemDialog({ jobId, open, onOpenChange }: AddScopeItemDialogPro
                   value={requestedAt}
                   onChange={(e) => setRequestedAt(e.target.value)}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="scope-estimated-value">Valor estimado (R$)</Label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                    R$
+                  </span>
+                  <Input
+                    id="scope-estimated-value"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0,00"
+                    className="pl-9"
+                    value={estimatedValue}
+                    onChange={(e) => setEstimatedValue(e.target.value)}
+                  />
+                </div>
               </div>
             </>
           )}

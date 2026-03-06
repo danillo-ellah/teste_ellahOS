@@ -24,6 +24,7 @@ const CreateScopeItemSchema = z.object({
   ).optional().nullable(),
   requested_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'requested_at deve ser YYYY-MM-DD')
     .optional().nullable(),
+  estimated_value: z.number().min(0).optional().nullable(),
 }).refine(
   (data) => !data.is_extra || !!data.requested_at,
   { message: 'requested_at e obrigatorio quando is_extra=true', path: ['requested_at'] },
@@ -57,8 +58,31 @@ export async function handleScopeItemsCreate(req: Request, auth: AuthContext): P
   const data = parseResult.data;
   const client = getSupabaseClient(auth.token);
 
+  // S-01: Verificar threshold de auto-aprovacao do tenant
+  let autoApproveThreshold = 0;
+  if (data.is_extra && data.estimated_value != null) {
+    try {
+      const { data: tenant } = await client
+        .from('tenants')
+        .select('settings')
+        .eq('id', auth.tenantId)
+        .single();
+      const settings = (tenant?.settings as Record<string, unknown>) ?? {};
+      autoApproveThreshold = Number(settings.extra_auto_approve_threshold ?? 0);
+    } catch {
+      // Ignora erro — threshold 0 = tudo vai pro CEO
+    }
+  }
+
   // Se is_extra, define extra_status automaticamente
-  const extraStatus = data.is_extra ? 'pendente_ceo' : null;
+  // S-01: Se valor estimado abaixo do threshold, Atendimento resolve sozinho
+  const canAutoResolve = data.is_extra
+    && autoApproveThreshold > 0
+    && data.estimated_value != null
+    && data.estimated_value <= autoApproveThreshold;
+  const extraStatus = data.is_extra
+    ? (canAutoResolve ? 'resolvido_atendimento' : 'pendente_ceo')
+    : null;
 
   const { data: created_item, error: insertError } = await client
     .from('scope_items')
@@ -70,6 +94,10 @@ export async function handleScopeItemsCreate(req: Request, auth: AuthContext): P
       origin_channel: data.origin_channel ?? null,
       requested_at: data.requested_at ?? null,
       extra_status: extraStatus,
+      estimated_value: data.estimated_value ?? null,
+      ceo_decision_by: canAutoResolve ? auth.userId : null,
+      ceo_decision_at: canAutoResolve ? new Date().toISOString() : null,
+      ceo_notes: canAutoResolve ? `Auto-resolvido pelo Atendimento (valor R$${data.estimated_value?.toFixed(2)} abaixo do limite R$${autoApproveThreshold.toFixed(2)})` : null,
       created_by: auth.userId,
     })
     .select('*')
@@ -87,8 +115,8 @@ export async function handleScopeItemsCreate(req: Request, auth: AuthContext): P
     is_extra: data.is_extra,
   });
 
-  // Side effects quando is_extra=true
-  if (data.is_extra) {
+  // Side effects quando is_extra=true E precisa decisao do CEO (nao auto-resolvido)
+  if (data.is_extra && !canAutoResolve) {
     // Buscar dados do job para enriquecer o payload
     const { data: job } = await client
       .from('jobs')

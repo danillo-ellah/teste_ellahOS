@@ -17,7 +17,7 @@ const CreateCommunicationSchema = z.object({
   job_id: z.string().uuid('job_id deve ser um UUID valido'),
   entry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'entry_date deve ser YYYY-MM-DD'),
   entry_type: z.enum(
-    ['decisao', 'alteracao', 'informacao', 'aprovacao', 'satisfacao_automatica', 'outro'],
+    ['decisao', 'alteracao', 'informacao', 'aprovacao', 'satisfacao_automatica', 'registro_set', 'outro'],
     { errorMap: () => ({ message: 'entry_type invalido' }) },
   ),
   channel: z.enum(
@@ -25,6 +25,8 @@ const CreateCommunicationSchema = z.object({
     { errorMap: () => ({ message: 'channel invalido' }) },
   ),
   description: z.string().min(1, 'description e obrigatorio').max(5000),
+  shared_with_team: z.boolean().default(false),
+  team_note: z.string().max(2000).optional().nullable(),
 });
 
 export async function handleCommunicationsCreate(
@@ -67,6 +69,8 @@ export async function handleCommunicationsCreate(
       entry_type: data.entry_type,
       channel: data.channel,
       description: data.description,
+      shared_with_team: data.shared_with_team,
+      team_note: data.team_note ?? null,
       created_by: auth.userId,
     })
     .select('*')

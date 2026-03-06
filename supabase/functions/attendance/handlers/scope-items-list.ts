@@ -43,7 +43,7 @@ export async function handleScopeItemsList(req: Request, auth: AuthContext): Pro
     .from('scope_items')
     .select(
       `id, job_id, description, is_extra, origin_channel, requested_at,
-       extra_status, ceo_decision_by, ceo_decision_at, ceo_notes,
+       extra_status, ceo_decision_by, ceo_decision_at, ceo_notes, estimated_value,
        created_by, created_at, updated_at,
        profiles!scope_items_created_by_fkey(full_name)`,
       { count: 'exact' },

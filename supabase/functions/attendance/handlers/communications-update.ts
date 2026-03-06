@@ -16,12 +16,14 @@ const ALLOWED_ROLES = [
 const UpdateCommunicationSchema = z.object({
   entry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'entry_date deve ser YYYY-MM-DD').optional(),
   entry_type: z.enum(
-    ['decisao', 'alteracao', 'informacao', 'aprovacao', 'satisfacao_automatica', 'outro'],
+    ['decisao', 'alteracao', 'informacao', 'aprovacao', 'satisfacao_automatica', 'registro_set', 'outro'],
   ).optional(),
   channel: z.enum(
     ['whatsapp', 'email', 'reuniao', 'telefone', 'presencial', 'sistema'],
   ).optional(),
   description: z.string().min(1).max(5000).optional(),
+  shared_with_team: z.boolean().optional(),
+  team_note: z.string().max(2000).optional().nullable(),
 }).strict();
 
 export async function handleCommunicationsUpdate(

@@ -10,7 +10,7 @@ const DECISION_ROLES = ['ceo', 'produtor_executivo', 'admin'];
 
 const DecideScopeItemSchema = z.object({
   extra_status: z.enum(
-    ['aprovado_gratuito', 'cobrar_aditivo', 'recusado'],
+    ['aprovado_gratuito', 'cobrar_aditivo', 'recusado', 'resolvido_atendimento'],
     { errorMap: () => ({ message: 'extra_status invalido para decisao' }) },
   ),
   ceo_notes: z.string().max(2000).optional().nullable(),
@@ -120,6 +120,7 @@ export async function handleScopeItemsDecide(
       aprovado_gratuito: 'aprovado (gratuito)',
       cobrar_aditivo: 'cobrar como aditivo',
       recusado: 'recusado',
+      resolvido_atendimento: 'resolvido pelo Atendimento',
     };
 
     await createNotification(client, {

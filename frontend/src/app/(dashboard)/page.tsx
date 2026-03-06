@@ -23,6 +23,7 @@ import {
 import { useCashflowProjection } from '@/hooks/useCashflowProjection'
 import { useTenantFinancialDashboard } from '@/hooks/useFinancialDashboard'
 import { useCrmDashboard } from '@/hooks/useCrm'
+import { CeoPendingExtras } from '@/components/dashboard/CeoPendingExtras'
 
 // Saudacao baseada na hora do dia
 function getGreeting(): string {
@@ -140,6 +141,9 @@ export default function DashboardPage() {
 
       {/* KPI Cards */}
       <KpiCards data={kpis.data} isLoading={kpis.isLoading} />
+
+      {/* S-03: Extras Pendentes CEO — auto-oculta quando vazio */}
+      <CeoPendingExtras />
 
       {/* Faixa de Caixa + Pagamentos da Semana (v2) */}
       {showCashflowStrip && (

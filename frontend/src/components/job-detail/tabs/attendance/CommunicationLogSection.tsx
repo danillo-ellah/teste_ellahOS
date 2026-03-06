@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
 import {
   Select,
   SelectContent,
@@ -51,6 +52,7 @@ const ENTRY_TYPE_BADGE_CLASS: Record<CommunicationEntryType, string> = {
   informacao: 'bg-slate-500/10 text-slate-600 dark:text-slate-400',
   aprovacao: 'bg-green-500/10 text-green-600 dark:text-green-400',
   satisfacao_automatica: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
+  registro_set: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
   outro: 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400',
 }
 
@@ -64,6 +66,7 @@ const communicationSchema = z.object({
     'informacao',
     'aprovacao',
     'satisfacao_automatica',
+    'registro_set',
     'outro',
   ] as const),
   channel: z.enum([
@@ -75,6 +78,8 @@ const communicationSchema = z.object({
     'sistema',
   ] as const),
   description: z.string().min(1, 'Descricao obrigatoria').max(2000),
+  shared_with_team: z.boolean(),
+  team_note: z.string().max(2000).optional(),
 })
 
 type CommunicationFormValues = z.infer<typeof communicationSchema>
@@ -110,6 +115,7 @@ function CommunicationFormDialog({
     handleSubmit,
     control,
     reset,
+    watch,
     formState: { errors },
   } = useForm<CommunicationFormValues>({
     resolver: zodResolver(communicationSchema),
@@ -119,14 +125,20 @@ function CommunicationFormDialog({
           entry_type: editing.entry_type,
           channel: editing.channel,
           description: editing.description,
+          shared_with_team: editing.shared_with_team ?? false,
+          team_note: editing.team_note ?? '',
         }
       : {
           entry_date: todayISO(),
           entry_type: 'informacao',
           channel: 'whatsapp',
           description: '',
+          shared_with_team: false,
+          team_note: '',
         },
   })
+
+  const sharedWithTeam = watch('shared_with_team')
 
   // Resetar form quando o editing mudar
   const [lastEditingId, setLastEditingId] = useState<string | null>(null)
@@ -139,12 +151,16 @@ function CommunicationFormDialog({
             entry_type: editing.entry_type,
             channel: editing.channel,
             description: editing.description,
+            shared_with_team: editing.shared_with_team ?? false,
+            team_note: editing.team_note ?? '',
           }
         : {
             entry_date: todayISO(),
             entry_type: 'informacao',
             channel: 'whatsapp',
             description: '',
+            shared_with_team: false,
+            team_note: '',
           },
     )
   }
@@ -153,11 +169,16 @@ function CommunicationFormDialog({
 
   async function onSubmit(values: CommunicationFormValues) {
     try {
+      const payload = {
+        ...values,
+        shared_with_team: values.shared_with_team,
+        team_note: values.shared_with_team ? (values.team_note ?? null) : null,
+      }
       if (editing) {
-        await updateMutation.mutateAsync({ id: editing.id, ...values })
+        await updateMutation.mutateAsync({ id: editing.id, ...payload })
         toast.success('Comunicacao atualizada')
       } else {
-        await createMutation.mutateAsync({ job_id: jobId, ...values })
+        await createMutation.mutateAsync({ job_id: jobId, ...payload })
         toast.success('Comunicacao registrada')
       }
       onClose()
@@ -269,6 +290,40 @@ function CommunicationFormDialog({
             )}
           </div>
 
+          {/* Repassado a equipe */}
+          <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">
+            <Label htmlFor="shared_with_team" className="cursor-pointer">
+              Repassado a equipe
+            </Label>
+            <Controller
+              name="shared_with_team"
+              control={control}
+              render={({ field }) => (
+                <Switch
+                  id="shared_with_team"
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              )}
+            />
+          </div>
+
+          {/* Nota de repasse — visivel somente quando shared_with_team = true */}
+          {sharedWithTeam && (
+            <div className="space-y-1.5">
+              <Label htmlFor="team_note">Nota de repasse</Label>
+              <Textarea
+                id="team_note"
+                rows={3}
+                placeholder="O que e como foi repassado a equipe..."
+                {...register('team_note')}
+              />
+              {errors.team_note && (
+                <p className="text-xs text-destructive">{errors.team_note.message}</p>
+              )}
+            </div>
+          )}
+
           <DialogFooter>
             <Button
               type="button"
@@ -317,6 +372,14 @@ function CommunicationCard({ entry, onEdit, onDelete }: CommunicationCardProps) 
           >
             {CHANNEL_LABELS[entry.channel]}
           </Badge>
+          {entry.shared_with_team && (
+            <Badge
+              variant="secondary"
+              className="bg-green-500/10 text-green-600 dark:text-green-400"
+            >
+              Repassado
+            </Badge>
+          )}
         </div>
 
         {/* Acoes */}
@@ -346,6 +409,13 @@ function CommunicationCard({ entry, onEdit, onDelete }: CommunicationCardProps) 
       <p className="text-sm whitespace-pre-line leading-relaxed">
         {entry.description}
       </p>
+
+      {/* Nota de repasse */}
+      {entry.team_note && (
+        <p className="text-xs italic text-muted-foreground whitespace-pre-line leading-relaxed">
+          {entry.team_note}
+        </p>
+      )}
 
       {/* Rodape: autor + timestamp relativo */}
       <div className="flex items-center gap-2 text-xs text-muted-foreground pt-0.5">
