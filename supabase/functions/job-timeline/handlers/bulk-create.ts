@@ -105,8 +105,8 @@ export async function handleBulkCreate(
     .is('deleted_at', null);
 
   if (countErr) {
-    console.error('[job-timeline/bulk-create] erro ao checar fases existentes:', countErr);
-    throw new AppError('INTERNAL_ERROR', countErr.message, 500);
+    console.error('[job-timeline/bulk-create] erro ao checar fases existentes:', countErr.message);
+    throw new AppError('INTERNAL_ERROR', 'Erro ao verificar fases existentes', 500);
   }
 
   if ((count ?? 0) > 0) {
@@ -136,8 +136,8 @@ export async function handleBulkCreate(
     .select();
 
   if (insertErr) {
-    console.error('[job-timeline/bulk-create] erro ao inserir fases default:', insertErr);
-    throw new AppError('INTERNAL_ERROR', insertErr.message, 500);
+    console.error('[job-timeline/bulk-create] erro ao inserir fases default:', insertErr.message);
+    throw new AppError('INTERNAL_ERROR', 'Erro ao criar fases em lote', 500);
   }
 
   console.log('[job-timeline/bulk-create] fases default criadas:', phases?.length ?? 0);

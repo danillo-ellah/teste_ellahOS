@@ -171,9 +171,7 @@ export async function handleAutoFill(
 
   if (odErr) {
     console.error('[shooting-day-order/auto-fill] erro ao buscar OD:', odErr.message);
-    throw new AppError('INTERNAL_ERROR', 'Erro ao buscar ordem do dia', 500, {
-      detail: odErr.message,
-    });
+    throw new AppError('INTERNAL_ERROR', 'Erro ao buscar ordem do dia', 500);
   }
 
   if (!od) {

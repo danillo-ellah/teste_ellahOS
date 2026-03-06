@@ -50,8 +50,8 @@ export async function handleExportData(
   }
 
   if (phasesResult.error) {
-    console.error('[job-timeline/export-data] erro ao buscar fases:', phasesResult.error);
-    throw new AppError('INTERNAL_ERROR', phasesResult.error.message, 500);
+    console.error('[job-timeline/export-data] erro ao buscar fases:', phasesResult.error.message);
+    throw new AppError('INTERNAL_ERROR', 'Erro ao exportar fases', 500);
   }
 
   const job = jobResult.data;

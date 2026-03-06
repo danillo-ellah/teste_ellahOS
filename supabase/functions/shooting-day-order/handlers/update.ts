@@ -112,8 +112,8 @@ export async function handleUpdate(
     .single();
 
   if (updateErr) {
-    console.error('[shooting-day-order/update] erro ao atualizar ordem do dia:', updateErr);
-    throw new AppError('INTERNAL_ERROR', updateErr.message, 500);
+    console.error('[shooting-day-order/update] erro ao atualizar ordem do dia:', updateErr.message);
+    throw new AppError('INTERNAL_ERROR', 'Erro ao atualizar ordem do dia', 500);
   }
 
   console.log('[shooting-day-order/update] ordem do dia atualizada:', order.id);

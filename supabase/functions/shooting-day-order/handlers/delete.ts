@@ -45,8 +45,8 @@ export async function handleDelete(
     .eq('tenant_id', auth.tenantId);
 
   if (deleteErr) {
-    console.error('[shooting-day-order/delete] erro ao deletar ordem do dia:', deleteErr);
-    throw new AppError('INTERNAL_ERROR', deleteErr.message, 500);
+    console.error('[shooting-day-order/delete] erro ao deletar ordem do dia:', deleteErr.message);
+    throw new AppError('INTERNAL_ERROR', 'Erro ao remover ordem do dia', 500);
   }
 
   console.log('[shooting-day-order/delete] ordem do dia deletada:', odId);

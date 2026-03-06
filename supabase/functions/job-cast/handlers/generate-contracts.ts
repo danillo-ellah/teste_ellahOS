@@ -409,11 +409,11 @@ export async function handleGenerateContracts(req: Request, auth: AuthContext): 
       .single();
 
     if (insertError || !insertedRow) {
-      const msg = insertError?.message ?? 'erro desconhecido';
       console.error(
-        `[job-cast/generate-contracts] falha ao persistir submission para cast_member_id=${member.id}: ${msg}`,
+        `[job-cast/generate-contracts] falha ao persistir submission para cast_member_id=${member.id}:`,
+        insertError?.message ?? 'erro desconhecido',
       );
-      failed.push({ member, reason: `Falha ao persistir: ${msg}` });
+      failed.push({ member, reason: 'Erro ao salvar contrato' });
       continue;
     }
 

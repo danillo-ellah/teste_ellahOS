@@ -44,8 +44,8 @@ export async function handleList(
     .order('created_at', { ascending: false });
 
   if (dbErr) {
-    console.error('[shooting-day-order/list] erro na query:', dbErr);
-    throw new AppError('INTERNAL_ERROR', dbErr.message, 500);
+    console.error('[shooting-day-order/list] erro na query:', dbErr.message);
+    throw new AppError('INTERNAL_ERROR', 'Erro ao listar ordens do dia', 500);
   }
 
   console.log('[shooting-day-order/list] retornando', orders?.length ?? 0, 'ordens do dia');

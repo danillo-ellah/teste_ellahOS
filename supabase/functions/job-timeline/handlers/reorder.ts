@@ -67,7 +67,7 @@ export async function handleReorder(
 
   if (errors.length > 0) {
     console.error('[job-timeline/reorder] erros ao reordenar:', errors);
-    throw new AppError('INTERNAL_ERROR', 'Erro ao reordenar algumas fases', 500, { errors });
+    throw new AppError('INTERNAL_ERROR', 'Erro ao reordenar fases', 500);
   }
 
   console.log('[job-timeline/reorder] reordenamento concluido para', validated.phase_ids.length, 'fases');

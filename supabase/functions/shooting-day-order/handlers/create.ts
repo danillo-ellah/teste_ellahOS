@@ -66,8 +66,8 @@ export async function handleCreate(
     .single();
 
   if (insertErr) {
-    console.error('[shooting-day-order/create] erro ao inserir ordem do dia:', insertErr);
-    throw new AppError('INTERNAL_ERROR', insertErr.message, 500);
+    console.error('[shooting-day-order/create] erro ao inserir ordem do dia:', insertErr.message);
+    throw new AppError('INTERNAL_ERROR', 'Erro ao criar ordem do dia', 500);
   }
 
   console.log('[shooting-day-order/create] ordem do dia criada:', order.id);

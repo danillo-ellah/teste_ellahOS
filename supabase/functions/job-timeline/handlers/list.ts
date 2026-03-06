@@ -40,8 +40,8 @@ export async function handleList(
     .order('sort_order', { ascending: true });
 
   if (dbErr) {
-    console.error('[job-timeline/list] erro na query:', dbErr);
-    throw new AppError('INTERNAL_ERROR', dbErr.message, 500);
+    console.error('[job-timeline/list] erro na query:', dbErr.message);
+    throw new AppError('INTERNAL_ERROR', 'Erro ao listar fases', 500);
   }
 
   console.log('[job-timeline/list] retornando', phases?.length ?? 0, 'fases');

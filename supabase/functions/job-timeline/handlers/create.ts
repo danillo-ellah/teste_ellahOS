@@ -86,8 +86,8 @@ export async function handleCreate(
     .single();
 
   if (insertErr) {
-    console.error('[job-timeline/create] erro ao inserir fase:', insertErr);
-    throw new AppError('INTERNAL_ERROR', insertErr.message, 500);
+    console.error('[job-timeline/create] erro ao inserir fase:', insertErr.message);
+    throw new AppError('INTERNAL_ERROR', 'Erro ao criar fase', 500);
   }
 
   console.log('[job-timeline/create] fase criada:', phase.id);

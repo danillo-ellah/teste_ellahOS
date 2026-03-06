@@ -516,9 +516,7 @@ export async function handlePreview(
 
   if (odErr) {
     console.error('[shooting-day-order/preview] erro ao buscar OD:', odErr.message);
-    throw new AppError('INTERNAL_ERROR', 'Erro ao buscar ordem do dia', 500, {
-      detail: odErr.message,
-    });
+    throw new AppError('INTERNAL_ERROR', 'Erro ao buscar ordem do dia', 500);
   }
 
   if (!od) {
@@ -556,9 +554,7 @@ export async function handlePreview(
 
   if (jobResult.error) {
     console.error('[shooting-day-order/preview] erro ao buscar job:', jobResult.error.message);
-    throw new AppError('INTERNAL_ERROR', 'Erro ao buscar dados do job', 500, {
-      detail: jobResult.error.message,
-    });
+    throw new AppError('INTERNAL_ERROR', 'Erro ao buscar dados do job', 500);
   }
 
   if (!jobResult.data) {

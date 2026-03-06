@@ -48,8 +48,8 @@ export async function handleDelete(
     .eq('tenant_id', auth.tenantId);
 
   if (deleteErr) {
-    console.error('[job-timeline/delete] erro ao deletar fase:', deleteErr);
-    throw new AppError('INTERNAL_ERROR', deleteErr.message, 500);
+    console.error('[job-timeline/delete] erro ao deletar fase:', deleteErr.message);
+    throw new AppError('INTERNAL_ERROR', 'Erro ao remover fase', 500);
   }
 
   console.log('[job-timeline/delete] fase deletada (soft):', phaseId);

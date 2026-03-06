@@ -81,8 +81,8 @@ export async function handleUpdate(
     .single();
 
   if (updateErr) {
-    console.error('[job-timeline/update] erro ao atualizar fase:', updateErr);
-    throw new AppError('INTERNAL_ERROR', updateErr.message, 500);
+    console.error('[job-timeline/update] erro ao atualizar fase:', updateErr.message);
+    throw new AppError('INTERNAL_ERROR', 'Erro ao atualizar fase', 500);
   }
 
   console.log('[job-timeline/update] fase atualizada:', phase.id);
