@@ -223,3 +223,40 @@ export function canEditTab(
 
 /** Roles que veem TODOS os jobs sem precisar estar no job_team (PO-04: CCO e socia) */
 export const GLOBAL_JOB_ROLES: UserRole[] = ['admin', 'ceo', 'produtor_executivo', 'comercial']
+
+// --- Sidebar: acesso por rota ---
+// Se href esta no mapa, so roles listados veem. Se nao esta, visivel pra todos.
+
+const FULL_ACCESS: UserRole[] = ['admin', 'ceo', 'produtor_executivo']
+
+export const SIDEBAR_ACCESS: Record<string, UserRole[]> = {
+  // Comercial — so lideranca + CCO
+  '/crm/dashboard': [...FULL_ACCESS, 'comercial'],
+  '/crm/report': [...FULL_ACCESS, 'comercial'],
+  '/crm': [...FULL_ACCESS, 'comercial'],
+  '/clients': [...FULL_ACCESS, 'comercial', 'atendimento'],
+  '/agencies': [...FULL_ACCESS, 'comercial', 'atendimento'],
+  // Financeiro — so lideranca + financeiro
+  '/financeiro': [...FULL_ACCESS, 'financeiro'],
+  '/financeiro/vendors': [...FULL_ACCESS, 'financeiro'],
+  '/financeiro/calendario': [...FULL_ACCESS, 'financeiro'],
+  '/financeiro/nf-validation': [...FULL_ACCESS, 'financeiro'],
+  '/financeiro/nf-request': [...FULL_ACCESS, 'financeiro'],
+  '/financeiro/conciliacao': [...FULL_ACCESS, 'financeiro'],
+  // Equipe — Portal so pra quem gerencia cliente
+  '/portal': [...FULL_ACCESS, 'atendimento'],
+  '/reports': FULL_ACCESS,
+}
+
+// --- Campos financeiros sensiveis ---
+// Roles que podem ver dados financeiros em listagens (closed_value, margin, etc.)
+export const FINANCIAL_VIEW_ROLES: UserRole[] = [
+  'admin', 'ceo', 'produtor_executivo', 'financeiro',
+]
+
+// Roles que podem ver fee/cache na aba Equipe (spec secao 8)
+// Admin/CEO, PE, Dir. Producao, Financeiro. DC/1AD, ATD, Coord, Outros = NAO.
+// Dir. Producao via team_role (user_role enum ainda nao tem — futuro Fase 3)
+export const FEE_VIEW_ROLES: UserRole[] = [
+  'admin', 'ceo', 'produtor_executivo', 'financeiro',
+]

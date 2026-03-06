@@ -31,6 +31,7 @@ import {
   useRemoveTeamMember,
 } from '@/hooks/useJobTeam'
 import { useUserRole, APPROVAL_PDF_ROLES } from '@/hooks/useUserRole'
+import { FEE_VIEW_ROLES } from '@/lib/access-control-map'
 import { ApiRequestError } from '@/lib/api'
 import { TEAM_ROLE_LABELS, HIRING_STATUS_LABELS } from '@/lib/constants'
 import { formatCurrency, formatDateShort } from '@/lib/format'
@@ -54,6 +55,7 @@ export function TabEquipe({ job }: TabEquipeProps) {
 
   // Roles que podem gerar contratos em lote (mesmos do backend)
   const canGenerateContracts = userRole !== null && APPROVAL_PDF_ROLES.includes(userRole)
+  const canViewFee = userRole !== null && FEE_VIEW_ROLES.includes(userRole)
 
   function handleOpenAdd() {
     setEditingMember(undefined)
@@ -207,7 +209,7 @@ export function TabEquipe({ job }: TabEquipeProps) {
               <TableHead>Nome</TableHead>
               <TableHead>Funcao</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">Valor</TableHead>
+              {canViewFee && <TableHead className="text-right">Valor</TableHead>}
               <TableHead className="hidden md:table-cell">Periodo</TableHead>
               <TableHead className="w-[50px]" />
               <TableHead className="w-[50px]" />
@@ -234,9 +236,11 @@ export function TabEquipe({ job }: TabEquipeProps) {
                 <TableCell>
                   <HiringStatusBadge status={m.hiring_status} />
                 </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {m.fee != null ? formatCurrency(m.fee) : '-'}
-                </TableCell>
+                {canViewFee && (
+                  <TableCell className="text-right tabular-nums">
+                    {m.fee != null ? formatCurrency(m.fee) : '-'}
+                  </TableCell>
+                )}
                 <TableCell className="hidden md:table-cell">
                   {m.allocation_start && m.allocation_end ? (
                     <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">

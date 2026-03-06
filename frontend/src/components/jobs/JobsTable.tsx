@@ -19,6 +19,8 @@ import { StatusBadge } from '@/components/jobs/StatusBadge'
 import { PROJECT_TYPE_SHORT_LABELS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { formatCurrency, formatDate, isOverdue } from '@/lib/format'
+import { useUserRole } from '@/hooks/useUserRole'
+import { FINANCIAL_VIEW_ROLES } from '@/lib/access-control-map'
 import type { Job, JobStatus } from '@/types/jobs'
 
 interface JobsTableProps {
@@ -86,6 +88,8 @@ export function JobsTable({
   onArchive,
 }: JobsTableProps) {
   const router = useRouter()
+  const { role } = useUserRole()
+  const canViewFinancial = role !== null && FINANCIAL_VIEW_ROLES.includes(role)
 
   const allSelected = jobs.length > 0 && jobs.every((j) => selectedJobs.has(j.id))
   const someSelected = jobs.some((j) => selectedJobs.has(j.id)) && !allSelected
@@ -128,7 +132,7 @@ export function JobsTable({
               />
             </TableHead>
 
-            {COLUMNS.map((col) => (
+            {COLUMNS.filter((col) => col.key !== 'closed_value' || canViewFinancial).map((col) => (
               <TableHead
                 key={col.key}
                 className={cn(
@@ -242,26 +246,26 @@ export function JobsTable({
                   </div>
                 </TableCell>
 
-                {/* === CELULA 3: Financeiro (Valor + Margem) === */}
-                <TableCell className="px-3 py-2.5 w-40">
-                  <div className="flex flex-col gap-1 items-end min-w-0">
-                    {/* Linha 1: valor */}
-                    <span
-                      className={cn(
-                        'text-sm font-medium tabular-nums',
-                        job.closed_value ? 'text-foreground' : 'text-muted-foreground/50',
-                      )}
-                    >
-                      {job.closed_value
-                        ? formatCurrency(job.closed_value)
-                        : isOrcamentoStatus(job.status)
-                          ? <span className="text-xs text-amber-500 italic">Em orc.</span>
-                          : '-'}
-                    </span>
-                    {/* Linha 2: margem badge */}
-                    <MarginBadge value={job.margin_percentage} />
-                  </div>
-                </TableCell>
+                {/* === CELULA 3: Financeiro (Valor + Margem) — oculto por RBAC === */}
+                {canViewFinancial && (
+                  <TableCell className="px-3 py-2.5 w-40">
+                    <div className="flex flex-col gap-1 items-end min-w-0">
+                      <span
+                        className={cn(
+                          'text-sm font-medium tabular-nums',
+                          job.closed_value ? 'text-foreground' : 'text-muted-foreground/50',
+                        )}
+                      >
+                        {job.closed_value
+                          ? formatCurrency(job.closed_value)
+                          : isOrcamentoStatus(job.status)
+                            ? <span className="text-xs text-amber-500 italic">Em orc.</span>
+                            : '-'}
+                      </span>
+                      <MarginBadge value={job.margin_percentage} />
+                    </div>
+                  </TableCell>
+                )}
 
                 {/* === CELULA 4: Health === */}
                 <TableCell className="px-2 py-2.5 w-20 text-center">

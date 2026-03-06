@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/tooltip'
 import { useUserRole } from '@/hooks/useUserRole'
 import { SIDEBAR_SECTIONS, AREA_CONFIG } from '@/lib/constants'
+import { SIDEBAR_ACCESS } from '@/lib/access-control-map'
 import type { SidebarItem, AreaType } from '@/lib/constants'
 
 // Mapa de nome do icone → componente Lucide
@@ -100,10 +101,13 @@ export function Sidebar({ collapsed, onToggle, badges }: SidebarProps) {
       {/* Navegacao com secoes */}
       <nav className="flex-1 overflow-y-auto px-2 py-2">
         {SIDEBAR_SECTIONS.map((section, sIdx) => {
-          // Filtrar items adminOnly
-          const visibleItems = section.items.filter(
-            (item) => !item.adminOnly || isAdmin,
-          )
+          // Filtrar items por role (adminOnly + SIDEBAR_ACCESS)
+          const visibleItems = section.items.filter((item) => {
+            if (item.adminOnly && !isAdmin) return false
+            const allowedRoles = SIDEBAR_ACCESS[item.href]
+            if (allowedRoles && role && !allowedRoles.includes(role)) return false
+            return true
+          })
           if (visibleItems.length === 0) return null
 
           const areaConfig = section.area ? AREA_CONFIG[section.area] : null

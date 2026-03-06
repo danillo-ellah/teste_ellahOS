@@ -24,6 +24,8 @@ import { MarginBadge } from '@/components/jobs/MarginBadge'
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, JOB_STATUS_EMOJI } from '@/lib/constants'
 import { formatDate, isOverdue } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { useUserRole } from '@/hooks/useUserRole'
+import { FINANCIAL_VIEW_ROLES } from '@/lib/access-control-map'
 import { JOB_STATUSES } from '@/types/jobs'
 import type { Job, JobStatus } from '@/types/jobs'
 
@@ -45,6 +47,8 @@ function KanbanCard({
   isOverlay?: boolean
 }) {
   const router = useRouter()
+  const { role } = useUserRole()
+  const canViewFinancial = role !== null && FINANCIAL_VIEW_ROLES.includes(role)
   const statusColor = JOB_STATUS_COLORS[job.status]
   const overdue =
     isOverdue(job.expected_delivery_date) &&
@@ -123,7 +127,7 @@ function KanbanCard({
           <Calendar className="size-3" />
           {formatDate(job.expected_delivery_date)}
         </span>
-        <MarginBadge value={job.margin_percentage} />
+        {canViewFinancial && <MarginBadge value={job.margin_percentage} />}
       </div>
 
       {/* Linha 5: health */}
