@@ -3,15 +3,16 @@ import { getSupabaseClient, getServiceClient } from '../../_shared/supabase-clie
 import { created, createdWithWarnings } from '../../_shared/response.ts';
 import { AppError } from '../../_shared/errors.ts';
 import { enqueueEvent } from '../../_shared/integration-client.ts';
-import { createSubmission } from '../../_shared/docuseal-client.ts';
-import { getSecret } from '../../_shared/vault.ts';
+import { createSubmissionFromHtml } from '../../_shared/docuseal-client.ts';
 import type { AuthContext } from '../../_shared/auth.ts';
 import type { DocuSealSubmissionRow } from '../../_shared/types.ts';
+import { generateContractHtml } from '../templates/contract-html.ts';
+import type { ContractData } from '../templates/contract-html.ts';
 
 // Roles permitidos para gerar contratos em lote
 const ALLOWED_ROLES = ['admin', 'ceo', 'produtor_executivo'];
 
-// Tipos de contrato suportados
+// Tipos de contrato suportados (mantidos como metadata)
 const CONTRACT_TEMPLATE_TYPES = ['elenco', 'tecnico', 'pj'] as const;
 type ContractTemplateType = (typeof CONTRACT_TEMPLATE_TYPES)[number];
 
@@ -29,43 +30,9 @@ const BatchGenerateSchema = z.object({
 
 type BatchGenerateInput = z.infer<typeof BatchGenerateSchema>;
 
-// Chave do Vault que mapeia tipo de template para template_id no DocuSeal
-// Formato: DOCUSEAL_TEMPLATE_ID_ELENCO, DOCUSEAL_TEMPLATE_ID_TECNICO, DOCUSEAL_TEMPLATE_ID_PJ
-// Tentamos primeiro a key por tenant, depois a global
-async function resolveTemplateId(
-  serviceClient: ReturnType<typeof getServiceClient>,
-  tenantId: string,
-  templateType: ContractTemplateType,
-): Promise<number> {
-  const keyName = `DOCUSEAL_TEMPLATE_ID_${templateType.toUpperCase()}`;
-
-  // Tenta tenant-specific primeiro
-  let value = await getSecret(serviceClient, `${tenantId}_${keyName}`);
-  if (!value) {
-    // Fallback global
-    value = await getSecret(serviceClient, keyName);
-  }
-
-  if (!value) {
-    throw new AppError(
-      'BUSINESS_RULE_VIOLATION',
-      `Template DocuSeal para tipo "${templateType}" nao configurado. Configure a secret "${keyName}" no Vault.`,
-      422,
-      { template_type: templateType, vault_key: keyName },
-    );
-  }
-
-  const id = parseInt(value, 10);
-  if (isNaN(id) || id <= 0) {
-    throw new AppError(
-      'INTERNAL_ERROR',
-      `Valor invalido na secret "${keyName}": esperado numero inteiro positivo, recebido "${value}"`,
-      500,
-    );
-  }
-
-  return id;
-}
+// ========================================================
+// Interfaces internas
+// ========================================================
 
 // Dados completos de uma pessoa para montar o contrato
 interface PersonContractData {
@@ -73,6 +40,13 @@ interface PersonContractData {
   full_name: string;
   email: string | null;
   cpf: string | null;
+  rg: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  phone: string | null;
+  profession: string | null;
+  bank_info: Record<string, string | null> | null;
 }
 
 // Dado de membro + dados da pessoa para gerar o contrato
@@ -84,7 +58,7 @@ interface MemberWithPerson {
   person: PersonContractData;
 }
 
-// Resultado parcial por membro: gerado com sucesso ou falha (dados incompletos)
+// Resultado parcial por membro: gerado com sucesso ou falha
 interface MemberResult {
   member_id: string;
   person_id: string;
@@ -94,6 +68,26 @@ interface MemberResult {
   submission_id?: string;
   docuseal_submission_id?: number;
 }
+
+// ========================================================
+// Helpers
+// ========================================================
+
+// Converte data ISO (2025-03-15) para PT-BR (15/03/2025)
+function isoToBR(isoDate: string): string {
+  const parts = isoDate.split('T')[0].split('-');
+  if (parts.length !== 3) return isoDate;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+// Data atual no formato DD/MM/YYYY
+function todayBR(): string {
+  return isoToBR(new Date().toISOString());
+}
+
+// ========================================================
+// Handler principal
+// ========================================================
 
 export async function batchGenerateHandler(req: Request, auth: AuthContext): Promise<Response> {
   // Verificar permissao
@@ -123,10 +117,10 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
     `[batch-generate] user=${auth.userId} job_id=${input.job_id} template_type=${input.template_type} members=${input.member_ids.length}`,
   );
 
-  // 1. Verificar que o job existe e pertence ao tenant
+  // 1. Verificar que o job existe e pertence ao tenant, buscando dados extras
   const { data: job, error: jobError } = await supabase
     .from('jobs')
-    .select('id, code, title, tenant_id, shooting_dates, expected_delivery_date, closed_value')
+    .select('id, code, title, tenant_id, client_id, agency_id')
     .eq('id', input.job_id)
     .eq('tenant_id', auth.tenantId)
     .is('deleted_at', null)
@@ -136,21 +130,59 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
     throw new AppError('NOT_FOUND', 'Job nao encontrado', 404);
   }
 
-  // 2. Resolver o template_id pelo tipo (Vault ou fallback global)
-  let templateId: number;
-  try {
-    templateId = await resolveTemplateId(serviceClient, auth.tenantId, input.template_type);
-  } catch (err) {
-    if (err instanceof AppError) throw err;
-    const msg = err instanceof Error ? err.message : String(err);
-    throw new AppError('INTERNAL_ERROR', `Erro ao resolver template: ${msg}`, 500);
+  // 2. Buscar dados do tenant para contratante
+  const { data: tenant, error: tenantError } = await serviceClient
+    .from('tenants')
+    .select('id, name, settings')
+    .eq('id', auth.tenantId)
+    .single();
+
+  if (tenantError || !tenant) {
+    console.warn(`[batch-generate] tenant nao encontrado: ${tenantError?.message}`);
   }
 
+  // Extrair dados da empresa do tenant.settings
+  const tenantSettings = (tenant?.settings ?? {}) as Record<string, string | null>;
+  const companyName: string = (tenant?.name as string) ?? 'Ellah Filmes';
+  const companyCnpj: string = (tenantSettings['company_cnpj'] as string) ?? '';
+  const companyAddress: string = (tenantSettings['company_address'] as string) ?? 'São Paulo, SP';
+  const companyCity: string = (tenantSettings['company_city'] as string) ?? 'São Paulo';
+  // Email de quem assina pela empresa — config no tenant ou fallback do usuario logado
+  const contractSignerEmail: string =
+    (tenantSettings['contract_signer_email'] as string) ?? auth.email ?? '';
+
   console.log(
-    `[batch-generate] template resolvido: tipo=${input.template_type} template_id=${templateId}`,
+    `[batch-generate] contratante=${companyName} signer_email=${contractSignerEmail}`,
   );
 
-  // 3. Buscar membros selecionados com dados completos da pessoa
+  // 3. Buscar cliente e agencia do job (queries paralelas)
+  const [clientResult, agencyResult, shootingDatesResult] = await Promise.all([
+    job.client_id
+      ? supabase.from('clients').select('name').eq('id', job.client_id).single()
+      : Promise.resolve({ data: null, error: null }),
+    job.agency_id
+      ? supabase.from('agencies').select('name').eq('id', job.agency_id).single()
+      : Promise.resolve({ data: null, error: null }),
+    supabase
+      .from('job_shooting_dates')
+      .select('shooting_date')
+      .eq('job_id', input.job_id)
+      .eq('tenant_id', auth.tenantId)
+      .is('deleted_at', null)
+      .order('shooting_date', { ascending: true }),
+  ]);
+
+  const clientName: string | null = (clientResult.data as { name: string } | null)?.name ?? null;
+  const agencyName: string | null = (agencyResult.data as { name: string } | null)?.name ?? null;
+  const shootingDates: string[] = (
+    (shootingDatesResult.data ?? []) as Array<{ shooting_date: string }>
+  ).map((d) => isoToBR(d.shooting_date));
+
+  console.log(
+    `[batch-generate] job=${job.code} cliente=${clientName} agencia=${agencyName} datas_filmagem=${shootingDates.length}`,
+  );
+
+  // 4. Buscar membros selecionados com dados completos da pessoa
   const { data: teamRows, error: teamError } = await supabase
     .from('job_team')
     .select(
@@ -163,7 +195,14 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
         id,
         full_name,
         email,
-        cpf
+        cpf,
+        rg,
+        address,
+        city,
+        state,
+        phone,
+        profession,
+        bank_info
       )
       `,
     )
@@ -198,16 +237,23 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
       full_name: 'Sem nome',
       email: null,
       cpf: null,
+      rg: null,
+      address: null,
+      city: null,
+      state: null,
+      phone: null,
+      profession: null,
+      bank_info: null,
     },
   }));
 
-  // 4. Verificar quais membros ja possuem contrato ativo com este template
+  // 5. Verificar quais membros ja possuem contrato ativo para este job
+  //    (sem filtrar por template_id, pois agora o contrato e gerado via HTML)
   const personIds = members.map((m) => m.person_id);
   const { data: existingSubmissions } = await supabase
     .from('docuseal_submissions')
     .select('id, person_id, docuseal_status')
     .eq('job_id', input.job_id)
-    .eq('docuseal_template_id', templateId)
     .eq('tenant_id', auth.tenantId)
     .in('person_id', personIds)
     .in('docuseal_status', ['pending', 'sent', 'opened', 'partially_signed', 'signed'])
@@ -217,12 +263,12 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
     (existingSubmissions ?? []).map((s) => s.person_id as string),
   );
 
-  // 5. Classificar membros: elegíveis vs. ignorados
+  // 6. Classificar membros: elegiveis vs. ignorados
   const eligible: MemberWithPerson[] = [];
   const skipped: MemberResult[] = [];
 
   for (const member of members) {
-    // Verificar email (obrigatorio para DocuSeal)
+    // Email e obrigatorio para o DocuSeal enviar o link de assinatura
     if (!member.person.email) {
       skipped.push({
         member_id: member.member_id,
@@ -241,7 +287,7 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
         person_id: member.person_id,
         person_name: member.person.full_name,
         status: 'skipped',
-        skip_reason: 'Ja possui contrato ativo para este template',
+        skip_reason: 'Ja possui contrato ativo para este job',
       });
       continue;
     }
@@ -250,7 +296,7 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
   }
 
   console.log(
-    `[batch-generate] elegíveis=${eligible.length} ignorados=${skipped.length} total=${members.length}`,
+    `[batch-generate] elegiveis=${eligible.length} ignorados=${skipped.length} total=${members.length}`,
   );
 
   if (eligible.length === 0) {
@@ -259,7 +305,6 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
       job_id: input.job_id,
       job_code: job.code,
       template_type: input.template_type,
-      template_id: templateId,
       generated: [],
       skipped,
       generated_count: 0,
@@ -267,8 +312,7 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
     });
   }
 
-  // 6. Gerar contratos: 1 submission DocuSeal por membro elegível
-  //    (cada membro recebe contrato individual, nao em lote na mesma submission)
+  // 7. Gerar contratos: 1 submission DocuSeal por membro elegivel
   const generated: MemberResult[] = [];
   const failedToGenerate: Array<{ member: MemberWithPerson; reason: string }> = [];
   const now = new Date().toISOString();
@@ -278,66 +322,101 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
       `[batch-generate] gerando contrato para person_id=${member.person_id} email=${member.person.email}`,
     );
 
-    // Montar campos pre-preenchidos para o template DocuSeal
-    const contractFields: Array<{ name: string; value: string }> = [
-      { name: 'Nome', value: member.person.full_name },
-      { name: 'name', value: member.person.full_name },
+    // Montar ContractData para gerar o HTML
+    const contractData: ContractData = {
+      // Contratante
+      company_name: companyName,
+      company_cnpj: companyCnpj,
+      company_address: companyAddress,
+      company_city: companyCity,
+
+      // Contratado
+      person_name: member.person.full_name,
+      person_cpf: member.person.cpf,
+      person_rg: member.person.rg,
+      person_address: member.person.address,
+      person_city: member.person.city,
+      person_state: member.person.state,
+      person_phone: member.person.phone,
+      person_email: member.person.email!,
+      person_profession: member.person.profession,
+      person_bank_info: member.person.bank_info
+        ? {
+            bank_name: member.person.bank_info['bank_name'] ?? undefined,
+            pix_key: member.person.bank_info['pix_key'] ?? undefined,
+            pix_key_type: member.person.bank_info['pix_key_type'] ?? undefined,
+          }
+        : null,
+
+      // Projeto
+      job_title: job.title,
+      job_code: job.code,
+      client_name: clientName,
+      agency_name: agencyName,
+
+      // Funcao e valor
+      role: member.role,
+      rate: member.rate,
+
+      // Datas
+      shooting_dates: shootingDates,
+
+      // Metadata
+      contract_date: todayBR(),
+    };
+
+    // Gerar HTML do contrato com dados pre-preenchidos
+    let contractHtml: string;
+    try {
+      contractHtml = generateContractHtml(contractData);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[batch-generate] falha ao gerar HTML para person_id=${member.person_id}: ${msg}`);
+      failedToGenerate.push({ member, reason: `Erro ao gerar HTML do contrato: ${msg}` });
+      continue;
+    }
+
+    // Montar nome do documento para exibicao no DocuSeal
+    const documentName = `Contrato — ${member.person.full_name} — ${job.code}`;
+
+    // Submitters: Contratado primeiro, depois Contratante
+    // DocuSeal exige que a ordem de roles coincida com os campos declarados no HTML
+    const submitters: Array<{ role: string; email: string; send_email: boolean }> = [
+      {
+        role: 'Contratado',
+        email: member.person.email!,
+        send_email: true,
+      },
     ];
 
-    if (member.person.cpf) {
-      contractFields.push({ name: 'CPF', value: member.person.cpf });
-      contractFields.push({ name: 'cpf', value: member.person.cpf });
+    // Adicionar contratante somente se o email estiver configurado
+    if (contractSignerEmail) {
+      submitters.push({
+        role: 'Contratante',
+        email: contractSignerEmail,
+        send_email: true,
+      });
     }
 
-    if (member.person.email) {
-      contractFields.push({ name: 'Email', value: member.person.email });
-      contractFields.push({ name: 'email', value: member.person.email });
-    }
-
-    if (member.rate != null) {
-      contractFields.push({ name: 'Valor', value: String(member.rate) });
-      contractFields.push({ name: 'Cache', value: String(member.rate) });
-      contractFields.push({ name: 'Cachê', value: String(member.rate) });
-    }
-
-    if (job.title) {
-      contractFields.push({ name: 'Projeto', value: job.title });
-      contractFields.push({ name: 'Filme', value: job.title });
-    }
-
-    if (job.code) {
-      contractFields.push({ name: 'Codigo', value: job.code });
-      contractFields.push({ name: 'Código do Projeto', value: job.code });
-    }
-
-    // Role traduzida para PT-BR (ja vem como snake_case do banco)
-    contractFields.push({ name: 'Funcao', value: member.role });
-    contractFields.push({ name: 'Função', value: member.role });
-
-    // Chamar DocuSeal API para criar submission individual
+    // Chamar DocuSeal API via HTML endpoint
     let docusealResponse;
     try {
-      docusealResponse = await createSubmission(serviceClient, auth.tenantId, {
-        template_id: templateId,
-        send_email: true,
-        submitters: [
-          {
-            role: 'Contratado', // Role padrao no template
-            email: member.person.email!,
-            fields: contractFields,
-          },
-        ],
+      docusealResponse = await createSubmissionFromHtml(serviceClient, auth.tenantId, {
+        html: contractHtml,
+        name: documentName,
+        submitters,
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(
-        `[batch-generate] falha ao criar submission para person_id=${member.person_id}: ${msg}`,
+        `[batch-generate] falha ao criar submission HTML para person_id=${member.person_id}: ${msg}`,
       );
       failedToGenerate.push({ member, reason: msg });
       continue;
     }
 
     // Persistir registro em docuseal_submissions
+    // docuseal_template_id = 0 porque nao usamos template fixo, mas o campo e NOT NULL
     const rowToInsert: Partial<DocuSealSubmissionRow> = {
       tenant_id: auth.tenantId,
       job_id: input.job_id,
@@ -346,16 +425,19 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
       person_email: member.person.email!,
       person_cpf: member.person.cpf ?? null,
       docuseal_submission_id: docusealResponse.submission_id,
-      docuseal_template_id: templateId,
+      docuseal_template_id: 0, // HTML submission nao usa template_id fixo
       docuseal_status: 'sent',
       contract_data: {
         docuseal_submitter_id: docusealResponse.submitters?.[0]?.id ?? null,
         docuseal_submitter_status: docusealResponse.submitters?.[0]?.status ?? null,
         role: member.role,
         template_type: input.template_type,
-        fields: contractFields,
+        generation_method: 'html_api',
+        document_name: documentName,
         job_code: job.code,
         job_title: job.title,
+        rate: member.rate,
+        shooting_dates: shootingDates,
       },
       signed_pdf_url: null,
       signed_pdf_drive_id: null,
@@ -367,7 +449,9 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
       metadata: {
         created_from: 'batch-generate',
         template_type: input.template_type,
+        generation_method: 'html_api',
         batch_timestamp: now,
+        signer_email: contractSignerEmail || null,
       },
     };
 
@@ -402,7 +486,7 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
     );
   }
 
-  // 7. Enfileirar integration_event para auditoria (nao bloqueante)
+  // 8. Enfileirar integration_event para auditoria (nao bloqueante)
   try {
     await enqueueEvent(serviceClient, {
       tenant_id: auth.tenantId,
@@ -411,7 +495,7 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
         job_id: input.job_id,
         job_code: job.code,
         template_type: input.template_type,
-        template_id: templateId,
+        generation_method: 'html_api',
         total_requested: members.length,
         generated_count: generated.length,
         skipped_count: skipped.length,
@@ -439,7 +523,7 @@ export async function batchGenerateHandler(req: Request, auth: AuthContext): Pro
     job_id: input.job_id,
     job_code: job.code,
     template_type: input.template_type,
-    template_id: templateId,
+    generation_method: 'html_api',
     generated,
     skipped,
     generated_count: generated.length,

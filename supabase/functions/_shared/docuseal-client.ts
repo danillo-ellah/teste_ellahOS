@@ -158,6 +158,72 @@ async function docusealFetch(
 }
 
 // ========================================================
+// createSubmissionFromHtml — POST /api/submissions/html
+// ========================================================
+
+export interface DocuSealHtmlSubmission {
+  html: string;
+  name: string; // nome do documento exibido no DocuSeal
+  submitters: Array<{
+    role: string;
+    email: string;
+    send_email?: boolean;
+  }>;
+}
+
+// Cria uma submission no DocuSeal a partir de HTML pre-renderizado.
+// O DocuSeal converte o HTML para PDF e extrai os campos de assinatura
+// (signature-field, text-field, date-field, checkbox-field) declarados no HTML.
+// Ideal para contratos onde os dados ja estao preenchidos antes do envio.
+export async function createSubmissionFromHtml(
+  serviceClient: SupabaseClient,
+  tenantId: string,
+  submission: DocuSealHtmlSubmission,
+): Promise<DocuSealSubmissionResponse> {
+  const config = await getDocuSealConfig(serviceClient, tenantId);
+
+  console.log(
+    `[docuseal] criando submission HTML name="${submission.name}" submitters=${submission.submitters.length}`,
+  );
+
+  // Payload conforme DocuSeal API /api/submissions/html
+  const payload = {
+    name: submission.name,
+    documents: [
+      {
+        name: 'contrato',
+        html: submission.html,
+      },
+    ],
+    submitters: submission.submitters.map((s) => ({
+      role: s.role,
+      email: s.email,
+      send_email: s.send_email ?? true,
+    })),
+  };
+
+  const resp = await docusealFetch(config, '/submissions/html', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+  const data = await resp.json();
+
+  // DocuSeal retorna array de submitters — mesma estrutura do endpoint padrao
+  const submitters: DocuSealSubmitterResponse[] = Array.isArray(data) ? data : [data];
+  const submissionId = submitters[0]?.submission_id ?? 0;
+
+  console.log(
+    `[docuseal] submission HTML criada submission_id=${submissionId} submitters=${submitters.length}`,
+  );
+
+  return {
+    submission_id: submissionId,
+    submitters,
+  } as DocuSealSubmissionResponse;
+}
+
+// ========================================================
 // createSubmission — POST /api/submissions
 // ========================================================
 
