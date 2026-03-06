@@ -8,6 +8,7 @@ import {
   ExternalLink,
   AlertCircle,
 } from 'lucide-react'
+import Link from 'next/link'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -133,7 +134,7 @@ export default function PortalPage() {
             Para criar links, acesse a aba <strong>Portal</strong> no detalhe do job.
           </p>
           <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
-            <a href="/jobs">Ver Jobs</a>
+            <Link href="/jobs">Ver Jobs</Link>
           </Button>
         </div>
       </div>
