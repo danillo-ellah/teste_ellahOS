@@ -2,6 +2,7 @@ import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 import { paginated } from '../../_shared/response.ts';
 import { AppError } from '../../_shared/errors.ts';
 import { mapDbToApi } from '../../_shared/column-map.ts';
+import { maskFinancialData } from '../../_shared/financial-mask.ts';
 import {
   parsePagination,
   getOffset,
@@ -131,8 +132,10 @@ export async function listJobs(
     throw new AppError('INTERNAL_ERROR', dbError.message, 500);
   }
 
-  // Mapear resultados banco -> API
-  const mappedJobs = (jobs ?? []).map((job) => mapDbToApi(job));
+  // Mapear resultados banco -> API e mascarar campos financeiros conforme role
+  const mappedJobs = (jobs ?? []).map((job) =>
+    maskFinancialData(mapDbToApi(job), auth.role)
+  );
 
   return paginated(mappedJobs, buildMeta(count ?? 0, params));
 }

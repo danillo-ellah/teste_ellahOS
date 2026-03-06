@@ -485,6 +485,7 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
     area: 'equipe',
     items: [
       { label: 'Pessoas', href: '/people', icon: 'Users' },
+      { label: 'Atendimento', href: '/atendimento', icon: 'Headset' },
       { label: 'Portal', href: '/portal', icon: 'Globe' },
       { label: 'Relatorios', href: '/reports', icon: 'BarChart3' },
     ],
@@ -563,7 +564,7 @@ export function getActiveArea(pathname: string): AreaType | null {
   if (pathname.startsWith('/financeiro')) {
     return 'financeiro'
   }
-  if (pathname.startsWith('/people') || pathname.startsWith('/portal') || pathname.startsWith('/reports')) {
+  if (pathname.startsWith('/people') || pathname.startsWith('/atendimento') || pathname.startsWith('/portal') || pathname.startsWith('/reports')) {
     return 'equipe'
   }
   if (pathname.startsWith('/settings') || pathname.startsWith('/admin')) {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, KeyboardEvent } from 'react'
-import { Bot, Plus, History, Send, Trash2, ChevronLeft, AlertCircle } from 'lucide-react'
+import { Bot, Plus, History, Send, Trash2, ChevronLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -213,7 +213,7 @@ export function AiCopilotPanel({ open, onOpenChange, context }: AiCopilotPanelPr
   const [input, setInput] = useState('')
   const [localMessages, setLocalMessages] = useState<CopilotMessage[]>([])
 
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const { sendMessage, isStreaming, streamedText, conversationId, resetStream } = useChatStream()
@@ -237,8 +237,11 @@ export function AiCopilotPanel({ open, onOpenChange, context }: AiCopilotPanelPr
   }, [conversationId, activeConversationId])
 
   // Auto-scroll para a ultima mensagem
+  // Usa scrollTop diretamente no container (scrollIntoView nao funciona dentro do Radix ScrollArea)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const el = messagesContainerRef.current
+    if (!el) return
+    el.scrollTop = el.scrollHeight
   }, [localMessages, streamedText, isStreaming])
 
   // Auto-resize do textarea conforme o usuario digita
@@ -381,8 +384,13 @@ export function AiCopilotPanel({ open, onOpenChange, context }: AiCopilotPanelPr
               </div>
             </SheetHeader>
 
-            {/* Area de mensagens */}
-            <ScrollArea className="flex-1">
+            {/* Area de mensagens
+                Usa div nativa com overflow-y-auto ao inves do Radix ScrollArea para que
+                o auto-scroll via scrollTop funcione corretamente */}
+            <div
+              ref={messagesContainerRef}
+              className="flex-1 overflow-y-auto min-h-0"
+            >
               <div className="flex flex-col gap-3 p-4">
                 {/* Estado inicial — sem conversa */}
                 {!activeConversationId && displayMessages.length === 0 && !isStreaming && (
@@ -430,11 +438,8 @@ export function AiCopilotPanel({ open, onOpenChange, context }: AiCopilotPanelPr
                 {/* Streaming em andamento */}
                 {isStreaming && streamedText && <StreamingBubble text={streamedText} />}
                 {isStreaming && !streamedText && <TypingIndicator />}
-
-                {/* Ancora para auto-scroll */}
-                <div ref={messagesEndRef} />
               </div>
-            </ScrollArea>
+            </div>
 
             {/* Area de input */}
             <div className="shrink-0 border-t bg-background p-3">

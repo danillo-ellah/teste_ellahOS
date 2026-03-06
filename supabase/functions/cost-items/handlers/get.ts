@@ -2,13 +2,20 @@ import type { AuthContext } from '../../_shared/auth.ts';
 import { AppError } from '../../_shared/errors.ts';
 import { success } from '../../_shared/response.ts';
 import { getSupabaseClient } from '../../_shared/supabase-client.ts';
+import { canViewFinancials } from '../../_shared/financial-mask.ts';
 
 export async function handleGet(_req: Request, auth: AuthContext, id: string): Promise<Response> {
   console.log('[cost-items/get] buscando item de custo', {
     id,
     userId: auth.userId,
     tenantId: auth.tenantId,
+    role: auth.role,
   });
+
+  // Guard: apenas roles com acesso financeiro podem ver itens de custo individuais
+  if (!canViewFinancials(auth.role)) {
+    throw new AppError('FORBIDDEN', 'Permissao insuficiente para acessar itens de custo', 403);
+  }
 
   const client = getSupabaseClient(auth.token);
 

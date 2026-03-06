@@ -3,6 +3,7 @@ import { AppError } from '../../_shared/errors.ts';
 import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 import { parsePagination, getOffset, buildMeta } from '../../_shared/pagination.ts';
 import { getCorsHeaders } from '../../_shared/cors.ts';
+import { canViewFinancials } from '../../_shared/financial-mask.ts';
 
 // Colunas permitidas para ordenacao
 const ALLOWED_SORT_COLS = [
@@ -18,7 +19,13 @@ export async function handleList(req: Request, auth: AuthContext): Promise<Respo
   console.log('[cost-items/list] listando itens de custo', {
     userId: auth.userId,
     tenantId: auth.tenantId,
+    role: auth.role,
   });
+
+  // Guard: apenas roles com acesso financeiro podem listar cost_items
+  if (!canViewFinancials(auth.role)) {
+    throw new AppError('FORBIDDEN', 'Permissao insuficiente para acessar itens de custo', 403);
+  }
 
   const url = new URL(req.url);
   const client = getSupabaseClient(auth.token);

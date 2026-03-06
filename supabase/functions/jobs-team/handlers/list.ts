@@ -1,6 +1,7 @@
 import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 import { success } from '../../_shared/response.ts';
 import { AppError } from '../../_shared/errors.ts';
+import { maskTeamFees } from '../../_shared/financial-mask.ts';
 import type { AuthContext } from '../../_shared/auth.ts';
 
 export async function listTeam(
@@ -38,5 +39,6 @@ export async function listTeam(
     updated_at: m.updated_at,
   }));
 
-  return success(mapped);
+  // Mascarar fee/rate para roles sem acesso financeiro
+  return success(maskTeamFees(mapped, auth.role));
 }

@@ -249,6 +249,8 @@ export const SIDEBAR_ACCESS: Record<string, UserRole[]> = {
   '/financeiro/nf-validation': [...FULL_ACCESS, 'financeiro'],
   '/financeiro/nf-request': [...FULL_ACCESS, 'financeiro'],
   '/financeiro/conciliacao': [...FULL_ACCESS, 'financeiro'],
+  // Atendimento — lideranca + coordenador + atendimento
+  '/atendimento': [...FULL_ACCESS, 'coordenador', 'atendimento'],
   // Equipe — Portal so pra quem gerencia cliente
   '/portal': [...FULL_ACCESS, 'atendimento'],
   '/reports': FULL_ACCESS,

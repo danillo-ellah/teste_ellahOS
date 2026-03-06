@@ -2,6 +2,7 @@ import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 import { success } from '../../_shared/response.ts';
 import { AppError } from '../../_shared/errors.ts';
 import { mapDbToApi } from '../../_shared/column-map.ts';
+import { maskFinancialData, maskTeamFees } from '../../_shared/financial-mask.ts';
 import type { AuthContext } from '../../_shared/auth.ts';
 
 export async function getJobById(
@@ -24,8 +25,8 @@ export async function getJobById(
     throw new AppError('NOT_FOUND', 'Job nao encontrado', 404);
   }
 
-  // Resultado base mapeado
-  const result: Record<string, unknown> = mapDbToApi(job);
+  // Resultado base mapeado e com campos financeiros mascarados conforme role
+  const result: Record<string, unknown> = maskFinancialData(mapDbToApi(job), auth.role);
 
   // Includes opcionais via ?include=team,deliverables,shooting_dates,history
   const includes = (url.searchParams.get('include') ?? '')
@@ -41,7 +42,8 @@ export async function getJobById(
       .is('deleted_at', null)
       .order('created_at', { ascending: true });
 
-    result.team = (team ?? []).map((m) => ({
+    // Mapear membros e mascarar fee para roles sem acesso
+    const rawTeam = (team ?? []).map((m) => ({
       id: m.id,
       person_id: m.person_id,
       person_name: m.people?.full_name ?? null,
@@ -52,6 +54,7 @@ export async function getJobById(
       notes: m.notes,
       created_at: m.created_at,
     }));
+    result.team = maskTeamFees(rawTeam, auth.role);
   }
 
   if (includes.includes('deliverables')) {
