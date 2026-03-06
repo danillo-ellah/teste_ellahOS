@@ -41,25 +41,43 @@ Como admin, quero forcar uma re-sincronizacao de permissoes de um job especifico
 
 ---
 
-## 3. Mapa de Permissoes por Papel
+## 3. Mapa de Permissoes por Papel (v4 — FINAL)
+
+**Atualizado em 06/03/2026** apos 31 perguntas com o CEO sobre acesso por funcao.
+30 pastas nivel 1 x 18 papeis. Veja mapa completo em `memory/roles-permissions-ellah.md`.
 
 **Legenda:** W = writer | R = reader | — = sem acesso
 
-| Pasta (folder_key) | admin/ceo | produtor_executivo | diretor | assistente_direcao | financeiro | editor | freelancer |
-|---|---|---|---|---|---|---|---|
-| (pasta raiz) | W | W | — | — | — | — | — |
-| `01_DOCUMENTOS` | — | — | W | W | R | R | R |
-| `02_FINANCEIRO` | — | — | — | — | W | — | — |
-| `03_MONSTRO_PESQUISA_ARTES` | — | — | W | W | — | R | — |
-| `04_CRONOGRAMA` | — | — | W | W | R | R | R |
-| `05_CONTRATOS` | — | — | — | — | R | — | — |
-| `06_FORNECEDORES` | — | — | W | W | R | — | — |
-| `07_CLIENTES` | — | — | W | R | R | — | — |
-| `08_POS_PRODUCAO` | — | — | W | W | — | W | W |
-| `09_ATENDIMENTO` | — | — | R | R | — | — | — |
-| `10_VENDAS_PRODUTOR_EXECUTIVO` | — | — | — | — | — | — | — |
+**Estrutura de pastas nivel 1 (30 pastas):**
+01A_ROTEIRO_BRIEFING, 01B_DOCS_PRODUTORA,
+02A a 02H (8 pastas financeiras), 03_MONSTRO, 04_CRONOGRAMA,
+05A a 05D (4 pastas contratos), 06A a 06D (4 pastas fornecedores),
+07_CLIENTES, 08A a 08E (5 pastas pos-producao),
+09_ATENDIMENTO, 10_VENDAS_PE
 
-**Nota:** admin/ceo e produtor_executivo recebem `writer` na pasta raiz (herda tudo). Demais papeis recebem permissoes granulares nas pastas de nivel 1.
+**Papeis (18):**
+admin, ceo, cco, produtor_executivo, diretor_producao, financeiro, juridico,
+atendimento, diretor (cena), primeiro_assistente (1a AD), dop,
+editor, colorista, motion_designer, finalizador, diretor_arte,
+figurinista, produtor_casting + tecnicos (gaffer, som, maquiador, locacao)
+
+**Regras principais:**
+- CEO/PE: writer na raiz (herda tudo)
+- CCO: vendas (W), crono/clientes/atend (R). Override pra atendimento por job
+- Dir. Producao: gastos/comprovantes/notinhas (R), producao_pre (W), crono/alvara/clientes (R)
+- Financeiro: todas pastas 02* (W), contratos prod/equipe (R), docs produtora (R)
+- Juridico: todos contratos (W), alvara (W)
+- Atendimento: roteiro (W), decupado/monstro (R), crono (R), alvara (R), clientes (W), pos_pesq/story/montagem (R), atendimento (W)
+- Dir. Cena: roteiro/monstro/crono (W), direcao (W), bruto (R), limpo/pesq/story (R), montagem (W)
+- 1a AD: mesmo que dir. cena (sem pos)
+- Editor/Colorista/Finalizador: pos completa (W), crono (R)
+- Dir. Arte: monstro (W), arte_pre (W), crono (R)
+- Figurinista: figurino_pre (W), crono (R)
+- Casting: contrato_elenco (W), crono (R)
+- Tecnicos: so crono (R)
+- Coordenador Producao: configuravel POR JOB (default: sem acesso Drive)
+
+**Nota:** O mapa completo com todas as combinacoes esta implementado em `_shared/drive-permission-map.ts`.
 
 ---
 

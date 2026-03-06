@@ -142,6 +142,12 @@ export async function grantDrivePermissionsForMember(
   // 4. Carregar mapa de permissoes e resolver role do membro
   const permissionMap = await getPermissionMap(serviceClient, auth.tenantId);
   const driveRole = resolvePermissionRole(member.role);
+
+  if (!driveRole) {
+    console.log(`[drive-permissions-helper] Role "${member.role}" sem acesso Drive (configuravel por job via override) — skip`);
+    return result;
+  }
+
   const folderEntries = permissionMap[driveRole] || [];
 
   if (folderEntries.length === 0) {
