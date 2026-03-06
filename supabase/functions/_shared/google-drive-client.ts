@@ -562,6 +562,33 @@ interface BuildDriveParams {
   tenantId: string;
 }
 
+// Valida que um email pertence a um profile membro do tenant informado.
+// Retorna true se encontrado, false caso contrario.
+// Usada para impedir que owner_email aponte para um email externo ao tenant,
+// evitando transferencia de ownership do Drive para terceiros nao autorizados.
+async function validateOwnerEmailBelongsToTenant(
+  serviceClient: SupabaseClient,
+  email: string,
+  tenantId: string,
+): Promise<boolean> {
+  const { data, error } = await serviceClient
+    .from('profiles')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('email', email)
+    .maybeSingle();
+
+  if (error) {
+    console.warn(
+      `[google-drive] validateOwnerEmail: erro ao consultar profiles — ${error.message}`,
+    );
+    // Em caso de erro de consulta, bloqueia por seguranca
+    return false;
+  }
+
+  return data !== null;
+}
+
 export async function buildDriveStructure(
   params: BuildDriveParams,
 ): Promise<BuildDriveResult> {
@@ -656,9 +683,17 @@ export async function buildDriveStructure(
       console.log(`[google-drive] Pasta do ano "${currentYear}" criada: ${yearFolder.id}`);
 
       // Dar permissao ao owner na pasta do ano
+      // Valida pertencimento ao tenant antes de conceder permissao
       const ownerEmail = driveConfig.owner_email as string;
       if (ownerEmail) {
-        await setPermission(token, yearFolder.id, ownerEmail, 'writer', driveOpts);
+        const ownerValido = await validateOwnerEmailBelongsToTenant(serviceClient, ownerEmail, tenantId);
+        if (ownerValido) {
+          await setPermission(token, yearFolder.id, ownerEmail, 'writer', driveOpts);
+        } else {
+          console.warn(
+            `[google-drive] owner_email "${ownerEmail}" nao pertence ao tenant ${tenantId} — permissao na pasta do ano ignorada`,
+          );
+        }
       }
     }
   } catch (yearErr) {
@@ -790,22 +825,37 @@ export async function buildDriveStructure(
   // SA cria como owner, mas o usuario precisa ter controle total.
   // Se transferOwnership falhar (cross-domain), faz fallback para writer com
   // permittedActions de organizer — permite mover, renomear e excluir pastas.
+  //
+  // SEGURANCA (MEDIO-006): owner_email vem de tenant_settings (config interna),
+  // mas validamos que pertence a um profile do mesmo tenant para evitar
+  // transferencia acidental de ownership para emails externos nao autorizados.
   const ownerEmail = driveConfig.owner_email as string;
   if (ownerEmail) {
-    console.log(`[google-drive] Transferindo ownership para ${ownerEmail}...`);
-    let transferred = 0;
-    let fallbacks = 0;
-    for (const [_key, folder] of Object.entries(folderMap)) {
-      const ok = await transferOwnership(token!, folder.driveId, ownerEmail, driveOpts);
-      if (ok) {
-        transferred++;
-      } else {
-        // Fallback: dar writer permission (permite editar, mover para lixeira)
-        await setPermission(token!, folder.driveId, ownerEmail, 'writer', driveOpts);
-        fallbacks++;
+    // Validar pertencimento ao tenant antes de qualquer operacao de ownership
+    const ownerValido = await validateOwnerEmailBelongsToTenant(serviceClient, ownerEmail, tenantId);
+
+    if (!ownerValido) {
+      // Bloqueia a transferencia e registra como aviso (nao erro fatal)
+      // para nao interromper a criacao de pastas ja concluida
+      const aviso = `owner_email "${ownerEmail}" nao encontrado nos profiles do tenant ${tenantId} — transferencia de ownership bloqueada por seguranca`;
+      errors.push(`[SEGURANCA] ${aviso}`);
+      console.warn(`[google-drive] MEDIO-006: ${aviso}`);
+    } else {
+      console.log(`[google-drive] Transferindo ownership para ${ownerEmail} (email validado no tenant)...`);
+      let transferred = 0;
+      let fallbacks = 0;
+      for (const [_key, folder] of Object.entries(folderMap)) {
+        const ok = await transferOwnership(token!, folder.driveId, ownerEmail, driveOpts);
+        if (ok) {
+          transferred++;
+        } else {
+          // Fallback: dar writer permission (permite editar, mover para lixeira)
+          await setPermission(token!, folder.driveId, ownerEmail, 'writer', driveOpts);
+          fallbacks++;
+        }
       }
+      console.log(`[google-drive] Ownership: ${transferred} transferidos, ${fallbacks} fallback (writer) de ${Object.keys(folderMap).length} pastas`);
     }
-    console.log(`[google-drive] Ownership: ${transferred} transferidos, ${fallbacks} fallback (writer) de ${Object.keys(folderMap).length} pastas`);
   } else {
     console.log('[google-drive] owner_email nao configurado — SA permanece como owner das pastas');
   }
