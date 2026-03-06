@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { clearTokenCache } from '@/lib/api'
 import { LogOut, User } from 'lucide-react'
 import {
   DropdownMenu,
@@ -49,6 +50,7 @@ export function UserMenu() {
   }, [])
 
   async function handleLogout() {
+    clearTokenCache()
     const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/login')

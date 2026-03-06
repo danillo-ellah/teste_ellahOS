@@ -492,6 +492,59 @@ export async function setPublicReadPermission(
   }
 }
 
+// Revoga permissao publica de leitura ("anyone" reader) de um arquivo.
+// Complementa setPublicReadPermission — permite revogar acesso publico quando nao mais necessario.
+export async function revokePublicReadPermission(
+  token: string,
+  fileId: string,
+  opts?: DriveOptions,
+): Promise<boolean> {
+  // Primeiro, listar permissoes para encontrar a de tipo "anyone"
+  let listUrl = `${DRIVE_API}/files/${fileId}/permissions?fields=permissions(id,type,role)`;
+  if (opts?.driveType === 'shared_drive') {
+    listUrl += '&supportsAllDrives=true';
+  }
+
+  const listResp = await driveFetchWithRetry(listUrl, {
+    headers: { Authorization: `Bearer ${token}` },
+  }, `revokePublicRead:list ${fileId}`);
+
+  if (!listResp.ok) {
+    console.error(`[google-drive] revokePublicReadPermission: falha ao listar permissoes de ${fileId}: HTTP ${listResp.status}`);
+    return false;
+  }
+
+  const data = await listResp.json();
+  const anyonePerms = (data.permissions || []).filter(
+    (p: { type: string; role: string }) => p.type === 'anyone' && p.role === 'reader',
+  );
+
+  if (anyonePerms.length === 0) {
+    return true; // Nenhuma permissao publica encontrada — ja revogada
+  }
+
+  // Revogar cada permissao "anyone/reader"
+  for (const perm of anyonePerms) {
+    let delUrl = `${DRIVE_API}/files/${fileId}/permissions/${perm.id}`;
+    if (opts?.driveType === 'shared_drive') {
+      delUrl += '?supportsAllDrives=true';
+    }
+
+    const delResp = await driveFetchWithRetry(delUrl, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    }, `revokePublicRead:delete ${perm.id}`);
+
+    if (!delResp.ok && delResp.status !== 204) {
+      console.error(`[google-drive] revokePublicReadPermission: falha ao revogar ${perm.id} de ${fileId}: HTTP ${delResp.status}`);
+      return false;
+    }
+  }
+
+  console.log(`[google-drive] permissao publica reader revogada de ${fileId} (${anyonePerms.length} permissoes)`);
+  return true;
+}
+
 // Copia um arquivo no Drive (files.copy API)
 // Util para copiar templates de documentos para pastas de jobs
 export async function copyDriveFile(
@@ -963,6 +1016,11 @@ export async function buildDriveStructure(
         }
       }
       console.log(`[google-drive] Ownership: ${transferred} transferidos, ${fallbacks} fallback (writer) de ${Object.keys(folderMap).length} pastas`);
+      if (fallbacks > 0) {
+        const aviso = `transferOwnership falhou em ${fallbacks} de ${Object.keys(folderMap).length} pastas — fallback para writer. Verificar se SA e owner_email estao no mesmo dominio Google Workspace.`;
+        errors.push(`[ALERTA-OPS] ${aviso}`);
+        console.warn(`[google-drive] BAIXO-002: ${aviso}`);
+      }
     }
   } else {
     console.log('[google-drive] owner_email nao configurado — SA permanece como owner das pastas');
@@ -980,7 +1038,9 @@ export async function buildDriveStructure(
   // 7. Permissoes na pasta raiz para equipe do job
   // DESABILITADO por seguranca — compartilhar pastas com emails externos
   // deve ser uma acao explicita do admin, nao automatica.
-  // Para reativar: configurar drive_auto_share: true no tenant settings.
+  // REATIVACAO REQUER: (1) revisao de seguranca documentada, (2) aprovacao do admin,
+  // (3) validacao de que todos os emails da equipe pertencem ao tenant.
+  // Configurar auto_share_team: true no tenant settings somente apos os 3 passos.
   const autoShare = driveConfig.auto_share_team === true;
   if (autoShare) {
     try {
