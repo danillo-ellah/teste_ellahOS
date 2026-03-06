@@ -310,3 +310,12 @@ export const cashflowKeys = {
   projection: (start: string, end: string, granularity: string) =>
     ['cashflow', 'projection', start, end, granularity] as const,
 }
+
+export const receivableKeys = {
+  all: ['receivables'] as const,
+  lists: () => [...receivableKeys.all, 'list'] as const,
+  list: (filters: Record<string, string>) => [...receivableKeys.lists(), filters] as const,
+  details: () => [...receivableKeys.all, 'detail'] as const,
+  detail: (id: string) => [...receivableKeys.details(), id] as const,
+  summary: (jobId: string) => [...receivableKeys.all, 'summary', jobId] as const,
+}

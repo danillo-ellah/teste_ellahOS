@@ -13,6 +13,7 @@ import { formatCurrency, formatPercentage, formatBRNumber, parseBRNumber } from 
 import { cn } from '@/lib/utils'
 import { FinancialRecordsList } from './FinancialRecordsList'
 import { BudgetsList } from './BudgetsList'
+import { ReceivablesList } from './ReceivablesList'
 import { useJobAccess } from '@/hooks/useJobAccess'
 import type { JobDetail, UpdateJobPayload } from '@/types/jobs'
 import { useFinancialSummary } from '@/hooks/useFinancialRecords'
@@ -209,6 +210,9 @@ export function TabFinanceiro({ job }: TabFinanceiroProps) {
           </div>
         </div>
       </section>
+
+      {/* Receitas (Recebiveis) */}
+      <ReceivablesList jobId={job.id} />
 
       {/* Lancamentos financeiros */}
       <FinancialRecordsList jobId={job.id} />
