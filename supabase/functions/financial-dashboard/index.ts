@@ -7,6 +7,7 @@ import { AppError } from '../_shared/errors.ts';
 import { handleJobDashboard } from './handlers/job-dashboard.ts';
 import { handleJobDashboardCharts } from './handlers/job-dashboard-charts.ts';
 import { handleTenantDashboard } from './handlers/tenant-dashboard.ts';
+import { handleCashflow } from './handlers/cashflow.ts';
 
 Deno.serve(async (req: Request) => {
   const corsResponse = handleCors(req);
@@ -43,6 +44,11 @@ Deno.serve(async (req: Request) => {
     // GET /financial-dashboard/tenant
     if (segment1 === 'tenant' && !segment2 && method === 'GET') {
       return await handleTenantDashboard(req, auth);
+    }
+
+    // GET /financial-dashboard/cashflow
+    if (segment1 === 'cashflow' && !segment2 && method === 'GET') {
+      return await handleCashflow(req, auth);
     }
 
     return error('METHOD_NOT_ALLOWED', 'Metodo ou rota nao permitido', 405, undefined, req);

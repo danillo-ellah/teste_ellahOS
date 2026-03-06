@@ -304,3 +304,9 @@ export const paymentCalendarKeys = {
   kpis: (start: string, end: string, jobId?: string) =>
     [...paymentCalendarKeys.all, 'kpis', start, end, jobId] as const,
 }
+
+export const cashflowKeys = {
+  all: ['cashflow'] as const,
+  projection: (start: string, end: string, granularity: string) =>
+    ['cashflow', 'projection', start, end, granularity] as const,
+}

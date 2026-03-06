@@ -476,6 +476,7 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
       { label: 'Visao Geral', href: '/financeiro', icon: 'DollarSign', exact: true },
       { label: 'Fornecedores', href: '/financeiro/vendors', icon: 'UserRoundSearch' },
       { label: 'Calendario Pgtos', href: '/financeiro/calendario', icon: 'CalendarClock' },
+      { label: 'Fluxo de Caixa', href: '/financeiro/fluxo-caixa', icon: 'TrendingUp' },
       { label: 'Validacao NFs', href: '/financeiro/nf-validation', icon: 'FileCheck2' },
       { label: 'Solicitar NFs', href: '/financeiro/nf-request', icon: 'MailPlus' },
       { label: 'Conciliacao', href: '/financeiro/conciliacao', icon: 'Landmark' },

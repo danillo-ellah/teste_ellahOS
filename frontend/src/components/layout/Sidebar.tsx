@@ -28,6 +28,7 @@ import {
   Shirt,
   Timer,
   Headset,
+  TrendingUp,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -67,6 +68,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Shirt,
   Timer,
   Headset,
+  TrendingUp,
 }
 
 interface SidebarProps {

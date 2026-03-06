@@ -246,6 +246,7 @@ export const SIDEBAR_ACCESS: Record<string, UserRole[]> = {
   '/financeiro': [...FULL_ACCESS, 'financeiro'],
   '/financeiro/vendors': [...FULL_ACCESS, 'financeiro'],
   '/financeiro/calendario': [...FULL_ACCESS, 'financeiro'],
+  '/financeiro/fluxo-caixa': [...FULL_ACCESS, 'financeiro'],
   '/financeiro/nf-validation': [...FULL_ACCESS, 'financeiro'],
   '/financeiro/nf-request': [...FULL_ACCESS, 'financeiro'],
   '/financeiro/conciliacao': [...FULL_ACCESS, 'financeiro'],
