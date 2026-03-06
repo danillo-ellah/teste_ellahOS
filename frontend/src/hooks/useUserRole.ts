@@ -43,11 +43,8 @@ export function useUserRole() {
   const [isLoading, setIsLoading] = useState(cachedRole === null)
 
   useEffect(() => {
-    if (cachedRole !== null) {
-      setRole(cachedRole)
-      setIsLoading(false)
-      return
-    }
+    // Already initialized from cache in useState — skip fetch
+    if (cachedRole !== null) return
 
     let cancelled = false
 
