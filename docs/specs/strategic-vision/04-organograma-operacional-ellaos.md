@@ -88,9 +88,9 @@ ENCERRAMENTO
 
 ---
 
-## 2. Organograma de Modulos do EllaOS
+## 2. Organograma de Modulos do EllaOS (v2 — Revisado)
 
-Baseado no fluxo real, estes sao os modulos necessarios e como se conectam:
+Baseado no fluxo real + analise de riscos + sugestoes de profissionalizacao:
 
 ```
                         ┌─────────────────────────────┐
@@ -98,33 +98,74 @@ Baseado no fluxo real, estes sao os modulos necessarios e como se conectam:
                         |  (Visao 360 em tempo real)  |
                         └──────────┬──────────────────┘
                                    |
+       ┌───────────────────────────┼───────────────────────────┐
+       |                           |                           |
+┌──────▼──────┐           ┌────────▼────────┐          ┌──────▼──────────┐
+|   CRM /     |           |   JOBS          |          |  FINANCEIRO     |
+| COMERCIAL   |           |  (Engine Core)  |          |  (Completo)     |
+└──────┬──────┘           └────────┬────────┘          └──────┬──────────┘
+       |                           |                          |
+┌──────▼──────┐           ┌────────▼────────┐          ┌──────▼──────────┐
+| ORCAMENTOS  |           |  ATENDIMENTO   |          | RECEITAS +      |
+| (Pre-Job)   |──────────>|  (Coracao)     |          | FLUXO DE CAIXA  |
+└─────────────┘           └────────┬────────┘          └─────────────────┘
+                                   |
            ┌───────────────────────┼───────────────────────┐
            |                       |                       |
-   ┌───────▼───────┐     ┌────────▼────────┐     ┌───────▼────────┐
-   |    CRM /      |     |   JOBS          |     |  FINANCEIRO    |
-   |  COMERCIAL    |     |  (Engine Core)  |     |  (Completo)    |
-   └───────┬───────┘     └────────┬────────┘     └───────┬────────┘
+  ┌────────▼───────┐     ┌────────▼───────┐     ┌────────▼────────┐
+  | PRE-PRODUCAO   |     |  PRODUCAO      |     | POS-PRODUCAO    |
+  | (Prep + PPM +  |     |  (Set/Diaria + |     | (Pipeline 12    |
+  |  Checklist)    |     |   Diario Set)  |     |  etapas)        |
+  └────────────────┘     └────────────────┘     └─────────────────┘
            |                       |                       |
-   ┌───────▼───────┐     ┌────────▼────────┐     ┌───────▼────────┐
-   |  ORCAMENTOS   |     |  ATENDIMENTO   |     |  RECEITAS      |
-   |  (Pre-Job)    |---->|  (Coracao)     |     |  (Recebiveis)  |
-   └───────────────┘     └────────┬────────┘     └────────────────┘
-                                  |
-              ┌───────────────────┼───────────────────┐
-              |                   |                   |
-     ┌────────▼───────┐ ┌────────▼───────┐ ┌────────▼───────┐
-     |  PRE-PRODUCAO  | |   PRODUCAO     | | POS-PRODUCAO   |
-     |  (Prep + PPM)  | |   (Set/Diaria) | | (Pipeline 12   |
-     └────────────────┘ └────────────────┘ |  etapas)       |
-                                           └────────────────┘
-           ┌───────────────────────┼───────────────────────┐
-           |                       |                       |
-   ┌───────▼───────┐     ┌────────▼────────┐     ┌───────▼────────┐
-   |  EQUIPE /     |     |  FORNECEDORES  |     |  COMUNICACAO   |
-   |  TALENTOS     |     |  (Cadastro +   |     |  (WA + IA)     |
-   |  (Rating!)    |     |   Cotacao)     |     |                |
-   └───────────────┘     └────────────────┘     └────────────────┘
+  ┌────────▼───────┐     ┌────────▼───────┐     ┌────────▼────────┐
+  | EQUIPE / RH    |     | FORNECEDORES   |     | COMUNICACAO     |
+  | (Rating +      |     | (Cadastro +    |     | (WA + IA +      |
+  |  Compliance +  |     |  Portal +      |     |  Resumo Diario) |
+  |  Blacklist)    |     |  Cotacao)      |     └─────────────────┘
+  └────────────────┘     └────────────────┘
+           |                       |
+  ┌────────▼───────┐     ┌────────▼───────┐
+  | JURIDICO /     |     | BUSINESS       |
+  | CONTRATOS      |     | INTELLIGENCE   |
+  | (DocuSeal +    |     | (Margem real + |
+  |  OD + NDA)     |     |  Conversao +   |
+  └────────────────┘     |  Analise)      |
+                         └────────────────┘
 ```
+
+### Modulos Novos (v2)
+
+**M-13: Juridico / Contratos**
+- Contrato padrao (OD/OS) gerado automaticamente ao escalar freela no job
+- Termo de cessao de imagem/direitos autorais
+- NDA quando necessario
+- Assinatura digital via DocuSeal (ja integrado)
+- Status: nao assinado > enviado > assinado (bloqueia pagamento se nao assinado)
+
+**M-14: RH / Compliance**
+- Onboarding padrao: freela novo preenche cadastro completo
+- Rating 1-5 estrelas + tags: "preferencial" / "nao contratar" / "ameacou" / "atrasa NF"
+- Historico: quantos jobs, valor total recebido, avaliacao media
+- Alerta compliance: freela com X+ jobs consecutivos = risco vinculo CLT
+- Custo real por pessoa por ano
+- Campo "indicado por" (qual chefe de area trouxe)
+
+**M-15: Business Intelligence**
+- Margem real por job (receita - custos - overhead rateado - tempo CEO)
+- Taxa de conversao orcamentos (por canal, por tipo, por cliente)
+- Motivo de perda em concorrencias
+- Top clientes por lucratividade (nao por faturamento)
+- Top freelas por custo-beneficio (rating + custo)
+- Alerta concentracao: se 1 cliente > 30% da receita
+- Score de risco por job: automatico baseado em valor, prazo, historico cliente
+
+**M-16: Pos-Venda / Relacionamento**
+- Lembrete automatico 30/60/90 dias pos-entrega
+- Pesquisa de satisfacao automatica (CEO esquece — sistema nao esquece)
+- Aniversario do projeto (1 ano): "faz 1 ano que fizemos X!"
+- Sugestao de upsell: "cliente Y postou campanha, quer making of?"
+- NPS tracking por cliente
 
 ---
 
@@ -297,68 +338,126 @@ Tudo terceirizado, cotacao depende do valor, cadastro por job com formulario.
 
 ---
 
-## 4. Conexoes entre Modulos
+## 4. Conexoes entre Modulos (v2)
 
 ```
-CRM ─── (ORC aprovado) ──> ORCAMENTO ─── (converter) ──> JOB
-                                                          |
-                              ┌────────────────────────────┤
-                              |            |               |
-                         ATENDIMENTO   FINANCEIRO     PRE-PRODUCAO
-                              |            |               |
-                              |       RECEBIVEIS       PRODUCAO
-                              |            |               |
-                              └──── POS-PRODUCAO ─── ENTREGA ──> ENCERRAMENTO
-                                       |
-                                  FORNECEDORES
-                                  EQUIPE/TALENTOS
-                                       |
-                                  COMUNICACAO (WA)
-                                       |
-                                  DASHBOARD CEO (agrega tudo)
+CRM ── (lead qualificado) ──> ORCAMENTO ── (aprovado) ──> JOB
+          |                        |                        |
+          |                   [JURIDICO]               [ATENDIMENTO]
+          |                  Gera contrato            Ponte cliente-equipe
+          |                   via DocuSeal                   |
+          |                        |          ┌─────────────┼─────────────┐
+          |                        |          |             |             |
+          |                   [FINANCEIRO]  [PRE-PROD]  [PRODUCAO]  [POS-PROD]
+          |                   Fluxo caixa   Checklist   Diario set  12 etapas
+          |                   Verba vista   PPM         Logger      Versoes
+          |                   Recebiveis    Escalacao   Aprovacoes  Frame.io
+          |                        |          |             |             |
+          |                   [EQUIPE/RH]  Rating + Compliance + Blacklist
+          |                        |
+          |                   [FORNECEDORES] Portal + Cotacao + Cadastro
+          |                        |
+          |                   [COMUNICACAO] WA monitoring + IA resumo
+          |                        |
+          |                   [BI] Margem real + Conversao + Risco
+          |                        |
+          └── [POS-VENDA] ────────┘
+              Satisfacao, follow-up, upsell
+                       |
+              ┌────────▼────────┐
+              | DASHBOARD CEO   |
+              | (Agrega TUDO)   |
+              └─────────────────┘
 ```
 
 ---
 
-## 5. Prioridade de Implementacao (Roadmap Revisado)
+## 5. Prioridade de Implementacao (Roadmap v2 — Revisado com Analise de Risco)
 
-### ONDA 1: Fundacao (o que desbloqueia o uso diario)
-| # | Modulo | Justificativa |
-|---|--------|---------------|
-| 1 | Dashboard CEO v2 | CEO precisa de visao 360 pra parar de viver em planilha |
-| 2 | Orcamentos Pre-Job | 30-50% dos orcamentos nao viram job; nao pode criar job pra cada |
-| 3 | Pos-Producao Pipeline | 12 etapas detalhadas, maior gap operacional |
-| 4 | Financeiro: Fluxo Caixa + Verba Vista | Pagamento 30/60/90 dias = dor critica |
+### ONDA 0: Sobrevivencia (proteger o negocio ANTES de crescer)
+| # | Item | Justificativa | Esforco |
+|---|------|---------------|---------|
+| 0.1 | **Fluxo de caixa projetado** | Cliente paga 30/60/90/120 dias pos-filmagem. Se 2 atrasam, quebra. Nenhuma tela mostra isso hoje | 3-4 dias |
+| 0.2 | **Contrato padrao freela (DocuSeal)** | Zero contratos = risco trabalhista de R$50-200k. Freela ja ameacou CEO. DocuSeal ja integrado | 2-3 dias |
+| 0.3 | **Dashboard CEO v2 (visao 360)** | CEO faz tudo sozinho e opera no escuro. Precisa ver jobs + caixa + alertas em 1 tela | 4-5 dias |
 
-### ONDA 2: Operacao Completa
-| # | Modulo | Justificativa |
-|---|--------|---------------|
-| 5 | Atendimento v2 (escopo, logistica, comunicacao) | Permitir 1 atendimento gerenciar 5+ jobs |
-| 6 | Pre-Producao (checklist, PPM, docs) | Tirar checklist da cabeca do Dir. Producao |
-| 7 | Equipe: Rating + "Nao contratar" | Evitar recontratar quem deu problema |
-| 8 | CRM > Job conversao automatica | Eliminar trabalho duplo |
+### ONDA 1: Fundacao Operacional (desbloqueia uso diario)
+| # | Item | Justificativa | Esforco |
+|---|------|---------------|---------|
+| 1.1 | Orcamentos Pre-Job + versionamento | 30-50% nao viram job; hoje precisa criar Job pra orcar (errado) | 4-5 dias |
+| 1.2 | Pos-Producao Pipeline (12 etapas) | Maior gap operacional. Fluxo detalhado pelo CEO: offline/online separados | 5-7 dias |
+| 1.3 | Rating equipe + blacklist + "nao contratar" | 40+ freelas por job, ja foi ameacado, precisa saber quem chamar | 2-3 dias |
+| 1.4 | Verba a vista (controle anti-falcatrua) | CEO explicitou: Dir. Producao fabrica notas. Deposito parcial + comprovacao | 3-4 dias |
 
-### ONDA 3: Diferenciacao (revolucionario)
-| # | Modulo | Justificativa |
-|---|--------|---------------|
-| 9 | IA WhatsApp: resumo diario + extrai decisoes | CEO pediu: revolucionario, profissional |
-| 10 | Portal Fornecedor | Substituir Google Forms |
-| 11 | Verba a Vista: controle anti-falcatrua | Feature unica que nenhum sistema tem |
-| 12 | Retrospectiva automatica + Satisfacao | Automatizar o que CEO esquece por falta de tempo |
+### ONDA 2: Escala do Atendimento (1 pessoa = 5+ jobs)
+| # | Item | Justificativa | Esforco |
+|---|------|---------------|---------|
+| 2.1 | Atendimento v2 (escopo + logistica + comunicacao) | Dor: 50 msgs pra entender contexto, info espalhada, filtra pra equipe | 5-7 dias |
+| 2.2 | Pre-Producao (checklist configuravel + PPM + docs) | Checklist na cabeca do Dir. Producao = risco. Docs salvos sem padrao | 3-4 dias |
+| 2.3 | Diario de set + boletim producao | CEO quer. Nao existe. Registro formal do que aconteceu na diaria | 2-3 dias |
+| 2.4 | Escopo: flag "extra" + alerta CEO | Atendimento flagra, CEO decide. Hoje passa batido e vira servico gratis | 1-2 dias |
+| 2.5 | CRM > Job conversao automatica | Eliminar trabalho duplo (copiar dados do orcamento pro job) | 2-3 dias |
 
-### ONDA 4: SaaS + Escala
-| # | Modulo | Justificativa |
-|---|--------|---------------|
-| 13 | Codigo job: {TENANT}-{ANO}-{SEQ} | Preparar pra multi-tenant |
-| 14 | Colorbar onboarding | Segundo tenant em 1-2 meses |
-| 15 | Custos fixos (overhead) | Controlar despesas fora de jobs |
-| 16 | Conciliacao bancaria | Import de extratos |
+### ONDA 3: Inteligencia + Diferenciacao (o que ninguem mais tem)
+| # | Item | Justificativa | Esforco |
+|---|------|---------------|---------|
+| 3.1 | IA WhatsApp: resumo diario + extrai decisoes | Revolucionario. 90% da comunicacao e WA. IA le e organiza | 5-7 dias |
+| 3.2 | BI: margem real + conversao + analise perda | Perde 30-50% de concorrencias sem saber por que. Nao sabe margem real | 4-5 dias |
+| 3.3 | Portal Fornecedor (substituir Forms) | Profissionalizar cadastro. Fornecedor entra, preenche, ja tem dados | 3-4 dias |
+| 3.4 | Alerta compliance (risco CLT freela) | Freela recorrente sem contrato = bomba juridica. Sistema avisa | 1-2 dias |
+| 3.5 | Pos-venda automatica (satisfacao + upsell) | CEO esquece de fazer. Sistema nao esquece. Gera recompra | 2-3 dias |
+
+### ONDA 4: SaaS + Escala (vender pra outros)
+| # | Item | Justificativa | Esforco |
+|---|------|---------------|---------|
+| 4.1 | Codigo job multi-tenant: {TENANT}-{ANO}-{SEQ} | Preparar pra Colorbar e outros | 1-2 dias |
+| 4.2 | Colorbar onboarding (2o tenant) | Validar multi-tenant com caso real | 2-3 dias |
+| 4.3 | Custos fixos + overhead rateado | Margem REAL = receita - custos - overhead. Hoje overhead e invisivel | 3-4 dias |
+| 4.4 | Conciliacao bancaria | Import extratos, cruzar com pagamentos | 3-4 dias |
+| 4.5 | Onboarding self-service | Produtora nova cria conta sozinha | 3-4 dias |
 
 ---
 
-## 6. Principios de Design
+## 6. Analise de Mercado & Viabilidade SaaS
 
-Baseados nas respostas do CEO:
+### Competidores Globais
+| Sistema | Origem | Foco | Preco | Falta |
+|---------|--------|------|-------|-------|
+| Shotgun (Autodesk) | EUA | VFX/Pipeline | US$30+/user | Financeiro, WA, portugues |
+| ftrack | Suecia | Pipeline pos | US$25+/user | Financeiro, pre-prod, WA |
+| StudioBinder | EUA | Pre-producao | US$30+/user | Pos, financeiro, WA |
+| Wrapbook | EUA | Payroll/contratos | US$- | Producao, WA, portugues |
+| Monday/Asana | EUA | Generico | R$80-300/user | Nao entende producao |
+| Yampi/Omie | Brasil | ERP generico | R$100-500 | Nao entende job/producao |
+
+**Nenhum e brasileiro, integra WhatsApp, ou cobre ciclo completo. EllaOS e unico.**
+
+### Modelo de Receita
+| Plano | Preco | Publico |
+|-------|-------|---------|
+| Starter | R$297/mes | Produtora solo (1-3 usuarios) |
+| Pro | R$697/mes | Produtora media (5-15 usuarios) |
+| Enterprise | R$1.497/mes | Produtora grande (15+ usuarios) |
+
+### Projecao
+| Cenario | Clientes | MRR | ARR |
+|---------|----------|-----|-----|
+| Conservador (1% de 12k) | 120 | R$70k | R$840k |
+| Moderado (3%) | 360 | R$210k | R$2.5M |
+| Otimista (5%) | 600 | R$350k | R$4.2M |
+
+### Diferenciais Competitivos (Moat)
+1. **WhatsApp-first**: unico sistema que abraca WA em vez de lutar contra
+2. **Feito por produtor**: features que so quem vive o caos pensaria (verba anti-falcatrua, blacklist freela)
+3. **Ciclo completo**: CRM > orcamento > job > pre > set > pos > financeiro > pos-venda
+4. **Brasileiro nativo**: portugues, NF, ANCINE, impostos BR, cultura WA
+5. **IA contextual**: nao e chatbot generico, e IA que entende producao audiovisual
+
+---
+
+## 7. Principios de Design (v2 — 12 principios)
+
+Baseados nas 59 respostas do CEO + analise de risco:
 
 1. **WhatsApp e rei** — NAO lutar contra. Integrar, monitorar, extrair valor.
 2. **CEO faz tudo** — Sistema deve AUTOMATIZAR, nao adicionar mais trabalho.
@@ -368,10 +467,14 @@ Baseados nas respostas do CEO:
 6. **Concorrencia e real** — 30-50% dos orcamentos podem nao virar job. Sistema deve suportar.
 7. **Atendimento e a ponte** — Tudo que envolve cliente passa pelo atendimento.
 8. **Rating de pessoas** — Saber quem chamar e quem NUNCA mais chamar.
+9. **Sobrevivencia primeiro** — Fluxo de caixa e contratos antes de features novas.
+10. **Sistema nao esquece** — Satisfacao, follow-up, compliance: automatizar o que CEO nao tem tempo.
+11. **Dados geram decisao** — Margem real, taxa conversao, motivo perda: operar com dados, nao intuicao.
+12. **Protecao juridica embutida** — Contrato automatico em cada escalacao. Sem contrato = sem pagamento.
 
 ---
 
-## 7. Respostas Compiladas (Referencia Completa)
+## 8. Respostas Compiladas (Referencia Completa)
 
 ### Bloco 1: Comercial & Captacao
 | # | Pergunta | Resposta |
