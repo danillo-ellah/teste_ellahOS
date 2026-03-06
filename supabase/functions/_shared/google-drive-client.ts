@@ -50,7 +50,7 @@ async function driveFetchWithRetry(
 }
 
 // Opcoes para chamadas que suportam Shared Drive
-interface DriveOptions {
+export interface DriveOptions {
   driveType?: string | null;   // 'my_drive' | 'shared_drive'
   sharedDriveId?: string | null;
 }
@@ -550,6 +550,144 @@ export async function copyDriveFile(
   }
 
   return await resp.json();
+}
+
+// ========================================================
+// Novas funcoes para permissoes granulares (G-04)
+// ========================================================
+
+// Resultado de concessao de permissao — retorna o permissionId para revogar depois
+export interface GrantPermissionResult {
+  permissionId: string;
+}
+
+// Informacoes de uma permissao listada pela Drive API
+export interface DrivePermissionInfo {
+  id: string;          // permissionId no Drive
+  emailAddress: string;
+  role: string;
+  type: string;        // 'user', 'anyone', etc.
+}
+
+// Concede permissao em uma pasta e retorna o permissionId.
+// Diferente de setPermission: lanca erro em falha e retorna o ID para poder revogar.
+// Usa sendNotificationEmail=false para nao enviar email do Google ao convidar.
+export async function grantFolderPermission(
+  token: string,
+  folderId: string,
+  email: string,
+  role: 'writer' | 'reader',
+  opts?: DriveOptions,
+): Promise<GrantPermissionResult> {
+  let url = `${DRIVE_API}/files/${folderId}/permissions?fields=id&sendNotificationEmail=false`;
+  if (opts?.driveType === 'shared_drive') {
+    url += '&supportsAllDrives=true';
+  }
+
+  const resp = await driveFetchWithRetry(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      type: 'user',
+      role,
+      emailAddress: email,
+    }),
+  }, `grantFolderPermission ${role} ${email} em ${folderId}`);
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Drive grantFolderPermission: HTTP ${resp.status} — ${text.slice(0, 300)}`);
+  }
+
+  const data = await resp.json();
+  return { permissionId: data.id as string };
+}
+
+// Revoga uma permissao em uma pasta usando o permissionId retornado por grantFolderPermission.
+// Retorna true se revogada com sucesso, false se falhou (com log de erro).
+export async function revokeFolderPermission(
+  token: string,
+  folderId: string,
+  permissionId: string,
+  opts?: DriveOptions,
+): Promise<boolean> {
+  let url = `${DRIVE_API}/files/${folderId}/permissions/${permissionId}`;
+  if (opts?.driveType === 'shared_drive') {
+    url += '?supportsAllDrives=true';
+  }
+
+  const resp = await driveFetchWithRetry(url, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }, `revokeFolderPermission ${permissionId} em ${folderId}`);
+
+  if (!resp.ok && resp.status !== 204) {
+    const text = await resp.text();
+    console.error(`[google-drive] revokeFolderPermission ${permissionId} em ${folderId}: HTTP ${resp.status} — ${text.slice(0, 200)}`);
+    return false;
+  }
+
+  return true;
+}
+
+// Lista permissoes atuais de uma pasta no Drive.
+// Usado pelo handler de re-sync para calcular delta (estado esperado vs atual).
+export async function listFolderPermissions(
+  token: string,
+  folderId: string,
+  opts?: DriveOptions,
+): Promise<DrivePermissionInfo[]> {
+  let url = `${DRIVE_API}/files/${folderId}/permissions?fields=permissions(id,emailAddress,role,type)`;
+  if (opts?.driveType === 'shared_drive') {
+    url += '&supportsAllDrives=true';
+  }
+
+  const resp = await driveFetchWithRetry(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  }, `listFolderPermissions em ${folderId}`);
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    console.warn(`[google-drive] listFolderPermissions em ${folderId}: HTTP ${resp.status} — ${text.slice(0, 200)}`);
+    return [];
+  }
+
+  const data = await resp.json();
+  return (data.permissions || []) as DrivePermissionInfo[];
+}
+
+// Obtém token de acesso Google para o tenant a partir do Vault.
+// Helper compartilhado entre buildDriveStructure e drive-permissions-helper.
+export async function getGoogleAuthToken(
+  serviceClient: SupabaseClient,
+  tenantId: string,
+): Promise<string> {
+  const saJson = await getSecret(serviceClient, `${tenantId}_gdrive_service_account`);
+  if (!saJson) {
+    throw new Error('Service Account nao encontrada no Vault');
+  }
+
+  const sa = JSON.parse(saJson);
+  const token = await getGoogleAccessToken(sa);
+  if (!token) {
+    throw new Error('Falha ao obter access_token do Google');
+  }
+
+  return token;
+}
+
+// Constroi DriveOptions a partir do driveConfig (settings.integrations.google_drive).
+// Helper compartilhado para evitar duplicacao de logica.
+export function getDriveOptions(driveConfig: Record<string, unknown>): DriveOptions {
+  return {
+    driveType: (driveConfig.drive_type as string) || 'my_drive',
+    sharedDriveId: (driveConfig.shared_drive_id as string) || null,
+  };
 }
 
 // ========================================================

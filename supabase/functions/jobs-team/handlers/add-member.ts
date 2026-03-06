@@ -4,6 +4,7 @@ import { AppError } from '../../_shared/errors.ts';
 import { validate, CreateTeamMemberSchema } from '../../_shared/validation.ts';
 import { insertHistory } from '../../_shared/history.ts';
 import { detectConflicts } from '../../_shared/conflict-detection.ts';
+import { grantDrivePermissionsForMember } from '../../_shared/drive-permissions-helper.ts';
 import type { AuthContext } from '../../_shared/auth.ts';
 
 export async function addMember(
@@ -153,7 +154,18 @@ export async function addMember(
     description: `${member.people?.full_name ?? 'Membro'} adicionado como ${validated.role}`,
   });
 
-  // 8. Retornar com mapeamento banco -> API
+  // 8. Conceder permissoes Drive (fire-and-forget — falha nao bloqueia a operacao)
+  try {
+    await grantDrivePermissionsForMember(auth, jobId, member.id);
+  } catch (driveErr) {
+    console.warn(`[jobs-team/add-member] Falha ao conceder permissoes Drive para ${member.id}: ${driveErr}`);
+    warnings.push({
+      code: 'DRIVE_PERMISSIONS_FAILED',
+      message: 'Permissoes Drive nao puderam ser concedidas automaticamente',
+    });
+  }
+
+  // 9. Retornar com mapeamento banco -> API
   const response = {
     id: member.id,
     person_id: member.person_id,

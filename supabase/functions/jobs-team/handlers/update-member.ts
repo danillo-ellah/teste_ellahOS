@@ -5,6 +5,10 @@ import { validate, UpdateTeamMemberSchema } from '../../_shared/validation.ts';
 import { insertHistory } from '../../_shared/history.ts';
 import { detectConflicts } from '../../_shared/conflict-detection.ts';
 import { getCorsHeaders } from '../../_shared/cors.ts';
+import {
+  grantDrivePermissionsForMember,
+  revokeDrivePermissionsForMember,
+} from '../../_shared/drive-permissions-helper.ts';
 import type { AuthContext } from '../../_shared/auth.ts';
 
 export async function updateMember(
@@ -133,6 +137,22 @@ export async function updateMember(
     dataAfter: dbPayload,
     description: `Dados de ${current.people?.full_name ?? 'membro'} atualizados`,
   });
+
+  // 7b. Se o role mudou, re-sync permissoes Drive (fire-and-forget — falha nao bloqueia)
+  if (validated.role !== undefined && validated.role !== current.role) {
+    try {
+      // Revogar permissoes antigas (baseadas no role anterior)
+      await revokeDrivePermissionsForMember(auth, jobId, memberId);
+      // Conceder permissoes novas (baseadas no novo role)
+      await grantDrivePermissionsForMember(auth, jobId, memberId);
+    } catch (driveErr) {
+      console.warn(`[jobs-team/update-member] Falha ao re-sync permissoes Drive apos mudanca de role para ${memberId}: ${driveErr}`);
+      warnings.push({
+        code: 'DRIVE_PERMISSIONS_FAILED',
+        message: 'Permissoes Drive nao puderam ser atualizadas apos mudanca de papel',
+      });
+    }
+  }
 
   // 8. Retornar
   const response = {

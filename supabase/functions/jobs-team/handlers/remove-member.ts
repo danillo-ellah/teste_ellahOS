@@ -2,6 +2,7 @@ import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 import { success } from '../../_shared/response.ts';
 import { AppError } from '../../_shared/errors.ts';
 import { insertHistory } from '../../_shared/history.ts';
+import { revokeDrivePermissionsForMember } from '../../_shared/drive-permissions-helper.ts';
 import type { AuthContext } from '../../_shared/auth.ts';
 
 export async function removeMember(
@@ -44,6 +45,13 @@ export async function removeMember(
     .update({ deleted_at: now })
     .eq('job_team_id', memberId)
     .is('deleted_at', null);
+
+  // 2c. Revogar permissoes Drive (fire-and-forget — falha nao bloqueia a operacao)
+  try {
+    await revokeDrivePermissionsForMember(auth, jobId, memberId);
+  } catch (driveErr) {
+    console.warn(`[jobs-team/remove-member] Falha ao revogar permissoes Drive para ${memberId}: ${driveErr}`);
+  }
 
   // 3. Registrar no historico
   await insertHistory(supabase, {

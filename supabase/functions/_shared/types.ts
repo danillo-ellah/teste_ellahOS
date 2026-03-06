@@ -428,6 +428,27 @@ export const DEFAULT_FOLDER_KEYS = [
 
 export type DefaultFolderKey = (typeof DEFAULT_FOLDER_KEYS)[number];
 
+// Permissao Google Drive de membro de job (tabela job_drive_permissions)
+export interface JobDrivePermissionRow {
+  id: string;
+  tenant_id: string;
+  job_id: string;
+  job_team_id: string;
+  person_id: string;
+  email: string;
+  folder_key: string;
+  drive_folder_id: string;
+  google_drive_id: string;
+  drive_role: 'writer' | 'reader';
+  drive_permission_id: string | null;
+  granted_at: string;
+  granted_by: string | null;
+  revoked_at: string | null;
+  revoked_by: string | null;
+  error_message: string | null;
+  created_at: string;
+}
+
 // BankInfo — estrutura do campo JSONB people.bank_info
 export interface BankInfo {
   bank_name: string | null;
@@ -634,6 +655,29 @@ export const DOCUSEAL_STATUSES = [
 ] as const;
 
 export type DocuSealStatus = (typeof DOCUSEAL_STATUSES)[number];
+
+// === G-04: Permissoes Drive por Papel ===
+
+// Registro de permissao Drive concedida a membro de job (tabela job_drive_permissions)
+export interface JobDrivePermissionRow {
+  id: string;
+  tenant_id: string;
+  job_id: string;
+  job_team_id: string;
+  person_id: string;
+  email: string;
+  folder_key: string;
+  drive_folder_id: string;
+  google_drive_id: string;
+  drive_role: 'writer' | 'reader';
+  drive_permission_id: string | null;
+  granted_at: string;
+  granted_by: string | null;
+  revoked_at: string | null;
+  revoked_by: string | null;
+  error_message: string | null;
+  created_at: string;
+}
 
 // Registro de submission do DocuSeal na tabela docuseal_submissions
 export interface DocuSealSubmissionRow {
