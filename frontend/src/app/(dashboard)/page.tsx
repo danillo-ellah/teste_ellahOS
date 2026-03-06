@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { startOfDay, addDays, format } from 'date-fns'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -10,6 +11,8 @@ import { AlertsPanel } from '@/components/dashboard/alerts-panel'
 import { ActivityTimeline } from '@/components/dashboard/activity-timeline'
 import { StatusDonut } from '@/components/dashboard/status-donut'
 import { RevenueChart } from '@/components/dashboard/revenue-chart'
+import { CashflowStrip } from '@/components/dashboard/cashflow-strip'
+import { CommercialSnapshot } from '@/components/dashboard/commercial-snapshot'
 import {
   useDashboardKpis,
   useDashboardPipeline,
@@ -17,6 +20,9 @@ import {
   useDashboardActivity,
   useDashboardRevenue,
 } from '@/hooks/use-dashboard'
+import { useCashflowProjection } from '@/hooks/useCashflowProjection'
+import { useTenantFinancialDashboard } from '@/hooks/useFinancialDashboard'
+import { useCrmDashboard } from '@/hooks/useCrm'
 
 // Saudacao baseada na hora do dia
 function getGreeting(): string {
@@ -40,23 +46,41 @@ export default function DashboardPage() {
           user.email?.split('@')[0] ??
           null
         if (fullName) {
-          // Apenas o primeiro nome
           setUserName(fullName.split(' ')[0])
         }
       }
     })
   }, [])
 
-  // Hooks de dados
+  // Hooks existentes
   const kpis = useDashboardKpis()
   const pipeline = useDashboardPipeline()
   const alerts = useDashboardAlerts(20)
   const activity = useDashboardActivity(48, 30)
   const revenue = useDashboardRevenue(12)
 
+  // Novos hooks (Onda 0.3)
+  const cashflowDates = useMemo(() => {
+    const start = format(startOfDay(new Date()), 'yyyy-MM-dd')
+    const end = format(addDays(new Date(), 30), 'yyyy-MM-dd')
+    return { start, end }
+  }, [])
+
+  const cashflow = useCashflowProjection(
+    cashflowDates.start,
+    cashflowDates.end,
+    'monthly',
+  )
+  const tenantFinancial = useTenantFinancialDashboard()
+  const crmDashboard = useCrmDashboard()
+
   // Estado de erro global (qualquer secao com erro)
   const hasAnyError =
     kpis.isError || pipeline.isError || alerts.isError || activity.isError || revenue.isError
+
+  // Secoes financeiras/CRM podem retornar 403 — ocultar silenciosamente
+  const showCashflowStrip = !cashflow.isError && !tenantFinancial.isError
+  const showCrmSnapshot = !crmDashboard.isError
 
   function handleRefetchAll() {
     kpis.refetch()
@@ -64,6 +88,9 @@ export default function DashboardPage() {
     alerts.refetch()
     activity.refetch()
     revenue.refetch()
+    cashflow.refetch()
+    tenantFinancial.refetch()
+    crmDashboard.refetch()
   }
 
   const greeting = getGreeting()
@@ -114,6 +141,15 @@ export default function DashboardPage() {
       {/* KPI Cards */}
       <KpiCards data={kpis.data} isLoading={kpis.isLoading} />
 
+      {/* Faixa de Caixa + Pagamentos da Semana (v2) */}
+      {showCashflowStrip && (
+        <CashflowStrip
+          cashflow={cashflow.data?.data}
+          tenantDashboard={tenantFinancial.data?.data}
+          isLoading={cashflow.isLoading || tenantFinancial.isLoading}
+        />
+      )}
+
       {/* Pipeline de Jobs */}
       <PipelineChart data={pipeline.data} isLoading={pipeline.isLoading} />
 
@@ -130,11 +166,20 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Grid de graficos: Donut + Revenue (desktop 2 colunas, mobile 1col) */}
+      {/* Grid de graficos: CRM Snapshot + Revenue (desktop 2 colunas, mobile 1col) */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <StatusDonut data={pipeline.data} isLoading={pipeline.isLoading} />
+        {showCrmSnapshot ? (
+          <CommercialSnapshot data={crmDashboard.data} isLoading={crmDashboard.isLoading} />
+        ) : (
+          <StatusDonut data={pipeline.data} isLoading={pipeline.isLoading} />
+        )}
         <RevenueChart data={revenue.data} isLoading={revenue.isLoading} />
       </div>
+
+      {/* Donut — sempre visivel, mas movido para baixo quando CRM snapshot esta ativo */}
+      {showCrmSnapshot && (
+        <StatusDonut data={pipeline.data} isLoading={pipeline.isLoading} />
+      )}
     </div>
   )
 }

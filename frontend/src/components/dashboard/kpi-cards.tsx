@@ -198,6 +198,7 @@ export function KpiCards({ data, isLoading }: KpiCardsProps) {
   }
 
   const activeJobs = data?.active_jobs ?? 0
+  const teamAllocated = data?.team_allocated ?? 0
   const revenueMes = data?.revenue_month ?? 0
   const avgMargin = data?.avg_margin ?? 0
   const healthScore = data?.avg_health_score ?? 0
@@ -227,6 +228,11 @@ export function KpiCards({ data, isLoading }: KpiCardsProps) {
         value={String(activeJobs)}
         href="/jobs"
         trendDirection="neutral"
+        comparison={
+          teamAllocated > 0
+            ? `${teamAllocated} pessoa${teamAllocated !== 1 ? 's' : ''} alocada${teamAllocated !== 1 ? 's' : ''}`
+            : 'Nenhuma alocacao'
+        }
       />
 
       {/* Faturamento do Mes */}
