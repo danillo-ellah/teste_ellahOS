@@ -200,12 +200,51 @@ export async function handleGenerateContracts(req: Request, auth: AuthContext): 
     throw new AppError('NOT_FOUND', 'Nenhum membro do elenco encontrado com os IDs informados', 404);
   }
 
-  // 5. Resolver template_id (Vault ou fallback)
+  // 5. Resolver email ELLAH (remetente/assinante do contrato)
+  // Fonte primaria: tenants.settings.company_info.email
+  // Fallback: profiles.email do usuario que disparou a request
+  let ellahEmail: string | null = null;
+
+  const { data: tenantRow } = await serviceClient
+    .from('tenants')
+    .select('settings')
+    .eq('id', auth.tenantId)
+    .single();
+
+  const tenantSettings = (tenantRow?.settings as Record<string, unknown>) ?? {};
+  const companyInfo = (tenantSettings.company_info as Record<string, unknown>) ?? {};
+  ellahEmail = (companyInfo.email as string) || null;
+
+  if (!ellahEmail) {
+    // Fallback: email do perfil do usuario autenticado
+    const { data: profileRow } = await serviceClient
+      .from('profiles')
+      .select('email')
+      .eq('id', auth.userId)
+      .single();
+
+    ellahEmail = (profileRow?.email as string) || null;
+
+    if (ellahEmail) {
+      console.warn(
+        '[job-cast/generate-contracts] email da empresa nao configurado em tenant.settings.company_info.email — usando email do usuario como fallback',
+        { tenantId: auth.tenantId, userId: auth.userId, fallbackEmail: ellahEmail },
+      );
+    } else {
+      console.warn(
+        '[job-cast/generate-contracts] nenhum email encontrado para o submitter ELLAH — submissao DocuSeal pode falhar',
+        { tenantId: auth.tenantId, userId: auth.userId },
+      );
+      ellahEmail = '';
+    }
+  }
+
+  // 6. Resolver template_id (Vault ou fallback)
   const resolvedTemplateId = await resolveTemplateId(serviceClient, auth.tenantId, input.template_id);
 
   console.log('[job-cast/generate-contracts] template resolvido:', resolvedTemplateId);
 
-  // 6. Verificar quais membros ja possuem contrato ativo (evita duplicacao)
+  // 7. Verificar quais membros ja possuem contrato ativo (evita duplicacao)
   const memberEmails = members
     .map((m) => m.email as string | null)
     .filter((e): e is string => !!e);
@@ -224,7 +263,7 @@ export async function handleGenerateContracts(req: Request, auth: AuthContext): 
     (existingSubmissions ?? []).map((s) => s.person_email as string),
   );
 
-  // 7. Data atual formatada para campos do contrato
+  // 8. Data atual formatada para campos do contrato
   const now = new Date();
   const dataAtual = `Sao Paulo, ${now.toLocaleDateString('pt-BR', {
     day: '2-digit',
@@ -236,7 +275,7 @@ export async function handleGenerateContracts(req: Request, auth: AuthContext): 
   // Custom fields do job (dados da obra ANCINE, veiculacao, etc.)
   const cf = ((job.custom_fields as Record<string, unknown>) ?? {}) as Record<string, string>;
 
-  // 8. Gerar contratos individualmente
+  // 9. Gerar contratos individualmente
   const sent: CastMemberResult[] = [];
   const skipped: CastMemberResult[] = [];
   const failed: Array<{ member: typeof members[0]; reason: string }> = [];
@@ -337,7 +376,8 @@ export async function handleGenerateContracts(req: Request, auth: AuthContext): 
       },
       {
         role: 'ELLAH',
-        email: 'contas@ellahfilmes.com',
+        // Email resolvido dinamicamente: tenant.settings.company_info.email -> profiles.email (fallback)
+        email: ellahEmail,
         send_email: false,
         fields: [
           { name: 'CONTRATADO_NOME', value: contratadoNomeValue, readonly: true },
@@ -444,7 +484,7 @@ export async function handleGenerateContracts(req: Request, auth: AuthContext): 
     );
   }
 
-  // 9. Enfileirar evento de auditoria (nao bloqueante)
+  // 10. Enfileirar evento de auditoria (nao bloqueante)
   try {
     await enqueueEvent(serviceClient, {
       tenant_id: auth.tenantId,
