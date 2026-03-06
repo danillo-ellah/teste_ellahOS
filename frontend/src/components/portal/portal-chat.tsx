@@ -65,7 +65,8 @@ export function PortalChat({ messages: initialMessages, token }: PortalChatProps
   const [messages, setMessages] = useState<PortalMessage[]>(initialMessages)
   const [senderName, setSenderName] = useState(() => {
     if (typeof window === 'undefined') return ''
-    return localStorage.getItem(SENDER_NAME_KEY) ?? ''
+    const stored = localStorage.getItem(SENDER_NAME_KEY) ?? ''
+    return stored.replace(/<[^>]*>/g, '').trim()
   })
   const [showNameInput, setShowNameInput] = useState(false)
   const [content, setContent] = useState('')
@@ -94,8 +95,9 @@ export function PortalChat({ messages: initialMessages, token }: PortalChatProps
       return
     }
 
-    // Salva nome no localStorage
-    localStorage.setItem(SENDER_NAME_KEY, trimmedName)
+    // Salva nome no localStorage (sanitizado)
+    const safeName = trimmedName.replace(/<[^>]*>/g, '').slice(0, 200)
+    localStorage.setItem(SENDER_NAME_KEY, safeName)
 
     // Mensagem otimista (aparece imediatamente)
     const optimisticMsg: PortalMessage = {
@@ -129,7 +131,15 @@ export function PortalChat({ messages: initialMessages, token }: PortalChatProps
     } catch (err) {
       // Remover mensagem otimista em caso de erro
       setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id))
-      const msg = err instanceof Error ? err.message : 'Erro ao enviar mensagem'
+      const raw = err instanceof Error ? err.message : ''
+      let msg = 'Nao foi possivel enviar sua mensagem. Tente novamente.'
+      if (raw.includes('expirou') || raw.includes('expired')) {
+        msg = 'Este link expirou. Solicite um novo link a equipe de producao.'
+      } else if (raw.includes('desativado') || raw.includes('inativ')) {
+        msg = 'Este link foi desativado. Entre em contato com a producao.'
+      } else if (raw.includes('rate') || raw.includes('limite')) {
+        msg = 'Voce enviou muitas mensagens. Aguarde alguns minutos.'
+      }
       toast.error(msg)
       setContent(trimmedContent) // Restaura o texto
     } finally {
@@ -168,15 +178,7 @@ export function PortalChat({ messages: initialMessages, token }: PortalChatProps
         <h2 id="chat-heading" className="text-base font-semibold flex-1">
           Mensagens com a Producao
         </h2>
-        {/* Indicador online (visual) */}
-        <div className="flex items-center gap-1.5">
-          <span
-            className="h-2 w-2 rounded-full bg-green-500"
-            aria-hidden="true"
-            style={{ animation: 'pulse 2s ease-in-out infinite' }}
-          />
-          <span className="text-xs text-green-500">Online</span>
-        </div>
+        <span className="text-xs text-muted-foreground">Deixe sua mensagem</span>
       </div>
 
       {/* Area de mensagens */}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Copy, Check, Loader2, Globe } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -46,6 +46,7 @@ export function CreateSessionDialog({
 }: CreateSessionDialogProps) {
   const [portalUrl, setPortalUrl] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const isSubmittingRef = useRef(false)
   const { mutateAsync: createSession, isPending } = useCreateSession()
 
   const form = useForm<FormValues>({
@@ -60,6 +61,8 @@ export function CreateSessionDialog({
   })
 
   async function onSubmit(values: FormValues) {
+    if (isSubmittingRef.current) return
+    isSubmittingRef.current = true
     try {
       // Converter YYYY-MM-DD para ISO 8601 datetime (backend espera datetime completo)
       let expiresAt: string | null = values.expires_at || null
@@ -85,6 +88,8 @@ export function CreateSessionDialog({
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao criar link'
       toast.error(msg)
+    } finally {
+      isSubmittingRef.current = false
     }
   }
 

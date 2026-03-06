@@ -53,6 +53,7 @@ function SessionCard({ session }: { session: PortalSession }) {
   const [showMessages, setShowMessages] = useState(false)
   const [copied, setCopied] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showDeactivateDialog, setShowDeactivateDialog] = useState(false)
 
   const { mutateAsync: updateSession, isPending: isUpdating } = useUpdateSession()
   const { mutateAsync: deleteSession, isPending: isDeleting } = useDeleteSession()
@@ -68,7 +69,17 @@ function SessionCard({ session }: { session: PortalSession }) {
     }
   }
 
-  async function handleToggleActive() {
+  function handleToggleRequest() {
+    // Se esta ativo e vai desativar, pedir confirmacao
+    if (session.is_active) {
+      setShowDeactivateDialog(true)
+      return
+    }
+    // Ativar nao precisa de confirmacao
+    doToggleActive()
+  }
+
+  async function doToggleActive() {
     try {
       await updateSession({
         id: session.id,
@@ -78,6 +89,7 @@ function SessionCard({ session }: { session: PortalSession }) {
     } catch {
       toast.error('Erro ao atualizar o status do link')
     }
+    setShowDeactivateDialog(false)
   }
 
   async function handleDelete() {
@@ -156,7 +168,7 @@ function SessionCard({ session }: { session: PortalSession }) {
           {/* Toggle ativo/inativo */}
           <Switch
             checked={session.is_active}
-            onCheckedChange={handleToggleActive}
+            onCheckedChange={handleToggleRequest}
             disabled={isUpdating || isDeleting}
             aria-label={`${session.is_active ? 'Desativar' : 'Ativar'} link: ${session.label}`}
           />
@@ -265,6 +277,25 @@ function SessionCard({ session }: { session: PortalSession }) {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialogo de confirmacao de desativacao */}
+      <AlertDialog open={showDeactivateDialog} onOpenChange={setShowDeactivateDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Desativar link do portal?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Desativar o link <strong>{session.label}</strong> ira bloquear
+              o acesso do cliente imediatamente. Voce pode reativar depois.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={doToggleActive}>
+              Desativar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

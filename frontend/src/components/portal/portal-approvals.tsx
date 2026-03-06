@@ -103,11 +103,13 @@ function ApprovalCard({
   }
 
   async function handleRespond(action: 'approved' | 'rejected', comment?: string) {
+    const approvalToken = approval.token
+    if (!approvalToken) {
+      toast.error('Esta aprovacao nao pode ser respondida por este portal. Entre em contato com a producao.')
+      return
+    }
     setIsSubmitting(true)
     try {
-      // Usa o token da approval (endpoint /approvals/public/:token/respond)
-      const approvalToken = approval.token
-      if (!approvalToken) throw new Error('Token de aprovacao nao disponivel')
 
       const res = await fetch(
         `${SUPABASE_URL}/functions/v1/approvals/public/${approvalToken}/respond`,

@@ -128,9 +128,14 @@ export default function PortalPage() {
         </div>
 
         {/* Info: criar links pelo detalhe do job */}
-        <p className="text-xs text-muted-foreground">
-          Para criar links, acesse a aba <strong>Portal</strong> no detalhe do job.
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-muted-foreground">
+            Para criar links, acesse a aba <strong>Portal</strong> no detalhe do job.
+          </p>
+          <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
+            <a href="/jobs">Ver Jobs</a>
+          </Button>
+        </div>
       </div>
 
       {/* Tabela */}
