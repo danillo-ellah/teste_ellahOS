@@ -22,6 +22,9 @@ const STATUS_LABEL: Record<string, string> = {
   pago: 'Pago',
   recebido: 'Recebido',
   vencido: 'Vencido',
+  cancelado: 'Cancelado',
+  faturado: 'Faturado',
+  atrasado: 'Atrasado',
 }
 
 function statusLabel(status: string): string {
@@ -32,7 +35,7 @@ function statusVariant(status: string): 'default' | 'secondary' | 'destructive' 
   if (status === 'paid' || status === 'received' || status === 'pago' || status === 'recebido') {
     return 'secondary'
   }
-  if (status === 'overdue' || status === 'vencido') return 'destructive'
+  if (status === 'overdue' || status === 'vencido' || status === 'atrasado') return 'destructive'
   return 'outline'
 }
 

@@ -52,6 +52,8 @@ export interface CashflowKpis {
   is_danger: boolean
   /** Dias ate o primeiro saldo negativo — null se nao houver risco */
   days_until_danger: number | null
+  /** Data do primeiro periodo em que o saldo fica negativo */
+  first_negative_date: string | null
   /** Soma de receivables com due_date < hoje e status pendente */
   overdue_receivables: number
   /** Soma de cost_items com payment_due_date < hoje e status pendente */

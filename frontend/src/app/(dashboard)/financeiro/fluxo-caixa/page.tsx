@@ -204,13 +204,13 @@ function CashflowKpisGrid({ kpis, isLoading }: CashflowKpisGridProps) {
 // ---------------------------------------------------------------------------
 
 interface DangerBannerProps {
-  minBalanceDate: string | null
+  firstNegativeDate: string | null
   daysUntilDanger: number | null
 }
 
-function DangerBanner({ minBalanceDate, daysUntilDanger }: DangerBannerProps) {
-  const formattedDate = minBalanceDate
-    ? format(parseISO(minBalanceDate), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+function DangerBanner({ firstNegativeDate, daysUntilDanger }: DangerBannerProps) {
+  const formattedDate = firstNegativeDate
+    ? format(parseISO(firstNegativeDate), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
     : null
 
   return (
@@ -341,14 +341,6 @@ export default function FluxoCaixaPage() {
         </div>
       </div>
 
-      {/* Banner de alerta — exibido quando kpis.is_danger === true */}
-      {kpis?.is_danger && (
-        <DangerBanner
-          minBalanceDate={kpis.min_balance_date}
-          daysUntilDanger={kpis.days_until_danger}
-        />
-      )}
-
       {/* Estado de loading */}
       {isLoading && <PageSkeleton />}
 
@@ -370,6 +362,14 @@ export default function FluxoCaixaPage() {
       {/* Conteudo principal */}
       {!isLoading && !isError && (
         <>
+          {/* Banner de alerta — so exibe com dados carregados */}
+          {kpis?.is_danger && (
+            <DangerBanner
+              firstNegativeDate={kpis.first_negative_date}
+              daysUntilDanger={kpis.days_until_danger}
+            />
+          )}
+
           {/* KPI Cards */}
           <CashflowKpisGrid kpis={kpis} isLoading={false} />
 

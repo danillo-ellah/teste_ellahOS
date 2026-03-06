@@ -17,13 +17,13 @@ import type { CashflowEntry } from '@/types/cashflow'
 const formatBRL = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 
-// Formata valor resumido para eixo Y (50k, 1.2M)
+// Formata valor resumido para eixo Y (50k, 1.2M, -500)
 const formatAxisBRL = (value: number) => {
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`
-  if (value >= 1_000) return `${(value / 1_000).toFixed(0)}k`
-  if (value <= -1_000_000) return `${(value / 1_000_000).toFixed(1)}M`
-  if (value <= -1_000) return `${(value / 1_000).toFixed(0)}k`
-  return `${value}`
+  const abs = Math.abs(value)
+  const sign = value < 0 ? '-' : ''
+  if (abs >= 1_000_000) return `${sign}${(abs / 1_000_000).toFixed(1)}M`
+  if (abs >= 1_000) return `${sign}${(abs / 1_000).toFixed(0)}k`
+  return value.toLocaleString('pt-BR')
 }
 
 interface TooltipPayloadEntry {

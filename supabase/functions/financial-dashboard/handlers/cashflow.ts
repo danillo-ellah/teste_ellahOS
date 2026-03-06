@@ -71,6 +71,8 @@ interface CashflowKpis {
   min_balance_date: string | null;
   is_danger: boolean;
   days_until_danger: number | null;
+  /** Data do primeiro periodo em que o saldo fica negativo */
+  first_negative_date: string | null;
   overdue_receivables: number;
   overdue_payables: number;
 }
@@ -243,7 +245,7 @@ export async function handleCashflow(
       .select('id, job_id, description, amount, due_date, status, installment_number')
       .eq('tenant_id', auth.tenantId)
       .is('deleted_at', null)
-      .in('status', ['pendente', 'faturado'])
+      .in('status', ['pendente', 'faturado', 'atrasado'])
       .not('due_date', 'is', null)
       .gte('due_date', startDate)
       .lte('due_date', endDate)
@@ -486,11 +488,13 @@ export async function handleCashflow(
   // Detectar se saldo fica negativo e quando (dias ate o perigo)
   const isDanger = minBalance < 0;
   let daysUntilDanger: number | null = null;
+  let firstNegativeDate: string | null = null;
 
-  if (isDanger && minBalanceDate) {
+  if (isDanger) {
     // Encontrar o PRIMEIRO periodo em que o saldo fica negativo
     for (const period of series) {
       if (period.cumulative_balance < 0) {
+        firstNegativeDate = period.period_start;
         const dangerDate = new Date(period.period_start + 'T00:00:00Z');
         const todayMs = new Date(todayStr + 'T00:00:00Z').getTime();
         const dangerMs = dangerDate.getTime();
@@ -505,14 +509,10 @@ export async function handleCashflow(
     (overdueReceivablesResult.data ?? []).reduce((acc, r) => acc + ((r.amount as number) ?? 0), 0),
   );
 
-  // Calcular overdue: custos vencidos
+  // Calcular overdue: custos vencidos — sempre usar total_with_overtime (valor devido, nao pago)
   const overduePayables = round2(
     (overduePayablesResult.data ?? []).reduce(
-      (acc, i) => acc + (
-        i.actual_paid_value != null
-          ? (i.actual_paid_value as number)
-          : ((i.total_with_overtime as number) ?? 0)
-      ),
+      (acc, i) => acc + ((i.total_with_overtime as number) ?? 0),
       0,
     ),
   );
@@ -525,6 +525,7 @@ export async function handleCashflow(
     min_balance_date: minBalanceDate,
     is_danger: isDanger,
     days_until_danger: daysUntilDanger,
+    first_negative_date: firstNegativeDate,
     overdue_receivables: overdueReceivables,
     overdue_payables: overduePayables,
   };
