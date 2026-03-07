@@ -33,7 +33,9 @@ import { useCloneJob } from '@/hooks/useCloneJob'
 import { useUserRole } from '@/hooks/useUserRole'
 import { formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { PreProductionBadge } from '@/components/job-detail/tabs/ppm/PreProductionBadge'
 import type { JobDetail } from '@/types/jobs'
+import type { PpmDataV2 } from '@/types/preproduction'
 
 // Dynamic import para evitar SSR do componente que usa supabase.auth no cliente
 const ApprovalPdfButton = dynamic(
@@ -196,6 +198,9 @@ export function JobHeader({ job }: JobHeaderProps) {
                 currentStatus={job.status}
               />
               <PriorityBadge priority={job.priority} />
+              <PreProductionBadge
+                complete={(job.custom_fields?.ppm as PpmDataV2 | undefined)?.pre_production_complete}
+              />
               <SyncIndicator state={syncState} />
             </div>
 

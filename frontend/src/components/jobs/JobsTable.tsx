@@ -16,7 +16,9 @@ import { JobActionsMenu } from '@/components/jobs/JobActionsMenu'
 import { JobCodeBadge } from '@/components/jobs/JobCodeBadge'
 import { MarginBadge } from '@/components/jobs/MarginBadge'
 import { StatusBadge } from '@/components/jobs/StatusBadge'
+import { PreProductionBadge } from '@/components/job-detail/tabs/ppm/PreProductionBadge'
 import { PROJECT_TYPE_SHORT_LABELS } from '@/lib/constants'
+import type { PpmDataV2 } from '@/types/preproduction'
 import { cn } from '@/lib/utils'
 import { formatCurrency, formatDate, isOverdue } from '@/lib/format'
 import { useUserRole } from '@/hooks/useUserRole'
@@ -217,8 +219,13 @@ export function JobsTable({
                 {/* === CELULA 2: Status + Tipo + Entrega === */}
                 <TableCell className="px-3 py-2.5 w-48">
                   <div className="flex flex-col gap-1 min-w-0">
-                    {/* Linha 1: status badge */}
-                    <StatusBadge status={job.status} />
+                    {/* Linha 1: status badge + pre-producao badge */}
+                    <div className="flex items-center gap-1 flex-wrap">
+                      <StatusBadge status={job.status} />
+                      <PreProductionBadge
+                        complete={(job.custom_fields?.ppm as PpmDataV2 | undefined)?.pre_production_complete}
+                      />
+                    </div>
                     {/* Linha 2: tipo + data */}
                     <div className="flex items-center gap-1.5 min-w-0">
                       <span className="text-xs text-muted-foreground truncate">
