@@ -320,6 +320,15 @@ export const receivableKeys = {
   summary: (jobId: string) => [...receivableKeys.all, 'summary', jobId] as const,
 }
 
+export const preproductionTemplateKeys = {
+  all: ['preproduction-templates'] as const,
+  lists: () => [...preproductionTemplateKeys.all, 'list'] as const,
+  list: (filters?: Record<string, string>) =>
+    [...preproductionTemplateKeys.lists(), filters] as const,
+  forType: (projectType: string | null) =>
+    [...preproductionTemplateKeys.all, 'for-type', projectType] as const,
+}
+
 export const attendanceKeys = {
   all: ['attendance'] as const,
   communications: (jobId: string) => [...attendanceKeys.all, 'communications', jobId] as const,
