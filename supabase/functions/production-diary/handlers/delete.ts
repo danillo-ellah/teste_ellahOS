@@ -4,7 +4,8 @@ import { success } from '../../_shared/response.ts';
 import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 
 // Roles autorizados para deletar entradas do diario
-const ALLOWED_ROLES = ['admin', 'ceo', 'produtor_executivo', 'coordenador_producao'];
+// Restricao: apenas ceo e produtor_executivo podem deletar (spec RN-06)
+const ALLOWED_ROLES = ['admin', 'ceo', 'produtor_executivo'];
 
 export async function handleDelete(_req: Request, auth: AuthContext, id: string): Promise<Response> {
   console.log('[production-diary/delete] deletando entrada', {

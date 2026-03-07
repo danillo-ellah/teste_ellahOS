@@ -5,22 +5,70 @@ import { created } from '../../_shared/response.ts';
 import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 
 // Roles autorizados para criar entradas no diario
-const ALLOWED_ROLES = ['admin', 'ceo', 'produtor_executivo', 'coordenador_producao'];
+const ALLOWED_ROLES = [
+  'admin',
+  'ceo',
+  'produtor_executivo',
+  'coordenador_producao',
+  'diretor_producao',
+  'cco',
+];
+
+// Regex reutilizavel para horario HH:MM
+const HH_MM = z.string().regex(/^\d{2}:\d{2}$/, 'Horario deve ser HH:MM');
+
+// Sub-schema: cena filmada
+const SceneItemSchema = z.object({
+  scene_number: z.string().min(1).max(50),
+  description: z.string().max(500).nullable().optional(),
+  takes: z.number().int().min(0).default(0),
+  ok_take: z.number().int().min(0).nullable().optional(),
+  status: z.enum(['ok', 'incompleta', 'nao_gravada']).default('ok'),
+});
+
+// Sub-schema: presenca de membro da equipe
+const AttendanceItemSchema = z.object({
+  person_id: z.string().uuid().nullable().optional(),
+  person_name: z.string().min(1).max(200),
+  role: z.string().max(100),
+  present: z.boolean().default(true),
+  arrival_time: HH_MM.nullable().optional(),
+  notes: z.string().max(500).nullable().optional(),
+});
+
+// Sub-schema: equipamento utilizado
+const EquipmentItemSchema = z.object({
+  name: z.string().min(1).max(200),
+  quantity: z.number().int().min(0).nullable().optional(),
+  notes: z.string().max(500).nullable().optional(),
+});
 
 // Schema de validacao para criacao de entrada
 const CreateDiaryEntrySchema = z.object({
   job_id: z.string().uuid(),
   shooting_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data deve ser YYYY-MM-DD'),
   day_number: z.number().int().min(1).optional(), // auto-calculado se omitido
-  weather_condition: z.enum(['sol', 'nublado', 'chuva', 'noturna']).default('sol'),
-  call_time: z.string().regex(/^\d{2}:\d{2}$/, 'Horario deve ser HH:MM').nullable().optional(),
-  wrap_time: z.string().regex(/^\d{2}:\d{2}$/, 'Horario deve ser HH:MM').nullable().optional(),
+  weather_condition: z.enum(['sol', 'nublado', 'chuva', 'noturna', 'indoor']).default('sol'),
+  call_time: HH_MM.nullable().optional(),
+  wrap_time: HH_MM.nullable().optional(),
   planned_scenes: z.string().max(2000).nullable().optional(),
   filmed_scenes: z.string().max(2000).nullable().optional(),
   total_takes: z.number().int().min(0).nullable().optional(),
   observations: z.string().max(5000).nullable().optional(),
   issues: z.string().max(5000).nullable().optional(),
   highlights: z.string().max(5000).nullable().optional(),
+  // Campos novos Onda 2.3
+  shooting_date_id: z.string().uuid().nullable().optional(),
+  location: z.string().max(500).nullable().optional(),
+  filming_start_time: HH_MM.nullable().optional(),
+  lunch_time: HH_MM.nullable().optional(),
+  scenes_list: z.array(SceneItemSchema).default([]),
+  day_status: z.enum(['no_cronograma', 'adiantado', 'atrasado']).nullable().optional(),
+  executive_summary: z.string().max(2000).nullable().optional(),
+  attendance_list: z.array(AttendanceItemSchema).default([]),
+  equipment_list: z.array(EquipmentItemSchema).default([]),
+  next_steps: z.string().max(5000).nullable().optional(),
+  director_signature: z.string().max(200).nullable().optional(),
 });
 
 /**
@@ -105,6 +153,24 @@ export async function handleCreate(req: Request, auth: AuthContext): Promise<Res
     );
   }
 
+  // Validar shooting_date_id: deve pertencer ao mesmo job
+  if (data.shooting_date_id) {
+    const { data: sd } = await client
+      .from('job_shooting_dates')
+      .select('id, job_id')
+      .eq('id', data.shooting_date_id)
+      .eq('job_id', data.job_id)
+      .maybeSingle();
+
+    if (!sd) {
+      throw new AppError(
+        'VALIDATION_ERROR',
+        'Data de filmagem nao encontrada ou nao pertence a este job',
+        400,
+      );
+    }
+  }
+
   // Auto-calcular day_number se nao fornecido
   const dayNumber = data.day_number ?? await calculateDayNumber(client, data.job_id, auth.tenantId);
 
@@ -124,6 +190,18 @@ export async function handleCreate(req: Request, auth: AuthContext): Promise<Res
     issues: data.issues ?? null,
     highlights: data.highlights ?? null,
     created_by: auth.userId,
+    // Campos novos Onda 2.3
+    shooting_date_id: data.shooting_date_id ?? null,
+    location: data.location ?? null,
+    filming_start_time: data.filming_start_time ?? null,
+    lunch_time: data.lunch_time ?? null,
+    scenes_list: data.scenes_list,
+    day_status: data.day_status ?? null,
+    executive_summary: data.executive_summary ?? null,
+    attendance_list: data.attendance_list,
+    equipment_list: data.equipment_list,
+    next_steps: data.next_steps ?? null,
+    director_signature: data.director_signature ?? null,
   };
 
   const { data: createdEntry, error: insertError } = await client

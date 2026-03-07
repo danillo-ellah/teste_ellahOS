@@ -5,7 +5,14 @@ import { created } from '../../_shared/response.ts';
 import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 
 // Roles autorizados para adicionar fotos
-const ALLOWED_ROLES = ['admin', 'ceo', 'produtor_executivo', 'coordenador_producao'];
+const ALLOWED_ROLES = [
+  'admin',
+  'ceo',
+  'produtor_executivo',
+  'coordenador_producao',
+  'diretor_producao',
+  'cco',
+];
 
 // Schema de validacao para adicionar foto
 const AddPhotoSchema = z.object({
