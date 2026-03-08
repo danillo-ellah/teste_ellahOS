@@ -188,7 +188,7 @@ function PhotoGrid({ photos, onAdd }: PhotoGridProps) {
 
   return (
     <div className="space-y-2">
-      <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+      <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-7 gap-2">
         {visible.map((photo) => (
           <div key={photo.id} className="group relative aspect-square">
             <img
@@ -214,8 +214,9 @@ function PhotoGrid({ photos, onAdd }: PhotoGridProps) {
 
         <button
           onClick={onAdd}
-          className="aspect-square rounded-md border border-dashed border-border flex items-center justify-center hover:border-primary hover:bg-muted/50 transition-colors"
+          className="aspect-square min-h-[44px] rounded-md border border-dashed border-border flex items-center justify-center hover:border-primary hover:bg-muted/50 transition-colors"
           title="Adicionar foto"
+          aria-label="Adicionar foto ao diario"
         >
           <Plus className="size-4 text-muted-foreground" />
         </button>
@@ -251,17 +252,17 @@ function CollapsibleSection({ title, defaultOpen = false, children }: Collapsibl
   const [open, setOpen] = useState(defaultOpen)
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen} className="col-span-2">
+    <Collapsible open={open} onOpenChange={setOpen} className="col-span-1 sm:col-span-2">
       <CollapsibleTrigger asChild>
         <button
           type="button"
-          className="flex items-center justify-between w-full py-2 border-t border-border text-left"
+          className="flex items-center justify-between w-full py-3 border-t border-border text-left min-h-[44px]"
         >
-          <span className="text-sm font-medium text-muted-foreground">{title}</span>
+          <span className="text-sm font-medium text-foreground">{title}</span>
           {open ? (
-            <ChevronUp className="size-4 text-muted-foreground" />
+            <ChevronUp className="size-4 text-muted-foreground shrink-0" />
           ) : (
-            <ChevronDown className="size-4 text-muted-foreground" />
+            <ChevronDown className="size-4 text-muted-foreground shrink-0" />
           )}
         </button>
       </CollapsibleTrigger>
@@ -378,16 +379,17 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <h3 className="text-lg font-semibold">Diario de Producao</h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground hidden sm:block">
             Registro diario das filmagens — cenas, clima, horarios e ocorrencias
           </p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="size-4 mr-2" />
-          Novo Dia
+        <Button onClick={openCreate} className="shrink-0">
+          <Plus className="size-4 mr-1.5" />
+          <span className="hidden sm:inline">Novo Dia</span>
+          <span className="sm:hidden">Novo</span>
         </Button>
       </div>
 
@@ -458,21 +460,21 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
                     <div className="flex items-center gap-1 shrink-0">
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         onClick={() => openEdit(entry)}
-                        className="h-8 w-8 p-0"
-                        title="Editar"
+                        className="size-9"
+                        aria-label={`Editar dia ${entry.day_number}`}
                       >
-                        <Pencil className="size-3.5" />
+                        <Pencil className="size-4" />
                       </Button>
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         onClick={() => setDeleteId(entry.id)}
-                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                        title="Remover"
+                        className="size-9 text-destructive hover:text-destructive"
+                        aria-label={`Remover dia ${entry.day_number}`}
                       >
-                        <Trash2 className="size-3.5" />
+                        <Trash2 className="size-4" />
                       </Button>
                     </div>
                   </div>
@@ -599,7 +601,7 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="grid grid-cols-2 gap-4 py-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-2">
             {/* Secao 1: Data e Info Basica */}
             <DiaryDatePicker
               jobId={job.id}
@@ -617,7 +619,7 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
             />
 
             {/* Dia numero */}
-            <div className="col-span-2 sm:col-span-1">
+            <div className="col-span-1">
               <Label>
                 Numero do dia
                 <span className="ml-1 text-xs text-muted-foreground">(auto-calculado se vazio)</span>
@@ -632,7 +634,7 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
             </div>
 
             {/* Condicao climatica */}
-            <div className="col-span-2 sm:col-span-1">
+            <div className="col-span-1">
               <Label>Condicao climatica</Label>
               <Select
                 value={form.weather_condition}
@@ -660,7 +662,7 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
             </div>
 
             {/* Locacao */}
-            <div className="col-span-2 sm:col-span-1">
+            <div className="col-span-1">
               <Label>Locacao</Label>
               <Input
                 placeholder="Ex: Parque Ibirapuera, Sao Paulo"
@@ -670,7 +672,7 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
             </div>
 
             {/* Secao 2: Horarios */}
-            <div className="col-span-2 border-t pt-2">
+            <div className="col-span-1 sm:col-span-2 border-t pt-2">
               <p className="text-sm font-medium text-muted-foreground">Horarios</p>
             </div>
 
@@ -711,11 +713,11 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
             </div>
 
             {/* Secao 3: Cenas texto */}
-            <div className="col-span-2 border-t pt-2">
+            <div className="col-span-1 sm:col-span-2 border-t pt-2">
               <p className="text-sm font-medium text-muted-foreground">Cenas</p>
             </div>
 
-            <div className="col-span-2">
+            <div className="col-span-1 sm:col-span-2">
               <Label>Cenas planejadas</Label>
               <Textarea
                 rows={2}
@@ -726,7 +728,7 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
               />
             </div>
 
-            <div className="col-span-2">
+            <div className="col-span-1 sm:col-span-2">
               <Label>Cenas filmadas</Label>
               <Textarea
                 rows={2}
@@ -751,11 +753,11 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
             </CollapsibleSection>
 
             {/* Separador: Relatorio do dia */}
-            <div className="col-span-2 border-t pt-2">
+            <div className="col-span-1 sm:col-span-2 border-t pt-2">
               <p className="text-sm font-medium text-muted-foreground">Relatorio do dia</p>
             </div>
 
-            <div className="col-span-2">
+            <div className="col-span-1 sm:col-span-2">
               <Label>Problemas / Ocorrencias</Label>
               <Textarea
                 rows={3}
@@ -766,7 +768,7 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
               />
             </div>
 
-            <div className="col-span-2">
+            <div className="col-span-1 sm:col-span-2">
               <Label>Destaques</Label>
               <Textarea
                 rows={3}
@@ -777,7 +779,7 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
               />
             </div>
 
-            <div className="col-span-2">
+            <div className="col-span-1 sm:col-span-2">
               <Label>Observacoes gerais</Label>
               <Textarea
                 rows={3}

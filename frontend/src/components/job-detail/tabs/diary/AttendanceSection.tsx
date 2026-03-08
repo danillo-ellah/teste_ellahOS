@@ -94,7 +94,7 @@ export function AttendanceSection({ jobId, attendance, onChange }: AttendanceSec
 
       {/* Botao pre-popular se vazio */}
       {totalCount === 0 && teamMembers && teamMembers.length > 0 && (
-        <Button type="button" variant="outline" size="sm" onClick={handlePrePopulate}>
+        <Button type="button" variant="outline" size="sm" onClick={handlePrePopulate} className="h-9">
           <Users className="size-3.5 mr-1.5" />
           Carregar equipe confirmada ({teamMembers.length})
         </Button>
@@ -104,75 +104,90 @@ export function AttendanceSection({ jobId, attendance, onChange }: AttendanceSec
       {attendance.map((item, i) => (
         <div
           key={i}
-          className="flex items-center gap-3 p-2 rounded-md border border-border bg-muted/30"
+          className="flex items-start gap-3 p-3 rounded-md border border-border bg-muted/30"
         >
           <Checkbox
             checked={item.present}
             onCheckedChange={(checked) =>
               updateItem(i, { present: checked === true })
             }
+            className="mt-0.5 shrink-0"
           />
-          <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
-            <span className="text-sm font-medium truncate sm:col-span-1">
-              {item.person_name}
-            </span>
-            <span className="text-xs text-muted-foreground sm:col-span-1">
-              {item.role}
-            </span>
-            <Input
-              type="time"
-              placeholder="Chegada"
-              value={item.arrival_time ?? ''}
-              onChange={(e) =>
-                updateItem(i, { arrival_time: e.target.value || null })
-              }
-              className="h-7 text-xs sm:col-span-1"
-            />
-            <Input
-              placeholder="Obs"
-              value={item.notes ?? ''}
-              onChange={(e) =>
-                updateItem(i, { notes: e.target.value || null })
-              }
-              className="h-7 text-xs sm:col-span-1"
-            />
+          <div className="flex-1 min-w-0 space-y-2">
+            {/* Nome e funcao */}
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm font-medium truncate flex-1">
+                {item.person_name}
+              </span>
+              <span className="text-xs text-muted-foreground shrink-0">
+                {item.role}
+              </span>
+            </div>
+            {/* Horario e obs — empilhados em mobile, lado a lado em sm+ */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <Input
+                type="time"
+                placeholder="Horario de chegada"
+                value={item.arrival_time ?? ''}
+                onChange={(e) =>
+                  updateItem(i, { arrival_time: e.target.value || null })
+                }
+                className="h-9 text-sm"
+              />
+              <Input
+                placeholder="Observacao"
+                value={item.notes ?? ''}
+                onChange={(e) =>
+                  updateItem(i, { notes: e.target.value || null })
+                }
+                className="h-9 text-sm"
+              />
+            </div>
           </div>
-          <button
+          <Button
             type="button"
-            className="text-muted-foreground hover:text-destructive text-xs shrink-0"
+            variant="ghost"
+            size="icon"
+            className="size-9 shrink-0 text-muted-foreground hover:text-destructive mt-0.5"
             onClick={() => removeItem(i)}
+            aria-label={`Remover ${item.person_name}`}
           >
-            &times;
-          </button>
+            <span className="text-base leading-none">&times;</span>
+          </Button>
         </div>
       ))}
 
       {/* Adicionar participante extra */}
       {showAddExtra ? (
-        <div className="flex items-center gap-2">
-          <Input
-            placeholder="Nome"
-            value={extraName}
-            onChange={(e) => setExtraName(e.target.value)}
-            className="h-8 text-sm"
-          />
-          <Input
-            placeholder="Funcao"
-            value={extraRole}
-            onChange={(e) => setExtraRole(e.target.value)}
-            className="h-8 text-sm w-32"
-          />
-          <Button type="button" size="sm" onClick={addExtra} disabled={!extraName.trim()}>
-            OK
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowAddExtra(false)}
-          >
-            Cancelar
-          </Button>
+        <div className="space-y-2 p-3 rounded-md border border-border bg-muted/20">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <Input
+              placeholder="Nome do participante"
+              value={extraName}
+              onChange={(e) => setExtraName(e.target.value)}
+              className="h-10 text-sm"
+            />
+            <Input
+              placeholder="Funcao (ex: camarero)"
+              value={extraRole}
+              onChange={(e) => setExtraRole(e.target.value)}
+              className="h-10 text-sm"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button type="button" size="sm" onClick={addExtra} disabled={!extraName.trim()} className="h-9">
+              Adicionar
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowAddExtra(false)}
+              className="h-9"
+            >
+              Cancelar
+            </Button>
+          </div>
         </div>
       ) : (
         <Button
@@ -180,6 +195,7 @@ export function AttendanceSection({ jobId, attendance, onChange }: AttendanceSec
           variant="outline"
           size="sm"
           onClick={() => setShowAddExtra(true)}
+          className="h-9"
         >
           <Plus className="size-3.5 mr-1.5" />
           Adicionar participante

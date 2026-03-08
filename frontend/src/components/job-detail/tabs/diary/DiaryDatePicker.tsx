@@ -41,17 +41,18 @@ export function DiaryDatePicker({
 
   if (!hasDates || isManual) {
     return (
-      <div className="col-span-2 sm:col-span-1 space-y-1.5">
+      <div className="col-span-1 space-y-1.5">
         <Label>Data de filmagem *</Label>
         <Input
           type="date"
           value={value}
           onChange={(e) => onChange(e.target.value, null, null)}
+          className="h-10"
         />
         {hasDates && (
           <button
             type="button"
-            className="text-xs text-primary hover:underline"
+            className="text-xs text-primary hover:underline min-h-[36px] flex items-center"
             onClick={() => onChange('', null, null)}
           >
             Selecionar de diaria cadastrada
@@ -62,7 +63,7 @@ export function DiaryDatePicker({
   }
 
   return (
-    <div className="col-span-2 sm:col-span-1 space-y-1.5">
+    <div className="col-span-1 space-y-1.5">
       <Label>Data de filmagem *</Label>
       <Select
         value={shootingDateId ?? ''}
@@ -77,7 +78,7 @@ export function DiaryDatePicker({
           }
         }}
       >
-        <SelectTrigger>
+        <SelectTrigger className="h-10">
           <SelectValue placeholder="Selecione a data..." />
         </SelectTrigger>
         <SelectContent>

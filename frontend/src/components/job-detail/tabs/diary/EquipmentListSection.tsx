@@ -33,43 +33,46 @@ export function EquipmentListSection({ equipment, onChange }: EquipmentListSecti
       {equipment.map((item, i) => (
         <div
           key={i}
-          className="flex items-center gap-2 p-2 rounded-md border border-border bg-muted/30"
+          className="flex items-start gap-2 p-3 rounded-md border border-border bg-muted/30"
         >
-          <Input
-            placeholder="Equipamento *"
-            value={item.name}
-            onChange={(e) => updateItem(i, { name: e.target.value })}
-            className="h-8 text-sm flex-1"
-          />
-          <Input
-            type="number"
-            min={0}
-            placeholder="Qtd"
-            value={item.quantity ?? ''}
-            onChange={(e) =>
-              updateItem(i, { quantity: e.target.value ? Number(e.target.value) : null })
-            }
-            className="h-8 text-sm w-20"
-          />
-          <Input
-            placeholder="Obs"
-            value={item.notes ?? ''}
-            onChange={(e) => updateItem(i, { notes: e.target.value || null })}
-            className="h-8 text-sm w-32"
-          />
+          <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <Input
+              placeholder="Nome do equipamento *"
+              value={item.name}
+              onChange={(e) => updateItem(i, { name: e.target.value })}
+              className="h-10 text-sm sm:col-span-1"
+            />
+            <Input
+              type="number"
+              min={0}
+              placeholder="Quantidade"
+              value={item.quantity ?? ''}
+              onChange={(e) =>
+                updateItem(i, { quantity: e.target.value ? Number(e.target.value) : null })
+              }
+              className="h-10 text-sm"
+            />
+            <Input
+              placeholder="Observacao"
+              value={item.notes ?? ''}
+              onChange={(e) => updateItem(i, { notes: e.target.value || null })}
+              className="h-10 text-sm"
+            />
+          </div>
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="size-7 shrink-0 text-muted-foreground hover:text-destructive"
+            className="size-9 shrink-0 text-muted-foreground hover:text-destructive mt-0.5"
             onClick={() => removeItem(i)}
+            aria-label={`Remover ${item.name || 'equipamento'}`}
           >
-            <X className="size-3.5" />
+            <X className="size-4" />
           </Button>
         </div>
       ))}
 
-      <Button type="button" variant="outline" size="sm" onClick={addItem}>
+      <Button type="button" variant="outline" size="sm" onClick={addItem} className="h-9">
         <Plus className="size-3.5 mr-1.5" />
         Adicionar equipamento
       </Button>

@@ -42,7 +42,7 @@ export function BulletinSection({
           value={dayStatus ?? ''}
           onValueChange={(v) => onChange('day_status', v || null)}
         >
-          <SelectTrigger>
+          <SelectTrigger className="h-10">
             <SelectValue placeholder="Selecione..." />
           </SelectTrigger>
           <SelectContent>
@@ -90,6 +90,7 @@ export function BulletinSection({
           placeholder="Nome completo do DP responsavel"
           value={directorSignature}
           onChange={(e) => onChange('director_signature', e.target.value)}
+          className="h-10"
         />
       </div>
     </div>

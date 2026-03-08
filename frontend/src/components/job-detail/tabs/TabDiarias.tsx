@@ -148,8 +148,8 @@ export function TabDiarias({ job }: TabDiariasProps) {
 
   return (
     <>
-      <div className="flex items-center justify-between mb-4">
-        <div>
+      <div className="flex items-center justify-between mb-4 gap-3">
+        <div className="min-w-0">
           <h3 className="text-sm font-semibold">
             Diarias ({totalDates})
           </h3>
@@ -159,9 +159,9 @@ export function TabDiarias({ job }: TabDiariasProps) {
             </p>
           )}
         </div>
-        <Button size="sm" variant="outline" onClick={handleOpenAdd}>
+        <Button size="sm" variant="outline" onClick={handleOpenAdd} className="h-9 shrink-0">
           <Plus className="size-4" />
-          Adicionar diaria
+          <span className="hidden sm:inline ml-1.5">Adicionar diaria</span>
         </Button>
       </div>
 
@@ -212,7 +212,7 @@ export function TabDiarias({ job }: TabDiariasProps) {
 
                   {/* Descricao */}
                   {d.description && (
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                       {d.description}
                     </p>
                   )}
