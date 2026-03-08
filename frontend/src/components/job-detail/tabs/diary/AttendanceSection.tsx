@@ -28,9 +28,11 @@ export function AttendanceSection({ jobId, attendance, onChange }: AttendanceSec
   const [showAddExtra, setShowAddExtra] = useState(false)
   const [extraName, setExtraName] = useState('')
   const [extraRole, setExtraRole] = useState('')
+  // IDs estáveis por item — evita re-render com key por índice ao remover/reordenar
+  const [ids, setIds] = useState<string[]>(() => attendance.map(() => crypto.randomUUID()))
 
   // Busca equipe confirmada para pre-popular
-  const { data: teamMembers } = useQuery({
+  const { data: teamMembers, isError: teamError } = useQuery({
     queryKey: [...jobKeys.team(jobId), 'confirmed'],
     queryFn: async () => {
       const res = await apiGet<TeamMember[]>('jobs-team', {}, jobId)
@@ -51,6 +53,7 @@ export function AttendanceSection({ jobId, attendance, onChange }: AttendanceSec
       arrival_time: null,
       notes: null,
     }))
+    setIds(items.map(() => crypto.randomUUID()))
     onChange(items)
   }
 
@@ -69,6 +72,7 @@ export function AttendanceSection({ jobId, attendance, onChange }: AttendanceSec
       arrival_time: null,
       notes: null,
     }
+    setIds((prev) => [...prev, crypto.randomUUID()])
     onChange([...attendance, newItem])
     setExtraName('')
     setExtraRole('')
@@ -76,6 +80,7 @@ export function AttendanceSection({ jobId, attendance, onChange }: AttendanceSec
   }
 
   function removeItem(index: number) {
+    setIds((prev) => prev.filter((_, i) => i !== index))
     onChange(attendance.filter((_, i) => i !== index))
   }
 
@@ -92,6 +97,11 @@ export function AttendanceSection({ jobId, attendance, onChange }: AttendanceSec
         </div>
       )}
 
+      {/* Erro ao carregar equipe */}
+      {teamError && totalCount === 0 && (
+        <p className="text-xs text-destructive">Erro ao carregar equipe. Adicione participantes manualmente.</p>
+      )}
+
       {/* Botao pre-popular se vazio */}
       {totalCount === 0 && teamMembers && teamMembers.length > 0 && (
         <Button type="button" variant="outline" size="sm" onClick={handlePrePopulate} className="h-9">
@@ -103,7 +113,7 @@ export function AttendanceSection({ jobId, attendance, onChange }: AttendanceSec
       {/* Lista de presenca */}
       {attendance.map((item, i) => (
         <div
-          key={i}
+          key={ids[i]}
           className="flex items-start gap-3 p-3 rounded-md border border-border bg-muted/30"
         >
           <Checkbox

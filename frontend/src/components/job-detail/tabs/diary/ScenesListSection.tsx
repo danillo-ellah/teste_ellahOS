@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,6 +37,9 @@ export function ScenesListSection({
   totalTakes,
   onTotalTakesChange,
 }: ScenesListSectionProps) {
+  // IDs estáveis por item — evita re-render com key por índice ao remover/reordenar
+  const [ids, setIds] = useState<string[]>(() => scenes.map(() => crypto.randomUUID()))
+
   const hasScenes = scenes.length > 0
   const computedTakes = hasScenes ? scenes.reduce((sum, s) => sum + s.takes, 0) : null
 
@@ -45,17 +49,19 @@ export function ScenesListSection({
   }
 
   function removeScene(index: number) {
+    setIds((prev) => prev.filter((_, i) => i !== index))
     onChange(scenes.filter((_, i) => i !== index))
   }
 
   function addScene() {
+    setIds((prev) => [...prev, crypto.randomUUID()])
     onChange([...scenes, emptyScene()])
   }
 
   return (
     <div className="space-y-3">
       {scenes.map((scene, i) => (
-        <div key={i} className="flex items-start gap-2 p-3 rounded-md border border-border bg-muted/30">
+        <div key={ids[i]} className="flex items-start gap-2 p-3 rounded-md border border-border bg-muted/30">
           <div className="flex-1 min-w-0 space-y-2">
             {/* Linha 1: numero da cena + descricao */}
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">

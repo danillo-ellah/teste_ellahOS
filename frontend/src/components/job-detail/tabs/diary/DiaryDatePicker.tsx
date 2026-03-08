@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { CheckCircle2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -36,8 +37,12 @@ export function DiaryDatePicker({
 }: DiaryDatePickerProps) {
   const { data: shootingDates } = useJobShootingDates(jobId)
 
+  // forceManual: true quando usuario clica explicitamente em "Outra data..."
+  // Reseta automaticamente quando o componente desmonta (Dialog fecha/abre)
+  const [forceManual, setForceManual] = useState(false)
+
   const hasDates = shootingDates && shootingDates.length > 0
-  const isManual = !hasDates || (value && !shootingDateId && !shootingDates?.find(d => d.shooting_date === value))
+  const isManual = !hasDates || forceManual
 
   if (!hasDates || isManual) {
     return (
@@ -53,7 +58,7 @@ export function DiaryDatePicker({
           <button
             type="button"
             className="text-xs text-primary hover:underline min-h-[36px] flex items-center"
-            onClick={() => onChange('', null, null)}
+            onClick={() => { setForceManual(false); onChange('', null, null) }}
           >
             Selecionar de diaria cadastrada
           </button>
@@ -69,6 +74,7 @@ export function DiaryDatePicker({
         value={shootingDateId ?? ''}
         onValueChange={(v) => {
           if (v === MANUAL_VALUE) {
+            setForceManual(true)
             onChange('', null, null)
             return
           }

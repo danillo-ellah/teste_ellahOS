@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,16 +16,21 @@ function emptyEquipment(): EquipmentItem {
 }
 
 export function EquipmentListSection({ equipment, onChange }: EquipmentListSectionProps) {
+  // IDs estáveis por item — evita re-render com key por índice ao remover/reordenar
+  const [ids, setIds] = useState<string[]>(() => equipment.map(() => crypto.randomUUID()))
+
   function updateItem(index: number, partial: Partial<EquipmentItem>) {
     const updated = equipment.map((e, i) => (i === index ? { ...e, ...partial } : e))
     onChange(updated)
   }
 
   function removeItem(index: number) {
+    setIds((prev) => prev.filter((_, i) => i !== index))
     onChange(equipment.filter((_, i) => i !== index))
   }
 
   function addItem() {
+    setIds((prev) => [...prev, crypto.randomUUID()])
     onChange([...equipment, emptyEquipment()])
   }
 
@@ -32,7 +38,7 @@ export function EquipmentListSection({ equipment, onChange }: EquipmentListSecti
     <div className="space-y-3">
       {equipment.map((item, i) => (
         <div
-          key={i}
+          key={ids[i]}
           className="flex items-start gap-2 p-3 rounded-md border border-border bg-muted/30"
         >
           <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-3 gap-2">

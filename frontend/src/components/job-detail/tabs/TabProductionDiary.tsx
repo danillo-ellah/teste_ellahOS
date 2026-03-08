@@ -106,6 +106,12 @@ const PHOTO_TYPE_BADGE_CLASSES: Record<PhotoType, string> = {
 
 // --- Helpers ---
 
+// Normaliza TIME "HH:MM:SS" retornado pelo banco para "HH:MM" (compatibilidade Safari iOS)
+function normalizeTime(t: string | null | undefined): string {
+  if (!t) return ''
+  return t.length > 5 ? t.slice(0, 5) : t
+}
+
 function defaultForm(): DiaryEntryFormData {
   return {
     shooting_date: '',
@@ -139,10 +145,10 @@ function formFromEntry(entry: DiaryEntry): DiaryEntryFormData {
     shooting_date_id: entry.shooting_date_id ?? null,
     day_number: String(entry.day_number),
     weather_condition: entry.weather_condition,
-    call_time: entry.call_time ?? '',
-    wrap_time: entry.wrap_time ?? '',
-    filming_start_time: entry.filming_start_time ?? '',
-    lunch_time: entry.lunch_time ?? '',
+    call_time: normalizeTime(entry.call_time),
+    wrap_time: normalizeTime(entry.wrap_time),
+    filming_start_time: normalizeTime(entry.filming_start_time),
+    lunch_time: normalizeTime(entry.lunch_time),
     location: entry.location ?? '',
     planned_scenes: entry.planned_scenes ?? '',
     filmed_scenes: entry.filmed_scenes ?? '',
@@ -445,7 +451,7 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
                       </div>
                       {entry.call_time && entry.wrap_time && (
                         <span className="text-xs text-muted-foreground">
-                          {entry.call_time} - {entry.wrap_time}
+                          {normalizeTime(entry.call_time)} - {normalizeTime(entry.wrap_time)}
                         </span>
                       )}
                       {entry.total_takes != null && (
@@ -741,6 +747,7 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
 
             {/* Secao: Lista de cenas (colapsavel) */}
             <CollapsibleSection
+              key={`scenes-${editingEntry?.id ?? 'new'}`}
               title="Lista detalhada de cenas"
               defaultOpen={!!editingEntry && hasScenesData}
             >
@@ -792,6 +799,7 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
 
             {/* Secao: Presenca (colapsavel) */}
             <CollapsibleSection
+              key={`attendance-${editingEntry?.id ?? 'new'}`}
               title="Presenca da equipe"
               defaultOpen={!!editingEntry && hasAttendanceData}
             >
@@ -804,6 +812,7 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
 
             {/* Secao: Boletim (colapsavel) */}
             <CollapsibleSection
+              key={`bulletin-${editingEntry?.id ?? 'new'}`}
               title="Boletim de producao"
               defaultOpen={!!editingEntry && hasBulletinData}
             >
@@ -820,6 +829,7 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
 
             {/* Secao: Equipamentos (colapsavel) */}
             <CollapsibleSection
+              key={`equipment-${editingEntry?.id ?? 'new'}`}
               title="Equipamentos"
               defaultOpen={!!editingEntry && hasEquipmentData}
             >
