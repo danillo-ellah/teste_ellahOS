@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   Plus,
@@ -40,6 +41,10 @@ interface TabDiariasProps {
 }
 
 export function TabDiarias({ job }: TabDiariasProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const pathname = usePathname()
+
   const { data: dates, isLoading, isError, refetch } = useJobShootingDates(job.id)
   const { mutateAsync: addDate, isPending: isAdding } = useAddShootingDate()
   const { mutateAsync: updateDate, isPending: isUpdating } = useUpdateShootingDate()
@@ -62,6 +67,13 @@ export function TabDiarias({ job }: TabDiariasProps) {
   const list = dates ?? []
   const totalDates = list.length
   const datesWithDiary = list.filter((d) => diaryDateSet.has(d.shooting_date)).length
+
+  // Navega para tab diario (CA-07.2 / CA-07.3)
+  function navigateToDiary() {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('tab', 'diario')
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+  }
 
   function handleOpenAdd() {
     setEditing(undefined)
@@ -175,16 +187,26 @@ export function TabDiarias({ job }: TabDiariasProps) {
             >
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
-                  {/* Data + indicador diario */}
+                  {/* Data + indicador diario (clicavel: CA-07.2 / CA-07.3) */}
                   <div className="flex items-center gap-2 text-sm font-medium">
                     {hasDiary ? (
-                      <span title="Diario registrado">
+                      <button
+                        type="button"
+                        title="Ver diario registrado"
+                        className="hover:scale-110 transition-transform"
+                        onClick={navigateToDiary}
+                      >
                         <CheckCircle2 className="size-4 text-green-500 shrink-0" />
-                      </span>
+                      </button>
                     ) : (
-                      <span title="Sem diario">
+                      <button
+                        type="button"
+                        title="Criar diario para esta data"
+                        className="hover:scale-110 transition-transform"
+                        onClick={navigateToDiary}
+                      >
                         <Circle className="size-4 text-muted-foreground/40 shrink-0" />
-                      </span>
+                      </button>
                     )}
                     <Calendar className="size-4 text-muted-foreground" />
                     {formatDate(d.shooting_date)}

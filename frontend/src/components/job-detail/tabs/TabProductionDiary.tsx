@@ -427,6 +427,7 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
             const WeatherIcon = weather.icon
             const scenesOk = (entry.scenes_list ?? []).filter((s) => s.status === 'ok').length
             const scenesTotal = (entry.scenes_list ?? []).length
+            const scenesWarning = scenesTotal > 0 && scenesOk < scenesTotal
             const presentCount = (entry.attendance_list ?? []).filter((a) => a.present).length
             const attendanceTotal = (entry.attendance_list ?? []).length
             const hasBulletin = !!entry.executive_summary
@@ -460,6 +461,11 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
                         </Badge>
                       )}
                       <DayStatusBadge status={entry.day_status} hasBulletin={hasBulletin} />
+                      {scenesWarning && (
+                        <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20">
+                          {scenesTotal - scenesOk} cena{scenesTotal - scenesOk > 1 ? 's' : ''} pendente{scenesTotal - scenesOk > 1 ? 's' : ''}
+                        </Badge>
+                      )}
                     </div>
 
                     {/* Acoes */}
