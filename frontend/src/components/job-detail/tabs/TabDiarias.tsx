@@ -167,7 +167,7 @@ export function TabDiarias({ job }: TabDiariasProps) {
           </h3>
           {totalDates > 0 && (
             <p className="text-xs text-muted-foreground">
-              {datesWithDiary} de {totalDates} com diario registrado
+              {datesWithDiary} de {totalDates} com relatorio registrado
             </p>
           )}
         </div>
@@ -192,7 +192,7 @@ export function TabDiarias({ job }: TabDiariasProps) {
                     {hasDiary ? (
                       <button
                         type="button"
-                        title="Ver diario registrado"
+                        title="Ver relatorio de set"
                         className="hover:scale-110 transition-transform"
                         onClick={navigateToDiary}
                       >
@@ -201,7 +201,7 @@ export function TabDiarias({ job }: TabDiariasProps) {
                     ) : (
                       <button
                         type="button"
-                        title="Criar diario para esta data"
+                        title="Criar relatorio para esta data"
                         className="hover:scale-110 transition-transform"
                         onClick={navigateToDiary}
                       >

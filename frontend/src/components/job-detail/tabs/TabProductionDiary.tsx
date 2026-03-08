@@ -199,7 +199,7 @@ function PhotoGrid({ photos, onAdd }: PhotoGridProps) {
           <div key={photo.id} className="group relative aspect-square">
             <img
               src={photo.thumbnail_url ?? photo.url}
-              alt={photo.caption ?? 'Foto do diario'}
+              alt={photo.caption ?? 'Foto do relatorio'}
               className="w-full h-full object-cover rounded-md border border-border"
               loading="lazy"
             />
@@ -222,7 +222,7 @@ function PhotoGrid({ photos, onAdd }: PhotoGridProps) {
           onClick={onAdd}
           className="aspect-square min-h-[44px] rounded-md border border-dashed border-border flex items-center justify-center hover:border-primary hover:bg-muted/50 transition-colors"
           title="Adicionar foto"
-          aria-label="Adicionar foto ao diario"
+          aria-label="Adicionar foto ao relatorio"
         >
           <Plus className="size-4 text-muted-foreground" />
         </button>
@@ -387,9 +387,9 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="text-lg font-semibold">Diario de Producao</h3>
+          <h3 className="text-lg font-semibold">Relatorio de Set</h3>
           <p className="text-sm text-muted-foreground hidden sm:block">
-            Registro diario das filmagens — cenas, clima, horarios e ocorrencias
+            Registro de cada dia de filmagem — cenas, clima, horarios e ocorrencias
           </p>
         </div>
         <Button onClick={openCreate} className="shrink-0">
@@ -411,7 +411,7 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
             <div>
               <p className="font-medium text-muted-foreground">Nenhum dia registrado</p>
               <p className="text-sm text-muted-foreground/70 mt-1">
-                Registre o primeiro dia de filmagem para comecar o diario
+                Registre o primeiro dia de filmagem para comecar o relatorio
               </p>
             </div>
             <Button variant="outline" onClick={openCreate}>
@@ -796,7 +796,7 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
               <Label>Observacoes gerais</Label>
               <Textarea
                 rows={3}
-                placeholder="Anotacoes adicionais para o diario..."
+                placeholder="Anotacoes adicionais..."
                 value={form.observations}
                 onChange={(e) => updateField('observations', e.target.value)}
                 className="resize-none"
@@ -877,7 +877,7 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Adicionar Foto ao Diario</DialogTitle>
+            <DialogTitle>Adicionar Foto ao Relatorio</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
@@ -974,7 +974,7 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remover entrada do diario?</AlertDialogTitle>
+            <AlertDialogTitle>Remover entrada do relatorio?</AlertDialogTitle>
             <AlertDialogDescription>
               Esta acao nao pode ser desfeita. As fotos vinculadas a este dia tambem serao removidas.
             </AlertDialogDescription>
