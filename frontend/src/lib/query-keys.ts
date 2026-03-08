@@ -341,3 +341,10 @@ export const attendanceKeys = {
   dashboardCounts: (jobIds: string[]) => [...attendanceKeys.all, 'dashboard-counts', jobIds] as const,
   pendingExtras: () => [...attendanceKeys.all, 'pending-extras'] as const,
 }
+
+export const productionDiaryKeys = {
+  all: ['production-diary'] as const,
+  lists: () => [...productionDiaryKeys.all, 'list'] as const,
+  list: (jobId: string) => [...productionDiaryKeys.lists(), jobId] as const,
+  detail: (id: string) => [...productionDiaryKeys.all, 'detail', id] as const,
+}

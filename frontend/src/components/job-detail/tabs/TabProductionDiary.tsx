@@ -1,7 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState, useMemo } from 'react'
 import { toast } from 'sonner'
 import {
   Plus,
@@ -13,10 +12,11 @@ import {
   Cloud,
   CloudRain,
   Moon,
+  Building2,
   ChevronDown,
   ChevronUp,
   BookOpen,
-  X,
+  MapPin,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -48,63 +48,46 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { apiGet, apiMutate, safeErrorMessage } from '@/lib/api'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
+import { safeErrorMessage } from '@/lib/api'
+import {
+  useProductionDiaryList,
+  useCreateDiaryEntry,
+  useUpdateDiaryEntry,
+  useDeleteDiaryEntry,
+  useAddDiaryPhoto,
+} from '@/hooks/useProductionDiary'
 import type { JobDetail } from '@/types/jobs'
+import type {
+  DiaryEntry,
+  DiaryEntryFormData,
+  WeatherCondition,
+  PhotoType,
+  SceneItem,
+  AttendanceItem,
+  EquipmentItem,
+} from '@/types/production-diary'
 
-// --- Tipos ---
+// Sub-componentes
+import { DiaryDatePicker } from './diary/DiaryDatePicker'
+import { ScenesListSection } from './diary/ScenesListSection'
+import { AttendanceSection } from './diary/AttendanceSection'
+import { BulletinSection } from './diary/BulletinSection'
+import { EquipmentListSection } from './diary/EquipmentListSection'
+import { DayStatusBadge } from './diary/DayStatusBadge'
 
-type WeatherCondition = 'sol' | 'nublado' | 'chuva' | 'noturna'
-type PhotoType = 'referencia' | 'bts' | 'continuidade' | 'problema'
-
-interface DiaryPhoto {
-  id: string
-  url: string
-  thumbnail_url: string | null
-  caption: string | null
-  photo_type: PhotoType
-  taken_at: string | null
-  created_at: string
-}
-
-interface DiaryEntry {
-  id: string
-  job_id: string
-  shooting_date: string
-  day_number: number
-  weather_condition: WeatherCondition
-  call_time: string | null
-  wrap_time: string | null
-  planned_scenes: string | null
-  filmed_scenes: string | null
-  total_takes: number | null
-  observations: string | null
-  issues: string | null
-  highlights: string | null
-  created_at: string
-  production_diary_photos: DiaryPhoto[]
-}
-
-interface DiaryEntryFormData {
-  shooting_date: string
-  day_number: string
-  weather_condition: WeatherCondition
-  call_time: string
-  wrap_time: string
-  planned_scenes: string
-  filmed_scenes: string
-  total_takes: string
-  observations: string
-  issues: string
-  highlights: string
-}
-
-// --- Constantes de configuracao ---
+// --- Constantes ---
 
 const WEATHER_CONFIG: Record<WeatherCondition, { label: string; icon: typeof Sun; className: string }> = {
   sol: { label: 'Ensolarado', icon: Sun, className: 'text-amber-500' },
   nublado: { label: 'Nublado', icon: Cloud, className: 'text-zinc-400' },
   chuva: { label: 'Chuvoso', icon: CloudRain, className: 'text-blue-400' },
   noturna: { label: 'Noturna', icon: Moon, className: 'text-indigo-400' },
+  indoor: { label: 'Indoor', icon: Building2, className: 'text-zinc-500' },
 }
 
 const PHOTO_TYPE_LABELS: Record<PhotoType, string> = {
@@ -126,32 +109,54 @@ const PHOTO_TYPE_BADGE_CLASSES: Record<PhotoType, string> = {
 function defaultForm(): DiaryEntryFormData {
   return {
     shooting_date: '',
+    shooting_date_id: null,
     day_number: '',
     weather_condition: 'sol',
     call_time: '',
     wrap_time: '',
+    filming_start_time: '',
+    lunch_time: '',
+    location: '',
     planned_scenes: '',
     filmed_scenes: '',
     total_takes: '',
     observations: '',
     issues: '',
     highlights: '',
+    scenes_list: [],
+    day_status: null,
+    executive_summary: '',
+    attendance_list: [],
+    equipment_list: [],
+    next_steps: '',
+    director_signature: '',
   }
 }
 
 function formFromEntry(entry: DiaryEntry): DiaryEntryFormData {
   return {
     shooting_date: entry.shooting_date,
+    shooting_date_id: entry.shooting_date_id ?? null,
     day_number: String(entry.day_number),
     weather_condition: entry.weather_condition,
     call_time: entry.call_time ?? '',
     wrap_time: entry.wrap_time ?? '',
+    filming_start_time: entry.filming_start_time ?? '',
+    lunch_time: entry.lunch_time ?? '',
+    location: entry.location ?? '',
     planned_scenes: entry.planned_scenes ?? '',
     filmed_scenes: entry.filmed_scenes ?? '',
     total_takes: entry.total_takes != null ? String(entry.total_takes) : '',
     observations: entry.observations ?? '',
     issues: entry.issues ?? '',
     highlights: entry.highlights ?? '',
+    scenes_list: entry.scenes_list ?? [],
+    day_status: entry.day_status ?? null,
+    executive_summary: entry.executive_summary ?? '',
+    attendance_list: entry.attendance_list ?? [],
+    equipment_list: entry.equipment_list ?? [],
+    next_steps: entry.next_steps ?? '',
+    director_signature: entry.director_signature ?? '',
   }
 }
 
@@ -160,10 +165,10 @@ function formatDate(dateStr: string): string {
   return `${day}/${month}/${year}`
 }
 
-// --- Sub-componentes ---
+// --- Sub-componente: PhotoGrid ---
 
 interface PhotoGridProps {
-  photos: DiaryPhoto[]
+  photos: DiaryEntry['production_diary_photos']
   onAdd: () => void
 }
 
@@ -207,7 +212,6 @@ function PhotoGrid({ photos, onAdd }: PhotoGridProps) {
           </div>
         ))}
 
-        {/* Botao de adicionar */}
         <button
           onClick={onAdd}
           className="aspect-square rounded-md border border-dashed border-border flex items-center justify-center hover:border-primary hover:bg-muted/50 transition-colors"
@@ -235,6 +239,39 @@ function PhotoGrid({ photos, onAdd }: PhotoGridProps) {
   )
 }
 
+// --- Sub-componente: CollapsibleSection ---
+
+interface CollapsibleSectionProps {
+  title: string
+  defaultOpen?: boolean
+  children: React.ReactNode
+}
+
+function CollapsibleSection({ title, defaultOpen = false, children }: CollapsibleSectionProps) {
+  const [open, setOpen] = useState(defaultOpen)
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen} className="col-span-2">
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="flex items-center justify-between w-full py-2 border-t border-border text-left"
+        >
+          <span className="text-sm font-medium text-muted-foreground">{title}</span>
+          {open ? (
+            <ChevronUp className="size-4 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="size-4 text-muted-foreground" />
+          )}
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="pt-2 space-y-4">
+        {children}
+      </CollapsibleContent>
+    </Collapsible>
+  )
+}
+
 // --- Componente principal ---
 
 interface TabProductionDiaryProps {
@@ -242,15 +279,13 @@ interface TabProductionDiaryProps {
 }
 
 export function TabProductionDiary({ job }: TabProductionDiaryProps) {
-  const queryClient = useQueryClient()
-
   // Estado dos dialogs
   const [showForm, setShowForm] = useState(false)
   const [editingEntry, setEditingEntry] = useState<DiaryEntry | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [photoEntryId, setPhotoEntryId] = useState<string | null>(null)
 
-  // Estado do formulario de entrada
+  // Estado do formulario
   const [form, setForm] = useState<DiaryEntryFormData>(defaultForm)
 
   // Estado do formulario de foto
@@ -261,112 +296,19 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
     photo_type: 'bts' as PhotoType,
   })
 
-  // --- Queries ---
+  // --- Hooks de dados ---
+  const { data: entries, isLoading } = useProductionDiaryList(job.id)
+  const createMutation = useCreateDiaryEntry(job.id)
+  const updateMutation = useUpdateDiaryEntry(job.id)
+  const deleteMutation = useDeleteDiaryEntry(job.id)
+  const addPhotoMutation = useAddDiaryPhoto(job.id)
 
-  const { data: entries, isLoading } = useQuery({
-    queryKey: ['production-diary', job.id],
-    queryFn: async () => {
-      const res = await apiGet<DiaryEntry[]>('production-diary', { job_id: job.id })
-      return res.data
-    },
-  })
-
-  // --- Mutations ---
-
-  const createMutation = useMutation({
-    mutationFn: async (data: DiaryEntryFormData) => {
-      const payload: Record<string, unknown> = {
-        job_id: job.id,
-        shooting_date: data.shooting_date,
-        weather_condition: data.weather_condition,
-        call_time: data.call_time || null,
-        wrap_time: data.wrap_time || null,
-        planned_scenes: data.planned_scenes || null,
-        filmed_scenes: data.filmed_scenes || null,
-        total_takes: data.total_takes ? Number(data.total_takes) : null,
-        observations: data.observations || null,
-        issues: data.issues || null,
-        highlights: data.highlights || null,
-      }
-      // day_number manual (opcional — se vazio, o backend auto-calcula)
-      if (data.day_number) {
-        payload.day_number = Number(data.day_number)
-      }
-      const res = await apiMutate<DiaryEntry>('production-diary', 'POST', payload)
-      return res.data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['production-diary', job.id] })
-      toast.success('Dia de producao registrado')
-      setShowForm(false)
-      setForm(defaultForm())
-    },
-    onError: (err) => toast.error(safeErrorMessage(err)),
-  })
-
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: DiaryEntryFormData }) => {
-      const payload: Record<string, unknown> = {
-        shooting_date: data.shooting_date,
-        weather_condition: data.weather_condition,
-        call_time: data.call_time || null,
-        wrap_time: data.wrap_time || null,
-        planned_scenes: data.planned_scenes || null,
-        filmed_scenes: data.filmed_scenes || null,
-        total_takes: data.total_takes ? Number(data.total_takes) : null,
-        observations: data.observations || null,
-        issues: data.issues || null,
-        highlights: data.highlights || null,
-      }
-      if (data.day_number) {
-        payload.day_number = Number(data.day_number)
-      }
-      const res = await apiMutate<DiaryEntry>('production-diary', 'PATCH', payload, id)
-      return res.data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['production-diary', job.id] })
-      toast.success('Entrada atualizada')
-      setEditingEntry(null)
-      setForm(defaultForm())
-    },
-    onError: (err) => toast.error(safeErrorMessage(err)),
-  })
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await apiMutate('production-diary', 'DELETE', undefined, id)
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['production-diary', job.id] })
-      toast.success('Entrada removida')
-      setDeleteId(null)
-    },
-    onError: (err) => toast.error(safeErrorMessage(err)),
-  })
-
-  const addPhotoMutation = useMutation({
-    mutationFn: async ({ entryId, data }: { entryId: string; data: typeof photoForm }) => {
-      const res = await apiMutate<DiaryPhoto>(
-        `production-diary/${entryId}/photos`,
-        'POST',
-        {
-          url: data.url,
-          thumbnail_url: data.thumbnail_url || null,
-          caption: data.caption || null,
-          photo_type: data.photo_type,
-        },
-      )
-      return res.data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['production-diary', job.id] })
-      toast.success('Foto adicionada')
-      setPhotoEntryId(null)
-      setPhotoForm({ url: '', thumbnail_url: '', caption: '', photo_type: 'bts' })
-    },
-    onError: (err) => toast.error(safeErrorMessage(err)),
-  })
+  // Set de datas que ja tem diario (para DiaryDatePicker)
+  const existingDiaryDates = useMemo(() => {
+    const set = new Set<string>()
+    entries?.forEach((e) => set.add(e.shooting_date))
+    return set
+  }, [entries])
 
   // --- Handlers ---
 
@@ -383,10 +325,38 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
   }
 
   function handleSubmit() {
+    // Auto-calcular total_takes se scenes_list tem items
+    const finalForm = { ...form }
+    if (finalForm.scenes_list.length > 0) {
+      const sum = finalForm.scenes_list.reduce((s, sc) => s + sc.takes, 0)
+      finalForm.total_takes = String(sum)
+    }
+
     if (editingEntry) {
-      updateMutation.mutate({ id: editingEntry.id, data: form })
+      updateMutation.mutate(
+        { entryId: editingEntry.id, form: finalForm },
+        {
+          onSuccess: () => {
+            toast.success('Entrada atualizada')
+            setShowForm(false)
+            setEditingEntry(null)
+            setForm(defaultForm())
+          },
+          onError: (err) => toast.error(safeErrorMessage(err)),
+        },
+      )
     } else {
-      createMutation.mutate(form)
+      createMutation.mutate(
+        { jobId: job.id, form: finalForm },
+        {
+          onSuccess: () => {
+            toast.success('Dia de producao registrado')
+            setShowForm(false)
+            setForm(defaultForm())
+          },
+          onError: (err) => toast.error(safeErrorMessage(err)),
+        },
+      )
     }
   }
 
@@ -396,6 +366,12 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
 
   const isPending = createMutation.isPending || updateMutation.isPending
   const isFormValid = !!form.shooting_date
+
+  // Helper: verifica se secao colapsavel tem dados (para abrir no edit)
+  const hasScenesData = form.scenes_list.length > 0
+  const hasAttendanceData = form.attendance_list.length > 0
+  const hasBulletinData = !!(form.day_status || form.executive_summary || form.next_steps || form.director_signature)
+  const hasEquipmentData = form.equipment_list.length > 0
 
   // --- Render ---
 
@@ -439,8 +415,13 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
       ) : (
         <div className="space-y-4">
           {entries.map((entry) => {
-            const weather = WEATHER_CONFIG[entry.weather_condition]
+            const weather = WEATHER_CONFIG[entry.weather_condition] ?? WEATHER_CONFIG.sol
             const WeatherIcon = weather.icon
+            const scenesOk = (entry.scenes_list ?? []).filter((s) => s.status === 'ok').length
+            const scenesTotal = (entry.scenes_list ?? []).length
+            const presentCount = (entry.attendance_list ?? []).filter((a) => a.present).length
+            const attendanceTotal = (entry.attendance_list ?? []).length
+            const hasBulletin = !!entry.executive_summary
 
             return (
               <Card key={entry.id} className="overflow-hidden">
@@ -470,6 +451,7 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
                           {entry.total_takes} takes
                         </Badge>
                       )}
+                      <DayStatusBadge status={entry.day_status} hasBulletin={hasBulletin} />
                     </div>
 
                     {/* Acoes */}
@@ -497,7 +479,27 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
                 </CardHeader>
 
                 <CardContent className="px-5 pb-4 space-y-3">
-                  {/* Grid de cenas */}
+                  {/* Locacao */}
+                  {entry.location && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <MapPin className="size-3.5 shrink-0" />
+                      <span>{entry.location}</span>
+                    </div>
+                  )}
+
+                  {/* Resumo de cenas e presenca */}
+                  {(scenesTotal > 0 || attendanceTotal > 0) && (
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      {scenesTotal > 0 && (
+                        <span>Cenas: {scenesOk}/{scenesTotal} OK</span>
+                      )}
+                      {attendanceTotal > 0 && (
+                        <span>Presenca: {presentCount}/{attendanceTotal}</span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Grid de cenas texto */}
                   {(entry.planned_scenes || entry.filmed_scenes) && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {entry.planned_scenes && (
@@ -545,6 +547,16 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
                     </div>
                   )}
 
+                  {/* Resumo executivo do boletim */}
+                  {entry.executive_summary && (
+                    <div className="rounded-md bg-blue-500/5 border border-blue-500/20 px-3 py-2">
+                      <p className="text-xs font-medium text-blue-600 dark:text-blue-400 mb-1">
+                        Boletim - Resumo executivo
+                      </p>
+                      <p className="text-sm text-foreground">{entry.executive_summary}</p>
+                    </div>
+                  )}
+
                   {/* Fotos */}
                   <div>
                     <p className="text-xs font-medium text-muted-foreground mb-2">
@@ -588,15 +600,21 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
           </DialogHeader>
 
           <div className="grid grid-cols-2 gap-4 py-2">
-            {/* Data de filmagem */}
-            <div className="col-span-2 sm:col-span-1">
-              <Label>Data de filmagem *</Label>
-              <Input
-                type="date"
-                value={form.shooting_date}
-                onChange={(e) => updateField('shooting_date', e.target.value)}
-              />
-            </div>
+            {/* Secao 1: Data e Info Basica */}
+            <DiaryDatePicker
+              jobId={job.id}
+              value={form.shooting_date}
+              shootingDateId={form.shooting_date_id}
+              existingDiaryDates={existingDiaryDates}
+              onChange={(date, sdId, location) => {
+                setForm((prev) => ({
+                  ...prev,
+                  shooting_date: date,
+                  shooting_date_id: sdId,
+                  location: location ?? prev.location,
+                }))
+              }}
+            />
 
             {/* Dia numero */}
             <div className="col-span-2 sm:col-span-1">
@@ -641,7 +659,21 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
               </Select>
             </div>
 
-            {/* Horario chamada */}
+            {/* Locacao */}
+            <div className="col-span-2 sm:col-span-1">
+              <Label>Locacao</Label>
+              <Input
+                placeholder="Ex: Parque Ibirapuera, Sao Paulo"
+                value={form.location}
+                onChange={(e) => updateField('location', e.target.value)}
+              />
+            </div>
+
+            {/* Secao 2: Horarios */}
+            <div className="col-span-2 border-t pt-2">
+              <p className="text-sm font-medium text-muted-foreground">Horarios</p>
+            </div>
+
             <div>
               <Label>Chamada (call time)</Label>
               <Input
@@ -651,7 +683,24 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
               />
             </div>
 
-            {/* Horario encerramento */}
+            <div>
+              <Label>Inicio filmagens</Label>
+              <Input
+                type="time"
+                value={form.filming_start_time}
+                onChange={(e) => updateField('filming_start_time', e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Label>Almoco</Label>
+              <Input
+                type="time"
+                value={form.lunch_time}
+                onChange={(e) => updateField('lunch_time', e.target.value)}
+              />
+            </div>
+
             <div>
               <Label>Encerramento (wrap)</Label>
               <Input
@@ -661,7 +710,11 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
               />
             </div>
 
-            {/* Cenas planejadas */}
+            {/* Secao 3: Cenas texto */}
+            <div className="col-span-2 border-t pt-2">
+              <p className="text-sm font-medium text-muted-foreground">Cenas</p>
+            </div>
+
             <div className="col-span-2">
               <Label>Cenas planejadas</Label>
               <Textarea
@@ -673,7 +726,6 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
               />
             </div>
 
-            {/* Cenas filmadas */}
             <div className="col-span-2">
               <Label>Cenas filmadas</Label>
               <Textarea
@@ -685,48 +737,46 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
               />
             </div>
 
-            {/* Numero de takes */}
-            <div className="col-span-2 sm:col-span-1">
-              <Label>Total de takes</Label>
-              <Input
-                type="number"
-                min={0}
-                placeholder="Ex: 47"
-                value={form.total_takes}
-                onChange={(e) => updateField('total_takes', e.target.value)}
+            {/* Secao: Lista de cenas (colapsavel) */}
+            <CollapsibleSection
+              title="Lista detalhada de cenas"
+              defaultOpen={!!editingEntry && hasScenesData}
+            >
+              <ScenesListSection
+                scenes={form.scenes_list}
+                onChange={(scenes: SceneItem[]) => updateField('scenes_list', scenes)}
+                totalTakes={form.total_takes}
+                onTotalTakesChange={(v) => updateField('total_takes', v)}
               />
-            </div>
+            </CollapsibleSection>
 
-            {/* Separador */}
+            {/* Separador: Relatorio do dia */}
             <div className="col-span-2 border-t pt-2">
               <p className="text-sm font-medium text-muted-foreground">Relatorio do dia</p>
             </div>
 
-            {/* Problemas */}
             <div className="col-span-2">
               <Label>Problemas / Ocorrencias</Label>
               <Textarea
                 rows={3}
-                placeholder="Ex: Chuva inesperada as 14h, pausa de 2h. Equipamento de som com falha."
+                placeholder="Ex: Chuva inesperada as 14h, pausa de 2h."
                 value={form.issues}
                 onChange={(e) => updateField('issues', e.target.value)}
                 className="resize-none"
               />
             </div>
 
-            {/* Destaques */}
             <div className="col-span-2">
               <Label>Destaques</Label>
               <Textarea
                 rows={3}
-                placeholder="Ex: Cena de abertura ficou excepcional. Elenco superou expectativas."
+                placeholder="Ex: Cena de abertura ficou excepcional."
                 value={form.highlights}
                 onChange={(e) => updateField('highlights', e.target.value)}
                 className="resize-none"
               />
             </div>
 
-            {/* Observacoes gerais */}
             <div className="col-span-2">
               <Label>Observacoes gerais</Label>
               <Textarea
@@ -737,6 +787,45 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
                 className="resize-none"
               />
             </div>
+
+            {/* Secao: Presenca (colapsavel) */}
+            <CollapsibleSection
+              title="Presenca da equipe"
+              defaultOpen={!!editingEntry && hasAttendanceData}
+            >
+              <AttendanceSection
+                jobId={job.id}
+                attendance={form.attendance_list}
+                onChange={(att: AttendanceItem[]) => updateField('attendance_list', att)}
+              />
+            </CollapsibleSection>
+
+            {/* Secao: Boletim (colapsavel) */}
+            <CollapsibleSection
+              title="Boletim de producao"
+              defaultOpen={!!editingEntry && hasBulletinData}
+            >
+              <BulletinSection
+                dayStatus={form.day_status}
+                executiveSummary={form.executive_summary}
+                nextSteps={form.next_steps}
+                directorSignature={form.director_signature}
+                onChange={(field, value) =>
+                  setForm((prev) => ({ ...prev, [field]: value }))
+                }
+              />
+            </CollapsibleSection>
+
+            {/* Secao: Equipamentos (colapsavel) */}
+            <CollapsibleSection
+              title="Equipamentos"
+              defaultOpen={!!editingEntry && hasEquipmentData}
+            >
+              <EquipmentListSection
+                equipment={form.equipment_list}
+                onChange={(eq: EquipmentItem[]) => updateField('equipment_list', eq)}
+              />
+            </CollapsibleSection>
           </div>
 
           <DialogFooter className="mt-2">
@@ -842,7 +931,17 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
             <Button
               onClick={() =>
                 photoEntryId &&
-                addPhotoMutation.mutate({ entryId: photoEntryId, data: photoForm })
+                addPhotoMutation.mutate(
+                  { entryId: photoEntryId, url: photoForm.url, thumbnail_url: photoForm.thumbnail_url || null, caption: photoForm.caption || null, photo_type: photoForm.photo_type },
+                  {
+                    onSuccess: () => {
+                      toast.success('Foto adicionada')
+                      setPhotoEntryId(null)
+                      setPhotoForm({ url: '', thumbnail_url: '', caption: '', photo_type: 'bts' })
+                    },
+                    onError: (err) => toast.error(safeErrorMessage(err)),
+                  },
+                )
               }
               disabled={addPhotoMutation.isPending || !photoForm.url}
             >
@@ -866,7 +965,19 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => deleteId && deleteMutation.mutate(deleteId)}
+              onClick={() =>
+                deleteId &&
+                deleteMutation.mutate(
+                  { entryId: deleteId },
+                  {
+                    onSuccess: () => {
+                      toast.success('Entrada removida')
+                      setDeleteId(null)
+                    },
+                    onError: (err) => toast.error(safeErrorMessage(err)),
+                  },
+                )
+              }
             >
               Remover
             </AlertDialogAction>
