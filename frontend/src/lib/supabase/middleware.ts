@@ -55,7 +55,8 @@ export async function updateSession(request: NextRequest) {
         request.nextUrl.pathname.startsWith('/approve/') ||
         request.nextUrl.pathname.startsWith('/vendor/') ||
         request.nextUrl.pathname.startsWith('/invite/') ||
-        request.nextUrl.pathname.startsWith('/landing')
+        request.nextUrl.pathname.startsWith('/landing') ||
+        request.nextUrl.pathname.startsWith('/signup')
       if (isPublicRoute) {
         return supabaseResponse
       }
@@ -66,8 +67,12 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url)
     }
 
-    // Redirecionar /login para / (dashboard) se ja logado
-    if (user && request.nextUrl.pathname.startsWith('/login')) {
+    // Redirecionar /login e /signup para / (dashboard) se ja logado
+    if (
+      user &&
+      (request.nextUrl.pathname.startsWith('/login') ||
+        request.nextUrl.pathname.startsWith('/signup'))
+    ) {
       return NextResponse.redirect(new URL('/', request.url))
     }
 

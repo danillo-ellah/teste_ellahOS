@@ -142,6 +142,13 @@ function EmailForm({ returnUrl }: { returnUrl: string }) {
           Esqueceu a senha?
         </Link>
       </div>
+
+      <div className="mt-2 text-center text-sm text-muted-foreground">
+        Nao tem conta?{' '}
+        <Link href="/signup" className="font-medium text-primary hover:underline">
+          Criar conta
+        </Link>
+      </div>
     </>
   )
 }
