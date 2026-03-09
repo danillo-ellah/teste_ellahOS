@@ -201,6 +201,7 @@ export type JobDetailTabId =
   | 'horas-extras'
   | 'historico'
   | 'portal'
+  | 'pos-producao'
 
 export const JOB_DETAIL_TABS: ReadonlyArray<{
   id: JobDetailTabId
@@ -545,6 +546,13 @@ export const JOB_TAB_GROUPS: JobTabGroup[] = [
       { id: 'claquete', label: 'Claquete', icon: 'Clapperboard' },
       { id: 'atendimento', label: 'Atendimento', icon: 'Headset' },
       { id: 'horas-extras', label: 'Horas Extras', icon: 'Timer' },
+    ],
+  },
+  {
+    group: 'Pos-Producao',
+    area: 'producao',
+    tabs: [
+      { id: 'pos-producao', label: 'Pos-Producao', icon: 'Scissors' },
     ],
   },
   {

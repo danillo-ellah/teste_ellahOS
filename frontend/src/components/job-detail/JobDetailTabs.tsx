@@ -22,6 +22,7 @@ import {
   ClipboardList,
   GanttChartSquare,
   Headset,
+  Scissors,
 } from 'lucide-react'
 import {
   Tabs,
@@ -52,6 +53,7 @@ import { TabCast } from '@/components/job-detail/tabs/TabCast'
 import { TabOrdemDoDia } from '@/components/job-detail/tabs/TabOrdemDoDia'
 import { TabCronograma } from '@/components/job-detail/tabs/TabCronograma'
 import { TabAtendimento } from '@/components/job-detail/tabs/TabAtendimento'
+import { TabPosProducao } from '@/components/job-detail/tabs/TabPosProducao'
 import type { JobDetail } from '@/types/jobs'
 import { useJobAccess } from '@/hooks/useJobAccess'
 
@@ -114,6 +116,7 @@ const ICON_MAP: Record<string, typeof FileText> = {
   ClipboardList,
   GanttChartSquare,
   Headset,
+  Scissors,
 }
 
 interface JobDetailTabsProps {
@@ -372,6 +375,11 @@ export function JobDetailTabs({ job }: JobDetailTabsProps) {
         {/* Tab: Portal */}
         <TabsContent value="portal" className="mt-6">
           <TabErrorBoundary tabName="portal"><PortalSessionsManager jobId={job.id} /></TabErrorBoundary>
+        </TabsContent>
+
+        {/* Tab: Pos-Producao */}
+        <TabsContent value="pos-producao" className="mt-6">
+          <TabErrorBoundary tabName="pos-producao"><TabPosProducao job={job} /></TabErrorBoundary>
         </TabsContent>
       </Tabs>
     </div>

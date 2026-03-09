@@ -72,7 +72,7 @@ const ALL_TABS_VE: TabMap = {
   'diario': 'view_edit', 'figurino': 'view_edit', 'financeiro': 'view_edit',
   'cronograma': 'view_edit', 'aprovacoes': 'view_edit', 'contratos': 'view_edit',
   'claquete': 'view_edit', 'atendimento': 'view_edit', 'horas-extras': 'view_edit',
-  'historico': 'view_edit', 'portal': 'view_edit',
+  'historico': 'view_edit', 'portal': 'view_edit', 'pos-producao': 'view_edit',
 }
 
 const ACCESS_MAP: Record<RoleGroup, TabMap> = {
@@ -92,6 +92,7 @@ const ACCESS_MAP: Record<RoleGroup, TabMap> = {
     'diarias': 'view', 'locacoes': 'view', 'ordem-do-dia': 'view',
     'diario': 'view', 'cronograma': 'view', 'aprovacoes': 'view',
     'claquete': 'view', 'atendimento': 'view', 'horas-extras': 'view',
+    'pos-producao': 'view_edit',
   },
 
   fin: {
@@ -111,6 +112,7 @@ const ACCESS_MAP: Record<RoleGroup, TabMap> = {
     'claquete': 'view', 'financeiro': 'view_restricted',
     'atendimento': 'view_edit', // Aba principal do atendimento
     'portal': 'view_edit', // PO-07: pode criar sessoes
+    'pos-producao': 'view', // Atendimento ve versoes para poder aprovar
   },
 
   cco: {
@@ -134,6 +136,7 @@ const ACCESS_MAP: Record<RoleGroup, TabMap> = {
     'geral': 'view_restricted', 'equipe': 'view_restricted',
     'entregaveis': 'view', 'diarias': 'view', 'ordem-do-dia': 'view',
     'diario': 'view', 'cronograma': 'view', 'aprovacoes': 'view', 'claquete': 'view',
+    'pos-producao': 'view_edit',
   },
 
   da: {
@@ -210,7 +213,7 @@ export function getVisibleTabs(
     'geral', 'equipe', 'entregaveis', 'ppm', 'diarias', 'locacoes',
     'storyboard', 'elenco', 'ordem-do-dia', 'diario', 'figurino',
     'financeiro', 'cronograma', 'aprovacoes', 'contratos', 'claquete',
-    'atendimento', 'horas-extras', 'historico', 'portal',
+    'atendimento', 'horas-extras', 'historico', 'portal', 'pos-producao',
   ]
 
   return allTabs.filter(
