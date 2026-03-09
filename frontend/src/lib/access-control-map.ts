@@ -254,6 +254,8 @@ export const SIDEBAR_ACCESS: Record<string, UserRole[]> = {
   '/financeiro/nf-validation': [...FULL_ACCESS, 'financeiro'],
   '/financeiro/nf-request': [...FULL_ACCESS, 'financeiro'],
   '/financeiro/conciliacao': [...FULL_ACCESS, 'financeiro'],
+  // Pos-Producao — lideranca + coordenador + freelancer (editores, coloristas, finalizadores)
+  '/pos-producao': [...FULL_ACCESS, 'coordenador', 'freelancer'],
   // Atendimento — lideranca + coordenador + atendimento
   '/atendimento': [...FULL_ACCESS, 'coordenador', 'atendimento'],
   // Equipe — Portal so pra quem gerencia cliente

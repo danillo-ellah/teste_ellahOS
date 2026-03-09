@@ -10,6 +10,7 @@ import {
   Copy,
   ExternalLink,
   MoreHorizontal,
+  AlertTriangle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -31,7 +32,7 @@ import { useUpdateJob } from '@/hooks/useUpdateJob'
 import { useArchiveJob } from '@/hooks/useArchiveJob'
 import { useCloneJob } from '@/hooks/useCloneJob'
 import { useUserRole } from '@/hooks/useUserRole'
-import { formatDate } from '@/lib/format'
+import { formatDate, daysUntil } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { PreProductionBadge } from '@/components/job-detail/tabs/ppm/PreProductionBadge'
 import type { JobDetail } from '@/types/jobs'
@@ -50,6 +51,19 @@ interface JobHeaderProps {
   job: JobDetail
 }
 
+// Contar entregaveis com pos_stage ativo (nao entregue) e delivery_date vencida
+function countOverduePos(deliverables: JobDetail['deliverables']): number {
+  if (!deliverables) return 0
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return deliverables.filter((d) => {
+    if (!d.pos_stage || d.pos_stage === 'entregue') return false
+    if (!d.delivery_date) return false
+    const days = daysUntil(d.delivery_date)
+    return days !== null && days < 0
+  }).length
+}
+
 export function JobHeader({ job }: JobHeaderProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(job.title)
@@ -62,6 +76,7 @@ export function JobHeader({ job }: JobHeaderProps) {
   const { mutateAsync: archiveJob, isPending: isArchiving } = useArchiveJob()
   const { mutateAsync: cloneJobMutation, isPending: isCloning } = useCloneJob()
   const { role: userRole } = useUserRole()
+  const overdueCount = countOverduePos(job.deliverables)
 
   // Sync titulo se mudar externamente
   useEffect(() => {
@@ -201,6 +216,12 @@ export function JobHeader({ job }: JobHeaderProps) {
               <PreProductionBadge
                 complete={(job.custom_fields?.ppm as PpmDataV2 | undefined)?.pre_production_complete}
               />
+              {overdueCount > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/40 dark:text-red-400">
+                  <AlertTriangle className="size-3" />
+                  {overdueCount} pos atrasad{overdueCount === 1 ? 'o' : 'os'}
+                </span>
+              )}
               <SyncIndicator state={syncState} />
             </div>
 

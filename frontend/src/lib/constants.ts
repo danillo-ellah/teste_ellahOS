@@ -460,6 +460,7 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
       { label: 'Jobs', href: '/jobs', icon: 'Clapperboard' },
       { label: 'Calendario', href: '/team/calendar', icon: 'CalendarDays' },
       { label: 'Aprovacoes', href: '/approvals', icon: 'ClipboardCheck' },
+      { label: 'Pos-Producao', href: '/pos-producao', icon: 'Scissors' },
     ],
   },
   {
@@ -567,7 +568,7 @@ export const JOB_TAB_GROUPS: JobTabGroup[] = [
 
 // Helper: detectar area ativa pelo pathname
 export function getActiveArea(pathname: string): AreaType | null {
-  if (pathname.startsWith('/jobs') || pathname.startsWith('/approvals') || pathname.startsWith('/team/calendar')) {
+  if (pathname.startsWith('/jobs') || pathname.startsWith('/approvals') || pathname.startsWith('/team/calendar') || pathname.startsWith('/pos-producao')) {
     return 'producao'
   }
   if (pathname.startsWith('/crm') || pathname.startsWith('/clients') || pathname.startsWith('/agencies')) {

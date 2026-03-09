@@ -47,6 +47,7 @@ import { ApiRequestError } from '@/lib/api'
 import { DELIVERABLE_STATUS_LABELS } from '@/lib/constants'
 import { formatDate, formatIndustryDuration, daysUntil } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { POS_STAGE_MAP, POS_BLOCK_COLORS } from '@/types/pos-producao'
 import type { JobDetail, JobDeliverable, DeliverableStatus } from '@/types/jobs'
 
 interface TabEntregaveisProps {
@@ -242,6 +243,7 @@ export function TabEntregaveis({ job }: TabEntregaveisProps) {
                 <TableHead>Formato</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Prazo</TableHead>
+                <TableHead className="w-[120px]">Pos</TableHead>
                 <TableHead className="w-[40px]">Link</TableHead>
                 <TableHead className="w-[50px]" />
               </TableRow>
@@ -270,6 +272,12 @@ export function TabEntregaveis({ job }: TabEntregaveisProps) {
                       <DeliveryDateCell
                         date={d.delivery_date}
                         status={d.status}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <PosStageCell
+                        posStage={d.pos_stage}
+                        deliveryDate={d.delivery_date}
                       />
                     </TableCell>
                     <TableCell>
@@ -389,6 +397,49 @@ function DeliveryDateCell({ date, status }: { date: string | null; status: strin
 
   // Normal
   return <span className="text-xs">{formatDate(date)}</span>
+}
+
+// --- Badge de etapa de pos-producao ---
+
+function PosStageCell({ posStage, deliveryDate }: { posStage: string | null | undefined; deliveryDate: string | null }) {
+  if (!posStage) return <span className="text-xs text-muted-foreground">-</span>
+
+  const info = POS_STAGE_MAP.find((s) => s.value === posStage)
+  if (!info) return <span className="text-xs">{posStage}</span>
+
+  const colors = POS_BLOCK_COLORS[info.block]
+
+  // Verificar atraso apenas para stages nao finais
+  const isFinished = posStage === 'entregue'
+  const days = !isFinished ? daysUntil(deliveryDate) : null
+  const isOverdue = days !== null && days < 0
+  const isUrgent = days !== null && days >= 0 && days <= 2
+
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span
+        className={cn(
+          'inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium',
+          colors.bg,
+          colors.text,
+        )}
+      >
+        {info.label}
+      </span>
+      {isOverdue && (
+        <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-red-600 dark:text-red-400">
+          <AlertTriangle className="size-2.5" />
+          vencido
+        </span>
+      )}
+      {isUrgent && !isOverdue && days !== null && (
+        <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+          <Clock className="size-2.5" />
+          {days}d
+        </span>
+      )}
+    </div>
+  )
 }
 
 // --- Badge de status ---

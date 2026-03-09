@@ -229,6 +229,11 @@ export interface JobDeliverable {
   link: string | null
   display_order: number
   notes: string | null
+  // Pos-Producao (Onda 1.2) — opcionais: podem nao estar presentes em respostas antigas
+  pos_stage?: string | null
+  pos_assignee_id?: string | null
+  pos_drive_url?: string | null
+  pos_briefing?: unknown
   created_at: string
   updated_at: string
 }
