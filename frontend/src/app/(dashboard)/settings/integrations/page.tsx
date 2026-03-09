@@ -78,6 +78,10 @@ interface DriveFormState {
   drive_type: 'my_drive' | 'shared_drive'
   shared_drive_id: string
   root_folder_id: string
+  owner_email: string
+  auto_share_team: boolean
+  auto_copy_templates: boolean
+  auto_create_on_job: boolean
   enabled: boolean
   templates: DriveTemplate[]
 }
@@ -189,6 +193,10 @@ export default function IntegrationsPage() {
     drive_type: 'my_drive',
     shared_drive_id: '',
     root_folder_id: '',
+    owner_email: '',
+    auto_share_team: false,
+    auto_copy_templates: false,
+    auto_create_on_job: false,
     enabled: false,
     templates: [],
   })
@@ -216,6 +224,10 @@ export default function IntegrationsPage() {
       drive_type: cfg?.drive_type ?? 'my_drive',
       shared_drive_id: cfg?.shared_drive_id ?? '',
       root_folder_id: cfg?.root_folder_id ?? '',
+      owner_email: cfg?.owner_email ?? '',
+      auto_share_team: cfg?.auto_share_team ?? false,
+      auto_copy_templates: cfg?.auto_copy_templates ?? false,
+      auto_create_on_job: cfg?.auto_create_on_job ?? false,
       enabled: cfg?.enabled ?? false,
       templates: (cfg as GoogleDriveConfigWithTemplates)?.templates ?? [],
     })
@@ -279,6 +291,10 @@ export default function IntegrationsPage() {
         driveForm.drive_type === 'shared_drive'
           ? driveForm.shared_drive_id || null
           : null,
+      owner_email: driveForm.owner_email || null,
+      auto_share_team: driveForm.auto_share_team,
+      auto_copy_templates: driveForm.auto_copy_templates,
+      auto_create_on_job: driveForm.auto_create_on_job,
       templates: driveForm.templates.filter((t) => t.source_id.trim()),
     }
     if (driveForm.service_account_json.trim()) {
@@ -804,6 +820,26 @@ export default function IntegrationsPage() {
               </p>
             </div>
 
+            {/* Email do proprietario */}
+            <div className="space-y-1.5">
+              <Label htmlFor="owner-email">Email do Proprietario (owner)</Label>
+              <Input
+                id="owner-email"
+                type="email"
+                placeholder="drive@suaempresa.com"
+                value={driveForm.owner_email}
+                onChange={(e) =>
+                  setDriveForm((prev) => ({
+                    ...prev,
+                    owner_email: e.target.value,
+                  }))
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                Email que recebera ownership das pastas criadas pela Service Account.
+              </p>
+            </div>
+
             {/* Toggle habilitado */}
             <div className="flex items-center justify-between rounded-md border border-border p-3">
               <div>
@@ -816,6 +852,52 @@ export default function IntegrationsPage() {
                 checked={driveForm.enabled}
                 onCheckedChange={(checked) =>
                   setDriveForm((prev) => ({ ...prev, enabled: checked }))
+                }
+              />
+            </div>
+
+            {/* Opcoes de automacao */}
+            <div className="flex items-center justify-between rounded-md border border-border p-3">
+              <div>
+                <p className="text-sm font-medium">Criar pastas ao criar job</p>
+                <p className="text-xs text-muted-foreground">
+                  Cria a estrutura de pastas automaticamente ao cadastrar um novo job
+                </p>
+              </div>
+              <Switch
+                checked={driveForm.auto_create_on_job}
+                onCheckedChange={(checked) =>
+                  setDriveForm((prev) => ({ ...prev, auto_create_on_job: checked }))
+                }
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-md border border-border p-3">
+              <div>
+                <p className="text-sm font-medium">Compartilhar com equipe</p>
+                <p className="text-xs text-muted-foreground">
+                  Concede acesso automaticamente aos membros da equipe do job
+                </p>
+              </div>
+              <Switch
+                checked={driveForm.auto_share_team}
+                onCheckedChange={(checked) =>
+                  setDriveForm((prev) => ({ ...prev, auto_share_team: checked }))
+                }
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-md border border-border p-3">
+              <div>
+                <p className="text-sm font-medium">Copiar templates</p>
+                <p className="text-xs text-muted-foreground">
+                  Copia arquivos-modelo para as pastas ao criar estrutura
+                </p>
+              </div>
+              <Switch
+                checked={driveForm.auto_copy_templates}
+                onCheckedChange={(checked) =>
+                  setDriveForm((prev) => ({ ...prev, auto_copy_templates: checked }))
                 }
               />
             </div>

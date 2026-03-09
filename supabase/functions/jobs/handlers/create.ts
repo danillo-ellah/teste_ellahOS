@@ -1,9 +1,10 @@
-import { getSupabaseClient } from '../../_shared/supabase-client.ts';
+import { getSupabaseClient, getServiceClient } from '../../_shared/supabase-client.ts';
 import { created } from '../../_shared/response.ts';
 import { AppError } from '../../_shared/errors.ts';
 import { validate, CreateJobSchema } from '../../_shared/validation.ts';
 import { mapApiToDb, mapDbToApi } from '../../_shared/column-map.ts';
 import { insertHistory } from '../../_shared/history.ts';
+import { enqueueEvent } from '../../_shared/integration-client.ts';
 import type { AuthContext } from '../../_shared/auth.ts';
 
 export async function createJob(
@@ -54,6 +55,32 @@ export async function createJob(
     description: `Job "${job.title}" criado com status briefing_recebido`,
   });
 
-  // 5. Retornar mapeado banco -> API
+  // 5. Auto-trigger Drive: criar estrutura de pastas se configurado
+  try {
+    const serviceClient = getServiceClient();
+    const { data: tenant } = await serviceClient
+      .from('tenants')
+      .select('settings')
+      .eq('id', auth.tenantId)
+      .single();
+
+    const settings = (tenant?.settings as Record<string, unknown>) || {};
+    const integrations = (settings.integrations as Record<string, Record<string, unknown>>) || {};
+    const driveConfig = integrations.google_drive || {};
+
+    if (driveConfig.enabled && driveConfig.configured && driveConfig.auto_create_on_job) {
+      await enqueueEvent(serviceClient, {
+        tenant_id: auth.tenantId,
+        event_type: 'drive_create_structure',
+        payload: { job_id: job.id, job_title: job.title },
+        idempotency_key: `drive_create:${job.id}`,
+      });
+    }
+  } catch (err) {
+    // Nao bloqueia criacao do job se o auto-trigger falhar
+    console.warn('[jobs/create] Erro ao enfileirar auto-trigger Drive:', err);
+  }
+
+  // 6. Retornar mapeado banco -> API
   return created(mapDbToApi(job));
 }

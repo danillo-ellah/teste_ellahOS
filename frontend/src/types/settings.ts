@@ -38,6 +38,10 @@ export interface GoogleDriveConfig {
   root_folder_id: string | null
   folder_template: FolderTemplateItem[] | null
   has_service_account: boolean
+  owner_email: string | null
+  auto_share_team: boolean
+  auto_copy_templates: boolean
+  auto_create_on_job: boolean
   templates?: DriveTemplate[]
 }
 
@@ -91,6 +95,8 @@ export interface TestConnectionResult {
   success: boolean
   message: string
   state?: string
+  folder_name?: string
+  folder_count?: number
 }
 
 // Payload de update por integracao
@@ -101,6 +107,10 @@ export interface GoogleDriveUpdatePayload {
   root_folder_id?: string | null
   folder_template?: FolderTemplateItem[] | null
   service_account_json?: string
+  owner_email?: string | null
+  auto_share_team?: boolean
+  auto_copy_templates?: boolean
+  auto_create_on_job?: boolean
   templates?: DriveTemplate[]
 }
 

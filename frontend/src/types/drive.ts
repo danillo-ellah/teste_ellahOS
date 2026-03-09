@@ -23,3 +23,18 @@ export interface DriveStructureResponse {
   warnings?: string[]
   recreated?: boolean
 }
+
+// Permissoes de membros no Drive
+export interface DrivePermissionEntry {
+  person_id: string
+  person_name: string
+  email: string
+  role: string
+  has_access: boolean
+  permission_id: string | null
+}
+
+export interface DrivePermissionsResponse {
+  data: DrivePermissionEntry[]
+  meta: { total: number; synced_at: string | null }
+}

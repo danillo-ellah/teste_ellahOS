@@ -13,6 +13,10 @@ const DEFAULT_INTEGRATIONS = {
     root_folder_id: null,
     folder_template: null,
     has_service_account: false,
+    owner_email: null,
+    auto_share_team: false,
+    auto_copy_templates: false,
+    auto_create_on_job: false,
   },
   whatsapp: {
     enabled: false,

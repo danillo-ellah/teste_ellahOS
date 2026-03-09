@@ -10,6 +10,7 @@ import {
   ChevronRight,
   FolderPlus,
   Trash2,
+  Users,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -36,6 +37,7 @@ import {
   useDeleteDriveStructure,
 } from '@/hooks/useDriveFolders'
 import { ApiRequestError } from '@/lib/api'
+import { DrivePermissionsDialog } from './DrivePermissionsDialog'
 import type { JobDetail } from '@/types/jobs'
 import type { DriveFolderRow } from '@/types/drive'
 
@@ -118,6 +120,7 @@ const PARENT_KEYS = [
 ]
 
 export function DriveSection({ job }: DriveSectionProps) {
+  const [permissionsOpen, setPermissionsOpen] = useState(false)
   const { data: folders, total, isLoading } = useDriveFolders(job.id)
   const { mutateAsync: createStructure, isPending: isCreating } =
     useCreateDriveStructure()
@@ -231,6 +234,15 @@ export function DriveSection({ job }: DriveSectionProps) {
 
           {hasFolders && (
             <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPermissionsOpen(true)}
+              >
+                <Users className="size-3.5 mr-1.5" />
+                Permissoes
+              </Button>
+
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
@@ -344,6 +356,12 @@ export function DriveSection({ job }: DriveSectionProps) {
           })}
         </div>
       )}
+
+      <DrivePermissionsDialog
+        jobId={job.id}
+        open={permissionsOpen}
+        onOpenChange={setPermissionsOpen}
+      />
     </section>
   )
 }

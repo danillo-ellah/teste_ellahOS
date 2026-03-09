@@ -24,6 +24,10 @@ const googleDriveSchema = z.object({
     })).optional(),
   })).optional().nullable(),
   service_account_json: z.string().optional(), // Secret → Vault
+  owner_email: z.string().email().optional().nullable(),
+  auto_share_team: z.boolean().optional(),
+  auto_copy_templates: z.boolean().optional(),
+  auto_create_on_job: z.boolean().optional(),
 });
 
 const whatsappSchema = z.object({

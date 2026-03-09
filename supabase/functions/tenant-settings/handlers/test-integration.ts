@@ -97,20 +97,25 @@ async function testGoogleDrive(
       const driveType = config.drive_type as string | null;
       const sharedDriveId = config.shared_drive_id as string | null;
 
-      const folderOk = await testDriveFolder(token, rootFolderId, driveType, sharedDriveId);
-      if (!folderOk) {
+      const folderResult = await testDriveFolder(token, rootFolderId, driveType, sharedDriveId);
+      if (!folderResult.ok) {
         return success({
           success: false,
           message: 'Autenticacao OK, mas a pasta raiz nao foi encontrada ou nao tem permissao.',
         });
       }
+
+      return success({
+        success: true,
+        message: `Conexao OK! Pasta "${folderResult.folder_name}" com ${folderResult.folder_count} subpastas.`,
+        folder_name: folderResult.folder_name,
+        folder_count: folderResult.folder_count,
+      });
     }
 
     return success({
       success: true,
-      message: rootFolderId
-        ? 'Conexao OK! Autenticacao e acesso a pasta verificados.'
-        : 'Autenticacao OK! Configure a pasta raiz para validar acesso completo.',
+      message: 'Autenticacao OK! Configure a pasta raiz para validar acesso completo.',
     });
   } catch (err) {
     console.error('[test-integration] Erro ao testar Google Drive:', err);
@@ -204,7 +209,7 @@ async function testDriveFolder(
   folderId: string,
   driveType: string | null,
   sharedDriveId: string | null,
-): Promise<boolean> {
+): Promise<{ ok: boolean; folder_name?: string; folder_count?: number }> {
   try {
     let url = `https://www.googleapis.com/drive/v3/files/${folderId}?fields=id,name,mimeType`;
 
@@ -216,9 +221,32 @@ async function testDriveFolder(
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    return resp.ok;
+    if (!resp.ok) return { ok: false };
+
+    const folderData = await resp.json();
+
+    // Contar subpastas diretas
+    let listUrl = `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+mimeType='application/vnd.google-apps.folder'&fields=files(id)&pageSize=1000`;
+    if (driveType === 'shared_drive' && sharedDriveId) {
+      listUrl += '&supportsAllDrives=true&includeItemsFromAllDrives=true&driveId=' + sharedDriveId + '&corpora=drive';
+    }
+
+    let folderCount = 0;
+    try {
+      const listResp = await fetch(listUrl, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (listResp.ok) {
+        const listData = await listResp.json();
+        folderCount = listData.files?.length ?? 0;
+      }
+    } catch {
+      // Contagem falhou, mas a pasta existe — tudo bem
+    }
+
+    return { ok: true, folder_name: folderData.name, folder_count: folderCount };
   } catch {
-    return false;
+    return { ok: false };
   }
 }
 
