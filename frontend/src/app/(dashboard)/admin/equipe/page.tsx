@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { MoreHorizontal, Plus, ShieldAlert, UserPlus, Mail, Phone, Trash2, UserCog } from 'lucide-react'
+import { MoreHorizontal, Plus, ShieldAlert, UserPlus, Mail, Phone, Trash2, UserCog, Copy, CheckCheck } from 'lucide-react'
 import { apiGet, apiMutate, safeErrorMessage } from '@/lib/api'
 import { useUserRole } from '@/hooks/useUserRole'
 import { Button } from '@/components/ui/button'
@@ -119,18 +119,29 @@ function InviteDialog({ open, onOpenChange }: InviteDialogProps) {
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [role, setRole] = useState('membro')
+  const [result, setResult] = useState<{ accept_url: string; email_sent: boolean } | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const inviteMutation = useMutation({
     mutationFn: () =>
-      apiMutate('tenant-management/invitations', 'POST', {
-        email: email.trim() || undefined,
-        phone: phone.trim() || undefined,
-        role,
-      }),
-    onSuccess: () => {
-      toast.success('Convite enviado com sucesso')
+      apiMutate<{ accept_url: string; email_sent: boolean }>(
+        'tenant-management/invitations',
+        'POST',
+        {
+          email: email.trim() || undefined,
+          phone: phone.trim() || undefined,
+          role,
+        },
+      ),
+    onSuccess: (res) => {
+      const inv = res?.data
       queryClient.invalidateQueries({ queryKey: ['team-invitations'] })
-      handleClose()
+      if (inv?.email_sent) {
+        toast.success('Convite enviado por email')
+      } else {
+        toast.info('Convite criado — copie o link e envie manualmente')
+      }
+      setResult({ accept_url: inv?.accept_url ?? '', email_sent: inv?.email_sent ?? false })
     },
     onError: (err) => {
       toast.error(safeErrorMessage(err))
@@ -141,6 +152,8 @@ function InviteDialog({ open, onOpenChange }: InviteDialogProps) {
     setEmail('')
     setPhone('')
     setRole('membro')
+    setResult(null)
+    setCopied(false)
     onOpenChange(false)
   }
 
@@ -153,71 +166,134 @@ function InviteDialog({ open, onOpenChange }: InviteDialogProps) {
     inviteMutation.mutate()
   }
 
+  async function handleCopy() {
+    if (!result?.accept_url) return
+    await navigator.clipboard.writeText(result.accept_url)
+    setCopied(true)
+    toast.success('Link copiado')
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose() }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Convidar Membro</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="invite-email">Email</Label>
-            <Input
-              id="invite-email"
-              type="email"
-              placeholder="nome@empresa.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="off"
-            />
-          </div>
+        {result ? (
+          <div className="space-y-4 py-2">
+            {result.email_sent ? (
+              <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3">
+                <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                  Email de convite enviado com sucesso!
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  O convidado recebera um email com o link de aceite.
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3">
+                <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                  Convite criado, mas email nao foi enviado
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Copie o link abaixo e envie manualmente por email ou WhatsApp.
+                </p>
+              </div>
+            )}
 
-          <div className="space-y-1.5">
-            <Label htmlFor="invite-phone">
-              Telefone <span className="text-xs text-muted-foreground">(opcional)</span>
-            </Label>
-            <Input
-              id="invite-phone"
-              type="tel"
-              placeholder="(11) 91234-5678"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              autoComplete="off"
-            />
-          </div>
+            <div className="space-y-1.5">
+              <Label>Link de convite</Label>
+              <div className="flex gap-2">
+                <Input
+                  readOnly
+                  value={result.accept_url}
+                  className="font-mono text-xs"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={handleCopy}
+                  className="shrink-0"
+                >
+                  {copied ? (
+                    <CheckCheck className="size-4 text-emerald-600" />
+                  ) : (
+                    <Copy className="size-4" />
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Valido por 7 dias.
+              </p>
+            </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="invite-role">Cargo</Label>
-            <Select value={role} onValueChange={setRole}>
-              <SelectTrigger id="invite-role">
-                <SelectValue placeholder="Selecionar cargo" />
-              </SelectTrigger>
-              <SelectContent>
-                {ALL_ROLES.map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {ROLE_LABELS[r] ?? r}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <DialogFooter className="pt-2">
+              <Button onClick={handleClose}>Fechar</Button>
+            </DialogFooter>
           </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="invite-email">Email</Label>
+              <Input
+                id="invite-email"
+                type="email"
+                placeholder="nome@empresa.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="off"
+              />
+            </div>
 
-          <DialogFooter className="pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              disabled={inviteMutation.isPending}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={inviteMutation.isPending}>
-              <UserPlus className="size-4 mr-1.5" />
-              {inviteMutation.isPending ? 'Enviando...' : 'Enviar Convite'}
-            </Button>
-          </DialogFooter>
-        </form>
+            <div className="space-y-1.5">
+              <Label htmlFor="invite-phone">
+                Telefone <span className="text-xs text-muted-foreground">(opcional)</span>
+              </Label>
+              <Input
+                id="invite-phone"
+                type="tel"
+                placeholder="(11) 91234-5678"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                autoComplete="off"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="invite-role">Cargo</Label>
+              <Select value={role} onValueChange={setRole}>
+                <SelectTrigger id="invite-role">
+                  <SelectValue placeholder="Selecionar cargo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ALL_ROLES.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {ROLE_LABELS[r] ?? r}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClose}
+                disabled={inviteMutation.isPending}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={inviteMutation.isPending}>
+                <UserPlus className="size-4 mr-1.5" />
+                {inviteMutation.isPending ? 'Enviando...' : 'Enviar Convite'}
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   )

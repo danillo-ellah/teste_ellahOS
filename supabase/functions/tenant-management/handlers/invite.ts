@@ -3,6 +3,8 @@ import type { AuthContext } from '../../_shared/auth.ts';
 import { AppError } from '../../_shared/errors.ts';
 import { created } from '../../_shared/response.ts';
 import { getSupabaseClient } from '../../_shared/supabase-client.ts';
+import { sendFallbackEmail } from '../../_shared/email-fallback.ts';
+import { buildNotificationEmail } from '../../_shared/email-template.ts';
 
 // Roles que podem enviar convites
 const ADMIN_ROLES = ['admin', 'ceo'];
@@ -122,19 +124,54 @@ export async function handleInvite(req: Request, auth: AuthContext): Promise<Res
     });
   }
 
-  // Construir URL de aceite para retornar ao caller
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-  const acceptUrl = `${supabaseUrl}/functions/v1/tenant-management/invitations/accept?token=${invitation.token}`;
+  // Construir URL de aceite (frontend, nao EF)
+  const siteUrl = Deno.env.get('SITE_URL') ?? 'https://teste-ellah-os.vercel.app';
+  const acceptUrl = `${siteUrl}/invite/${invitation.token}`;
 
   console.log('[tenant-management/invite] convite criado', {
     id: invitation.id,
     tenantId: auth.tenantId,
   });
 
+  // Buscar nome do tenant para personalizar o email
+  let tenantName = 'ELLAHOS';
+  try {
+    const { data: tenant } = await client
+      .from('tenants')
+      .select('name')
+      .eq('id', auth.tenantId)
+      .single();
+    if (tenant?.name) tenantName = tenant.name;
+  } catch { /* usa default */ }
+
+  // Enviar email de convite (se email fornecido e RESEND_API_KEY configurada)
+  let emailSent = false;
+  if (data.email) {
+    try {
+      const html = buildNotificationEmail({
+        title: `Convite para ${tenantName}`,
+        body: `Voce foi convidado para participar da equipe ${tenantName} como ${data.role}. Clique no botao abaixo para aceitar o convite. O convite expira em 7 dias.`,
+        actionUrl: acceptUrl,
+        actionLabel: 'Aceitar Convite',
+      });
+
+      emailSent = await sendFallbackEmail(
+        data.email,
+        `Convite para ${tenantName} — ELLAHOS`,
+        html,
+      );
+
+      console.log('[tenant-management/invite] email resultado:', { emailSent, to: data.email });
+    } catch (err) {
+      console.warn('[tenant-management/invite] erro ao enviar email (nao-bloqueante):', err);
+    }
+  }
+
   return created(
     {
       ...invitation,
       accept_url: acceptUrl,
+      email_sent: emailSent,
     },
     req,
   );
