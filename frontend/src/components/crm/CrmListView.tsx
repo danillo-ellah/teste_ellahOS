@@ -72,7 +72,7 @@ interface SortableColumn {
 }
 
 const COLUMNS: SortableColumn[] = [
-  { label: 'DATA', key: 'created_at', sortable: true, headerClassName: 'w-24' },
+  { label: 'CRIADO EM', key: 'created_at', sortable: true, headerClassName: 'w-24' },
   { label: 'TITULO', key: 'title', sortable: true, headerClassName: 'min-w-[200px]' },
   { label: 'AGENCIA', key: 'agency', sortable: true, headerClassName: 'w-36' },
   { label: 'CLIENTE', key: 'client', sortable: true, headerClassName: 'w-36' },
@@ -323,7 +323,7 @@ export function CrmListView({ pipeline, includeClosed, onOpportunityClick }: Crm
                 <Badge
                   variant="secondary"
                   className={cn(
-                    'text-[11px] font-medium',
+                    'text-xs font-medium',
                     STAGE_COLORS[opp.stage],
                   )}
                 >

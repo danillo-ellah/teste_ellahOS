@@ -237,6 +237,18 @@ export function CrmDashboard() {
 
   const maxFunnelCount = Math.max(...funnel.map((f) => f.count), 1)
 
+  // BAIXO-04: cores do funil consistentes com STAGE_CONFIG
+  const FUNNEL_COLORS: Record<string, string> = {
+    lead: 'bg-slate-500',
+    qualificado: 'bg-blue-500',
+    proposta: 'bg-violet-500',
+    negociacao: 'bg-amber-500',
+    fechamento: 'bg-orange-500',
+    ganho: 'bg-emerald-500',
+    perdido: 'bg-red-500',
+    pausado: 'bg-slate-400',
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {/* ------------------------------------------------------------------ */}
@@ -336,7 +348,7 @@ export function CrmDashboard() {
                 <span className="w-28 shrink-0 text-xs text-muted-foreground">{item.label}</span>
                 <div className="flex-1 rounded-full bg-muted/60 h-5 overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-violet-500 transition-all duration-500"
+                    className={`h-full rounded-full transition-all duration-500 ${FUNNEL_COLORS[item.stage] ?? 'bg-violet-500'}`}
                     style={{
                       width: `${Math.max(
                         4,

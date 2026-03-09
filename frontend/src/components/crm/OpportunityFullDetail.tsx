@@ -15,7 +15,6 @@ import {
   ExternalLink,
   Pencil,
   ChevronRight,
-  Plus,
   Loader2,
   FileText,
   Bell,
@@ -24,7 +23,16 @@ import {
   MessageCircle,
   ChevronDown,
   Pause,
+  ArrowRight,
+  XCircle,
 } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -69,6 +77,34 @@ const NEXT_STAGE: Partial<Record<OpportunityStage, OpportunityStage>> = {
   negociacao: 'fechamento',
   fechamento: 'ganho',
   pausado: 'qualificado',
+}
+
+// Dicas de proximo passo por stage — CRIT-02
+const NEXT_STEP_HINTS: Partial<Record<OpportunityStage, { title: string; description: string }>> = {
+  lead: {
+    title: 'Qualificar esta oportunidade',
+    description: 'Verifique se ha budget, prazo e escopo definidos antes de avancar.',
+  },
+  qualificado: {
+    title: 'Preparar e enviar orcamento',
+    description: 'Monte a proposta comercial e envie ao cliente ou agencia.',
+  },
+  proposta: {
+    title: 'Acompanhar retorno do cliente',
+    description: 'Faca follow-up sobre o orcamento enviado. Registre ligacoes e emails.',
+  },
+  negociacao: {
+    title: 'Fechar a negociacao',
+    description: 'Alinhe valores, prazos e escopo final. Busque aprovacao do cliente.',
+  },
+  fechamento: {
+    title: 'Aguardar aprovacao final',
+    description: 'O cliente esta decidindo. Se aprovado, converta em Job.',
+  },
+  pausado: {
+    title: 'Reativar quando houver novidade',
+    description: 'Esta oportunidade esta pausada. Mova para "Em Analise" quando retomar.',
+  },
 }
 
 const LOSS_CATEGORY_OPTIONS: { value: string; label: string }[] = [
@@ -516,14 +552,18 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
               <CardTitle className="text-sm font-semibold">Atividades</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Formulario de adicao */}
+              {/* Formulario de adicao — CRIT-04: label + botao com texto */}
               <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
+                <div>
+                  <p className="text-xs font-medium mb-0.5">Registrar atividade</p>
+                  <p className="text-xs text-muted-foreground mb-2">Anote ligacoes, emails, reunioes e follow-ups</p>
+                </div>
                 <div className="flex gap-2">
                   <Select
                     value={activityType}
                     onValueChange={(v) => setActivityType(v as AddActivityPayload['activity_type'])}
                   >
-                    <SelectTrigger className="h-8 w-36 text-xs">
+                    <SelectTrigger className="h-9 w-36 text-xs" aria-label="Tipo de atividade">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -537,9 +577,9 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
 
                   <div className="flex flex-1 gap-2">
                     <Textarea
-                      rows={1}
-                      className="min-h-8 resize-none text-xs"
-                      placeholder="Registrar atividade..."
+                      rows={2}
+                      className="min-h-9 resize-none text-xs"
+                      placeholder="O que aconteceu?"
                       value={activityText}
                       onChange={(e) => setActivityText(e.target.value)}
                       onKeyDown={(e) => {
@@ -548,18 +588,18 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
                           handleAddActivity()
                         }
                       }}
+                      aria-label="Descricao da atividade"
                     />
                     <Button
-                      size="icon"
-                      className="h-8 w-8 shrink-0"
+                      size="sm"
+                      className="h-9 shrink-0 gap-1.5 px-3"
                       onClick={handleAddActivity}
                       disabled={addActivityMutation.isPending || !activityText.trim()}
                     >
                       {addActivityMutation.isPending ? (
                         <Loader2 className="size-3.5 animate-spin" />
-                      ) : (
-                        <Plus className="size-3.5" />
-                      )}
+                      ) : null}
+                      Salvar
                     </Button>
                   </div>
                 </div>
@@ -610,32 +650,31 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
             </Card>
           )}
 
-          {/* Acoes */}
+          {/* Acoes — CRIT-02: reestruturado com hierarquia + proximo passo */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold">Acoes</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              {/* WhatsApp */}
-              {whatsappHref && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full gap-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 dark:border-emerald-800 dark:hover:bg-emerald-950"
-                  asChild
-                >
-                  <a href={whatsappHref} target="_blank" rel="noopener noreferrer">
-                    <MessageCircle className="size-4" />
-                    Abrir WhatsApp
-                  </a>
-                </Button>
+            <CardContent className="space-y-3">
+              {/* Proximo passo recomendado — CRIT-02 */}
+              {NEXT_STEP_HINTS[opportunity.stage] && (
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                  <div className="flex items-start gap-2">
+                    <ArrowRight className="size-4 shrink-0 mt-0.5 text-primary" />
+                    <div>
+                      <p className="text-xs font-semibold text-primary">Proximo passo</p>
+                      <p className="text-sm font-medium mt-0.5">{NEXT_STEP_HINTS[opportunity.stage]!.title}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{NEXT_STEP_HINTS[opportunity.stage]!.description}</p>
+                    </div>
+                  </div>
+                </div>
               )}
 
               {/* Mover para proximo stage */}
               {isActive && nextStage && (
                 <Button
                   size="sm"
-                  className="w-full gap-1.5"
+                  className="w-full gap-1.5 h-9"
                   onClick={handleMoveStage}
                   disabled={updateMutation.isPending}
                 >
@@ -656,7 +695,7 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
                   <Button
                     size="sm"
                     variant="default"
-                    className="w-full gap-1.5 bg-emerald-600 hover:bg-emerald-700"
+                    className="w-full gap-1.5 h-9 bg-emerald-600 hover:bg-emerald-700"
                     onClick={() => setConvertOpen(true)}
                   >
                     <Briefcase className="size-3.5" />
@@ -664,17 +703,18 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
                   </Button>
                 )}
 
-              {/* Pausar */}
-              {isActive && (
+              {/* WhatsApp */}
+              {whatsappHref && (
                 <Button
-                  size="sm"
                   variant="outline"
-                  className="w-full gap-1.5"
-                  onClick={handlePause}
-                  disabled={updateMutation.isPending}
+                  size="sm"
+                  className="w-full gap-2 h-9 text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 dark:border-emerald-800 dark:hover:bg-emerald-950"
+                  asChild
                 >
-                  <Pause className="size-3.5" />
-                  Pausar
+                  <a href={whatsappHref} target="_blank" rel="noopener noreferrer">
+                    <MessageCircle className="size-4" />
+                    Abrir WhatsApp
+                  </a>
                 </Button>
               )}
 
@@ -684,7 +724,7 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="w-full gap-1.5 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950"
+                    className="w-full gap-1.5 h-9 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950"
                     onClick={() => setWinFormOpen((v) => !v)}
                   >
                     <ChevronDown
@@ -700,14 +740,14 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
                       </p>
                       <Input
                         placeholder="Ex: Preco, relacionamento, diretor..."
-                        className="h-8 text-xs"
+                        className="h-9 text-xs"
                         value={winReason}
                         onChange={(e) => setWinReason(e.target.value)}
                       />
                       <div className="flex gap-2">
                         <Button
                           size="sm"
-                          className="flex-1 h-7 text-xs bg-emerald-600 hover:bg-emerald-700"
+                          className="flex-1 h-9 text-xs bg-emerald-600 hover:bg-emerald-700"
                           onClick={handleMarkWon}
                           disabled={updateMutation.isPending}
                         >
@@ -716,7 +756,7 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-7 text-xs"
+                          className="h-9 text-xs"
                           onClick={() => setWinFormOpen(false)}
                         >
                           Cancelar
@@ -727,108 +767,138 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
                 </div>
               )}
 
-              {/* Perdemos (dropdown para confirmar com motivo expandido) */}
+              {/* Separador — Encerrar negociacao */}
               {opportunity.stage !== 'perdido' && opportunity.stage !== 'ganho' && (
-                <div className="space-y-2">
+                <>
+                  <div className="relative my-2">
+                    <Separator />
+                    <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                      Encerrar negociacao
+                    </span>
+                  </div>
+
+                  {/* Pausar */}
+                  {isActive && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full gap-1.5 h-9"
+                      onClick={handlePause}
+                      disabled={updateMutation.isPending}
+                    >
+                      <Pause className="size-3.5" />
+                      Pausar oportunidade
+                    </Button>
+                  )}
+
+                  {/* Perdemos — abre Dialog (ALTO-03) */}
                   <Button
                     size="sm"
-                    variant="ghost"
-                    className="w-full gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => setLossOpen((v) => !v)}
+                    variant="outline"
+                    className="w-full gap-1.5 h-9 border-red-200 text-destructive hover:bg-destructive/10 hover:text-destructive dark:border-red-800"
+                    onClick={() => setLossOpen(true)}
                   >
-                    <ChevronDown
-                      className={cn('size-3.5 transition-transform', lossOpen && 'rotate-180')}
-                    />
-                    Perdemos
+                    <XCircle className="size-3.5" />
+                    Perdemos...
                   </Button>
-
-                  {lossOpen && (
-                    <div className="space-y-2.5 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
-                      <p className="text-xs text-destructive font-medium">Analise da perda:</p>
-
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] text-muted-foreground">Motivo principal *</label>
-                        <Select
-                          value={lossCategory}
-                          onValueChange={(v) => setLossCategory(v as typeof lossCategory)}
-                        >
-                          <SelectTrigger className="h-8 text-xs border-destructive/30">
-                            <SelectValue placeholder="Selecione..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {LOSS_CATEGORY_OPTIONS.map((o) => (
-                              <SelectItem key={o.value} value={o.value} className="text-xs">
-                                {o.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] text-muted-foreground">Concorrente vencedor</label>
-                        <Input
-                          placeholder="Ex: Paranoid, O2 Filmes"
-                          className="h-8 text-xs border-destructive/30"
-                          value={winnerCompetitor}
-                          onChange={(e) => setWinnerCompetitor(e.target.value)}
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] text-muted-foreground">Valor do concorrente</label>
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs text-muted-foreground px-2 h-8 flex items-center border border-r-0 rounded-l-md bg-muted/50 border-destructive/30">R$</span>
-                          <Input
-                            type="number"
-                            min={0}
-                            step={0.01}
-                            placeholder="0,00"
-                            className="h-8 text-xs border-destructive/30 rounded-l-none"
-                            value={winnerValue}
-                            onChange={(e) => setWinnerValue(e.target.value)}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] text-muted-foreground">Detalhes</label>
-                        <Textarea
-                          rows={2}
-                          className="text-xs resize-none border-destructive/30"
-                          placeholder="Conte o que aconteceu..."
-                          value={lossReason}
-                          onChange={(e) => setLossReason(e.target.value)}
-                        />
-                      </div>
-
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          className="flex-1 h-7 text-xs"
-                          onClick={handleMarkLost}
-                          disabled={updateMutation.isPending || !lossCategory}
-                        >
-                          Confirmar perda
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 text-xs"
-                          onClick={() => setLossOpen(false)}
-                        >
-                          Cancelar
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                </>
               )}
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Dialog de perda — ALTO-03 */}
+      <Dialog open={lossOpen} onOpenChange={setLossOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <XCircle className="size-5" />
+              Registrar Perda
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Tem certeza? Voce pode reativar esta oportunidade depois se precisar.
+            </p>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium">Motivo principal *</label>
+              <Select
+                value={lossCategory}
+                onValueChange={(v) => setLossCategory(v as typeof lossCategory)}
+              >
+                <SelectTrigger className="h-9 text-xs">
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {LOSS_CATEGORY_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value} className="text-xs">
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium">Concorrente vencedor (opcional)</label>
+              <Input
+                placeholder="Ex: Paranoid, O2 Filmes"
+                className="h-9 text-xs"
+                value={winnerCompetitor}
+                onChange={(e) => setWinnerCompetitor(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium">Valor do concorrente (opcional)</label>
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-muted-foreground px-2 h-9 flex items-center border border-r-0 rounded-l-md bg-muted/50">R$</span>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  placeholder="0,00"
+                  className="h-9 text-xs rounded-l-none"
+                  value={winnerValue}
+                  onChange={(e) => setWinnerValue(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium">Detalhes (opcional)</label>
+              <Textarea
+                rows={2}
+                className="text-xs resize-none"
+                placeholder="Conte o que aconteceu..."
+                value={lossReason}
+                onChange={(e) => setLossReason(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setLossOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleMarkLost}
+              disabled={updateMutation.isPending || !lossCategory}
+              className="gap-1.5"
+            >
+              {updateMutation.isPending && <Loader2 className="size-3.5 animate-spin" />}
+              Confirmar Perda
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog de edicao */}
       <OpportunityDialog
@@ -869,7 +939,7 @@ function InfoRow({
     <div className="flex items-start gap-2">
       {icon && <div className="mt-0.5 shrink-0">{icon}</div>}
       <div className={cn('flex-1 min-w-0', !icon && 'pl-6')}>
-        <p className="text-[11px] text-muted-foreground uppercase tracking-wide">{label}</p>
+        <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
         <p className={cn('text-sm mt-0.5', valueClass)}>
           {value}
           {suffix && (
@@ -902,7 +972,7 @@ function ActivityItem({ activity }: { activity: OpportunityActivity }) {
       <div className="flex-none pt-0.5 text-muted-foreground">{icon}</div>
       <div className="flex-1 min-w-0">
         <p className="text-xs leading-snug">{activity.description}</p>
-        <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
           {activity.created_by_profile?.full_name && (
             <span>{activity.created_by_profile.full_name}</span>
           )}

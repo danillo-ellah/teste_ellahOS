@@ -42,6 +42,9 @@ export default function CrmPage() {
             <h1 className="text-xl font-semibold">Comercial</h1>
             <p className="text-sm text-muted-foreground">
               Propostas e negociacoes em andamento
+              {pipeline && (
+                <span className="ml-1">&middot; {pipeline.total_opportunities} oportunidade{pipeline.total_opportunities !== 1 ? 's' : ''}</span>
+              )}
             </p>
           </div>
         </div>
@@ -107,15 +110,10 @@ export default function CrmPage() {
               : 'bg-muted text-muted-foreground hover:bg-muted/80'
           }`}
         >
-          Incluir ganhos/perdidos
+          Historico completo
         </button>
 
-        {pipeline && (
-          <Badge variant="outline" className="ml-auto text-xs">
-            {pipeline.total_opportunities} oportunidade{pipeline.total_opportunities !== 1 ? 's' : ''}
-          </Badge>
-        )}
-
+        <div className="flex-1" />
         {/* Toggle Kanban / Lista */}
         <div className="flex items-center rounded-lg border p-0.5">
           <button

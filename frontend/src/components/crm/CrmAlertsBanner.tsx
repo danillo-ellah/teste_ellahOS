@@ -22,25 +22,29 @@ import { useFollowUpAlerts, type CrmAlert, type CrmAlertType } from '@/hooks/use
 
 const ALERT_CONFIG: Record<
   CrmAlertType,
-  { label: string; icon: React.ReactNode; class: string }
+  { label: string; action: string; icon: React.ReactNode; class: string }
 > = {
   deadline_overdue: {
     label: 'Vencido',
+    action: 'Prazo expirou — faca follow-up urgente',
     icon: <AlertTriangle className="size-3" />,
     class: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
   },
   deadline_urgent: {
     label: 'Urgente',
+    action: 'Prazo vence em breve — entre em contato',
     icon: <Zap className="size-3" />,
     class: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
   },
   inactive: {
     label: 'Inativo',
+    action: 'Sem atividade recente — faca um follow-up',
     icon: <Clock className="size-3" />,
     class: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
   },
   unassigned: {
     label: 'Sem PE',
+    action: 'Atribua um produtor executivo',
     icon: <UserX className="size-3" />,
     class: 'bg-slate-100 text-slate-600 dark:bg-slate-800/40 dark:text-slate-400',
   },
@@ -70,7 +74,7 @@ export function CrmAlertsBanner() {
       >
         <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400 shrink-0" />
         <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
-          {data.total_alerts} alerta{data.total_alerts !== 1 ? 's' : ''} de follow-up
+          {data.total_alerts} oportunidade{data.total_alerts !== 1 ? 's' : ''} precisa{data.total_alerts === 1 ? '' : 'm'} de atencao
         </span>
         <span className="ml-auto shrink-0 text-muted-foreground">
           {expanded ? (
@@ -144,21 +148,27 @@ function AlertRow({
         </div>
       </div>
 
-      {/* Badges de alerta */}
-      <div className="flex items-center gap-1 shrink-0">
-        {alert.alert_types.map((type) => {
-          const cfg = ALERT_CONFIG[type]
-          return (
-            <Badge
-              key={type}
-              variant="secondary"
-              className={cn('text-[10px] gap-0.5 px-1.5 py-0', cfg.class)}
-            >
-              {cfg.icon}
-              {cfg.label}
-            </Badge>
-          )
-        })}
+      {/* Badges de alerta + acao sugerida — ALTO-05 */}
+      <div className="flex flex-col items-end gap-0.5 shrink-0">
+        <div className="flex items-center gap-1">
+          {alert.alert_types.map((type) => {
+            const cfg = ALERT_CONFIG[type]
+            return (
+              <Badge
+                key={type}
+                variant="secondary"
+                className={cn('text-[10px] gap-0.5 px-1.5 py-0', cfg.class)}
+                title={cfg.action}
+              >
+                {cfg.icon}
+                {cfg.label}
+              </Badge>
+            )
+          })}
+        </div>
+        <span className="text-[10px] text-muted-foreground max-w-[200px] text-right truncate">
+          {ALERT_CONFIG[alert.alert_types[0]]?.action}
+        </span>
       </div>
 
       {/* Valor */}

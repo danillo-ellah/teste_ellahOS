@@ -1,7 +1,7 @@
 'use client'
 
 import { memo } from 'react'
-import { CalendarDays, Building2, ChevronRight, Shield } from 'lucide-react'
+import { CalendarDays, Building2, ChevronRight, Shield, GripVertical, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Opportunity } from '@/hooks/useCrm'
 
@@ -67,18 +67,22 @@ export const OpportunityCard = memo(function OpportunityCard({ opportunity, onCl
   return (
     <button
       onClick={onClick}
+      aria-label={`Ver detalhes: ${opportunity.title}`}
       className={cn(
         'group flex flex-col gap-2 rounded-md border bg-card p-3.5 text-left shadow-sm transition-all',
         'hover:border-primary/40 hover:shadow-md',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
       )}
     >
-      {/* Titulo */}
+      {/* Titulo + drag handle */}
       <div className="flex items-start justify-between gap-2">
-        <span className="text-sm font-medium leading-snug line-clamp-2">
-          {opportunity.title}
-        </span>
-        <ChevronRight className="mt-0.5 size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+        <div className="flex items-start gap-1.5 min-w-0">
+          <GripVertical className="mt-0.5 size-4 shrink-0 text-muted-foreground/40 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" aria-hidden="true" />
+          <span className="text-sm font-medium leading-snug line-clamp-2">
+            {opportunity.title}
+          </span>
+        </div>
+        <ChevronRight className="mt-0.5 size-3.5 shrink-0 text-muted-foreground opacity-60 sm:opacity-0 transition-opacity sm:group-hover:opacity-100" />
       </div>
 
       {/* Agencia + Cliente */}
@@ -128,7 +132,7 @@ export const OpportunityCard = memo(function OpportunityCard({ opportunity, onCl
             >
               <CalendarDays className="size-3 shrink-0" />
               {deadlineOverdue ? (
-                <span className="font-medium">vencido</span>
+                <span className="inline-flex items-center gap-0.5 font-medium"><AlertTriangle className="size-3" />vencido</span>
               ) : deadlineDays !== null && deadlineDays <= 3 && deadlineDays >= 0 ? (
                 <span>
                   retorno:{' '}
@@ -149,7 +153,7 @@ export const OpportunityCard = memo(function OpportunityCard({ opportunity, onCl
             >
               <CalendarDays className="size-3 shrink-0" />
               <span>{closeDateFormatted}</span>
-              {closeDateOverdue && <span className="font-medium">atrasado</span>}
+              {closeDateOverdue && <span className="inline-flex items-center gap-0.5 font-medium"><AlertTriangle className="size-3" />atrasado</span>}
             </div>
           ) : null}
         </div>
@@ -164,7 +168,7 @@ export const OpportunityCard = memo(function OpportunityCard({ opportunity, onCl
           <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
             {assignedName.charAt(0).toUpperCase()}
           </div>
-          <span className="truncate text-[11px] text-muted-foreground">{assignedName}</span>
+          <span className="truncate text-xs text-muted-foreground">{assignedName}</span>
         </div>
       )}
     </button>
@@ -172,26 +176,21 @@ export const OpportunityCard = memo(function OpportunityCard({ opportunity, onCl
 })
 
 function HeatIndicator({ probability }: { probability: number }) {
-  if (probability >= 70) {
-    return (
-      <span className="inline-flex items-center gap-1 text-[13px] font-medium text-emerald-600 dark:text-emerald-400">
-        <span className="inline-block size-2 rounded-full bg-emerald-500" />
-        Quente
-      </span>
-    )
-  }
-  if (probability >= 40) {
-    return (
-      <span className="inline-flex items-center gap-1 text-[13px] font-medium text-amber-600 dark:text-amber-400">
-        <span className="inline-block size-2 rounded-full bg-amber-500" />
-        Morno
-      </span>
-    )
-  }
+  const heat =
+    probability >= 70
+      ? { label: 'Quente', desc: 'Alta chance de fechar', dotClass: 'bg-emerald-500', textClass: 'text-emerald-600 dark:text-emerald-400' }
+      : probability >= 40
+        ? { label: 'Morno', desc: 'Chance moderada', dotClass: 'bg-amber-500', textClass: 'text-amber-600 dark:text-amber-400' }
+        : { label: 'Frio', desc: 'Baixa chance de fechar', dotClass: 'bg-blue-500', textClass: 'text-blue-600 dark:text-blue-400' }
+
   return (
-    <span className="inline-flex items-center gap-1 text-[13px] font-medium text-blue-600 dark:text-blue-400">
-      <span className="inline-block size-2 rounded-full bg-blue-500" />
-      Frio
+    <span
+      className={cn('inline-flex items-center gap-1 text-[13px] font-medium', heat.textClass)}
+      title={`${heat.label} — ${heat.desc} (${probability}%)`}
+      aria-label={`Temperatura: ${heat.label} (${probability}% de probabilidade)`}
+    >
+      <span className={cn('inline-block size-2 rounded-full', heat.dotClass)} />
+      {heat.label}
     </span>
   )
 }

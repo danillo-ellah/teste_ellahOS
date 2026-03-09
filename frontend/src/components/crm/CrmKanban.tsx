@@ -13,7 +13,7 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { Plus } from 'lucide-react'
+import { Plus, Target } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -211,6 +211,37 @@ export function CrmKanban({ pipeline, includeClosed }: CrmKanbanProps) {
   const router = useRouter()
   const [createInStage, setCreateInStage] = useState<OpportunityStage | null>(null)
 
+  // Empty state global — quando nao ha nenhuma oportunidade
+  if (pipeline.total_opportunities === 0) {
+    return (
+      <>
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <Target className="size-12 text-muted-foreground/30 mb-4" />
+          <h2 className="text-lg font-semibold">Nenhuma oportunidade cadastrada</h2>
+          <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+            Registre aqui consultas e negociacoes da produtora. Cada oportunidade representa um potencial job.
+          </p>
+          <Button
+            size="default"
+            className="mt-6 gap-2"
+            onClick={() => setCreateInStage('lead')}
+          >
+            <Plus className="size-4" />
+            Nova Oportunidade
+          </Button>
+        </div>
+        <OpportunityDialog
+          open={!!createInStage}
+          onOpenChange={(open) => {
+            if (!open) setCreateInStage(null)
+          }}
+          mode="create"
+          defaultStage={createInStage ?? undefined}
+        />
+      </>
+    )
+  }
+
   return (
     <MutationRegistryProvider>
       <KanbanBoard
@@ -397,7 +428,7 @@ const KanbanColumn = memo(function KanbanColumn({
       <div className="flex items-center justify-between px-3 py-3">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">{config.label}</span>
-          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-[11px] font-medium text-muted-foreground">
+          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">
             {items.length}
           </span>
           {isOver && transitionValid && (
@@ -408,7 +439,7 @@ const KanbanColumn = memo(function KanbanColumn({
         </div>
         <div className="flex items-center gap-1.5">
           {formattedValue && (
-            <span className="text-[11px] font-medium text-muted-foreground">{formattedValue}</span>
+            <span className="text-xs font-medium text-muted-foreground">{formattedValue}</span>
           )}
           <Button
             variant="ghost"
@@ -493,7 +524,7 @@ const DraggableCard = memo(function DraggableCard({ opportunity, onCardClick }: 
       {...attributes}
       {...listeners}
       className={cn(
-        'touch-none select-none',
+        'touch-none select-none cursor-grab active:cursor-grabbing',
         // Card some quando esta sendo arrastado — DragOverlay assume o papel visual
         isDragging && 'opacity-0',
       )}

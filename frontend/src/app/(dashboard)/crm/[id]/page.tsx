@@ -3,8 +3,8 @@
 import { use } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, ChevronRight, Target } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useOpportunity } from '@/hooks/useCrm'
 import { OpportunityFullDetail } from '@/components/crm/OpportunityFullDetail'
@@ -21,12 +21,13 @@ export default function CrmDetailPage({ params }: CrmDetailPageProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Breadcrumb + back */}
+      {/* Breadcrumb — ALTO-01: removed duplicate back button */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Link
           href="/crm"
           className="flex items-center gap-1.5 hover:text-foreground transition-colors"
         >
+          <ArrowLeft className="size-3.5" />
           <Target className="size-3.5" />
           Comercial
         </Link>
@@ -39,22 +40,12 @@ export default function CrmDetailPage({ params }: CrmDetailPageProps) {
               {opportunity?.title ?? 'Oportunidade'}
             </span>
             {opportunity?.stage && STAGE_CONFIG[opportunity.stage] && (
-              <Badge className={cn('text-[10px] ml-1', STAGE_CONFIG[opportunity.stage].badgeClass)}>
+              <Badge className={cn('text-xs ml-1', STAGE_CONFIG[opportunity.stage].badgeClass)}>
                 {STAGE_CONFIG[opportunity.stage].label}
               </Badge>
             )}
           </>
         )}
-      </div>
-
-      {/* Back button */}
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" asChild className="gap-1.5 -ml-2">
-          <Link href="/crm">
-            <ArrowLeft className="size-4" />
-            Voltar ao Pipeline
-          </Link>
-        </Button>
       </div>
 
       {/* Loading skeleton */}

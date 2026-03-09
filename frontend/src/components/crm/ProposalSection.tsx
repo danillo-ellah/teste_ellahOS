@@ -128,31 +128,33 @@ export function ProposalSection({ opportunityId, proposals, jobId }: ProposalSec
         <h3 className="text-sm font-semibold">
           Propostas
           {proposals.length > 0 && (
-            <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1 text-[11px] font-medium text-muted-foreground">
+            <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1 text-xs font-medium text-muted-foreground">
               {proposals.length}
             </span>
           )}
         </h3>
         <div className="flex items-center gap-1">
-          {jobId ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 gap-1.5 text-xs text-violet-600 hover:text-violet-700 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-950"
-              onClick={() => {
-                setAiFormOpen(!aiFormOpen)
-                setAddingProposal(false)
-                setGeneratedContent(null)
-              }}
-            >
-              <Sparkles className="size-3" />
-              Gerar Carta IA
-            </Button>
-          ) : null}
+          {/* ALTO-04: botao sempre visivel, desabilitado sem job */}
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 gap-1.5 text-xs"
+            className="h-9 gap-1.5 text-xs text-violet-600 hover:text-violet-700 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-950 disabled:opacity-50"
+            disabled={!jobId}
+            title={!jobId ? 'Converta esta oportunidade em Job primeiro para usar este recurso' : 'Gerar carta orcamento com IA'}
+            onClick={() => {
+              if (!jobId) return
+              setAiFormOpen(!aiFormOpen)
+              setAddingProposal(false)
+              setGeneratedContent(null)
+            }}
+          >
+            <Sparkles className="size-3" />
+            Gerar Carta IA
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 gap-1.5 text-xs"
             onClick={() => {
               setAddingProposal(!addingProposal)
               setAiFormOpen(false)
@@ -164,13 +166,6 @@ export function ProposalSection({ opportunityId, proposals, jobId }: ProposalSec
           </Button>
         </div>
       </div>
-
-      {/* Hint quando nao ha job vinculado */}
-      {!jobId && (
-        <p className="text-[11px] text-muted-foreground/70 italic">
-          Vincule a um job para gerar carta orcamento com IA.
-        </p>
-      )}
 
       {/* Form de geracao IA */}
       {aiFormOpen && jobId && (
@@ -193,7 +188,7 @@ export function ProposalSection({ opportunityId, proposals, jobId }: ProposalSec
               <div className="flex gap-2">
                 <Button
                   size="sm"
-                  className="h-7 text-xs bg-violet-600 hover:bg-violet-700"
+                  className="h-9 text-xs bg-violet-600 hover:bg-violet-700"
                   onClick={handleSaveGeneratedAsProposal}
                   disabled={addProposalMutation.isPending}
                 >
@@ -212,7 +207,7 @@ export function ProposalSection({ opportunityId, proposals, jobId }: ProposalSec
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-7 text-xs"
+                  className="h-9 text-xs"
                   onClick={handleDiscardGenerated}
                 >
                   Descartar
@@ -236,7 +231,7 @@ export function ProposalSection({ opportunityId, proposals, jobId }: ProposalSec
               <div className="flex gap-2">
                 <Button
                   size="sm"
-                  className="h-7 text-xs bg-violet-600 hover:bg-violet-700"
+                  className="h-9 text-xs bg-violet-600 hover:bg-violet-700"
                   onClick={handleGenerateLetter}
                   disabled={generateLetterMutation.isPending}
                 >
@@ -255,7 +250,7 @@ export function ProposalSection({ opportunityId, proposals, jobId }: ProposalSec
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-7 text-xs"
+                  className="h-9 text-xs"
                   onClick={() => setAiFormOpen(false)}
                 >
                   Cancelar
@@ -272,7 +267,7 @@ export function ProposalSection({ opportunityId, proposals, jobId }: ProposalSec
           <div className="space-y-1.5">
             <Label className="text-xs">Titulo da proposta *</Label>
             <Input
-              className="h-8 text-xs"
+              className="h-9 text-xs"
               placeholder="Ex: Proposta v1 — Campanha Produto X"
               value={form.title}
               onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
@@ -283,7 +278,7 @@ export function ProposalSection({ opportunityId, proposals, jobId }: ProposalSec
             <div className="space-y-1.5">
               <Label className="text-xs">Valor (R$)</Label>
               <Input
-                className="h-8 text-xs"
+                className="h-9 text-xs"
                 type="number"
                 min={0}
                 step="0.01"
@@ -300,7 +295,7 @@ export function ProposalSection({ opportunityId, proposals, jobId }: ProposalSec
                   setForm((f) => ({ ...f, status: v as AddProposalPayload['status'] }))
                 }
               >
-                <SelectTrigger className="h-8 text-xs">
+                <SelectTrigger className="h-9 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -317,18 +312,21 @@ export function ProposalSection({ opportunityId, proposals, jobId }: ProposalSec
           <div className="space-y-1.5">
             <Label className="text-xs">URL do arquivo (PDF)</Label>
             <Input
-              className="h-8 text-xs"
+              className="h-9 text-xs"
               type="url"
               placeholder="https://..."
               value={form.file_url}
               onChange={(e) => setForm((f) => ({ ...f, file_url: e.target.value }))}
             />
+            <p className="text-xs text-muted-foreground">
+              Cole o link publico do Google Drive ou Dropbox
+            </p>
           </div>
 
           <div className="flex gap-2">
             <Button
               size="sm"
-              className="h-7 text-xs"
+              className="h-9 text-xs"
               onClick={handleAddProposal}
               disabled={addProposalMutation.isPending}
             >
@@ -337,7 +335,7 @@ export function ProposalSection({ opportunityId, proposals, jobId }: ProposalSec
             <Button
               size="sm"
               variant="ghost"
-              className="h-7 text-xs"
+              className="h-9 text-xs"
               onClick={() => setAddingProposal(false)}
             >
               Cancelar
@@ -368,15 +366,15 @@ export function ProposalSection({ opportunityId, proposals, jobId }: ProposalSec
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-medium truncate">{proposal.title}</span>
-                  <span className="shrink-0 text-[11px] text-muted-foreground">
+                  <span className="shrink-0 text-xs text-muted-foreground">
                     v{proposal.version}
                   </span>
                 </div>
                 {formattedValue && (
-                  <span className="text-[11px] text-muted-foreground">{formattedValue}</span>
+                  <span className="text-xs text-muted-foreground">{formattedValue}</span>
                 )}
               </div>
-              <Badge className={cn('shrink-0 text-[11px]', statusCfg.class)}>
+              <Badge className={cn('shrink-0 text-xs', statusCfg.class)}>
                 {statusCfg.label}
               </Badge>
               {proposal.file_url && (

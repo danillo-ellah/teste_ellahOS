@@ -89,10 +89,10 @@ export function ConvertToJobDialog({
         </DialogHeader>
 
         <div className="space-y-5">
-          {/* Campos editaveis */}
+          {/* Campos editaveis — ALTO-07: labels melhorados */}
           <div className="space-y-4">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Dados do Job (editaveis)
+              Dados do Job (voce pode editar)
             </p>
 
             <div className="space-y-2">
@@ -144,7 +144,7 @@ export function ConvertToJobDialog({
           {/* Dados somente leitura */}
           <div className="space-y-3 rounded-lg border bg-muted/30 p-3">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Dados copiados (somente leitura)
+              Estes dados sao copiados automaticamente para o novo job
             </p>
             <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
               {opportunity.clients?.name && (
@@ -171,7 +171,8 @@ export function ConvertToJobDialog({
           <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50/50 p-3 text-xs text-blue-800 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-300">
             <Info className="size-4 shrink-0 mt-0.5" />
             <span>
-              A oportunidade sera marcada como &quot;ganho&quot; e voce sera
+              A oportunidade ficara salva no CRM como &quot;Fechado&quot;. O job
+              criado tera todos os dados copiados automaticamente. Voce sera
               redirecionado ao novo job.
             </span>
           </div>
@@ -206,7 +207,7 @@ export function ConvertToJobDialog({
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <p className="text-[11px] text-muted-foreground">{label}</p>
+      <p className="text-xs text-muted-foreground">{label}</p>
       <p className="text-sm truncate">{value}</p>
     </div>
   )
