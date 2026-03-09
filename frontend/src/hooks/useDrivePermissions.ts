@@ -1,21 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiGet, apiMutate } from '@/lib/api'
 import { jobKeys } from '@/lib/query-keys'
-import type { DrivePermissionEntry, DrivePermissionsResponse } from '@/types/drive'
+import type { DrivePermissionsResponse } from '@/types/drive'
 
 export const drivePermissionKeys = {
-  permissions: (jobId: string) => [...jobKeys.detail(jobId), 'drive-permissions'] as const,
+  permissions: (jobId: string, activeOnly?: boolean) =>
+    [...jobKeys.detail(jobId), 'drive-permissions', activeOnly ?? true] as const,
 }
 
-// --- List permissions ---
+// --- List permissions (modelo rico: members[].permissions[]) ---
 
-export function useDrivePermissions(jobId: string, enabled = true) {
+export function useDrivePermissions(jobId: string, activeOnly = true, enabled = true) {
   const query = useQuery({
-    queryKey: drivePermissionKeys.permissions(jobId),
+    queryKey: drivePermissionKeys.permissions(jobId, activeOnly),
     queryFn: () =>
       apiGet<DrivePermissionsResponse>(
         'drive-integration',
-        {},
+        { active_only: String(activeOnly) },
         `${jobId}/permissions`,
       ),
     staleTime: 60_000,
@@ -25,8 +26,8 @@ export function useDrivePermissions(jobId: string, enabled = true) {
   const inner = query.data?.data
 
   return {
-    data: (inner?.data ?? []) as DrivePermissionEntry[],
-    meta: inner?.meta ?? { total: 0, synced_at: null },
+    members: inner?.members ?? [],
+    meta: inner?.meta ?? { total_members: 0, total_active_permissions: 0, active_only: activeOnly },
     isLoading: query.isLoading,
     isError: query.isError,
     refetch: query.refetch,
@@ -39,11 +40,11 @@ export function useGrantMemberPermissions() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ jobId, personId, email }: { jobId: string; personId: string; email: string }) =>
+    mutationFn: ({ jobId, jobTeamId, email }: { jobId: string; jobTeamId: string; email: string }) =>
       apiMutate(
         'drive-integration',
         'POST',
-        { person_id: personId, email },
+        { job_team_id: jobTeamId, email },
         `${jobId}/grant-member-permissions`,
       ),
     onSuccess: (_data, { jobId }) => {
@@ -58,11 +59,11 @@ export function useRevokeMemberPermissions() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ jobId, personId }: { jobId: string; personId: string }) =>
+    mutationFn: ({ jobId, jobTeamId }: { jobId: string; jobTeamId: string }) =>
       apiMutate(
         'drive-integration',
         'POST',
-        { person_id: personId },
+        { job_team_id: jobTeamId },
         `${jobId}/revoke-member-permissions`,
       ),
     onSuccess: (_data, { jobId }) => {

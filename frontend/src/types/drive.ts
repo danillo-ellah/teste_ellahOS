@@ -24,17 +24,32 @@ export interface DriveStructureResponse {
   recreated?: boolean
 }
 
-// Permissoes de membros no Drive
-export interface DrivePermissionEntry {
+// Permissoes de membros no Drive — modelo rico (match backend list-permissions)
+
+export interface DrivePermissionDetail {
+  id: string
+  folder_key: string
+  drive_role: 'writer' | 'reader'
+  drive_permission_id: string | null
+  granted_at: string
+  revoked_at: string | null
+  error_message: string | null
+}
+
+export interface DrivePermissionMember {
+  job_team_id: string
   person_id: string
   person_name: string
   email: string
   role: string
-  has_access: boolean
-  permission_id: string | null
+  permissions: DrivePermissionDetail[]
 }
 
 export interface DrivePermissionsResponse {
-  data: DrivePermissionEntry[]
-  meta: { total: number; synced_at: string | null }
+  members: DrivePermissionMember[]
+  meta: {
+    total_members: number
+    total_active_permissions: number
+    active_only: boolean
+  }
 }

@@ -46,7 +46,7 @@ interface DriveSectionProps {
 }
 
 // Labels amigaveis para folder_key (v4 + legado para jobs antigos)
-const FOLDER_LABELS: Record<string, string> = {
+export const FOLDER_LABELS: Record<string, string> = {
   root: 'Pasta raiz',
   // v4 — nivel 1 (30 pastas)
   roteiro_briefing: '01A Roteiro/Briefing',
