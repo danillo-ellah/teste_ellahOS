@@ -44,6 +44,7 @@ export interface DiaryPhoto {
 
 export interface DiaryEntry {
   id: string
+  tenant_id: string
   job_id: string
   shooting_date: string
   day_number: number
@@ -71,6 +72,7 @@ export interface DiaryEntry {
   updated_by: string | null
   created_by: string | null
   created_at: string
+  deleted_at: string | null
   production_diary_photos: DiaryPhoto[]
 }
 

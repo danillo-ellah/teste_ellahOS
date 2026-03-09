@@ -34,9 +34,11 @@ export function DayStatusBadge({ status, hasBulletin, className }: DayStatusBadg
     )
   }
 
+  // Mostra "Boletim pendente" apenas quando nao ha status E nao ha resumo executivo.
+  // Entries que nunca tiveram boletim preenchido exibem o indicador para lembrar o DP.
   if (!hasBulletin) {
     return (
-      <Badge variant="outline" className={`text-muted-foreground ${className ?? ''}`}>
+      <Badge variant="outline" className={`text-muted-foreground border-dashed ${className ?? ''}`}>
         Boletim pendente
       </Badge>
     )

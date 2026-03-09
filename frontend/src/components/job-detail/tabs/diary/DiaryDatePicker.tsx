@@ -44,7 +44,7 @@ export function DiaryDatePicker({
   const hasDates = shootingDates && shootingDates.length > 0
   const isManual = !hasDates || forceManual
 
-  if (!hasDates || isManual) {
+  if (isManual) {
     return (
       <div className="col-span-1 space-y-1.5">
         <Label>Data de filmagem *</Label>

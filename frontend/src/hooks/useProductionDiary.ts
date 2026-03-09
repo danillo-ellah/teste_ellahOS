@@ -5,22 +5,15 @@ import type {
   DiaryEntry,
   DiaryEntryFormData,
   DiaryPhoto,
-  SceneItem,
-  AttendanceItem,
-  EquipmentItem,
 } from '@/types/production-diary'
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Converte DiaryEntryFormData (strings de formulario) para o payload da API. */
-function formDataToPayload(
-  jobId: string,
-  form: DiaryEntryFormData,
-): Record<string, unknown> {
+/** Campos comuns do formulario para payload da API. */
+function formFields(form: DiaryEntryFormData): Record<string, unknown> {
   return {
-    job_id: jobId,
     shooting_date: form.shooting_date || null,
     shooting_date_id: form.shooting_date_id || null,
     day_number: form.day_number !== '' ? Number(form.day_number) : null,
@@ -44,6 +37,16 @@ function formDataToPayload(
     next_steps: form.next_steps || null,
     director_signature: form.director_signature || null,
   }
+}
+
+/** Payload para POST — inclui job_id. */
+function createPayload(jobId: string, form: DiaryEntryFormData): Record<string, unknown> {
+  return { job_id: jobId, ...formFields(form) }
+}
+
+/** Payload para PATCH — sem job_id (backend rejeita com .strict()). */
+function updatePayload(form: DiaryEntryFormData): Record<string, unknown> {
+  return formFields(form)
 }
 
 // ---------------------------------------------------------------------------
@@ -85,7 +88,7 @@ export function useCreateDiaryEntry(jobId: string) {
       apiMutate<DiaryEntry>(
         'production-diary',
         'POST',
-        formDataToPayload(jid, form),
+        createPayload(jid, form),
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -118,7 +121,7 @@ export function useUpdateDiaryEntry(jobId: string) {
       apiMutate<DiaryEntry>(
         'production-diary',
         'PATCH',
-        formDataToPayload(jobId, form),
+        updatePayload(form),
         entryId,
       ),
     onSuccess: (_data, { entryId }) => {
@@ -215,6 +218,3 @@ export function useAddDiaryPhoto(jobId: string) {
   }
 }
 
-// Re-exporta tipos de sub-itens para uso nos componentes sem precisar importar
-// de dois lugares diferentes.
-export type { SceneItem, AttendanceItem, EquipmentItem }

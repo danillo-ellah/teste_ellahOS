@@ -12,12 +12,15 @@ import {
 } from '@/components/ui/select'
 import type { DayStatus } from '@/types/production-diary'
 
+// Campos gerenciados por este componente
+type BulletinField = 'day_status' | 'executive_summary' | 'next_steps' | 'director_signature'
+
 interface BulletinSectionProps {
   dayStatus: DayStatus | null
   executiveSummary: string
   nextSteps: string
   directorSignature: string
-  onChange: (field: string, value: unknown) => void
+  onChange: (field: BulletinField, value: DayStatus | string | null) => void
 }
 
 const DAY_STATUS_OPTIONS: { value: DayStatus; label: string }[] = [
