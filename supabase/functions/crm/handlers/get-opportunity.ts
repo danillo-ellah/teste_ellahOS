@@ -27,7 +27,7 @@ export async function handleGetOpportunity(
       *,
       clients(id, name, cnpj),
       agencies(id, name),
-      contacts(id, full_name, email, phone),
+      contacts(id, name, email, phone),
       assigned_profile:profiles!opportunities_assigned_to_fkey(id, full_name, avatar_url, email),
       created_by_profile:profiles!opportunities_created_by_fkey(id, full_name),
       jobs(id, title, code, status)

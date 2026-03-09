@@ -75,7 +75,7 @@ export interface Opportunity {
 }
 
 export interface OpportunityDetail extends Opportunity {
-  contacts?: { id: string; full_name: string; email?: string; phone?: string } | null
+  contacts?: { id: string; name: string; email?: string; phone?: string } | null
   created_by_profile?: { id: string; full_name: string } | null
   jobs?: { id: string; title: string; code?: string; status: string } | null
   proposals: OpportunityProposal[]

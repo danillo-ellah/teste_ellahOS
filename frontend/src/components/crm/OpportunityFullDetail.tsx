@@ -350,12 +350,12 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
               )}
 
               {/* Contato */}
-              {opportunity.contacts?.full_name && (
+              {opportunity.contacts?.name && (
                 <>
                   <InfoRow
                     icon={<User className="size-4 text-muted-foreground" />}
                     label="Contato"
-                    value={opportunity.contacts.full_name}
+                    value={opportunity.contacts.name}
                   />
                   {opportunity.contacts.phone && (
                     <InfoRow
