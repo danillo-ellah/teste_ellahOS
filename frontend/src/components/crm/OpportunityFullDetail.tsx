@@ -45,7 +45,6 @@ import {
   useOpportunityActivities,
   useAddActivity,
   useUpdateOpportunity,
-  useConvertToJob,
   type OpportunityDetail,
   type OpportunityActivity,
   type AddActivityPayload,
@@ -56,7 +55,7 @@ import { STAGE_CONFIG } from './CrmKanban'
 import { ProposalSection } from './ProposalSection'
 import { AgencyHistoryPanel } from './AgencyHistoryPanel'
 import { OpportunityDialog } from './OpportunityDialog'
-import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
+import { ConvertToJobDialog } from './ConvertToJobDialog'
 import { useUserRole } from '@/hooks/useUserRole'
 
 // ---------------------------------------------------------------------------
@@ -139,7 +138,6 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
   const { data: activities } = useOpportunityActivities(opportunity.id)
   const addActivityMutation = useAddActivity(opportunity.id)
   const updateMutation = useUpdateOpportunity(opportunity.id)
-  const convertMutation = useConvertToJob(opportunity.id)
 
   const config = STAGE_CONFIG[opportunity.stage]
   const nextStage = NEXT_STAGE[opportunity.stage]
@@ -212,26 +210,6 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
       toast.success('Oportunidade marcada como ganha')
       setWinReason('')
       setWinFormOpen(false)
-    } catch (err) {
-      toast.error(safeErrorMessage(err as Error))
-    }
-  }
-
-  async function handleConvertToJob() {
-    try {
-      const result = await convertMutation.mutateAsync({
-        job_title: opportunity.title,
-        project_type: opportunity.project_type ?? undefined,
-        client_id: opportunity.client_id ?? undefined,
-        agency_id: opportunity.agency_id ?? undefined,
-        closed_value: opportunity.estimated_value ?? undefined,
-        description: opportunity.notes ?? undefined,
-        deliverable_format: opportunity.deliverable_format ?? undefined,
-        campaign_period: opportunity.campaign_period ?? undefined,
-      })
-      toast.success(`Job "${result.data.job.title}" criado com sucesso`)
-      setConvertOpen(false)
-      router.push(`/jobs/${result.data.job.id}`)
     } catch (err) {
       toast.error(safeErrorMessage(err as Error))
     }
@@ -860,15 +838,11 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
         opportunity={opportunity}
       />
 
-      {/* Confirmacao de conversao em job */}
-      <ConfirmDialog
+      {/* Dialog de conversao em job */}
+      <ConvertToJobDialog
         open={convertOpen}
         onOpenChange={setConvertOpen}
-        title="Converter em Job"
-        description={`Criar job "${opportunity.title}" a partir desta oportunidade?\n\nSerao copiados: titulo, cliente/agencia, tipo de projeto${opportunity.estimated_value ? `, valor estimado (${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(opportunity.estimated_value)})` : ''}, observacoes e formato de entrega.\n\nA oportunidade sera marcada como "ganho".`}
-        confirmLabel="Criar Job"
-        onConfirm={handleConvertToJob}
-        isPending={convertMutation.isPending}
+        opportunity={opportunity}
       />
     </>
   )

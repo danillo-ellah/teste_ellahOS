@@ -4,9 +4,12 @@ import { use } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, ChevronRight, Target } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useOpportunity } from '@/hooks/useCrm'
 import { OpportunityFullDetail } from '@/components/crm/OpportunityFullDetail'
+import { STAGE_CONFIG } from '@/components/crm/CrmKanban'
+import { cn } from '@/lib/utils'
 
 interface CrmDetailPageProps {
   params: Promise<{ id: string }>
@@ -31,9 +34,16 @@ export default function CrmDetailPage({ params }: CrmDetailPageProps) {
         {isLoading ? (
           <Skeleton className="h-4 w-40" />
         ) : (
-          <span className="truncate text-foreground font-medium max-w-xs">
-            {opportunity?.title ?? 'Oportunidade'}
-          </span>
+          <>
+            <span className="truncate text-foreground font-medium max-w-xs">
+              {opportunity?.title ?? 'Oportunidade'}
+            </span>
+            {opportunity?.stage && STAGE_CONFIG[opportunity.stage] && (
+              <Badge className={cn('text-[10px] ml-1', STAGE_CONFIG[opportunity.stage].badgeClass)}>
+                {STAGE_CONFIG[opportunity.stage].label}
+              </Badge>
+            )}
+          </>
         )}
       </div>
 

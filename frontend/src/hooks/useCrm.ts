@@ -506,6 +506,9 @@ export function useConvertToJob(opportunityId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: crmKeys.pipeline() })
       qc.invalidateQueries({ queryKey: crmKeys.dashboard() })
+      qc.invalidateQueries({ queryKey: crmKeys.detail(opportunityId) })
+      qc.invalidateQueries({ queryKey: crmKeys.stats() })
+      qc.invalidateQueries({ queryKey: crmKeys.alerts() })
     },
   })
 }

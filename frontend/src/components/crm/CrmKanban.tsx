@@ -14,6 +14,7 @@ import {
 } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { Plus } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -21,7 +22,6 @@ import type { Opportunity, OpportunityStage, PipelineData } from '@/hooks/useCrm
 import { useUpdateOpportunity } from '@/hooks/useCrm'
 import { OpportunityCard } from './OpportunityCard'
 import { OpportunityDialog } from './OpportunityDialog'
-import { OpportunityDetailDialog } from './OpportunityDetailDialog'
 
 // ---------------------------------------------------------------------------
 // Configuracao visual de cada stage
@@ -208,7 +208,7 @@ interface CrmKanbanProps {
 }
 
 export function CrmKanban({ pipeline, includeClosed }: CrmKanbanProps) {
-  const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null)
+  const router = useRouter()
   const [createInStage, setCreateInStage] = useState<OpportunityStage | null>(null)
 
   return (
@@ -216,20 +216,9 @@ export function CrmKanban({ pipeline, includeClosed }: CrmKanbanProps) {
       <KanbanBoard
         pipeline={pipeline}
         includeClosed={includeClosed}
-        onCardClick={setSelectedOpportunity}
+        onCardClick={(opp) => router.push(`/crm/${opp.id}`)}
         onAddClick={setCreateInStage}
       />
-
-      {/* Dialog de detalhe */}
-      {selectedOpportunity && (
-        <OpportunityDetailDialog
-          opportunityId={selectedOpportunity.id}
-          open={!!selectedOpportunity}
-          onOpenChange={(open) => {
-            if (!open) setSelectedOpportunity(null)
-          }}
-        />
-      )}
 
       {/* Dialog de criacao com stage pre-selecionado */}
       <OpportunityDialog
