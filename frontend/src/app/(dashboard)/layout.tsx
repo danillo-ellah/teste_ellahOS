@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useState, useEffect, useMemo } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
 import { BottomNav } from '@/components/layout/BottomNav'
@@ -37,6 +37,35 @@ export default function DashboardLayout({
   const [mobileOpen, setMobileOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [userId, setUserId] = useState<string>()
+  const router = useRouter()
+
+  // Verificar se o onboarding precisa ser completado (apenas admin/ceo)
+  useEffect(() => {
+    async function checkOnboarding() {
+      try {
+        const supabase = createClient()
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) return
+
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/onboarding/status`,
+          { headers: { Authorization: `Bearer ${session.access_token}` } },
+        )
+        if (res.ok) {
+          const json = await res.json()
+          if (
+            json.data?.tenant?.onboarding_completed === false &&
+            ['admin', 'ceo'].includes(json.data?.profile?.role)
+          ) {
+            router.push('/onboarding')
+          }
+        }
+      } catch {
+        // Silencioso — nao bloquear o dashboard em caso de falha
+      }
+    }
+    checkOnboarding()
+  }, [router])
 
   // Obter userId para Realtime subscription
   useEffect(() => {
