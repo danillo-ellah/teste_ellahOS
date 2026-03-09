@@ -656,6 +656,39 @@ export const DOCUSEAL_STATUSES = [
 
 export type DocuSealStatus = (typeof DOCUSEAL_STATUSES)[number];
 
+// === Onda 1.2: Pos-Producao ===
+
+export const POS_STAGES = [
+  'ingest', 'montagem', 'apresentacao_offline', 'revisao_offline',
+  'aprovado_offline', 'finalizacao', 'apresentacao_online',
+  'revisao_online', 'aprovado_online', 'copias', 'entregue',
+] as const;
+
+export type PosStage = (typeof POS_STAGES)[number];
+
+export const CUT_VERSION_TYPES = ['offline', 'online'] as const;
+export type CutVersionType = (typeof CUT_VERSION_TYPES)[number];
+
+export const CUT_VERSION_STATUSES = ['rascunho', 'enviado', 'aprovado', 'rejeitado'] as const;
+export type CutVersionStatus = (typeof CUT_VERSION_STATUSES)[number];
+
+export interface PosCutVersionRow {
+  id: string;
+  tenant_id: string;
+  deliverable_id: string;
+  job_id: string;
+  version_number: number;
+  version_type: CutVersionType;
+  review_url: string | null;
+  status: CutVersionStatus;
+  revision_notes: string | null;
+  created_by: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // === G-04: Permissoes Drive por Papel ===
 
 // Registro de permissao Drive concedida a membro de job (tabela job_drive_permissions)

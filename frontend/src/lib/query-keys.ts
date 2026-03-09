@@ -348,3 +348,11 @@ export const productionDiaryKeys = {
   list: (jobId: string) => [...productionDiaryKeys.lists(), jobId] as const,
   detail: (id: string) => [...productionDiaryKeys.all, 'detail', id] as const,
 }
+
+export const posProducaoKeys = {
+  all: ['pos-producao'] as const,
+  dashboard: (filters: Record<string, string>) =>
+    [...posProducaoKeys.all, 'dashboard', filters] as const,
+  cutVersions: (deliverableId: string) =>
+    [...posProducaoKeys.all, 'cut-versions', deliverableId] as const,
+}

@@ -9,6 +9,9 @@ import {
   HIRING_STATUSES,
   DELIVERABLE_STATUSES,
   POS_SUB_STATUSES,
+  POS_STAGES,
+  CUT_VERSION_TYPES,
+  CUT_VERSION_STATUSES,
 } from './types.ts';
 
 // Helper: valida dados contra um schema Zod. Lanca AppError se invalido.
@@ -244,6 +247,55 @@ export const UpdateShootingDateSchema = z
   .refine((data) => Object.keys(data).length > 0, {
     message: 'Pelo menos um campo deve ser enviado',
   });
+
+// ===== Schemas de Pos-Producao =====
+
+export const UpdatePosStageSchema = z.object({
+  pos_stage: z.enum(POS_STAGES, {
+    errorMap: () => ({ message: 'Etapa de pos-producao invalida' }),
+  }),
+});
+
+export const UpdatePosAssigneeSchema = z.object({
+  pos_assignee_id: z.string().uuid('pos_assignee_id deve ser UUID valido').nullable(),
+});
+
+export const UpdatePosDriveUrlSchema = z.object({
+  pos_drive_url: z.string().url('URL invalida').max(2000).nullable(),
+});
+
+export const PosBriefingSchema = z.object({
+  codec_master: z.string().max(100).optional().nullable(),
+  codec_entrega: z.string().max(100).optional().nullable(),
+  resolucao: z.string().max(50).optional().nullable(),
+  fps: z.string().max(20).optional().nullable(),
+  aspect_ratio: z.string().max(20).optional().nullable(),
+  lut_name: z.string().max(200).optional().nullable(),
+  audio_specs: z.string().max(500).optional().nullable(),
+  notas_tecnicas: z.string().max(5000).optional().nullable(),
+}).strict();
+
+export const UpdatePosBriefingSchema = z.object({
+  pos_briefing: PosBriefingSchema.nullable(),
+});
+
+export const CreateCutVersionSchema = z.object({
+  version_type: z.enum(CUT_VERSION_TYPES, {
+    errorMap: () => ({ message: 'Tipo de versao deve ser offline ou online' }),
+  }),
+  review_url: z.string().url('URL de review invalida').max(2000).optional().nullable(),
+  revision_notes: z.string().max(5000).optional().nullable(),
+});
+
+export const UpdateCutVersionSchema = z.object({
+  status: z.enum(CUT_VERSION_STATUSES, {
+    errorMap: () => ({ message: 'Status da versao invalido' }),
+  }).optional(),
+  review_url: z.string().url('URL de review invalida').max(2000).optional().nullable(),
+  revision_notes: z.string().max(5000).optional().nullable(),
+}).refine((data) => Object.keys(data).length > 0, {
+  message: 'Pelo menos um campo deve ser enviado',
+});
 
 // Re-exportar z para uso nos handlers
 export { z };
