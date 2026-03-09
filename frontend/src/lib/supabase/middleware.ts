@@ -54,7 +54,8 @@ export async function updateSession(request: NextRequest) {
         request.nextUrl.pathname.startsWith('/portal/') ||
         request.nextUrl.pathname.startsWith('/approve/') ||
         request.nextUrl.pathname.startsWith('/vendor/') ||
-        request.nextUrl.pathname.startsWith('/invite/')
+        request.nextUrl.pathname.startsWith('/invite/') ||
+        request.nextUrl.pathname.startsWith('/landing')
       if (isPublicRoute) {
         return supabaseResponse
       }
