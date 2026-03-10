@@ -452,6 +452,7 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
     area: null,
     items: [
       { label: 'Dashboard', href: '/', icon: 'LayoutDashboard', exact: true },
+      { label: 'Minha Semana', href: '/minha-semana', icon: 'CalendarDays' },
     ],
   },
   {
