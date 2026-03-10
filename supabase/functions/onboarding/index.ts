@@ -45,9 +45,8 @@ Deno.serve(async (req: Request) => {
     console.log('[onboarding/index] request recebido', {
       method,
       segment,
-      userId: auth.userId,
-      tenantId: auth.tenantId,
-      role: auth.role,
+      userId: auth.userId.substring(0, 8),
+      tenantId: auth.tenantId.substring(0, 8),
     });
 
     // GET /onboarding/status

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
@@ -8,9 +8,9 @@ import { toast } from 'sonner'
 
 function getSignupErrorMessage(message: string): string {
   const map: Record<string, string> = {
-    'User already registered': 'Este email ja esta cadastrado. Tente fazer login.',
-    'Email already in use': 'Este email ja esta cadastrado. Tente fazer login.',
-    'Password should be at least 6 characters': 'A senha deve ter no minimo 6 caracteres',
+    'User already registered': 'Verifique seus dados e tente novamente, ou faca login.',
+    'Email already in use': 'Verifique seus dados e tente novamente, ou faca login.',
+    'Password should be at least 6 characters': 'A senha deve ter no minimo 8 caracteres',
     'Unable to validate email address': 'Email invalido. Verifique e tente novamente',
     'Signup is disabled': 'Cadastro desabilitado. Entre em contato com o suporte',
     'For security purposes': 'Aguarde alguns segundos antes de tentar novamente',
@@ -55,8 +55,8 @@ export default function SignupPage() {
       errors.email = 'Email e obrigatorio'
     }
 
-    if (password.length < 6) {
-      errors.password = 'A senha deve ter no minimo 6 caracteres'
+    if (password.length < 8) {
+      errors.password = 'A senha deve ter no minimo 8 caracteres'
     }
 
     if (password !== passwordConfirm) {
@@ -67,10 +67,15 @@ export default function SignupPage() {
     return Object.keys(errors).length === 0
   }
 
+  // Mutex para evitar double-submit
+  const submittingRef = useRef(false)
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
     if (!validate()) return
+    if (submittingRef.current) return
+    submittingRef.current = true
 
     setLoading(true)
 
@@ -89,14 +94,18 @@ export default function SignupPage() {
     if (error) {
       toast.error(getSignupErrorMessage(error.message))
       setLoading(false)
+      submittingRef.current = false
       return
     }
 
     if (data.session) {
+      // Refresh session para obter JWT com tenant_id (setado pelo trigger)
+      await supabase.auth.refreshSession()
       router.push('/onboarding')
     } else {
       setShowConfirmation(true)
       setLoading(false)
+      submittingRef.current = false
     }
   }
 
@@ -213,7 +222,7 @@ export default function SignupPage() {
                 setFieldErrors((prev) => ({ ...prev, password: '' }))
               }
             }}
-            placeholder="Minimo 6 caracteres"
+            placeholder="Minimo 8 caracteres"
             autoComplete="new-password"
             className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />

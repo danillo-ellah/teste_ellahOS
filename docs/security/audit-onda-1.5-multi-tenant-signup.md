@@ -8,7 +8,7 @@
 
 ## RESUMO EXECUTIVO
 
-0 CRITICOS | 2 ALTOS | 5 MEDIOS | 4 BAIXOS
+0 CRITICOS | 2 ALTOS | 5 MEDIOS | 4 BAIXOS — **9 de 11 CORRIGIDOS** (2026-03-10)
 
 Base solida: JWT validado server-side em todas as rotas via getAuthContext(), RLS usando get_tenant_id() do JWT (nunca do body), Zod em todos os handlers PATCH, CORS dinamico com allowlist.
 
@@ -170,14 +170,14 @@ Documentar explicitamente como client-only.
 
 | ID | Severidade | Descricao | Status |
 |----|------------|-----------|--------|
-| ONDA15-ALTO-001 | ALTA | Tenant criado antes da confirmacao de email | ABERTO |
-| ONDA15-ALTO-002 | ALTA | Middleware catch vazio - fail open em falha de auth | ABERTO |
-| ONDA15-MEDIO-001 | MEDIA | JWT sem tenant_id na primeira sessao pos-signup | ABERTO |
-| ONDA15-MEDIO-002 | MEDIA | company_name sem limite de tamanho server-side | ABERTO |
-| ONDA15-MEDIO-003 | MEDIA | logo_url aceita qualquer URL sem validacao de dominio | ABERTO |
-| ONDA15-MEDIO-004 | MEDIA | Redirect onboarding client-side bypassavel | ABERTO |
-| ONDA15-MEDIO-005 | MEDIA | Logs expoem userId/tenantId em producao | ABERTO |
-| ONDA15-BAIXO-001 | BAIXA | Senha minima 6 chars - abaixo do recomendado | ABERTO |
-| ONDA15-BAIXO-002 | BAIXA | CNPJ sem validacao de digitos verificadores | ABERTO |
-| ONDA15-BAIXO-003 | BAIXA | Email enumeration via mensagem diferenciada | ABERTO |
-| ONDA15-BAIXO-004 | BAIXA | Cache de token singleton em api.ts - risco SSR | ABERTO |
+| ONDA15-ALTO-001 | ALTA | Tenant criado antes da confirmacao de email | ABERTO (aceito: job limpeza futuro) |
+| ONDA15-ALTO-002 | ALTA | Middleware catch vazio - fail open em falha de auth | **CORRIGIDO** (2026-03-10) |
+| ONDA15-MEDIO-001 | MEDIA | JWT sem tenant_id na primeira sessao pos-signup | **CORRIGIDO** (2026-03-10) |
+| ONDA15-MEDIO-002 | MEDIA | company_name sem limite de tamanho server-side | **CORRIGIDO** (2026-03-10) |
+| ONDA15-MEDIO-003 | MEDIA | logo_url aceita qualquer URL sem validacao de dominio | **CORRIGIDO** (2026-03-10) |
+| ONDA15-MEDIO-004 | MEDIA | Redirect onboarding client-side bypassavel | **CORRIGIDO** (2026-03-10) |
+| ONDA15-MEDIO-005 | MEDIA | Logs expoem userId/tenantId em producao | **CORRIGIDO** (2026-03-10) |
+| ONDA15-BAIXO-001 | BAIXA | Senha minima 6 chars - abaixo do recomendado | **CORRIGIDO** (2026-03-10) |
+| ONDA15-BAIXO-002 | BAIXA | CNPJ sem validacao de digitos verificadores | **CORRIGIDO** (2026-03-10) |
+| ONDA15-BAIXO-003 | BAIXA | Email enumeration via mensagem diferenciada | **CORRIGIDO** (2026-03-10) |
+| ONDA15-BAIXO-004 | BAIXA | Cache de token singleton em api.ts - risco SSR | ABERTO (baixo risco, doc-only) |

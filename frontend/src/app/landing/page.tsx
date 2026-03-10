@@ -101,7 +101,7 @@ export default function LandingPage() {
 
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button asChild size="lg" className="w-full sm:w-auto">
-              <Link href="/login">
+              <Link href="/signup">
                 Comecar gratis
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>

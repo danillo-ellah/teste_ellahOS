@@ -7,11 +7,51 @@ import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 // Roles que podem atualizar dados da empresa
 const ADMIN_ROLES = ['admin', 'ceo'];
 
+// Validacao de CNPJ com digitos verificadores
+function isValidCnpj(cnpj: string): boolean {
+  const digits = cnpj.replace(/\D/g, '');
+  if (digits.length !== 14) return false;
+  if (/^(\d)\1{13}$/.test(digits)) return false;
+
+  const calcDigit = (slice: string, weights: number[]): number => {
+    const sum = weights.reduce((acc, w, i) => acc + parseInt(slice[i]) * w, 0);
+    const remainder = sum % 11;
+    return remainder < 2 ? 0 : 11 - remainder;
+  };
+
+  const w1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const w2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+
+  const d1 = calcDigit(digits.slice(0, 12), w1);
+  if (d1 !== parseInt(digits[12])) return false;
+
+  const d2 = calcDigit(digits.slice(0, 13), w2);
+  if (d2 !== parseInt(digits[13])) return false;
+
+  return true;
+}
+
 // Schema do passo 1: informacoes da empresa
 const UpdateCompanySchema = z.object({
   name: z.string().min(1, 'Nome da empresa e obrigatorio').max(100),
-  cnpj: z.string().max(20).optional().nullable(),
-  logo_url: z.string().url('URL do logo invalida').optional().nullable(),
+  cnpj: z.string().max(20)
+    .refine((val) => !val || isValidCnpj(val), { message: 'CNPJ invalido' })
+    .optional().nullable(),
+  logo_url: z.string().url('URL do logo invalida')
+    .refine((val) => {
+      if (!val) return true;
+      try {
+        const url = new URL(val);
+        // Exigir HTTPS e bloquear IPs privados / localhost
+        if (url.protocol !== 'https:') return false;
+        const host = url.hostname.toLowerCase();
+        if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0') return false;
+        if (host.startsWith('10.') || host.startsWith('192.168.') || host.startsWith('169.254.')) return false;
+        if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false;
+        return true;
+      } catch { return false; }
+    }, { message: 'URL do logo deve usar HTTPS e nao pode apontar para enderecos internos' })
+    .optional().nullable(),
   city: z.string().max(100).optional().nullable(),
   state: z.string().max(100).optional().nullable(),
 });
@@ -23,9 +63,8 @@ const UpdateCompanySchema = z.object({
  */
 export async function handleUpdateCompany(req: Request, auth: AuthContext): Promise<Response> {
   console.log('[onboarding/update-company] atualizando dados da empresa', {
-    userId: auth.userId,
-    tenantId: auth.tenantId,
-    role: auth.role,
+    userId: auth.userId.substring(0, 8),
+    tenantId: auth.tenantId.substring(0, 8),
   });
 
   // Verificar permissao
@@ -104,9 +143,7 @@ export async function handleUpdateCompany(req: Request, auth: AuthContext): Prom
     });
   }
 
-  console.log('[onboarding/update-company] dados da empresa atualizados', {
-    tenantId: auth.tenantId,
-  });
+  console.log('[onboarding/update-company] dados da empresa atualizados');
 
   return success(tenant, 200, req);
 }

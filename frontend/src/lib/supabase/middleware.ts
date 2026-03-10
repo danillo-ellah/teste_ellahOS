@@ -78,7 +78,17 @@ export async function updateSession(request: NextRequest) {
 
     return supabaseResponse
   } catch {
-    // Se o middleware falhar (ex: Supabase indisponivel), deixar a request passar
-    return NextResponse.next({ request })
+    // Fail-closed: se o middleware falhar (ex: Supabase indisponivel),
+    // redirecionar para login em vez de permitir acesso sem auth.
+    // Exceto rotas publicas que nao precisam de autenticacao.
+    const publicPaths = ['/login', '/signup', '/forgot-password', '/reset-password',
+      '/auth/callback', '/portal/', '/approve/', '/vendor/', '/invite/', '/landing']
+    const isPublic = publicPaths.some((p) => request.nextUrl.pathname.startsWith(p))
+    if (isPublic) {
+      return NextResponse.next({ request })
+    }
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
   }
 }

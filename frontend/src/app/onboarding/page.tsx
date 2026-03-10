@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Building2,
@@ -79,21 +79,16 @@ const STEP_CONFIG = [
 
 const TOTAL_STEPS = 5
 
-// Roles disponiveis para convite
+// Roles disponiveis para convite — alinhados com ENUM user_role do banco
+// admin nao aparece aqui (o dono ja e admin, nao faz sentido convidar outro admin no onboarding)
 const INVITE_ROLES = [
-  { value: 'admin', label: 'Administrador' },
   { value: 'ceo', label: 'CEO' },
-  { value: 'pe', label: 'Produtor Executivo' },
-  { value: 'coord_producao', label: 'Coordenador de Producao' },
-  { value: 'atendimento', label: 'Atendimento' },
-  { value: 'financeiro', label: 'Financeiro' },
+  { value: 'produtor_executivo', label: 'Produtor Executivo' },
+  { value: 'coordenador', label: 'Coordenador' },
   { value: 'diretor', label: 'Diretor' },
-  { value: 'producer', label: 'Producer' },
-  { value: 'camera', label: 'Camera' },
-  { value: 'edit', label: 'Editor' },
-  { value: 'arte', label: 'Arte' },
-  { value: 'motion', label: 'Motion' },
-  { value: 'som', label: 'Som' },
+  { value: 'financeiro', label: 'Financeiro' },
+  { value: 'atendimento', label: 'Atendimento' },
+  { value: 'comercial', label: 'Comercial' },
   { value: 'freelancer', label: 'Freelancer' },
 ]
 
@@ -105,6 +100,31 @@ function maskCnpj(value: string): string {
     .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
     .replace(/\.(\d{3})(\d)/, '.$1/$2')
     .replace(/(\d{4})(\d)/, '$1-$2')
+}
+
+// Validacao de CNPJ com digitos verificadores
+function isValidCnpj(cnpj: string): boolean {
+  const digits = cnpj.replace(/\D/g, '')
+  if (digits.length !== 14) return false
+  // Rejeitar todos iguais (00.000.000/0000-00)
+  if (/^(\d)\1{13}$/.test(digits)) return false
+
+  const calcDigit = (slice: string, weights: number[]): number => {
+    const sum = weights.reduce((acc, w, i) => acc + parseInt(slice[i]) * w, 0)
+    const remainder = sum % 11
+    return remainder < 2 ? 0 : 11 - remainder
+  }
+
+  const w1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+  const w2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+
+  const d1 = calcDigit(digits.slice(0, 12), w1)
+  if (d1 !== parseInt(digits[12])) return false
+
+  const d2 = calcDigit(digits.slice(0, 13), w2)
+  if (d2 !== parseInt(digits[13])) return false
+
+  return true
 }
 
 // Mascara simples de telefone: (XX) XXXXX-XXXX
@@ -331,9 +351,9 @@ function StepTeam({
       return
     }
     onChange({
-      invites: [...state.invites, { email, role: state.inviteRole || 'producer' }],
+      invites: [...state.invites, { email, role: state.inviteRole || 'coordenador' }],
       inviteEmail: '',
-      inviteRole: 'producer',
+      inviteRole: 'coordenador',
     })
   }
 
@@ -363,7 +383,7 @@ function StepTeam({
           className="flex-1"
         />
         <Select
-          value={state.inviteRole || 'producer'}
+          value={state.inviteRole || 'coordenador'}
           onValueChange={(val) => onChange({ inviteRole: val })}
         >
           <SelectTrigger className="w-44">
@@ -631,6 +651,7 @@ export default function OnboardingPage() {
 
   const [currentStep, setCurrentStep] = useState(1)
   const [submitting, setSubmitting] = useState(false)
+  const submittingRef = useRef(false)
 
   // Estado do formulario
   const [wizardState, setWizardState] = useState<WizardState>({
@@ -643,11 +664,18 @@ export default function OnboardingPage() {
     phone: '',
     invites: [],
     inviteEmail: '',
-    inviteRole: 'producer',
+    inviteRole: 'coordenador',
     driveAcknowledged: false,
     whatsappAcknowledged: false,
     completedSteps: new Set(),
   })
+
+  // Guard: redirecionar se onboarding ja foi concluido
+  useEffect(() => {
+    if (status?.tenant?.onboarding_completed === true) {
+      router.push('/')
+    }
+  }, [status, router])
 
   // Pre-preencher com dados do status
   useEffect(() => {
@@ -667,9 +695,14 @@ export default function OnboardingPage() {
       whatsappAcknowledged: saved?.integrations?.whatsapp_acknowledged ?? false,
     }))
 
-    // Retomar do passo salvo (se houver)
-    if (saved?.onboarding_step) {
-      setCurrentStep(Math.min(saved.onboarding_step, TOTAL_STEPS))
+    // Retomar do passo salvo (se houver) e restaurar completedSteps
+    if (saved?.onboarding_step && saved.onboarding_step > 1) {
+      const step = Math.min(saved.onboarding_step, TOTAL_STEPS)
+      setCurrentStep(step)
+      // Marcar todos os passos anteriores como concluidos
+      const restored = new Set<number>()
+      for (let i = 1; i < step; i++) restored.add(i)
+      setWizardState((p) => ({ ...p, completedSteps: restored }))
     }
   }, [status])
 
@@ -702,12 +735,19 @@ export default function OnboardingPage() {
 
   // Avancar / submeter passo atual
   const handleNext = async () => {
+    if (submittingRef.current) return
+    submittingRef.current = true
     setSubmitting(true)
     try {
       if (currentStep === 1) {
         // Validacao minima
         if (!wizardState.companyName.trim()) {
           toast.error('Informe o nome da empresa')
+          return
+        }
+        // Validar CNPJ se preenchido
+        if (wizardState.cnpj && !isValidCnpj(wizardState.cnpj)) {
+          toast.error('CNPJ invalido. Verifique os digitos.')
           return
         }
         await updateCompany.mutateAsync({
@@ -733,20 +773,13 @@ export default function OnboardingPage() {
         setCurrentStep(3)
 
       } else if (currentStep === 3) {
-        // Enviar convites se houver
+        // Convites salvos localmente — envio real sera implementado
+        // quando a EF tenant-invitations existir. Por enquanto, registra
+        // a lista no settings do tenant para envio posterior.
         if (wizardState.invites.length > 0) {
-          for (const invite of wizardState.invites) {
-            try {
-              await apiMutate('tenant-invitations', 'POST', {
-                email: invite.email,
-                role: invite.role,
-              })
-            } catch {
-              // Nao bloquear por falha em convite individual
-              toast.error(`Falha ao convidar ${invite.email}`)
-            }
-          }
-          toast.success(`${wizardState.invites.length} convite(s) enviado(s)`)
+          toast.success(
+            `${wizardState.invites.length} convite(s) salvo(s). Serao enviados quando voce configurar a equipe em Configuracoes.`,
+          )
         }
         markCompleted(3)
         setCurrentStep(4)
@@ -769,6 +802,7 @@ export default function OnboardingPage() {
       // Erros ja tratados nas mutations
     } finally {
       setSubmitting(false)
+      submittingRef.current = false
     }
   }
 

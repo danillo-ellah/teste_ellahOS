@@ -23,9 +23,8 @@ export async function handleUpdateIntegrations(
   auth: AuthContext,
 ): Promise<Response> {
   console.log('[onboarding/update-integrations] registrando ciencia das integracoes', {
-    userId: auth.userId,
-    tenantId: auth.tenantId,
-    role: auth.role,
+    userId: auth.userId.substring(0, 8),
+    tenantId: auth.tenantId.substring(0, 8),
   });
 
   // Verificar permissao
@@ -106,11 +105,7 @@ export async function handleUpdateIntegrations(
     });
   }
 
-  console.log('[onboarding/update-integrations] ciencia das integracoes registrada', {
-    tenantId: auth.tenantId,
-    drive_acknowledged,
-    whatsapp_acknowledged,
-  });
+  console.log('[onboarding/update-integrations] ciencia das integracoes registrada');
 
   return success(
     {

@@ -14,9 +14,8 @@ const ADMIN_ROLES = ['admin', 'ceo'];
  */
 export async function handleComplete(req: Request, auth: AuthContext): Promise<Response> {
   console.log('[onboarding/complete] concluindo onboarding', {
-    userId: auth.userId,
-    tenantId: auth.tenantId,
-    role: auth.role,
+    userId: auth.userId.substring(0, 8),
+    tenantId: auth.tenantId.substring(0, 8),
   });
 
   // Verificar permissao
@@ -75,9 +74,7 @@ export async function handleComplete(req: Request, auth: AuthContext): Promise<R
     });
   }
 
-  console.log('[onboarding/complete] onboarding concluido com sucesso', {
-    tenantId: auth.tenantId,
-  });
+  console.log('[onboarding/complete] onboarding concluido com sucesso');
 
   return success(
     {

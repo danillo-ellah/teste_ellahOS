@@ -1,6 +1,6 @@
 -- =============================================================================
 -- Migration: Multi-tenant signup trigger
--- Data: 2026-03-09
+-- Data: 2026-03-09 (corrigido 2026-03-10)
 --
 -- Contexto:
 --   Cria funcao e trigger em auth.users para automatizar a criacao de tenant +
@@ -8,9 +8,14 @@
 --   Usuarios convidados (sem company_name) nao sao afetados.
 --
 -- Operacoes:
---   1. Garantir colunas company_name e onboarding_completed em tenants
+--   1. Garantir coluna onboarding_completed em tenants (idempotente, ja criada em 110000)
 --   2. CREATE FUNCTION handle_new_user() — SECURITY DEFINER
 --   3. CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users
+--
+-- Fix 2026-03-10:
+--   - Removida coluna company_name (duplicava name)
+--   - Adicionado truncamento de v_company_name (max 100 chars)
+--   - Trigger usa apenas coluna name (nao company_name)
 --
 -- Idempotencia:
 --   - ALTER TABLE ... IF NOT EXISTS para colunas
@@ -21,11 +26,9 @@
 SET search_path TO public;
 
 -- =============================================================================
--- 0. Garantir que as colunas necessarias existem em tenants
---    (podem ter sido criadas via dashboard ou migration remota)
+-- 0. Garantir que a coluna necessaria existe em tenants (idempotente)
 -- =============================================================================
 
-ALTER TABLE tenants ADD COLUMN IF NOT EXISTS company_name TEXT;
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN NOT NULL DEFAULT false;
 
 -- =============================================================================
@@ -43,9 +46,9 @@ DECLARE
   v_tenant_id UUID;
   v_slug TEXT;
 BEGIN
-  -- Extrair metadados do signup
-  v_company_name := NEW.raw_user_meta_data->>'company_name';
-  v_full_name := NEW.raw_user_meta_data->>'full_name';
+  -- Extrair metadados do signup e sanitizar
+  v_company_name := left(trim(NEW.raw_user_meta_data->>'company_name'), 100);
+  v_full_name := left(trim(NEW.raw_user_meta_data->>'full_name'), 100);
 
   -- Se nao tem company_name, e um usuario convidado ou manual — nao criar tenant
   IF v_company_name IS NULL OR v_company_name = '' THEN
@@ -61,12 +64,11 @@ BEGIN
   -- Adicionar hash curto para garantir unicidade
   v_slug := v_slug || '-' || substr(gen_random_uuid()::text, 1, 8);
 
-  -- Criar tenant
-  INSERT INTO public.tenants (name, slug, company_name, onboarding_completed, settings)
+  -- Criar tenant (usa apenas coluna name, sem company_name duplicada)
+  INSERT INTO public.tenants (name, slug, onboarding_completed, settings)
   VALUES (
     v_company_name,
     v_slug,
-    v_company_name,
     false,
     '{"onboarding_completed": false}'::jsonb
   )

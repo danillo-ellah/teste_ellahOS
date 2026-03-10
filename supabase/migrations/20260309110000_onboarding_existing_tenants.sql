@@ -1,25 +1,29 @@
 -- =============================================================================
--- Migration: Marca tenants existentes como onboarding concluido
--- Data: 2026-03-09
+-- Migration: Cria coluna onboarding_completed + marca tenants existentes
+-- Data: 2026-03-09 (corrigido 2026-03-10)
 --
 -- Contexto:
---   O campo onboarding_completed ja existe na tabela tenants. Esta migration
---   apenas garante que todos os tenants criados ANTES da implementacao do
---   wizard de onboarding sejam marcados como concluidos, evitando que usuarios
+--   Cria a coluna onboarding_completed em tenants (necessaria para o wizard)
+--   e marca todos os tenants existentes como concluidos, evitando que usuarios
 --   ja cadastrados sejam redirecionados para o wizard na proxima sessao.
 --
 -- Operacoes:
---   1. UPDATE tenants: onboarding_completed = true para todos os registros
---      que ainda nao estejam marcados (idempotente via WHERE clause)
---   2. UPDATE tenants: merge em settings JSONB adicionando chave
---      "onboarding_completed: true" (preserva chaves existentes)
+--   1. ALTER TABLE: adiciona coluna onboarding_completed (IF NOT EXISTS)
+--   2. UPDATE tenants: onboarding_completed = true para todos os registros
+--   3. UPDATE tenants: merge em settings JSONB
 --
 -- Idempotencia:
---   - Condicao WHERE na operacao 1 evita UPDATE desnecessario
+--   - ADD COLUMN IF NOT EXISTS
+--   - Condicao WHERE evita UPDATE desnecessario
 --   - jsonb_set preserva chaves existentes no JSONB
 -- =============================================================================
 
 SET search_path TO public;
+
+-- =============================================================================
+-- 0. Garantir que a coluna existe ANTES de usa-la
+-- =============================================================================
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN NOT NULL DEFAULT false;
 
 -- =============================================================================
 -- 1. Marcar onboarding_completed = true em todos os tenants existentes

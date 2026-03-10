@@ -13,9 +13,8 @@ const ADMIN_ROLES = ['admin', 'ceo'];
  */
 export async function handleGetStatus(req: Request, auth: AuthContext): Promise<Response> {
   console.log('[onboarding/get-status] buscando status do onboarding', {
-    userId: auth.userId,
-    tenantId: auth.tenantId,
-    role: auth.role,
+    userId: auth.userId.substring(0, 8),
+    tenantId: auth.tenantId.substring(0, 8),
   });
 
   // Verificar permissao
@@ -62,7 +61,7 @@ export async function handleGetStatus(req: Request, auth: AuthContext): Promise<
   }
 
   console.log('[onboarding/get-status] status retornado', {
-    tenantId: auth.tenantId,
+    tenantId: auth.tenantId.substring(0, 8),
     onboarding_completed: tenant.onboarding_completed,
   });
 

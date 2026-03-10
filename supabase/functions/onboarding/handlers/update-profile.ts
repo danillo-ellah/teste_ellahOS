@@ -19,10 +19,9 @@ const UpdateProfileSchema = z.object({
  * Tambem avanca o indicador de passo para 3 dentro de settings do tenant.
  */
 export async function handleUpdateProfile(req: Request, auth: AuthContext): Promise<Response> {
-  console.log('[onboarding/update-profile] atualizando perfil do usuario', {
-    userId: auth.userId,
-    tenantId: auth.tenantId,
-    role: auth.role,
+  console.log('[onboarding/update-profile] atualizando perfil', {
+    userId: auth.userId.substring(0, 8),
+    tenantId: auth.tenantId.substring(0, 8),
   });
 
   // Verificar permissao
@@ -104,10 +103,7 @@ export async function handleUpdateProfile(req: Request, auth: AuthContext): Prom
     });
   }
 
-  console.log('[onboarding/update-profile] perfil atualizado', {
-    userId: auth.userId,
-    tenantId: auth.tenantId,
-  });
+  console.log('[onboarding/update-profile] perfil atualizado');
 
   return success(profile, 200, req);
 }
