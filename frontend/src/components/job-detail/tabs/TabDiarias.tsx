@@ -13,6 +13,7 @@ import {
   Trash2,
   CheckCircle2,
   Circle,
+  FileDown,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -32,9 +33,9 @@ import {
   useRemoveShootingDate,
 } from '@/hooks/useJobShootingDates'
 import { useProductionDiaryList } from '@/hooks/useProductionDiary'
-import { ApiRequestError } from '@/lib/api'
+import { ApiRequestError, apiGet } from '@/lib/api'
 import { formatDate, formatTime } from '@/lib/format'
-import type { JobDetail, JobShootingDate } from '@/types/jobs'
+import type { JobDetail, JobShootingDate, JobTeamMember } from '@/types/jobs'
 
 interface TabDiariasProps {
   job: JobDetail
@@ -56,6 +57,7 @@ export function TabDiarias({ job }: TabDiariasProps) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<JobShootingDate | undefined>()
   const [deleting, setDeleting] = useState<JobShootingDate | null>(null)
+  const [exportingId, setExportingId] = useState<string | null>(null)
 
   // Mapa de shooting_date -> tem diario
   const diaryDateSet = useMemo(() => {
@@ -73,6 +75,21 @@ export function TabDiarias({ job }: TabDiariasProps) {
     const params = new URLSearchParams(searchParams.toString())
     params.set('tab', 'diario')
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+  }
+
+  async function handleExportCallsheet(d: JobShootingDate) {
+    setExportingId(d.id)
+    try {
+      const teamRes = await apiGet<JobTeamMember[]>('jobs-team', {}, job.id)
+      const team = teamRes.data ?? []
+      const { generateCallsheetPdf } = await import('@/lib/pdf/callsheet-pdf')
+      await generateCallsheetPdf({ job, shootingDate: d, team })
+      toast.success('Callsheet exportada')
+    } catch {
+      toast.error('Erro ao gerar callsheet')
+    } finally {
+      setExportingId(null)
+    }
   }
 
   function handleOpenAdd() {
@@ -251,6 +268,10 @@ export function TabDiarias({ job }: TabDiariasProps) {
                     <DropdownMenuItem onClick={() => handleOpenEdit(d)}>
                       <Pencil className="size-4" />
                       Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExportCallsheet(d)} disabled={exportingId === d.id}>
+                      <FileDown className="size-4" />
+                      {exportingId === d.id ? 'Gerando...' : 'Exportar Callsheet'}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => setDeleting(d)}

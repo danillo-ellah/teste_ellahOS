@@ -17,6 +17,7 @@ import {
   ChevronUp,
   BookOpen,
   MapPin,
+  FileDown,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
@@ -292,6 +293,7 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
   const [editingEntry, setEditingEntry] = useState<DiaryEntry | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [photoEntryId, setPhotoEntryId] = useState<string | null>(null)
+  const [exportingDayId, setExportingDayId] = useState<string | null>(null)
 
   // Estado do formulario
   const [form, setForm] = useState<DiaryEntryFormData>(defaultForm)
@@ -319,6 +321,19 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
   }, [entries])
 
   // --- Handlers ---
+
+  async function handleExportSetReport(entry: DiaryEntry) {
+    setExportingDayId(entry.id)
+    try {
+      const { generateSetReportPdf } = await import('@/lib/pdf/set-report-pdf')
+      await generateSetReportPdf({ job, entry })
+      toast.success('PDF exportado')
+    } catch {
+      toast.error('Erro ao gerar PDF')
+    } finally {
+      setExportingDayId(null)
+    }
+  }
 
   function openCreate() {
     setForm(defaultForm())
@@ -489,6 +504,16 @@ export function TabProductionDiary({ job }: TabProductionDiaryProps) {
 
                     {/* Acoes */}
                     <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleExportSetReport(entry)}
+                        className="size-9"
+                        disabled={exportingDayId === entry.id}
+                        aria-label={`Exportar PDF dia ${entry.day_number}`}
+                      >
+                        <FileDown className="size-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"

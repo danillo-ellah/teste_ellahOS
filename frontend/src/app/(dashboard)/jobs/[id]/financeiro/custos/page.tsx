@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { FileDown } from 'lucide-react'
 import { useCostItems } from '@/hooks/useCostItems'
 import { useJob } from '@/hooks/useJob'
 import { createClient } from '@/lib/supabase/client'
@@ -114,6 +115,25 @@ export default function JobCostsPage({ params }: PageProps) {
     setPaymentItemIds([])
   }
 
+  const [isExportingPdf, setIsExportingPdf] = useState(false)
+
+  const handleExportPdf = useCallback(async () => {
+    if (!items.length || !job) {
+      toast.error('Nenhum item de custo para exportar')
+      return
+    }
+    setIsExportingPdf(true)
+    try {
+      const { generateBudgetPdf } = await import('@/lib/pdf/budget-pdf')
+      await generateBudgetPdf({ job, costItems: items })
+      toast.success('PDF exportado')
+    } catch {
+      toast.error('Erro ao gerar PDF')
+    } finally {
+      setIsExportingPdf(false)
+    }
+  }, [items, job])
+
   const handleExport = useCallback(async () => {
     try {
       const supabase = createClient()
@@ -170,6 +190,10 @@ export default function JobCostsPage({ params }: PageProps) {
         <div className="flex gap-2 flex-shrink-0">
           <Button variant="outline" size="sm" onClick={handleExport}>
             Exportar CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportPdf} disabled={isExportingPdf}>
+            <FileDown className="size-4 mr-1.5" />
+            {isExportingPdf ? 'Gerando...' : 'Exportar PDF'}
           </Button>
           <Button size="sm" onClick={handleAddNew}>
             Adicionar Item
