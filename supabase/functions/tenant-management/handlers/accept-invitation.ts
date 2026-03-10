@@ -49,8 +49,9 @@ export async function handleAcceptInvitation(req: Request): Promise<Response> {
 
   const { token, user_id } = parseResult.data;
 
-  // Tentar extrair user_id do Authorization header se nao foi fornecido no body
+  // Tentar extrair user_id e email do Authorization header se nao foi fornecido no body
   let resolvedUserId = user_id;
+  let resolvedUserEmail: string | null = null;
   if (!resolvedUserId) {
     const authHeader = req.headers.get('Authorization');
     if (authHeader?.startsWith('Bearer ')) {
@@ -60,6 +61,7 @@ export async function handleAcceptInvitation(req: Request): Promise<Response> {
         const { data: { user } } = await serviceClient.auth.getUser(jwtToken);
         if (user?.id) {
           resolvedUserId = user.id;
+          resolvedUserEmail = user.email ?? null;
         }
       } catch {
         // Ignora erro — continua sem user_id
@@ -139,6 +141,26 @@ export async function handleAcceptInvitation(req: Request): Promise<Response> {
       { error: { code: 'BUSINESS_RULE_VIOLATION', message: 'Este convite expirou' } },
       422,
     );
+  }
+
+  // Verificar se o email do usuario logado corresponde ao email do convite
+  // Previne que usuario A aceite convite destinado ao usuario B
+  if (resolvedUserEmail && invitation.email) {
+    if (resolvedUserEmail.toLowerCase() !== invitation.email.toLowerCase()) {
+      console.warn('[tenant-management/accept-invitation] email mismatch', {
+        userEmail: resolvedUserEmail.substring(0, 3) + '***',
+        inviteEmail: invitation.email.substring(0, 3) + '***',
+      });
+      return jsonPublic(
+        {
+          error: {
+            code: 'FORBIDDEN',
+            message: 'Este convite foi enviado para outro email. Faca login com o email correto.',
+          },
+        },
+        403,
+      );
+    }
   }
 
   // Marcar convite como aceito

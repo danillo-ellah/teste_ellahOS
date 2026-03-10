@@ -1,7 +1,7 @@
 import type { AuthContext } from '../../_shared/auth.ts';
 import { AppError } from '../../_shared/errors.ts';
 import { success } from '../../_shared/response.ts';
-import { getSupabaseClient } from '../../_shared/supabase-client.ts';
+import { getSupabaseClient, getServiceClient } from '../../_shared/supabase-client.ts';
 
 // Roles que podem concluir o onboarding
 const ADMIN_ROLES = ['admin', 'ceo'];
@@ -72,6 +72,20 @@ export async function handleComplete(req: Request, auth: AuthContext): Promise<R
     throw new AppError('INTERNAL_ERROR', 'Erro ao concluir onboarding', 500, {
       detail: updateError.message,
     });
+  }
+
+  // Atualizar app_metadata do usuario para refletir onboarding concluido
+  // Isso permite que o middleware redirecione corretamente
+  try {
+    const service = getServiceClient();
+    await service.auth.admin.updateUserById(auth.userId, {
+      app_metadata: {
+        onboarding_completed: true,
+      },
+    });
+  } catch (err) {
+    // Nao bloqueia — o tenant ja foi atualizado
+    console.warn('[onboarding/complete] erro ao atualizar app_metadata:', err);
   }
 
   console.log('[onboarding/complete] onboarding concluido com sucesso');

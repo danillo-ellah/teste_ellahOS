@@ -76,6 +76,22 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(new URL('/', request.url))
     }
 
+    // Guard de onboarding: se logado mas onboarding nao concluido, redirecionar para /onboarding
+    // (exceto se ja esta no onboarding ou em rotas publicas)
+    if (
+      user &&
+      !request.nextUrl.pathname.startsWith('/onboarding') &&
+      !request.nextUrl.pathname.startsWith('/auth/callback')
+    ) {
+      // Verificar app_metadata no JWT para onboarding_completed
+      // O campo e setado pelo EF complete-onboarding
+      const appMeta = (user as unknown as { app_metadata?: Record<string, unknown> })
+        .app_metadata
+      if (appMeta && appMeta.onboarding_completed === false) {
+        return NextResponse.redirect(new URL('/onboarding', request.url))
+      }
+    }
+
     return supabaseResponse
   } catch {
     // Fail-closed: se o middleware falhar (ex: Supabase indisponivel),

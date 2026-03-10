@@ -911,44 +911,46 @@ export default function OnboardingPage() {
         </CardContent>
       </Card>
 
-      {/* Navegacao */}
-      <div className="flex items-center justify-between gap-3">
-        <Button
-          variant="outline"
-          onClick={handleBack}
-          disabled={currentStep === 1 || submitting}
-          className="w-24"
-        >
-          Anterior
-        </Button>
-
-        <div className="flex items-center gap-2">
-          {isOptionalStep && (
-            <Button
-              variant="ghost"
-              onClick={handleSkip}
-              disabled={submitting}
-            >
-              Pular
-            </Button>
-          )}
+      {/* Navegacao — sticky no mobile para nao ser coberto pelo teclado */}
+      <div className="sticky bottom-0 z-10 bg-background/95 backdrop-blur-sm border-t border-border/40 -mx-4 px-4 py-3 sm:relative sm:bottom-auto sm:z-auto sm:bg-transparent sm:backdrop-blur-none sm:border-0 sm:mx-0 sm:px-0 sm:py-0">
+        <div className="flex items-center justify-between gap-3">
           <Button
-            onClick={handleNext}
-            disabled={submitting}
-            className="w-32"
+            variant="outline"
+            onClick={handleBack}
+            disabled={currentStep === 1 || submitting}
+            className="w-24"
           >
-            {submitting ? (
-              <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                Salvando...
-              </span>
-            ) : (
-              <span className="flex items-center gap-1">
-                {nextLabel}
-                <ChevronRight className="w-4 h-4" />
-              </span>
-            )}
+            Anterior
           </Button>
+
+          <div className="flex items-center gap-2">
+            {isOptionalStep && (
+              <Button
+                variant="ghost"
+                onClick={handleSkip}
+                disabled={submitting}
+              >
+                Pular
+              </Button>
+            )}
+            <Button
+              onClick={handleNext}
+              disabled={submitting}
+              className="w-32"
+            >
+              {submitting ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                  Salvando...
+                </span>
+              ) : (
+                <span className="flex items-center gap-1">
+                  {nextLabel}
+                  <ChevronRight className="w-4 h-4" />
+                </span>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

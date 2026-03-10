@@ -281,11 +281,18 @@ export default function InvitePage({
             href={`/login?returnUrl=/invite/${token}`}
             className="inline-flex h-9 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90"
           >
-            Fazer login primeiro
+            Fazer login
+          </Link>
+
+          <Link
+            href={`/signup`}
+            className="inline-flex h-9 w-full items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            Criar conta
           </Link>
 
           <p className="text-xs text-center text-muted-foreground">
-            Apos o login, voce sera redirecionado de volta para esta pagina.
+            Apos o login ou cadastro, volte a esta pagina para aceitar o convite.
           </p>
         </div>
       )}
