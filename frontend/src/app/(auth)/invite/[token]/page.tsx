@@ -25,11 +25,11 @@ const ROLE_LABELS: Record<string, string> = {
   admin: 'Administrador',
   ceo: 'CEO',
   produtor_executivo: 'Produtor Executivo',
-  coordenador_producao: 'Coord. Producao',
+  coordenador: 'Coordenador',
   diretor: 'Diretor',
   financeiro: 'Financeiro',
-  assistente: 'Assistente',
-  membro: 'Membro',
+  atendimento: 'Atendimento',
+  comercial: 'Comercial',
   freelancer: 'Freelancer',
 }
 
