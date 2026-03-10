@@ -9,6 +9,7 @@ import { handleUpdateCompany } from './handlers/update-company.ts';
 import { handleUpdateProfile } from './handlers/update-profile.ts';
 import { handleUpdateIntegrations } from './handlers/update-integrations.ts';
 import { handleComplete } from './handlers/complete.ts';
+import { handleSeedDemoData } from './handlers/seed-demo-data.ts';
 
 // Roteador da Edge Function de onboarding
 // Rotas:
@@ -17,6 +18,7 @@ import { handleComplete } from './handlers/complete.ts';
 //   PATCH /onboarding/profile     → passo 2: dados do perfil do usuario
 //   PATCH /onboarding/integrations → passo 4: ciencia das integracoes
 //   PATCH /onboarding/complete    → passo 5: conclusao do onboarding
+//   POST  /onboarding/seed-demo   → carrega dados de exemplo no workspace
 
 Deno.serve(async (req: Request) => {
   // CORS pre-flight
@@ -72,6 +74,11 @@ Deno.serve(async (req: Request) => {
     // PATCH /onboarding/complete
     if (method === 'PATCH' && segment === 'complete') {
       return await handleComplete(req, auth);
+    }
+
+    // POST /onboarding/seed-demo
+    if (method === 'POST' && segment === 'seed-demo') {
+      return await handleSeedDemoData(req, auth);
     }
 
     return error(

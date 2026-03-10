@@ -13,6 +13,8 @@ import {
   Plus,
   ExternalLink,
   ChevronRight,
+  ArrowRight,
+  Sparkles,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -558,6 +560,10 @@ function StepDone({
   companyName: string
   completedSteps: Set<number>
 }) {
+  const [seedLoading, setSeedLoading] = useState(false)
+  const seedingRef = useRef(false)
+  const [seedDone, setSeedDone] = useState(false)
+
   const STEP_LABELS: Record<number, string> = {
     1: 'Dados da empresa',
     2: 'Perfil configurado',
@@ -571,6 +577,34 @@ function StepDone({
     { label: 'Financeiro', href: '/financeiro', description: 'Gestao financeira' },
     { label: 'Equipe', href: '/settings/team', description: 'Gerenciar membros' },
   ]
+
+  // Carregar dados de exemplo via POST /onboarding/seed-demo
+  const handleSeedDemo = async () => {
+    if (seedingRef.current || seedDone) return
+    seedingRef.current = true
+    setSeedLoading(true)
+    try {
+      await apiMutate('onboarding', 'POST', {}, 'seed-demo')
+      setSeedDone(true)
+      toast.success('Dados de exemplo carregados! Explore o dashboard para ver como o sistema funciona.')
+    } catch (err: unknown) {
+      // Conflito = seed ja foi executado (idempotencia)
+      if (
+        err &&
+        typeof err === 'object' &&
+        'status' in err &&
+        (err as { status: number }).status === 409
+      ) {
+        setSeedDone(true)
+        toast.info('Dados de exemplo ja estavam carregados.')
+      } else {
+        toast.error('Nao foi possivel carregar os dados de exemplo. Tente novamente.')
+      }
+    } finally {
+      setSeedLoading(false)
+      seedingRef.current = false
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -612,6 +646,46 @@ function StepDone({
             </div>
           )
         })}
+      </div>
+
+      {/* Card: carregar dados de exemplo */}
+      <div className="rounded-lg border border-dashed p-4 space-y-3">
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+            <Sparkles className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-sm">Explorar com dados de exemplo</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Cria 2 clientes, 3 jobs e 6 entregaveis de exemplo para voce ver o sistema funcionando antes de inserir dados reais.
+            </p>
+          </div>
+        </div>
+        <Button
+          type="button"
+          variant={seedDone ? 'outline' : 'secondary'}
+          size="sm"
+          onClick={handleSeedDemo}
+          disabled={seedLoading || seedDone}
+          className="w-full gap-2"
+        >
+          {seedLoading ? (
+            <>
+              <span className="w-3.5 h-3.5 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+              Carregando dados...
+            </>
+          ) : seedDone ? (
+            <>
+              <Check className="w-3.5 h-3.5 text-green-500" />
+              Dados de exemplo carregados
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-3.5 h-3.5" />
+              Carregar dados de exemplo
+            </>
+          )}
+        </Button>
       </div>
 
       {/* Atalhos rapidos */}
@@ -849,10 +923,6 @@ export default function OnboardingPage() {
     5: 'Seu espaco de trabalho esta configurado.',
   }
 
-  // Determinar label do botao principal
-  const nextLabel =
-    currentStep === TOTAL_STEPS ? 'Comecar' : 'Proximo'
-
   const isOptionalStep = currentStep === 3 || currentStep === 4
 
   if (isLoading) {
@@ -872,6 +942,11 @@ export default function OnboardingPage() {
         completedSteps={wizardState.completedSteps}
         onStepClick={handleStepClick}
       />
+
+      {/* Indicador textual de progresso — visivel apenas no mobile */}
+      <p className="sm:hidden text-center text-xs text-muted-foreground -mt-4">
+        Passo {currentStep} de {TOTAL_STEPS} — {STEP_CONFIG[currentStep - 1].label}
+      </p>
 
       {/* Card do passo */}
       <Card>
@@ -913,6 +988,13 @@ export default function OnboardingPage() {
 
       {/* Navegacao — sticky no mobile para nao ser coberto pelo teclado */}
       <div className="sticky bottom-0 z-10 bg-background/95 backdrop-blur-sm border-t border-border/40 -mx-4 px-4 py-3 sm:relative sm:bottom-auto sm:z-auto sm:bg-transparent sm:backdrop-blur-none sm:border-0 sm:mx-0 sm:px-0 sm:py-0">
+        {/* Texto explicativo para passos opcionais */}
+        {isOptionalStep && (
+          <p className="text-center text-xs text-muted-foreground mb-2">
+            Voce pode configurar isso depois em Configuracoes
+          </p>
+        )}
+
         <div className="flex items-center justify-between gap-3">
           <Button
             variant="outline"
@@ -926,30 +1008,52 @@ export default function OnboardingPage() {
           <div className="flex items-center gap-2">
             {isOptionalStep && (
               <Button
-                variant="ghost"
+                variant="outline"
                 onClick={handleSkip}
                 disabled={submitting}
               >
-                Pular
+                Pular etapa
               </Button>
             )}
-            <Button
-              onClick={handleNext}
-              disabled={submitting}
-              className="w-32"
-            >
-              {submitting ? (
-                <span className="flex items-center gap-2">
-                  <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                  Salvando...
-                </span>
-              ) : (
-                <span className="flex items-center gap-1">
-                  {nextLabel}
-                  <ChevronRight className="w-4 h-4" />
-                </span>
-              )}
-            </Button>
+
+            {currentStep === TOTAL_STEPS ? (
+              <Button
+                onClick={handleNext}
+                disabled={submitting}
+                size="lg"
+                className="gap-2"
+              >
+                {submitting ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                    Finalizando...
+                  </>
+                ) : (
+                  <>
+                    Ir para o Dashboard
+                    <ArrowRight className="w-5 h-5" />
+                  </>
+                )}
+              </Button>
+            ) : (
+              <Button
+                onClick={handleNext}
+                disabled={submitting}
+                className="w-32"
+              >
+                {submitting ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                    Salvando...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1">
+                    Proximo
+                    <ChevronRight className="w-4 h-4" />
+                  </span>
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </div>
