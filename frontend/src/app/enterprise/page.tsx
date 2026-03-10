@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import {
   Shield,
   Upload,
@@ -82,6 +82,7 @@ type FormState = {
   company: string
   phone: string
   message: string
+  website: string // honeypot — campo invisivel
 }
 
 const emptyForm: FormState = {
@@ -90,11 +91,17 @@ const emptyForm: FormState = {
   company: '',
   phone: '',
   message: '',
+  website: '',
 }
+
+type SubmitStatus = 'idle' | 'submitting' | 'success' | 'error'
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 
 export default function EnterprisePage() {
   const [form, setForm] = useState<FormState>(emptyForm)
-  const submittingRef = useRef(false)
+  const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle')
+  const [submitError, setSubmitError] = useState('')
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -103,36 +110,37 @@ export default function EnterprisePage() {
     setForm((prev) => ({ ...prev, [name]: value }))
   }
 
-  function buildMailtoHref(): string {
-    const subject = encodeURIComponent(
-      `Interesse Enterprise — ${form.company || form.name}`,
-    )
-    const body = encodeURIComponent(
-      [
-        `Nome: ${form.name}`,
-        `Email: ${form.email}`,
-        `Empresa: ${form.company}`,
-        `Telefone: ${form.phone}`,
-        '',
-        `Mensagem:`,
-        form.message,
-      ].join('\n'),
-    )
-    return `mailto:comercial@ellahfilmes.com?subject=${subject}&body=${body}`
-  }
-
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (submittingRef.current) return
-    submittingRef.current = true
+    if (submitStatus === 'submitting') return
+    setSubmitStatus('submitting')
+    setSubmitError('')
 
-    const href = buildMailtoHref()
-    window.location.href = href
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/enterprise-leads`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          company: form.company,
+          phone: form.phone,
+          message: form.message,
+          website: form.website, // honeypot
+        }),
+      })
 
-    // Libera o mutex apos um breve delay para evitar duplo envio por clique rapido
-    setTimeout(() => {
-      submittingRef.current = false
-    }, 2000)
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.error?.message || 'Erro ao enviar formulario')
+      }
+
+      setSubmitStatus('success')
+      setForm(emptyForm)
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Erro ao enviar')
+      setSubmitStatus('error')
+    }
   }
 
   const isValid =
@@ -275,9 +283,39 @@ export default function EnterprisePage() {
               </p>
             </div>
 
+            {submitStatus === 'success' ? (
+              <Card className="border-primary/30 bg-primary/5">
+                <CardContent className="pt-6 text-center space-y-3">
+                  <CheckCircle2 className="mx-auto h-12 w-12 text-primary" />
+                  <h3 className="text-lg font-semibold">Mensagem enviada!</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Nossa equipe entrara em contato em ate 1 dia util.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSubmitStatus('idle')}
+                  >
+                    Enviar outra mensagem
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
             <Card className="border-border/60">
               <CardContent className="pt-6">
                 <form onSubmit={handleSubmit} className="space-y-5">
+                  {/* Honeypot — invisivel para usuarios, bots preenchem */}
+                  <div className="absolute left-[-9999px]" aria-hidden="true">
+                    <input
+                      type="text"
+                      name="website"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      value={form.website}
+                      onChange={handleChange}
+                    />
+                  </div>
+
                   {/* Nome */}
                   <div className="space-y-2">
                     <Label htmlFor="name">
@@ -347,7 +385,7 @@ export default function EnterprisePage() {
                     <Textarea
                       id="message"
                       name="message"
-                      placeholder="Conte um pouco sobre sua operacao, numero de usuarios, integrações de interesse..."
+                      placeholder="Conte um pouco sobre sua operacao, numero de usuarios, integracoes de interesse..."
                       value={form.message}
                       onChange={handleChange}
                       rows={4}
@@ -355,18 +393,23 @@ export default function EnterprisePage() {
                     />
                   </div>
 
+                  {submitError && (
+                    <p className="text-sm text-destructive">{submitError}</p>
+                  )}
+
                   <Button
                     type="submit"
                     size="lg"
                     className="w-full"
-                    disabled={!isValid}
+                    disabled={!isValid || submitStatus === 'submitting'}
                   >
-                    Enviar mensagem
+                    {submitStatus === 'submitting' ? 'Enviando...' : 'Enviar mensagem'}
                     <Send className="ml-2 h-4 w-4" />
                   </Button>
                 </form>
               </CardContent>
             </Card>
+            )}
 
             {/* CTA alternativo */}
             <div className="mt-6 text-center">
