@@ -1661,3 +1661,25 @@ A Fase 10 adiciona 6 tabelas financeiras (cost_categories, vendors, bank_account
 | FASE10-BAIXO-002 | BAIXA | vendors/create expoe dados pessoais em 409 | ABERTO (deferred) |
 | FASE10-BAIXO-003 | BAIXA | CORS hardcoded inline em vendors/create | ABERTO (deferred) |
 
+
+---
+
+## AUDITORIA ONDA 1.5 - MULTI-TENANT SIGNUP (2026-03-09)
+
+**Escopo:** signup/page.tsx, onboarding/page.tsx, useOnboarding.ts, EF onboarding (5 handlers), migrations 20260309120000 e 20260309110000, middleware.ts, layout.tsx, api.ts
+**Detalhe completo:** docs/security/audit-onda-1.5-multi-tenant-signup.md
+**Resumo:** 0 CRITICOS | 2 ALTOS | 5 MEDIOS | 4 BAIXOS
+
+| ID | Severidade | Descricao | Status |
+|----|------------|-----------|--------|
+| ONDA15-ALTO-001 | ALTA | Tenant criado antes da confirmacao de email | ABERTO |
+| ONDA15-ALTO-002 | ALTA | Middleware catch vazio - fail open em falha de auth | ABERTO |
+| ONDA15-MEDIO-001 | MEDIA | JWT sem tenant_id na primeira sessao pos-signup | ABERTO |
+| ONDA15-MEDIO-002 | MEDIA | company_name sem limite de tamanho server-side | ABERTO |
+| ONDA15-MEDIO-003 | MEDIA | logo_url aceita qualquer URL sem validacao de dominio | ABERTO |
+| ONDA15-MEDIO-004 | MEDIA | Redirect onboarding client-side bypassavel | ABERTO |
+| ONDA15-MEDIO-005 | MEDIA | Logs expoem userId/tenantId em producao | ABERTO |
+| ONDA15-BAIXO-001 | BAIXA | Senha minima 6 chars - abaixo do recomendado | ABERTO |
+| ONDA15-BAIXO-002 | BAIXA | CNPJ sem validacao de digitos verificadores | ABERTO |
+| ONDA15-BAIXO-003 | BAIXA | Email enumeration via mensagem diferenciada | ABERTO |
+| ONDA15-BAIXO-004 | BAIXA | Cache de token singleton em api.ts - risco SSR | ABERTO |
