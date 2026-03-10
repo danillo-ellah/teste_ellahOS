@@ -502,6 +502,7 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
       { label: 'Pre-Producao', href: '/admin/pre-producao', icon: 'ClipboardCheck', adminOnly: true },
       { label: 'Categorias Custo', href: '/admin/financeiro/categorias', icon: 'ListTree', adminOnly: true },
       { label: 'Importar Dados', href: '/admin/import', icon: 'Upload', adminOnly: true },
+      { label: 'Audit Log', href: '/admin/audit-log', icon: 'FileCheck2', adminOnly: true },
     ],
   },
 ]
