@@ -20,7 +20,7 @@ function getSignupErrorMessage(message: string): string {
   const key = Object.keys(map).find((k) => message.toLowerCase().includes(k.toLowerCase()))
   if (key) return map[key]
   console.error('[signup] Auth error:', message)
-  return `Erro: ${message}`
+  return 'Verifique seus dados e tente novamente.'
 }
 
 function FieldError({ message }: { message?: string }) {

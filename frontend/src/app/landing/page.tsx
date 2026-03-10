@@ -185,7 +185,7 @@ export default function LandingPage() {
             financeiro.
           </p>
           <Button asChild size="lg" className="mt-8">
-            <Link href="/login">
+            <Link href="/signup">
               Comecar gratis
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
