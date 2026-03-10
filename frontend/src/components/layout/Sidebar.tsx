@@ -30,6 +30,7 @@ import {
   Headset,
   TrendingUp,
   Scissors,
+  Upload,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -71,6 +72,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Headset,
   TrendingUp,
   Scissors,
+  Upload,
 }
 
 interface SidebarProps {
