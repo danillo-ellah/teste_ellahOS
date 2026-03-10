@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
-import { apiMutate, safeErrorMessage } from '@/lib/api'
+// apiMutate sera usado quando EF tenant-invitations for implementada
 
 import {
   useOnboardingStatus,
