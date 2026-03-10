@@ -86,6 +86,8 @@ interface KpiCardProps {
   urgent?: boolean
   /** Ponto vermelho pulsando no icone */
   urgentDot?: boolean
+  /** Tooltip exibido ao passar o mouse */
+  tooltip?: string
 }
 
 function KpiCard({
@@ -102,10 +104,12 @@ function KpiCard({
   progressColor,
   urgent,
   urgentDot,
+  tooltip,
 }: KpiCardProps) {
   return (
     <Link
       href={href}
+      title={tooltip}
       className={cn(
         'group relative flex min-h-[120px] flex-col rounded-xl border bg-card p-5 shadow-sm transition-all duration-150',
         'hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50 focus-visible:ring-offset-2',
@@ -269,16 +273,17 @@ export function KpiCards({ data, isLoading }: KpiCardsProps) {
         }
       />
 
-      {/* Health Score Medio */}
+      {/* Saude dos Jobs */}
       <KpiCard
         icon={Activity}
         iconColor="text-blue-500"
-        label="Health Score Medio"
+        label="Saude dos Jobs"
         value={formatHealthScore(healthScore)}
         href="/jobs"
         trendDirection="neutral"
         progressValue={healthScore}
         progressColor={healthProgressColor}
+        tooltip="Indica se seus jobs estao em dia (prazos, margem, entregas). 100 = perfeito."
       />
 
       {/* Aprovacoes Pendentes - ocupa 2 colunas no mobile */}

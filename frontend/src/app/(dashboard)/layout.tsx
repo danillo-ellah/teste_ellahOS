@@ -18,6 +18,9 @@ import { createClient } from '@/lib/supabase/client'
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications'
 import { useNfStats } from '@/hooks/useNf'
 import { getActiveArea, AREA_CONFIG } from '@/lib/constants'
+import { BreadcrumbProvider, useBreadcrumb } from '@/lib/breadcrumb-context'
+import { useDashboardKpis } from '@/hooks/use-dashboard'
+import { useCrmDashboard } from '@/hooks/useCrm'
 
 // Hook para evitar hydration mismatch de IDs Radix (SSR gera IDs diferentes do client)
 function useMounted() {
@@ -26,11 +29,13 @@ function useMounted() {
   return mounted
 }
 
-export default function DashboardLayout({
+// Layout interno — usa o BreadcrumbContext provido pelo wrapper abaixo
+function DashboardLayoutInner({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const { overrideItems } = useBreadcrumb()
   const mounted = useMounted()
   const isDesktop = useIsDesktop()
   const [collapsed, setCollapsed] = useLocalStorage('sidebar-collapsed', false)
@@ -93,9 +98,21 @@ export default function DashboardLayout({
   // NF pending count para badge no sidebar
   const { data: nfStats } = useNfStats()
   const nfPendingCount = (nfStats?.pending_review ?? 0) + (nfStats?.auto_matched ?? 0)
-  const sidebarBadges = nfPendingCount > 0
-    ? { '/financeiro/nf-validation': nfPendingCount }
-    : undefined
+
+  // Jobs ativos e oportunidades abertas para badges da sidebar (QW-7)
+  const { data: kpis } = useDashboardKpis()
+  const { data: crmDashboard } = useCrmDashboard()
+  const activeJobsCount = kpis?.active_jobs ?? 0
+  const openOpportunitiesCount = crmDashboard?.pipeline_summary?.total_count ?? 0
+
+  // Consolida todos os badges da sidebar
+  const sidebarBadges = useMemo(() => {
+    const badges: Record<string, number> = {}
+    if (nfPendingCount > 0) badges['/financeiro/nf-validation'] = nfPendingCount
+    if (activeJobsCount > 0) badges['/jobs'] = activeJobsCount
+    if (openOpportunitiesCount > 0) badges['/crm'] = openOpportunitiesCount
+    return Object.keys(badges).length > 0 ? badges : undefined
+  }, [nfPendingCount, activeJobsCount, openOpportunitiesCount])
 
   // SSR: renderizar shell minimo para evitar hydration mismatch dos IDs Radix
   if (!mounted) {
@@ -146,6 +163,7 @@ export default function DashboardLayout({
           showMenuButton={!isDesktop}
           onMenuClick={() => setMobileOpen(true)}
           onSearchClick={handleSearchClick}
+          breadcrumbItems={overrideItems ?? undefined}
         />
 
         {/* Ambient tint — barra sutil colorida no topo do conteudo */}
@@ -178,5 +196,18 @@ export default function DashboardLayout({
         onExternalOpenChange={setSearchOpen}
       />
     </div>
+  )
+}
+
+// Wrapper que provem o contexto de breadcrumb para todas as paginas do dashboard
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <BreadcrumbProvider>
+      <DashboardLayoutInner>{children}</DashboardLayoutInner>
+    </BreadcrumbProvider>
   )
 }

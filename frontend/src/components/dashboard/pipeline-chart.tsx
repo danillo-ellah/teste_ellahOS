@@ -1,8 +1,10 @@
 'use client'
 
 import Link from 'next/link'
+import { PlusCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
 import type { PipelineItem } from '@/hooks/use-dashboard'
 
 // Cores fixas por status (mesmo padrao das badges existentes)
@@ -170,8 +172,16 @@ export function PipelineChart({ data, isLoading }: PipelineChartProps) {
       </div>
 
       {isEmpty ? (
-        <div className="py-6 text-center text-sm text-muted-foreground">
-          Nenhum job no pipeline
+        <div className="py-8 flex flex-col items-center justify-center gap-3 text-center">
+          <p className="text-sm text-muted-foreground">
+            Nenhum job no pipeline ainda.
+          </p>
+          <Button asChild size="sm" variant="default">
+            <Link href="/jobs">
+              <PlusCircle className="size-4 mr-1.5" />
+              Criar seu primeiro job
+            </Link>
+          </Button>
         </div>
       ) : (
         <>

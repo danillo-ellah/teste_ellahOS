@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, use } from 'react'
+import { Suspense, use, useMemo } from 'react'
 import { notFound } from 'next/navigation'
 import { JobHeader } from '@/components/job-detail/JobHeader'
 import { JobStatusPipeline } from '@/components/job-detail/JobStatusPipeline'
@@ -8,6 +8,7 @@ import { JobDetailTabs } from '@/components/job-detail/JobDetailTabs'
 import { JobDetailSkeleton } from '@/components/job-detail/JobDetailSkeleton'
 import { useJob } from '@/hooks/useJob'
 import { ApiRequestError } from '@/lib/api'
+import { useBreadcrumbOverride } from '@/hooks/useBreadcrumbOverride'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -23,6 +24,20 @@ export default function JobDetailPage({ params }: PageProps) {
   } = useJob(id, {
     include: ['team', 'deliverables', 'shooting_dates', 'history'],
   })
+
+  // Breadcrumb dinamico: "Jobs > [CODE] - [Titulo]" assim que o job carrega
+  const breadcrumbItems = useMemo(() => {
+    if (!job) return null
+    const jobLabel = job.job_code
+      ? `${job.job_code}${job.title ? ` - ${job.title}` : ''}`
+      : job.title ?? 'Detalhe'
+    return [
+      { label: 'Jobs', href: '/jobs' },
+      { label: jobLabel },
+    ]
+  }, [job])
+
+  useBreadcrumbOverride(breadcrumbItems)
 
   if (isLoading) {
     return <JobDetailSkeleton />

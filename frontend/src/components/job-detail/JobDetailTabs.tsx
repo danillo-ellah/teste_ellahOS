@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useEffect, Component, type ReactNode } from 'react'
+import { useMemo, useEffect, useState, useCallback, Component, type ReactNode } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import {
   FileText,
@@ -23,6 +23,8 @@ import {
   GanttChartSquare,
   Headset,
   Scissors,
+  Eye,
+  EyeOff,
 } from 'lucide-react'
 import {
   Tabs,
@@ -55,7 +57,71 @@ import { TabCronograma } from '@/components/job-detail/tabs/TabCronograma'
 import { TabAtendimento } from '@/components/job-detail/tabs/TabAtendimento'
 import { TabPosProducao } from '@/components/job-detail/tabs/TabPosProducao'
 import type { JobDetail } from '@/types/jobs'
+import type { JobStatus } from '@/types/jobs'
 import { useJobAccess } from '@/hooks/useJobAccess'
+
+// localStorage key para preferencia "mostrar todas as abas"
+const SHOW_ALL_TABS_KEY = 'ellahos-show-all-tabs'
+
+// Abas visiveis por fase do job (mapa cumulativo)
+// Cada fase herda as abas da fase anterior + adiciona novas
+const TABS_BY_PHASE: Record<string, JobDetailTabId[]> = {
+  // Fase Comercial
+  comercial: ['geral', 'equipe', 'financeiro', 'atendimento', 'historico'],
+  // Fase Pre-Producao = Comercial + modulos de planejamento
+  pre_producao: [
+    'geral', 'equipe', 'financeiro', 'atendimento', 'historico',
+    'ppm', 'diarias', 'locacoes', 'elenco', 'figurino', 'contratos', 'cronograma', 'storyboard', 'ordem-do-dia',
+  ],
+  // Fase Producao = Pre-Producao + modulos de set
+  producao: [
+    'geral', 'equipe', 'financeiro', 'atendimento', 'historico',
+    'ppm', 'diarias', 'locacoes', 'elenco', 'figurino', 'contratos', 'cronograma', 'storyboard', 'ordem-do-dia',
+    'diario', 'horas-extras', 'claquete',
+  ],
+  // Fase Pos-Producao = Producao + pos + portal
+  pos_producao: [
+    'geral', 'equipe', 'financeiro', 'atendimento', 'historico',
+    'ppm', 'diarias', 'locacoes', 'elenco', 'figurino', 'contratos', 'cronograma', 'storyboard', 'ordem-do-dia',
+    'diario', 'horas-extras', 'claquete',
+    'pos-producao', 'portal', 'entregaveis', 'aprovacoes',
+  ],
+}
+
+// Mapear status do job para a fase correspondente
+function getJobPhase(status: JobStatus): keyof typeof TABS_BY_PHASE | 'all' {
+  switch (status) {
+    case 'briefing_recebido':
+    case 'orcamento_elaboracao':
+    case 'orcamento_enviado':
+    case 'aguardando_aprovacao':
+    case 'aprovado_selecao_diretor':
+    case 'cronograma_planejamento':
+      return 'comercial'
+    case 'pre_producao':
+      return 'pre_producao'
+    case 'producao_filmagem':
+      return 'producao'
+    case 'pos_producao':
+    case 'aguardando_aprovacao_final':
+      return 'pos_producao'
+    case 'entregue':
+    case 'finalizado':
+    case 'cancelado':
+    case 'pausado':
+      return 'all'
+    default:
+      return 'all'
+  }
+}
+
+// Retorna o conjunto de abas permitidas pela fase, ou null se "mostrar todas"
+function getPhaseAllowedTabs(status: JobStatus, showAll: boolean): Set<JobDetailTabId> | null {
+  if (showAll) return null
+  const phase = getJobPhase(status)
+  if (phase === 'all') return null
+  return new Set(TABS_BY_PHASE[phase] as JobDetailTabId[])
+}
 
 // --- Error Boundary para abas ---
 
@@ -154,16 +220,51 @@ export function JobDetailTabs({ job }: JobDetailTabsProps) {
   const currentTab = (searchParams.get('tab') as JobDetailTabId) || 'geral'
   const { visibleTabs, isLoading: isAccessLoading } = useJobAccess(job)
 
-  // Filtra grupos: so mostra grupos que tenham pelo menos 1 tab visivel
+  // Preferencia "mostrar todas as abas" — persiste em localStorage
+  const [showAllTabs, setShowAllTabs] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    try {
+      return localStorage.getItem(SHOW_ALL_TABS_KEY) === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  const toggleShowAllTabs = useCallback(() => {
+    setShowAllTabs((prev) => {
+      const next = !prev
+      try {
+        localStorage.setItem(SHOW_ALL_TABS_KEY, String(next))
+      } catch {
+        // Ignora erros de localStorage (modo privado, storage cheio)
+      }
+      return next
+    })
+  }, [])
+
+  // Abas permitidas pela fase do job (null = sem restricao de fase)
+  const phaseAllowedTabs = useMemo(
+    () => getPhaseAllowedTabs(job.status, showAllTabs),
+    [job.status, showAllTabs],
+  )
+
+  // Filtra grupos: combina filtro RBAC (visibleTabs) com filtro por fase (phaseAllowedTabs)
+  // Uma aba so aparece se AMBOS os filtros permitem
   const filteredGroups = useMemo(() => {
     if (isAccessLoading || visibleTabs.length === 0) return JOB_TAB_GROUPS
     return JOB_TAB_GROUPS
       .map((group) => ({
         ...group,
-        tabs: group.tabs.filter((t) => visibleTabs.includes(t.id)),
+        tabs: group.tabs.filter((t) => {
+          // Filtro RBAC (role do usuario)
+          if (!visibleTabs.includes(t.id)) return false
+          // Filtro por fase (se ativo)
+          if (phaseAllowedTabs !== null && !phaseAllowedTabs.has(t.id)) return false
+          return true
+        }),
       }))
       .filter((group) => group.tabs.length > 0)
-  }, [visibleTabs, isAccessLoading])
+  }, [visibleTabs, isAccessLoading, phaseAllowedTabs])
 
   // Grupo ativo baseado na tab atual
   const activeGroupIdx = useMemo(() => {
@@ -209,9 +310,12 @@ export function JobDetailTabs({ job }: JobDetailTabsProps) {
 
   if (!activeGroup) return null
 
+  // So mostra o toggle quando ha restricao de fase ativa (fase final = sem restricao)
+  const hasPhaseFilter = getJobPhase(job.status) !== 'all'
+
   return (
     <div className="mt-4">
-      {/* Nivel 1: Seletores de grupo */}
+      {/* Nivel 1: Seletores de grupo + toggle de fase */}
       <div className="flex items-center gap-1.5 mb-2 overflow-x-auto pb-1">
         {filteredGroups.map((group, gIdx) => {
           const areaConfig = AREA_CONFIG[group.area]
@@ -239,6 +343,33 @@ export function JobDetailTabs({ job }: JobDetailTabsProps) {
             </button>
           )
         })}
+
+        {/* Toggle: mostrar/ocultar abas de outras fases */}
+        {hasPhaseFilter && (
+          <button
+            type="button"
+            onClick={toggleShowAllTabs}
+            title={showAllTabs ? 'Ocultar abas de outras fases' : 'Mostrar todas as abas'}
+            className={cn(
+              'ml-auto flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap',
+              showAllTabs
+                ? 'bg-muted text-foreground'
+                : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+            )}
+          >
+            {showAllTabs ? (
+              <>
+                <EyeOff className="size-3.5" />
+                <span className="hidden sm:inline">Filtro de fase</span>
+              </>
+            ) : (
+              <>
+                <Eye className="size-3.5" />
+                <span className="hidden sm:inline">Mostrar todas as abas</span>
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Nivel 2: Tabs do grupo ativo */}
