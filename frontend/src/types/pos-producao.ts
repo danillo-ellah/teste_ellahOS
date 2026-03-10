@@ -149,7 +149,7 @@ export interface ApproveRejectFormData {
   revision_notes: string;
 }
 
-export interface PosBriefingFormData extends PosBriefing {}
+export type PosBriefingFormData = PosBriefing;
 
 // --- Filtros do dashboard ---
 
