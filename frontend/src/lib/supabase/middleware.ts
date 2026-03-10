@@ -56,6 +56,7 @@ export async function updateSession(request: NextRequest) {
         request.nextUrl.pathname.startsWith('/vendor/') ||
         request.nextUrl.pathname.startsWith('/invite/') ||
         request.nextUrl.pathname.startsWith('/landing') ||
+        request.nextUrl.pathname.startsWith('/pricing') ||
         request.nextUrl.pathname.startsWith('/signup')
       if (isPublicRoute) {
         return supabaseResponse
@@ -98,7 +99,7 @@ export async function updateSession(request: NextRequest) {
     // redirecionar para login em vez de permitir acesso sem auth.
     // Exceto rotas publicas que nao precisam de autenticacao.
     const publicPaths = ['/login', '/signup', '/forgot-password', '/reset-password',
-      '/auth/callback', '/portal/', '/approve/', '/vendor/', '/invite/', '/landing']
+      '/auth/callback', '/portal/', '/approve/', '/vendor/', '/invite/', '/landing', '/pricing', '/onboarding']
     const isPublic = publicPaths.some((p) => request.nextUrl.pathname.startsWith(p))
     if (isPublic) {
       return NextResponse.next({ request })
