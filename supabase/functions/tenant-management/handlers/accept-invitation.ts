@@ -161,10 +161,67 @@ export async function handleAcceptInvitation(req: Request): Promise<Response> {
     );
   }
 
+  // Criar profile do convidado e atualizar app_meta_data (requer service client)
+  if (resolvedUserId) {
+    // Buscar dados do auth.users para obter full_name do user_metadata
+    let fullName: string | null = null;
+    try {
+      const { data: { user: authUser } } = await service.auth.admin.getUserById(resolvedUserId);
+      fullName = authUser?.user_metadata?.full_name ?? authUser?.user_metadata?.name ?? null;
+    } catch (err) {
+      console.warn(
+        '[tenant-management/accept-invitation] nao foi possivel buscar user_metadata:',
+        err,
+      );
+    }
+
+    // Upsert profile — idempotente caso o perfil ja exista
+    const { error: profileError } = await service
+      .from('profiles')
+      .upsert(
+        {
+          id: resolvedUserId,
+          tenant_id: invitation.tenant_id,
+          email: invitation.email ?? null,
+          full_name: fullName,
+          role: invitation.role,
+        },
+        { onConflict: 'id' },
+      );
+
+    if (profileError) {
+      console.error(
+        '[tenant-management/accept-invitation] erro ao criar profile:',
+        profileError.message.substring(0, 120),
+      );
+      // Nao bloqueia — retorna sucesso parcial para nao deixar o convite em estado inconsistente
+    } else {
+      console.log('[tenant-management/accept-invitation] profile criado/atualizado', {
+        userId: resolvedUserId.substring(0, 8),
+        tenantId: invitation.tenant_id.substring(0, 8),
+      });
+    }
+
+    // Atualizar app_meta_data para que o JWT subsequente inclua tenant_id e role
+    try {
+      await service.auth.admin.updateUserById(resolvedUserId, {
+        app_metadata: {
+          tenant_id: invitation.tenant_id,
+          role: invitation.role,
+        },
+      });
+    } catch (err) {
+      console.warn(
+        '[tenant-management/accept-invitation] erro ao atualizar app_metadata:',
+        err,
+      );
+    }
+  }
+
   console.log('[tenant-management/accept-invitation] convite aceito', {
     invitationId: invitation.id,
     tenantId: invitation.tenant_id,
-    resolvedUserId,
+    resolvedUserId: resolvedUserId?.substring(0, 8),
   });
 
   return jsonPublic(

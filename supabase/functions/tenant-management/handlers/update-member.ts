@@ -11,11 +11,11 @@ const VALID_ROLES = [
   'admin',
   'ceo',
   'produtor_executivo',
-  'coordenador_producao',
+  'coordenador',
   'diretor',
   'financeiro',
-  'assistente',
-  'membro',
+  'atendimento',
+  'comercial',
   'freelancer',
 ] as const;
 

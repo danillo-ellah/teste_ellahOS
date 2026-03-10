@@ -13,11 +13,11 @@ const VALID_ROLES = [
   'admin',
   'ceo',
   'produtor_executivo',
-  'coordenador_producao',
+  'coordenador',
   'diretor',
   'financeiro',
-  'assistente',
-  'membro',
+  'atendimento',
+  'comercial',
   'freelancer',
 ] as const;
 
@@ -25,7 +25,7 @@ const InviteSchema = z
   .object({
     email: z.string().email('Email invalido').optional(),
     phone: z.string().min(10, 'Telefone deve ter pelo menos 10 caracteres').optional(),
-    role: z.enum(VALID_ROLES).default('membro'),
+    role: z.enum(VALID_ROLES).default('coordenador'),
   })
   .refine((d) => d.email || d.phone, {
     message: 'Email ou telefone e obrigatorio',

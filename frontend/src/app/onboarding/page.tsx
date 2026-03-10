@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
-// apiMutate sera usado quando EF tenant-invitations for implementada
+import { apiMutate } from '@/lib/api'
 
 import {
   useOnboardingStatus,
@@ -773,13 +773,24 @@ export default function OnboardingPage() {
         setCurrentStep(3)
 
       } else if (currentStep === 3) {
-        // Convites salvos localmente — envio real sera implementado
-        // quando a EF tenant-invitations existir. Por enquanto, registra
-        // a lista no settings do tenant para envio posterior.
+        // Enviar convites via EF tenant-management existente
         if (wizardState.invites.length > 0) {
-          toast.success(
-            `${wizardState.invites.length} convite(s) salvo(s). Serao enviados quando voce configurar a equipe em Configuracoes.`,
+          const results = await Promise.allSettled(
+            wizardState.invites.map((invite) =>
+              apiMutate('tenant-management', 'POST', {
+                email: invite.email,
+                role: invite.role,
+              }, 'invitations')
+            )
           )
+          const failed = results.filter((r) => r.status === 'rejected').length
+          const succeeded = results.filter((r) => r.status === 'fulfilled').length
+          if (succeeded > 0) {
+            toast.success(`${succeeded} convite(s) enviado(s)`)
+          }
+          if (failed > 0) {
+            toast.error(`${failed} convite(s) falharam — tente novamente em Configuracoes > Equipe`)
+          }
         }
         markCompleted(3)
         setCurrentStep(4)
