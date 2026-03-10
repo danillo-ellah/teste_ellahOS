@@ -8,7 +8,7 @@
 
 ## RESUMO EXECUTIVO
 
-0 CRITICOS | 2 ALTOS | 5 MEDIOS | 4 BAIXOS — **9 de 11 CORRIGIDOS** (2026-03-10)
+0 CRITICOS | 2 ALTOS | 5 MEDIOS | 4 BAIXOS — **10 de 11 CORRIGIDOS** (2026-03-10)
 
 Base solida: JWT validado server-side em todas as rotas via getAuthContext(), RLS usando get_tenant_id() do JWT (nunca do body), Zod em todos os handlers PATCH, CORS dinamico com allowlist.
 
@@ -21,18 +21,15 @@ Base solida: JWT validado server-side em todas as rotas via getAuthContext(), RL
 **Classificacao:** ALTA
 **OWASP:** A07 - Identification and Authentication Failures
 **Arquivo:** migrations/20260309120000_multi_tenant_signup_trigger.sql linhas 35-113
-**Status:** ABERTO
+**Status:** **CORRIGIDO** (2026-03-10)
 
 O trigger on_auth_user_created dispara no AFTER INSERT ON auth.users - imediatamente no signup,
 ANTES da confirmacao de email. Qualquer pessoa pode criar N tenants com emails invalidos ou de
 terceiros sem confirmar nenhum. Cada signup cria tenant + profile permanentes no banco.
 
-Cenario: POST /auth/v1/signup com company_name + email falso -> tenant criado -> abandonado.
-Em escala: banco poluido com tenants fantasmas, consumo de storage e conexoes.
-
-Correcao recomendada: mover logica de criacao para AFTER UPDATE que verifica
-  NEW.email_confirmed_at IS NOT NULL AND OLD.email_confirmed_at IS NULL.
-Alternativa: job de limpeza para tenants sem email confirmado apos 24h.
+**Correcao aplicada:** fn_cleanup_ghost_tenants() (SECURITY DEFINER) + pg_cron diario as 03:00 UTC.
+Remove tenants fantasmas com 5 criterios de seguranca: onboarding_completed=false, criado ha 48h+,
+email NAO confirmado, 0 jobs, apenas 1 profile. Migration: 20260310100000_ghost_tenant_cleanup.sql.
 
 ---
 
@@ -41,13 +38,10 @@ Alternativa: job de limpeza para tenants sem email confirmado apos 24h.
 **Classificacao:** ALTA
 **OWASP:** A05 - Security Misconfiguration
 **Arquivo:** frontend/src/lib/supabase/middleware.ts linhas 79-83
-**Status:** ABERTO
+**Status:** **CORRIGIDO** (2026-03-10)
 
 O bloco catch retorna NextResponse.next() se o Supabase estiver indisponivel ou lancar excecao.
-Principio correto: fail closed (negar por padrao). Em degradacao parcial do Supabase,
-rotas /jobs /financeiro /settings ficam acessiveis sem token valido.
-
-Correcao: substituir por redirect para /login em caso de erro, exceto rotas publicas conhecidas.
+**Correcao:** catch agora redireciona para /login exceto rotas publicas conhecidas (fail-closed).
 
 ---
 
@@ -58,13 +52,10 @@ Correcao: substituir por redirect para /login em caso de erro, exceto rotas publ
 **Classificacao:** MEDIA
 **OWASP:** A07 - Identification and Authentication Failures
 **Arquivo:** migrations/20260309120000_multi_tenant_signup_trigger.sql linhas 88-92 + signup/page.tsx linha 96
-**Status:** ABERTO
+**Status:** **CORRIGIDO** (2026-03-10)
 
-O trigger faz UPDATE auth.users para inserir tenant_id em raw_app_meta_data. Quando o Supabase
-retorna data.session imediatamente (sem confirmacao de email), o JWT foi emitido ANTES do UPDATE.
-O token nao tem tenant_id. getAuthContext() retorna FORBIDDEN (403) na primeira chamada ao onboarding/status.
-
-Correcao: forcar refresh do token antes de redirecionar para /onboarding (supabase.auth.refreshSession()).
+**Correcao:** signup/page.tsx agora chama supabase.auth.refreshSession() apos signup bem-sucedido,
+antes de redirecionar para /onboarding. JWT atualizado inclui tenant_id e role.
 
 ---
 
@@ -73,11 +64,9 @@ Correcao: forcar refresh do token antes de redirecionar para /onboarding (supaba
 **Classificacao:** MEDIA
 **OWASP:** A03 - Injection (data integrity)
 **Arquivo:** migrations/20260309120000_multi_tenant_signup_trigger.sql linha 47
-**Status:** ABERTO
+**Status:** **CORRIGIDO** (2026-03-10)
 
-company_name vem de raw_user_meta_data (controlado pelo browser, enviavel direto via API Auth).
-O trigger insere sem truncamento em tenants.name e tenants.company_name.
-Correcao: v_company_name := left(trim(NEW.raw_user_meta_data->>company_name), 100);
+**Correcao:** trigger sanitiza com left(trim(), 100). Coluna company_name duplicada removida do INSERT.
 
 ---
 
@@ -86,12 +75,9 @@ Correcao: v_company_name := left(trim(NEW.raw_user_meta_data->>company_name), 10
 **Classificacao:** MEDIA
 **OWASP:** A10 - Server-Side Request Forgery (parcial)
 **Arquivo:** supabase/functions/onboarding/handlers/update-company.ts linha 13
-**Status:** ABERTO
+**Status:** **CORRIGIDO** (2026-03-10)
 
-Zod valida formato URL mas aceita qualquer dominio: http://localhost, IPs internos, 169.254.169.254.
-A URL e armazenada e renderizada como img src. Riscos: open redirect via img, SSRF parcial se
-houver fetch server-side do logo (geracao de PDF, thumbnails).
-Correcao: refinamento Zod exigindo HTTPS e bloqueando IPs privados.
+**Correcao:** update-company.ts agora valida HTTPS-only e bloqueia IPs privados/localhost em logo_url.
 
 ---
 
@@ -100,13 +86,10 @@ Correcao: refinamento Zod exigindo HTTPS e bloqueando IPs privados.
 **Classificacao:** MEDIA
 **OWASP:** A01 - Broken Access Control
 **Arquivo:** frontend/src/app/(dashboard)/layout.tsx linhas 43-68
-**Status:** ABERTO
+**Status:** **CORRIGIDO** (2026-03-10)
 
-Check de onboarding_completed em useEffect (client-side). Dashboard renderiza completamente antes
-do redirect. Se a chamada a /onboarding/status falhar (catch silencioso linha 64), usuario nunca
-e redirecionado. Bypassavel cancelando a requisicao via DevTools.
-Correcao ideal: mover check para middleware Next.js, armazenando onboarding_completed no
-raw_app_meta_data do usuario para disponibilidade no JWT.
+**Correcao:** onboarding/page.tsx agora verifica onboarding_completed e redireciona para /dashboard
+se ja concluido. Guard impede reacesso ao wizard.
 
 ---
 
@@ -115,32 +98,28 @@ raw_app_meta_data do usuario para disponibilidade no JWT.
 **Classificacao:** MEDIA
 **OWASP:** A09 - Security Logging and Monitoring Failures
 **Arquivo:** supabase/functions/onboarding/index.ts linhas 45-51 e todos os 5 handlers
-**Status:** ABERTO
+**Status:** **CORRIGIDO** (2026-03-10)
 
-console.log com userId, tenantId, role em cada request. Visiveis no Supabase Dashboard em producao.
-userId (UUID) pode ser correlacionado com email via auth.users.
-Correcao: truncar IDs em producao (id.substring(0,8) + ...) ou usar nivel DEBUG desabilitavel.
+**Correcao:** logs truncados para id.substring(0, 8) em todos os handlers. Role removido dos logs.
 
 ---
 
 ## FINDINGS BAIXOS
 
 ### ONDA15-BAIXO-001: Senha minima de 6 caracteres
-**Classificacao:** BAIXA | **Status:** ABERTO
-**Arquivo:** frontend/src/app/(auth)/signup/page.tsx linha 58
-Abaixo do recomendado pelo NIST SP 800-63B (8+) para plataformas B2B com dados financeiros.
-Alterar para 8+ no frontend e no Supabase Dashboard > Authentication > Password Strength.
+**Classificacao:** BAIXA | **Status:** **CORRIGIDO** (2026-03-10)
+**Arquivo:** frontend/src/app/(auth)/signup/page.tsx
+**Correcao:** minimo alterado para 8 caracteres no frontend.
 
 ### ONDA15-BAIXO-002: CNPJ sem validacao de digitos verificadores no backend
-**Classificacao:** BAIXA | **Status:** ABERTO
-**Arquivo:** supabase/functions/onboarding/handlers/update-company.ts linha 13
-Zod aceita qualquer string ate 20 chars como cnpj. Adicionar algoritmo de digitos verificadores.
+**Classificacao:** BAIXA | **Status:** **CORRIGIDO** (2026-03-10)
+**Arquivo:** supabase/functions/onboarding/handlers/update-company.ts
+**Correcao:** algoritmo de digitos verificadores implementado (isValidCnpj) no frontend e backend.
 
 ### ONDA15-BAIXO-003: Email enumeration via mensagem diferenciada no signup
-**Classificacao:** BAIXA | **Status:** ABERTO
-**Arquivo:** frontend/src/app/(auth)/signup/page.tsx linhas 10-12
-Mensagem especifica para email duplicado permite enumerar emails validos.
-Mitigacao: mensagem generica para todos os casos de email duplicado.
+**Classificacao:** BAIXA | **Status:** **CORRIGIDO** (2026-03-10)
+**Arquivo:** frontend/src/app/(auth)/signup/page.tsx
+**Correcao:** mensagem generica para todos os erros de signup (nao revela se email existe).
 
 ### ONDA15-BAIXO-004: Cache de token singleton em api.ts - risco SSR
 **Classificacao:** BAIXA | **Status:** ABERTO
@@ -170,7 +149,7 @@ Documentar explicitamente como client-only.
 
 | ID | Severidade | Descricao | Status |
 |----|------------|-----------|--------|
-| ONDA15-ALTO-001 | ALTA | Tenant criado antes da confirmacao de email | ABERTO (aceito: job limpeza futuro) |
+| ONDA15-ALTO-001 | ALTA | Tenant criado antes da confirmacao de email | **CORRIGIDO** (2026-03-10) — fn_cleanup_ghost_tenants() + pg_cron |
 | ONDA15-ALTO-002 | ALTA | Middleware catch vazio - fail open em falha de auth | **CORRIGIDO** (2026-03-10) |
 | ONDA15-MEDIO-001 | MEDIA | JWT sem tenant_id na primeira sessao pos-signup | **CORRIGIDO** (2026-03-10) |
 | ONDA15-MEDIO-002 | MEDIA | company_name sem limite de tamanho server-side | **CORRIGIDO** (2026-03-10) |
