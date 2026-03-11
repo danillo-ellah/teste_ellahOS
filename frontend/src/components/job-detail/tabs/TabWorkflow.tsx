@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef } from 'react'
 import {
   GitBranch,
   Play,
@@ -18,9 +18,16 @@ import {
   Paperclip,
   AlertTriangle,
   Loader2,
+  Upload,
+  Image,
+  FileText,
+  Receipt,
+  File,
+  Trash2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
@@ -40,16 +47,19 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useWorkflowSteps, useInitializeWorkflow, useUpdateWorkflowStep } from '@/hooks/useWorkflow'
+import { useWorkflowSteps, useInitializeWorkflow, useUpdateWorkflowStep, useWorkflowEvidence, useAddWorkflowEvidence } from '@/hooks/useWorkflow'
 import { useUserRole } from '@/hooks/useUserRole'
 import {
   WORKFLOW_STATUS_LABELS,
   WORKFLOW_STATUS_COLORS,
   WORKFLOW_CATEGORY_LABELS,
   WORKFLOW_CATEGORY_COLORS,
+  EVIDENCE_TYPE_LABELS,
   type WorkflowStep,
+  type WorkflowEvidence,
   type WorkflowStatus,
   type WorkflowCategory,
+  type EvidenceType,
 } from '@/types/workflow'
 import type { JobDetail } from '@/types/jobs'
 
@@ -277,9 +287,10 @@ function StepRow({
   isFirst: boolean
   isLast: boolean
 }) {
-  const [showActions, setShowActions] = useState(false)
+  const [showEvidence, setShowEvidence] = useState(false)
   const [showRejectDialog, setShowRejectDialog] = useState(false)
   const { mutateAsync: updateStep, isPending } = useUpdateWorkflowStep(jobId)
+  const hasEvidencePanel = step.step_type === 'conferencia' || step.step_type === 'compra'
 
   const statusColors = WORKFLOW_STATUS_COLORS[step.status]
   const StepIcon = STEP_TYPE_ICONS[step.step_type] ?? CircleDot
@@ -369,71 +380,90 @@ function StepRow({
         </div>
 
         {/* Acoes */}
-        {canManage && (
-          <div className="flex items-center gap-1 shrink-0">
-            {step.status === 'pending' && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs gap-1"
-                disabled={isPending}
-                onClick={() => handleStatusChange('in_progress')}
-              >
-                <Play className="size-3" /> Iniciar
-              </Button>
-            )}
+        <div className="flex items-center gap-1 shrink-0">
+          {hasEvidencePanel && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs gap-1"
+              onClick={() => setShowEvidence(!showEvidence)}
+            >
+              <Paperclip className="size-3" />
+              {step.evidence_count ?? 0}
+            </Button>
+          )}
 
-            {step.status === 'in_progress' && (
-              <>
+          {canManage && (
+            <>
+              {step.status === 'pending' && (
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-7 text-xs gap-1 text-green-600 hover:text-green-700"
+                  className="h-7 text-xs gap-1"
                   disabled={isPending}
-                  onClick={() => handleStatusChange('completed')}
+                  onClick={() => handleStatusChange('in_progress')}
                 >
-                  <CheckCircle2 className="size-3" /> Concluir
+                  <Play className="size-3" /> Iniciar
                 </Button>
-                {step.step_type === 'aprovacao' && (
+              )}
+
+              {step.status === 'in_progress' && (
+                <>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-7 text-xs gap-1 text-red-600 hover:text-red-700"
+                    className="h-7 text-xs gap-1 text-green-600 hover:text-green-700"
                     disabled={isPending}
-                    onClick={() => setShowRejectDialog(true)}
+                    onClick={() => handleStatusChange('completed')}
                   >
-                    <XCircle className="size-3" /> Rejeitar
+                    <CheckCircle2 className="size-3" /> Concluir
                   </Button>
-                )}
-              </>
-            )}
+                  {step.step_type === 'aprovacao' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs gap-1 text-red-600 hover:text-red-700"
+                      disabled={isPending}
+                      onClick={() => setShowRejectDialog(true)}
+                    >
+                      <XCircle className="size-3" /> Rejeitar
+                    </Button>
+                  )}
+                </>
+              )}
 
-            {step.status === 'rejected' && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs gap-1"
-                disabled={isPending}
-                onClick={() => handleStatusChange('in_progress')}
-              >
-                <Play className="size-3" /> Reiniciar
-              </Button>
-            )}
+              {step.status === 'rejected' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs gap-1"
+                  disabled={isPending}
+                  onClick={() => handleStatusChange('in_progress')}
+                >
+                  <Play className="size-3" /> Reiniciar
+                </Button>
+              )}
 
-            {(step.status === 'pending' || step.status === 'in_progress') && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs gap-1 text-muted-foreground"
-                disabled={isPending}
-                onClick={() => handleStatusChange('skipped')}
-              >
-                <SkipForward className="size-3" /> Pular
-              </Button>
-            )}
-          </div>
-        )}
+              {(step.status === 'pending' || step.status === 'in_progress') && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs gap-1 text-muted-foreground"
+                  disabled={isPending}
+                  onClick={() => handleStatusChange('skipped')}
+                >
+                  <SkipForward className="size-3" /> Pular
+                </Button>
+              )}
+            </>
+          )}
+        </div>
       </div>
+
+      {/* Painel de evidencias expandivel */}
+      {showEvidence && hasEvidencePanel && (
+        <EvidenceUploadPanel stepId={step.id} jobId={jobId} canManage={canManage} />
+      )}
 
       {/* Dialog de rejeicao */}
       {showRejectDialog && (
@@ -445,6 +475,196 @@ function StepRow({
         />
       )}
     </>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Painel de evidencias (upload + listagem)
+// ---------------------------------------------------------------------------
+
+const EVIDENCE_TYPE_ICONS: Record<EvidenceType, typeof Image> = {
+  foto: Image,
+  nota_fiscal: FileText,
+  recibo: Receipt,
+  outro: File,
+}
+
+function EvidenceUploadPanel({
+  stepId,
+  jobId,
+  canManage,
+}: {
+  stepId: string
+  jobId: string
+  canManage: boolean
+}) {
+  const { data: evidences, isLoading } = useWorkflowEvidence(stepId)
+  const { mutateAsync: addEvidence, isPending: isAdding } = useAddWorkflowEvidence(jobId, stepId)
+  const [evidenceType, setEvidenceType] = useState<EvidenceType>('foto')
+  const [notes, setNotes] = useState('')
+  const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleUpload = useCallback(async (file: globalThis.File) => {
+    setIsUploading(true)
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Nao autenticado')
+
+      // Buscar tenant_id do profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('tenant_id')
+        .eq('id', user.id)
+        .single()
+
+      const tenantId = profile?.tenant_id ?? 'default'
+      const ext = file.name.split('.').pop() ?? 'bin'
+      const path = `${tenantId}/${jobId}/${stepId}/${Date.now()}.${ext}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('workflow-evidence')
+        .upload(path, file, { contentType: file.type })
+
+      if (uploadError) throw uploadError
+
+      const { data: urlData } = supabase.storage
+        .from('workflow-evidence')
+        .getPublicUrl(path)
+
+      await addEvidence({
+        evidence_type: evidenceType,
+        file_url: urlData.publicUrl,
+        file_name: file.name,
+        ...(notes.trim() ? { notes: notes.trim() } : {}),
+      })
+
+      toast.success(`Evidencia "${file.name}" enviada`)
+      setNotes('')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro ao enviar arquivo'
+      toast.error(msg)
+    } finally {
+      setIsUploading(false)
+    }
+  }, [jobId, stepId, evidenceType, notes, addEvidence])
+
+  const busy = isUploading || isAdding
+
+  return (
+    <div className="border-t bg-muted/20 px-4 py-3 space-y-3">
+      {/* Upload form */}
+      {canManage && (
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="flex-1 min-w-[180px]">
+            <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Arquivo</label>
+            <Input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,.pdf,.jpg,.jpeg,.png,.webp"
+              disabled={busy}
+              className="h-8 text-xs"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) handleUpload(file)
+              }}
+            />
+          </div>
+          <div className="w-[130px]">
+            <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Tipo</label>
+            <Select value={evidenceType} onValueChange={(v) => setEvidenceType(v as EvidenceType)}>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(['foto', 'nota_fiscal', 'recibo', 'outro'] as EvidenceType[]).map((t) => (
+                  <SelectItem key={t} value={t} className="text-xs">
+                    {EVIDENCE_TYPE_LABELS[t]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex-1 min-w-[140px]">
+            <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Obs (opcional)</label>
+            <Input
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Observacao..."
+              disabled={busy}
+              className="h-8 text-xs"
+            />
+          </div>
+          {busy && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
+        </div>
+      )}
+
+      {/* Lista de evidencias */}
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="size-3 animate-spin" /> Carregando evidencias...
+        </div>
+      ) : evidences && evidences.length > 0 ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+          {evidences.map((ev) => (
+            <EvidenceCard key={ev.id} evidence={ev} />
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground text-center py-2">
+          Nenhuma evidencia enviada ainda.
+        </p>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Card de evidencia individual
+// ---------------------------------------------------------------------------
+
+function EvidenceCard({ evidence }: { evidence: WorkflowEvidence }) {
+  const Icon = EVIDENCE_TYPE_ICONS[evidence.evidence_type] ?? File
+  const isImage = evidence.evidence_type === 'foto' ||
+    /\.(jpg|jpeg|png|webp|gif)$/i.test(evidence.file_name)
+
+  return (
+    <a
+      href={evidence.file_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group rounded-lg border bg-background p-2 hover:border-primary/50 transition-colors"
+    >
+      {isImage ? (
+        <div className="aspect-square rounded bg-muted overflow-hidden mb-1.5">
+          <img
+            src={evidence.file_url}
+            alt={evidence.file_name}
+            className="h-full w-full object-cover group-hover:scale-105 transition-transform"
+          />
+        </div>
+      ) : (
+        <div className="aspect-square rounded bg-muted flex items-center justify-center mb-1.5">
+          <Icon className="size-8 text-muted-foreground" />
+        </div>
+      )}
+      <div className="space-y-0.5">
+        <p className="text-[11px] font-medium truncate">{evidence.file_name}</p>
+        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+          <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">
+            {EVIDENCE_TYPE_LABELS[evidence.evidence_type]}
+          </Badge>
+          {evidence.uploader && (
+            <span className="truncate">{evidence.uploader.full_name.split(' ')[0]}</span>
+          )}
+        </div>
+        {evidence.notes && (
+          <p className="text-[10px] text-muted-foreground truncate">{evidence.notes}</p>
+        )}
+      </div>
+    </a>
   )
 }
 
