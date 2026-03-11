@@ -21,6 +21,10 @@ import { handleGetDirectorRanking } from './handlers/get-director-ranking.ts';
 import { handleProcessAlerts } from './handlers/process-alerts.ts';
 import { handleGenerateReport } from './handlers/generate-report.ts';
 import { handleIngestEmail } from './handlers/ingest-email.ts';
+import { handleListBudgetVersions } from './handlers/budget/list-versions.ts';
+import { handleUpsertBudgetVersion } from './handlers/budget/upsert-version.ts';
+import { handleActivateBudgetVersion } from './handlers/budget/activate-version.ts';
+import { handleGetLossAnalytics } from './handlers/get-loss-analytics.ts';
 
 // Rotas nomeadas que devem ser verificadas antes de interpretar segment1 como :id
 const NAMED_ROUTES_SEGMENT1 = new Set([
@@ -34,6 +38,7 @@ const NAMED_ROUTES_SEGMENT1 = new Set([
   'process-alerts',
   'report',
   'ingest-email',
+  'loss-analytics',
 ]);
 
 // Rotas CRON — autenticadas via x-cron-secret, nao via JWT
@@ -64,6 +69,17 @@ Deno.serve(async (req: Request) => {
     const segment3 = fnIndex >= 0 && pathSegments.length > fnIndex + 3
       ? pathSegments[fnIndex + 3]
       : null;
+    // Segmentos extras para rotas de budget (ate 6 niveis)
+    // Ex: /crm/opportunities/:id/budget/versions/:versionId/activate
+    const segment4 = fnIndex >= 0 && pathSegments.length > fnIndex + 4
+      ? pathSegments[fnIndex + 4]
+      : null;
+    const segment5 = fnIndex >= 0 && pathSegments.length > fnIndex + 5
+      ? pathSegments[fnIndex + 5]
+      : null;
+    const segment6 = fnIndex >= 0 && pathSegments.length > fnIndex + 6
+      ? pathSegments[fnIndex + 6]
+      : null;
 
     // ----------------------------------------------------------------
     // Rotas CRON — autenticadas via x-cron-secret (sem JWT)
@@ -84,6 +100,11 @@ Deno.serve(async (req: Request) => {
     // Rotas autenticadas — requerem JWT valido
     // ----------------------------------------------------------------
     const auth = await getAuthContext(req);
+
+    // GET /crm/loss-analytics
+    if (segment1 === 'loss-analytics' && !segment2 && method === 'GET') {
+      return await handleGetLossAnalytics(req, auth);
+    }
 
     // GET /crm/dashboard
     if (segment1 === 'dashboard' && !segment2 && method === 'GET') {
@@ -162,6 +183,27 @@ Deno.serve(async (req: Request) => {
       // POST /crm/opportunities/:id/convert-to-job
       if (segment3 === 'convert-to-job' && method === 'POST') {
         return await handleConvertToJob(req, auth, id);
+      }
+
+      // Rotas de orcamento (budget) — segmentos 4+
+      // GET /crm/opportunities/:id/budget/versions
+      if (segment3 === 'budget' && segment4 === 'versions' && !segment5 && method === 'GET') {
+        return await handleListBudgetVersions(req, auth, id);
+      }
+
+      // POST /crm/opportunities/:id/budget/versions
+      if (segment3 === 'budget' && segment4 === 'versions' && !segment5 && method === 'POST') {
+        return await handleUpsertBudgetVersion(req, auth, id, null);
+      }
+
+      // PATCH /crm/opportunities/:id/budget/versions/:versionId
+      if (segment3 === 'budget' && segment4 === 'versions' && segment5 && !segment6 && method === 'PATCH') {
+        return await handleUpsertBudgetVersion(req, auth, id, segment5);
+      }
+
+      // POST /crm/opportunities/:id/budget/versions/:versionId/activate
+      if (segment3 === 'budget' && segment4 === 'versions' && segment5 && segment6 === 'activate' && method === 'POST') {
+        return await handleActivateBudgetVersion(req, auth, id, segment5);
       }
     }
 
