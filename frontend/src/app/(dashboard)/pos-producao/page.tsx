@@ -5,7 +5,7 @@ import { Scissors, RefreshCw, LayoutGrid, List } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
-import { usePosDashboard } from '@/hooks/usePosProducao'
+import { usePosDashboard, useUpdatePosStageDashboard } from '@/hooks/usePosProducao'
 import { PosDashboardFilters } from './_components/PosDashboardFilters'
 import { PosKanbanView } from './_components/PosKanbanView'
 import { PosListView } from './_components/PosListView'
@@ -16,8 +16,13 @@ export default function PosProducaoPage() {
   const [filters, setFilters] = useState<Filters>({})
 
   const { data: deliverables, isLoading, isError, refetch } = usePosDashboard(filters)
+  const { mutateAsync: updateStage } = useUpdatePosStageDashboard()
 
   const total = deliverables?.length ?? 0
+
+  const handleStageChange = async (deliverableId: string, newStage: string) => {
+    await updateStage({ deliverableId, posStage: newStage as import('@/types/pos-producao').PosStage })
+  }
 
   // Mobile: default para lista (kanban scrollavel nao e ideal em telas muito pequenas)
   // Kanban ainda disponivel via toggle
@@ -123,7 +128,7 @@ export default function PosProducaoPage() {
           {viewMode === 'kanban' && (
             <>
               <div className="hidden md:block">
-                <PosKanbanView deliverables={deliverables} />
+                <PosKanbanView deliverables={deliverables} onStageChange={handleStageChange} />
               </div>
               {/* Em mobile, sempre mostra lista */}
               <div className="md:hidden">

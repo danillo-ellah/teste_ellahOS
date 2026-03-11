@@ -60,7 +60,28 @@ export function useCutVersions(deliverableId: string) {
 }
 
 // ---------------------------------------------------------------------------
-// useUpdatePosStage — Atualizar etapa de pos
+// useUpdatePosStageDashboard — Atualizar etapa via dashboard cross-job (DnD)
+// ---------------------------------------------------------------------------
+
+export function useUpdatePosStageDashboard() {
+  const queryClient = useQueryClient()
+
+  const mutation = useMutation({
+    mutationFn: ({ deliverableId, posStage }: { deliverableId: string; posStage: PosStage }) =>
+      apiMutate('pos-producao', 'PATCH', { pos_stage: posStage }, `${deliverableId}/stage`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: posProducaoKeys.all })
+    },
+  })
+
+  return {
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// useUpdatePosStage — Atualizar etapa de pos (dentro do job detail)
 // ---------------------------------------------------------------------------
 
 export function useUpdatePosStage(jobId: string) {
