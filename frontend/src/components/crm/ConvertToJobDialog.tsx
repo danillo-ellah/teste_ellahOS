@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, Briefcase, Info } from 'lucide-react'
 import {
@@ -58,12 +58,16 @@ export function ConvertToJobDialog({
   const { data: budgetVersions } = useOpportunityBudgetVersions(opportunity.id)
   const activeVersion = budgetVersions?.find((v) => v.status === 'ativa') ?? null
 
+  const isSubmitting = useRef(false)
+
   async function handleConvert() {
+    if (isSubmitting.current) return
     const trimmedTitle = title.trim()
     if (!trimmedTitle) {
       toast.error('Titulo do job e obrigatorio')
       return
     }
+    isSubmitting.current = true
 
     try {
       const result = await convertMutation.mutateAsync({
@@ -83,6 +87,8 @@ export function ConvertToJobDialog({
       router.push(`/jobs/${result.data.job.id}`)
     } catch (err) {
       toast.error(safeErrorMessage(err as Error))
+    } finally {
+      isSubmitting.current = false
     }
   }
 
@@ -224,7 +230,7 @@ export function ConvertToJobDialog({
                   htmlFor="transfer-budget"
                   className="text-sm cursor-pointer leading-snug"
                 >
-                  Criar cost_items a partir deste orcamento
+                  Transferir categorias de custo para o novo job
                 </label>
               </div>
             </div>

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard,
+  CalendarDays,
   Clapperboard,
   Target,
   Users,
@@ -16,10 +16,10 @@ import type { AreaType } from '@/lib/constants'
 const BOTTOM_NAV_ITEMS: Array<{
   label: string
   href: string
-  icon: typeof LayoutDashboard
+  icon: typeof CalendarDays
   area: AreaType | null
 }> = [
-  { label: 'Inicio', href: '/', icon: LayoutDashboard, area: null },
+  { label: 'Semana', href: '/minha-semana', icon: CalendarDays, area: null },
   { label: 'Jobs', href: '/jobs', icon: Clapperboard, area: 'producao' },
   { label: 'Pipeline', href: '/crm', icon: Target, area: 'comercial' },
   { label: 'Pessoas', href: '/people', icon: Users, area: 'admin' },
@@ -36,11 +36,9 @@ export function BottomNav() {
         {BOTTOM_NAV_ITEMS.map((item) => {
           const Icon = item.icon
           const active =
-            item.href === '/'
-              ? pathname === '/'
-              : item.href === '/financeiro'
-                ? pathname.startsWith('/financeiro') || pathname.startsWith('/admin/financeiro')
-                : pathname.startsWith(item.href)
+            item.href === '/financeiro'
+              ? pathname.startsWith('/financeiro') || pathname.startsWith('/admin/financeiro')
+              : pathname.startsWith(item.href)
 
           const areaConfig = item.area ? AREA_CONFIG[item.area] : null
 

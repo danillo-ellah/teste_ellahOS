@@ -1,15 +1,19 @@
 'use client'
 
-import { useState } from 'react'
-import { Scissors, RefreshCw, LayoutGrid, List } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Scissors, RefreshCw, LayoutGrid, List, Package, Play, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { usePosDashboard, useUpdatePosStageDashboard } from '@/hooks/usePosProducao'
 import { PosDashboardFilters } from './_components/PosDashboardFilters'
 import { PosKanbanView } from './_components/PosKanbanView'
 import { PosListView } from './_components/PosListView'
-import type { PosDashboardFilters as Filters } from '@/types/pos-producao'
+import type { PosDashboardFilters as Filters, PosStage } from '@/types/pos-producao'
+
+const ACTIVE_STAGES: PosStage[] = ['ingest', 'montagem', 'apresentacao_offline', 'revisao_offline', 'finalizacao', 'apresentacao_online', 'revisao_online', 'copias']
+const DONE_STAGES: PosStage[] = ['aprovado_offline', 'aprovado_online', 'entregue']
 
 export default function PosProducaoPage() {
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban')
@@ -19,6 +23,20 @@ export default function PosProducaoPage() {
   const { mutateAsync: updateStage } = useUpdatePosStageDashboard()
 
   const total = deliverables?.length ?? 0
+
+  const kpis = useMemo(() => {
+    if (!deliverables) return { total: 0, active: 0, overdue: 0, done: 0 }
+    const now = new Date()
+    now.setHours(0, 0, 0, 0)
+    const active = deliverables.filter((d) => d.pos_stage && ACTIVE_STAGES.includes(d.pos_stage)).length
+    const done = deliverables.filter((d) => d.pos_stage && DONE_STAGES.includes(d.pos_stage)).length
+    const overdue = deliverables.filter((d) => {
+      if (!d.delivery_date || !d.pos_stage) return false
+      if (DONE_STAGES.includes(d.pos_stage)) return false
+      return new Date(d.delivery_date) < now
+    }).length
+    return { total: deliverables.length, active, overdue, done }
+  }, [deliverables])
 
   const handleStageChange = async (deliverableId: string, newStage: string) => {
     await updateStage({ deliverableId, posStage: newStage as import('@/types/pos-producao').PosStage })
@@ -59,6 +77,46 @@ export default function PosProducaoPage() {
       </div>
 
       <Separator />
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle>
+            <Package className="size-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? <Skeleton className="h-8 w-12" /> : <p className="text-2xl font-bold">{kpis.total}</p>}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Em andamento</CardTitle>
+            <Play className="size-4 text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? <Skeleton className="h-8 w-12" /> : <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{kpis.active}</p>}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Atrasados</CardTitle>
+            <AlertTriangle className="size-4 text-red-500" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? <Skeleton className="h-8 w-12" /> : <p className={`text-2xl font-bold ${kpis.overdue > 0 ? 'text-red-600 dark:text-red-400' : ''}`}>{kpis.overdue}</p>}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Entregues</CardTitle>
+            <CheckCircle2 className="size-4 text-emerald-500" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? <Skeleton className="h-8 w-12" /> : <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{kpis.done}</p>}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Filtros + toggle */}
       <div className="flex flex-wrap items-center gap-2">
@@ -103,7 +161,7 @@ export default function PosProducaoPage() {
       {/* Skeleton de carregamento */}
       {isLoading && (
         <div className="space-y-4">
-          {viewMode === 'list' || typeof window !== 'undefined' && window.innerWidth < 768 ? (
+          {viewMode === 'list' ? (
             Array.from({ length: 5 }).map((_, i) => (
               <Skeleton key={i} className="h-14 w-full rounded-lg" />
             ))

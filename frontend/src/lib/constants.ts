@@ -525,6 +525,7 @@ export const JOB_TAB_GROUPS: JobTabGroup[] = [
     tabs: [
       { id: 'geral', label: 'Resumo', icon: 'FileText' },
       { id: 'equipe', label: 'Equipe', icon: 'Users' },
+      { id: 'workflow', label: 'Workflow', icon: 'GitBranch' },
       { id: 'cronograma', label: 'Cronograma', icon: 'GanttChartSquare' },
       { id: 'historico', label: 'Historico', icon: 'Clock' },
     ],
@@ -533,7 +534,6 @@ export const JOB_TAB_GROUPS: JobTabGroup[] = [
     group: 'Pre-Producao',
     area: 'producao',
     tabs: [
-      { id: 'workflow', label: 'Workflow', icon: 'GitBranch' },
       { id: 'ppm', label: 'Checklist Pre-Prod', icon: 'FileCheck' },
       { id: 'diarias', label: 'Diarias', icon: 'Calendar' },
       { id: 'locacoes', label: 'Locacoes', icon: 'MapPin' },

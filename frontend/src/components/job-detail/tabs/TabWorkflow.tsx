@@ -86,9 +86,9 @@ export function TabWorkflow({ job }: TabWorkflowProps) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <GitBranch className="size-12 text-muted-foreground/30 mb-4" />
-        <h2 className="text-lg font-semibold">Workflow nao inicializado</h2>
+        <h2 className="text-lg font-semibold">Workflow ainda nao iniciado</h2>
         <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-          Inicialize o workflow de 16 fases para controlar solicitacoes, aprovacoes e conferencias deste job.
+          Inicie o fluxo de aprovacoes e conferencias deste job com 16 etapas automaticas.
         </p>
         {canManage && (
           <Button
@@ -441,6 +441,18 @@ function StepRow({
                   onClick={() => handleStatusChange('in_progress')}
                 >
                   <Play className="size-3" /> Reiniciar
+                </Button>
+              )}
+
+              {step.status === 'blocked' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs gap-1 text-amber-600 hover:text-amber-700"
+                  disabled={isPending}
+                  onClick={() => handleStatusChange('pending')}
+                >
+                  <Play className="size-3" /> Desbloquear
                 </Button>
               )}
 

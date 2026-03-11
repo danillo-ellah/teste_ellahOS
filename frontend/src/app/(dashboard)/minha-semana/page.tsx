@@ -206,7 +206,7 @@ function MyJobsSection({ jobs, isLoading }: { jobs: MyWeekJob[]; isLoading: bool
 
               {/* Link para o job */}
               <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" asChild title="Ver job">
-                <Link href={`/jobs/${job.id}`}>
+                <Link href={`/jobs/${job.id}?tab=geral`}>
                   <ExternalLink className="h-4 w-4" />
                 </Link>
               </Button>
@@ -312,8 +312,8 @@ function DeliverablesByDay({
                           <Badge variant="outline" className="text-[10px]">
                             {statusLabel}
                           </Badge>
-                          <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" asChild>
-                            <Link href={`/jobs/${d.job_id}`}>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" asChild title="Ver entregaveis">
+                            <Link href={`/jobs/${d.job_id}?tab=entregaveis`}>
                               <ExternalLink className="h-3 w-3" />
                             </Link>
                           </Button>
@@ -430,8 +430,8 @@ function ShootingDatesByDay({
                             {s.location}
                           </span>
                         )}
-                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" asChild>
-                          <Link href={`/jobs/${s.job_id}`}>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" asChild title="Ver diarias">
+                          <Link href={`/jobs/${s.job_id}?tab=diarias`}>
                             <ExternalLink className="h-3 w-3" />
                           </Link>
                         </Button>
@@ -510,8 +510,8 @@ function PendingApprovalsSection({
                   </div>
                   <p className="text-sm truncate">{a.job_title}</p>
                 </div>
-                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" asChild title="Ver job">
-                  <Link href={`/jobs/${a.job_id}`}>
+                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" asChild title="Ver aprovacao">
+                  <Link href={`/jobs/${a.job_id}?tab=workflow`}>
                     <ExternalLink className="h-3.5 w-3.5" />
                   </Link>
                 </Button>
