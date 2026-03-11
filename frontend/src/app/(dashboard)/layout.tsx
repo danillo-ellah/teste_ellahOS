@@ -96,12 +96,13 @@ function DashboardLayoutInner({
   const handleSearchClick = useCallback(() => setSearchOpen(true), [])
 
   // NF pending count para badge no sidebar
-  const { data: nfStats } = useNfStats()
+  // enabled: so busca apos userId estar definido (sessao pronta)
+  const { data: nfStats } = useNfStats(!!userId)
   const nfPendingCount = (nfStats?.pending_review ?? 0) + (nfStats?.auto_matched ?? 0)
 
   // Jobs ativos e oportunidades abertas para badges da sidebar (QW-7)
-  const { data: kpis } = useDashboardKpis()
-  const { data: crmDashboard } = useCrmDashboard()
+  const { data: kpis } = useDashboardKpis(!!userId)
+  const { data: crmDashboard } = useCrmDashboard(!!userId)
   const activeJobsCount = kpis?.active_jobs ?? 0
   const openOpportunitiesCount = crmDashboard?.pipeline_summary?.total_count ?? 0
 

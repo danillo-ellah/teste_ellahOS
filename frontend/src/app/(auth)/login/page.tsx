@@ -101,7 +101,7 @@ function EmailForm({ returnUrl }: { returnUrl: string }) {
             placeholder="seu@email.com"
             required
             autoComplete="email"
-            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="flex h-11 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
         </div>
 
@@ -117,7 +117,7 @@ function EmailForm({ returnUrl }: { returnUrl: string }) {
             placeholder="********"
             required
             autoComplete="current-password"
-            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="flex h-11 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
         </div>
 
@@ -128,7 +128,7 @@ function EmailForm({ returnUrl }: { returnUrl: string }) {
         <button
           type="submit"
           disabled={loading}
-          className="inline-flex h-9 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none"
+          className="inline-flex h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none"
         >
           {loading ? 'Entrando...' : 'Entrar'}
         </button>
@@ -260,7 +260,7 @@ function PhoneForm({ returnUrl }: { returnUrl: string }) {
             Celular
           </label>
           <div className="flex items-center gap-2">
-            <span className="flex h-9 items-center rounded-md border border-input bg-muted px-3 text-sm text-muted-foreground select-none">
+            <span className="flex h-11 items-center rounded-md border border-input bg-muted px-3 text-sm text-muted-foreground select-none">
               +55
             </span>
             <input
@@ -271,7 +271,7 @@ function PhoneForm({ returnUrl }: { returnUrl: string }) {
               placeholder="(11) 91234-5678"
               required
               autoComplete="tel"
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="flex h-11 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
           </div>
           <p className="text-xs text-muted-foreground">
@@ -286,7 +286,7 @@ function PhoneForm({ returnUrl }: { returnUrl: string }) {
         <button
           type="submit"
           disabled={loading}
-          className="inline-flex h-9 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none"
+          className="inline-flex h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none"
         >
           {loading ? 'Enviando...' : 'Enviar Codigo'}
         </button>
@@ -311,7 +311,7 @@ function PhoneForm({ returnUrl }: { returnUrl: string }) {
           placeholder="000000"
           required
           autoComplete="one-time-code"
-          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-center text-sm tracking-[0.4em] shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="flex h-11 w-full rounded-md border border-input bg-transparent px-3 py-1 text-center text-sm tracking-[0.4em] shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
         <p className="text-xs text-muted-foreground">
           Codigo enviado para {formatPhoneNumber(phone)}
@@ -325,7 +325,7 @@ function PhoneForm({ returnUrl }: { returnUrl: string }) {
       <button
         type="submit"
         disabled={loading || otp.length < 6}
-        className="inline-flex h-9 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none"
+        className="inline-flex h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none"
       >
         {loading ? 'Verificando...' : 'Verificar'}
       </button>

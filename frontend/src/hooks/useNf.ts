@@ -78,11 +78,12 @@ export function useNfList(filters: NfFilters = {}) {
 
 // --- Estatisticas ---
 
-export function useNfStats() {
+export function useNfStats(enabled = true) {
   const query = useQuery({
     queryKey: nfKeys.stats(),
     queryFn: () => apiGet<NfStats>('nf-processor', undefined, 'stats'),
     staleTime: 30_000,
+    enabled,
   })
 
   return {

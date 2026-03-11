@@ -293,11 +293,12 @@ export interface CrmDashboardData {
   }>
 }
 
-export function useCrmDashboard() {
+export function useCrmDashboard(enabled = true) {
   return useQuery({
     queryKey: crmKeys.dashboard(),
     queryFn: () => apiGet<CrmDashboardData>('crm', undefined, 'dashboard'),
     staleTime: 60_000,
+    enabled,
     select: (res) => res.data,
   })
 }

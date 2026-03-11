@@ -65,12 +65,13 @@ export interface RevenueMonth {
 // --- Hooks ---
 
 /** KPIs gerais do dashboard. Atualiza a cada 30 segundos. */
-export function useDashboardKpis() {
+export function useDashboardKpis(enabled = true) {
   const query = useQuery({
     queryKey: dashboardKeys.kpis(),
     queryFn: () => apiGet<DashboardKpis>('dashboard', undefined, 'kpis'),
     staleTime: 30_000,
     refetchInterval: 30_000,
+    enabled,
   })
 
   return {

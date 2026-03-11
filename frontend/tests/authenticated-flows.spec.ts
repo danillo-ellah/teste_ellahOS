@@ -1267,12 +1267,13 @@ test.describe('SUITE E — Persona Hacker Junior (rotas proibidas e chaos)', () 
 
     const fakeUUID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
     await page.goto(`${BASE}/crm/${fakeUUID}`, { waitUntil: 'domcontentloaded', timeout: 20000 });
-    await page.waitForTimeout(3000);
+    // Espera a API retornar 404 e o estado de erro renderizar
+    await page.waitForTimeout(5000);
 
     const finalUrl = page.url().replace(BASE, '');
 
     // Nao deve mostrar crash (pageerror) nem dados de outro tenant
-    const notFoundMsg = page.locator('text=/nao encontrado|not found|404|oportunidade nao existe/i');
+    const notFoundMsg = page.locator('text=/nao encontrad[oa]|not found|404|oportunidade nao existe/i');
     const serverError = page.locator('text=/500|erro interno|something went wrong/i');
 
     if (await serverError.count() > 0) {
