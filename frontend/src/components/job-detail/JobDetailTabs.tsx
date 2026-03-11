@@ -330,7 +330,7 @@ export function JobDetailTabs({ job }: JobDetailTabsProps) {
               type="button"
               onClick={() => handleGroupClick(gIdx)}
               className={cn(
-                'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors whitespace-nowrap',
+                'flex items-center gap-1.5 rounded-full px-3 py-2 sm:py-1.5 text-xs font-semibold transition-colors whitespace-nowrap min-h-[36px]',
                 isActive
                   ? cn(areaConfig.bgClass, areaConfig.textClass)
                   : 'text-muted-foreground hover:bg-accent hover:text-foreground',
@@ -354,7 +354,7 @@ export function JobDetailTabs({ job }: JobDetailTabsProps) {
             onClick={toggleShowAllTabs}
             title={showAllTabs ? 'Ocultar abas de outras fases' : 'Mostrar todas as abas'}
             className={cn(
-              'ml-auto flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap',
+              'ml-auto flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 sm:py-1.5 text-xs font-medium transition-colors whitespace-nowrap min-h-[36px]',
               showAllTabs
                 ? 'bg-muted text-foreground'
                 : 'text-muted-foreground hover:bg-accent hover:text-foreground',
@@ -387,7 +387,7 @@ export function JobDetailTabs({ job }: JobDetailTabsProps) {
                 key={tab.id}
                 value={tab.id}
                 className={cn(
-                  'relative rounded-none border-b-2 border-transparent px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium whitespace-nowrap',
+                  'relative rounded-none border-b-2 border-transparent px-3 sm:px-4 py-3 sm:py-2.5 text-xs sm:text-sm font-medium whitespace-nowrap min-h-[40px]',
                   'text-muted-foreground hover:text-foreground transition-colors',
                   'data-[state=active]:border-primary data-[state=active]:text-foreground',
                   'data-[state=active]:shadow-none data-[state=active]:bg-transparent',

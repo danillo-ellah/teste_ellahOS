@@ -143,7 +143,7 @@ export function Sidebar({ collapsed, onToggle, badges }: SidebarProps) {
 
               {/* Separador fino quando collapsed (substitui header) */}
               {areaConfig && collapsed && sIdx > 0 && (
-                <div className="mx-2 mb-1.5 mt-0.5 border-t border-border/50" />
+                <div className="mx-2 mb-1.5 mt-0.5 border-t border-border" />
               )}
 
               {/* Items */}

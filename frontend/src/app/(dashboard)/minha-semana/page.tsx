@@ -167,7 +167,7 @@ function MyJobsSection({ jobs, isLoading }: { jobs: MyWeekJob[]; isLoading: bool
                 <span className={cn('text-lg font-bold', healthColor(job.health_score))}>
                   {job.health_score ?? '-'}
                 </span>
-                <span className="text-[9px] text-muted-foreground uppercase">health</span>
+                <span className="text-[9px] text-muted-foreground uppercase">saude</span>
               </div>
 
               {/* Info principal */}
