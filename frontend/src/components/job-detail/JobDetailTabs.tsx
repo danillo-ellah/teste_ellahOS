@@ -23,6 +23,7 @@ import {
   GanttChartSquare,
   Headset,
   Scissors,
+  GitBranch,
   Eye,
   EyeOff,
 } from 'lucide-react'
@@ -56,6 +57,7 @@ import { TabOrdemDoDia } from '@/components/job-detail/tabs/TabOrdemDoDia'
 import { TabCronograma } from '@/components/job-detail/tabs/TabCronograma'
 import { TabAtendimento } from '@/components/job-detail/tabs/TabAtendimento'
 import { TabPosProducao } from '@/components/job-detail/tabs/TabPosProducao'
+import { TabWorkflow } from '@/components/job-detail/tabs/TabWorkflow'
 import type { JobDetail } from '@/types/jobs'
 import type { JobStatus } from '@/types/jobs'
 import { useJobAccess } from '@/hooks/useJobAccess'
@@ -71,18 +73,18 @@ const TABS_BY_PHASE: Record<string, JobDetailTabId[]> = {
   // Fase Pre-Producao = Comercial + modulos de planejamento
   pre_producao: [
     'geral', 'equipe', 'financeiro', 'atendimento', 'historico',
-    'ppm', 'diarias', 'locacoes', 'elenco', 'figurino', 'contratos', 'cronograma', 'storyboard', 'ordem-do-dia',
+    'workflow', 'ppm', 'diarias', 'locacoes', 'elenco', 'figurino', 'contratos', 'cronograma', 'storyboard', 'ordem-do-dia',
   ],
   // Fase Producao = Pre-Producao + modulos de set
   producao: [
     'geral', 'equipe', 'financeiro', 'atendimento', 'historico',
-    'ppm', 'diarias', 'locacoes', 'elenco', 'figurino', 'contratos', 'cronograma', 'storyboard', 'ordem-do-dia',
+    'workflow', 'ppm', 'diarias', 'locacoes', 'elenco', 'figurino', 'contratos', 'cronograma', 'storyboard', 'ordem-do-dia',
     'diario', 'horas-extras', 'claquete',
   ],
   // Fase Pos-Producao = Producao + pos + portal
   pos_producao: [
     'geral', 'equipe', 'financeiro', 'atendimento', 'historico',
-    'ppm', 'diarias', 'locacoes', 'elenco', 'figurino', 'contratos', 'cronograma', 'storyboard', 'ordem-do-dia',
+    'workflow', 'ppm', 'diarias', 'locacoes', 'elenco', 'figurino', 'contratos', 'cronograma', 'storyboard', 'ordem-do-dia',
     'diario', 'horas-extras', 'claquete',
     'pos-producao', 'portal', 'entregaveis', 'aprovacoes',
   ],
@@ -183,6 +185,7 @@ const ICON_MAP: Record<string, typeof FileText> = {
   GanttChartSquare,
   Headset,
   Scissors,
+  GitBranch,
 }
 
 interface JobDetailTabsProps {
@@ -511,6 +514,11 @@ export function JobDetailTabs({ job }: JobDetailTabsProps) {
         {/* Tab: Pos-Producao */}
         <TabsContent value="pos-producao" className="mt-6">
           <TabErrorBoundary tabName="pos-producao"><TabPosProducao job={job} /></TabErrorBoundary>
+        </TabsContent>
+
+        {/* Tab: Workflow (ciclo aprovacao pre-producao) */}
+        <TabsContent value="workflow" className="mt-6">
+          <TabErrorBoundary tabName="workflow"><TabWorkflow job={job} /></TabErrorBoundary>
         </TabsContent>
       </Tabs>
     </div>

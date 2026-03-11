@@ -202,6 +202,7 @@ export type JobDetailTabId =
   | 'historico'
   | 'portal'
   | 'pos-producao'
+  | 'workflow'
 
 export const JOB_DETAIL_TABS: ReadonlyArray<{
   id: JobDetailTabId
@@ -223,6 +224,7 @@ export const JOB_DETAIL_TABS: ReadonlyArray<{
   { id: 'horas-extras', label: 'Horas Extras', icon: 'Timer' },
   { id: 'historico', label: 'Historico', icon: 'Clock' },
   { id: 'portal', label: 'Aprovacao Cliente', icon: 'Globe' },
+  { id: 'workflow', label: 'Workflow', icon: 'GitBranch' },
 ] as const
 
 // --- Cadastros: Segmento de cliente ---
@@ -531,6 +533,7 @@ export const JOB_TAB_GROUPS: JobTabGroup[] = [
     group: 'Pre-Producao',
     area: 'producao',
     tabs: [
+      { id: 'workflow', label: 'Workflow', icon: 'GitBranch' },
       { id: 'ppm', label: 'Checklist Pre-Prod', icon: 'FileCheck' },
       { id: 'diarias', label: 'Diarias', icon: 'Calendar' },
       { id: 'locacoes', label: 'Locacoes', icon: 'MapPin' },

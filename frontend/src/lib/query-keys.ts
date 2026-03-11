@@ -351,6 +351,12 @@ export const productionDiaryKeys = {
   detail: (id: string) => [...productionDiaryKeys.all, 'detail', id] as const,
 }
 
+export const workflowKeys = {
+  all: ['workflow'] as const,
+  steps: (jobId: string) => [...workflowKeys.all, 'steps', jobId] as const,
+  evidence: (stepId: string) => [...workflowKeys.all, 'evidence', stepId] as const,
+}
+
 export const posProducaoKeys = {
   all: ['pos-producao'] as const,
   dashboard: (filters: Record<string, string>) =>
