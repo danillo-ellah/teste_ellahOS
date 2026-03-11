@@ -29,6 +29,7 @@ import {
   Timer,
   Headset,
   TrendingUp,
+  TrendingDown,
   Scissors,
   Upload,
   type LucideIcon,
@@ -71,6 +72,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Timer,
   Headset,
   TrendingUp,
+  TrendingDown,
   Scissors,
   Upload,
 }

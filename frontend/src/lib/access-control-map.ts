@@ -243,6 +243,7 @@ export const SIDEBAR_ACCESS: Record<string, UserRole[]> = {
   // Comercial — so lideranca + CCO
   '/crm/dashboard': [...FULL_ACCESS, 'comercial'],
   '/crm/report': [...FULL_ACCESS, 'comercial'],
+  '/crm/perdas': FULL_ACCESS,
   '/crm': [...FULL_ACCESS, 'comercial'],
   '/clients': [...FULL_ACCESS, 'comercial', 'atendimento'],
   '/agencies': [...FULL_ACCESS, 'comercial', 'atendimento'],

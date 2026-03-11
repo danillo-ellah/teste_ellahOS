@@ -8,6 +8,7 @@ import {
   Plus,
   CheckCircle2,
   FileText,
+  FileDown,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -33,6 +34,7 @@ import {
   type OpportunityBudgetItem,
 } from '@/hooks/useCrmBudget'
 import type { OpportunityStage } from '@/hooks/useCrm'
+import { generateOpportunityBudgetPdf } from '@/lib/pdf/opportunity-budget-pdf'
 import { BudgetVersionHistory } from './BudgetVersionHistory'
 
 // ---------------------------------------------------------------------------
@@ -74,6 +76,9 @@ interface OpportunityBudgetSectionProps {
     stage: OpportunityStage
     orc_code?: string | null
     project_type?: string | null
+    title?: string
+    clients?: { name: string } | null
+    agencies?: { name: string } | null
   }
   onBudgetSaved?: () => void
 }
@@ -201,6 +206,9 @@ interface BudgetSectionInnerProps {
     stage: OpportunityStage
     orc_code?: string | null
     project_type?: string | null
+    title?: string
+    clients?: { name: string } | null
+    agencies?: { name: string } | null
   }
   isReadonly: boolean
   isEditable: boolean
@@ -352,6 +360,35 @@ function BudgetSectionInner({
   const draftVersion = versions?.find((v) => v.status === 'rascunho')
   const hasVersions = versions && versions.length > 0
 
+  // Exporta PDF da versao ativa
+  const [isExportingPdf, setIsExportingPdf] = useState(false)
+
+  async function handleExportPdf() {
+    if (!activeVersion?.items) return
+    setIsExportingPdf(true)
+    try {
+      await generateOpportunityBudgetPdf({
+        opportunityTitle: opportunity.title ?? 'Sem titulo',
+        clientName: opportunity.clients?.name ?? null,
+        agencyName: opportunity.agencies?.name ?? null,
+        orcCode: opportunity.orc_code ?? activeVersion.orc_code ?? null,
+        version: activeVersion.version,
+        versionDate: activeVersion.updated_at,
+        items: activeVersion.items.map((i) => ({
+          item_number: i.item_number,
+          display_name: i.display_name,
+          value: i.value,
+          notes: i.notes,
+        })),
+        totalValue: activeVersion.total_value,
+      })
+    } catch {
+      toast.error('Erro ao gerar PDF. Tente novamente.')
+    } finally {
+      setIsExportingPdf(false)
+    }
+  }
+
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       {/* Header colapsavel */}
@@ -491,6 +528,27 @@ function BudgetSectionInner({
                     onChange={(e) => setVersionNotes(e.target.value)}
                     aria-label="Notas da versao do orcamento"
                   />
+                </div>
+              )}
+
+              {/* Exportar PDF — disponivel quando ha versao ativa (readonly ou editor) */}
+              {activeVersion && (
+                <div className="flex justify-end pt-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 gap-1.5 text-xs"
+                    onClick={handleExportPdf}
+                    disabled={isExportingPdf}
+                    title="Exportar versao ativa como PDF"
+                  >
+                    {isExportingPdf ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <FileDown className="size-3.5" />
+                    )}
+                    Exportar PDF
+                  </Button>
                 </div>
               )}
 

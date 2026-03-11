@@ -470,6 +470,7 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
       { label: 'Dashboard', href: '/crm/dashboard', icon: 'BarChart3' },
       { label: 'Relatorio', href: '/crm/report', icon: 'FileBarChart' },
       { label: 'Pipeline', href: '/crm', icon: 'Target' },
+      { label: 'Analise de Perdas', href: '/crm/perdas', icon: 'TrendingDown' },
       { label: 'Clientes', href: '/clients', icon: 'Building2' },
       { label: 'Agencias', href: '/agencies', icon: 'Briefcase' },
     ],

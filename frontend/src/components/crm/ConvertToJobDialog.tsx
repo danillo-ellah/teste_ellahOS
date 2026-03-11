@@ -20,9 +20,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
 import { safeErrorMessage } from '@/lib/api'
 import { useConvertToJob, type OpportunityDetail } from '@/hooks/useCrm'
+import { useOpportunityBudgetVersions } from '@/hooks/useCrmBudget'
 import { PROJECT_TYPES, type ProjectType } from '@/types/jobs'
 import { PROJECT_TYPE_LABELS } from '@/lib/constants'
 import { formatCurrency } from '@/lib/format'
@@ -50,6 +52,11 @@ export function ConvertToJobDialog({
   const [projectType, setProjectType] = useState(
     opportunity.project_type ?? '',
   )
+  const [transferBudget, setTransferBudget] = useState(true)
+
+  // Busca versoes de orcamento para exibir preview da versao ativa
+  const { data: budgetVersions } = useOpportunityBudgetVersions(opportunity.id)
+  const activeVersion = budgetVersions?.find((v) => v.status === 'ativa') ?? null
 
   async function handleConvert() {
     const trimmedTitle = title.trim()
@@ -68,6 +75,7 @@ export function ConvertToJobDialog({
         description: opportunity.notes ?? undefined,
         deliverable_format: opportunity.deliverable_format ?? undefined,
         campaign_period: opportunity.campaign_period ?? undefined,
+        transfer_budget: activeVersion ? transferBudget : false,
       })
       toast.success(`Job "${result.data.job.title}" criado com sucesso`)
       onOpenChange(false)
@@ -166,6 +174,61 @@ export function ConvertToJobDialog({
               )}
             </div>
           </div>
+
+          {/* Orcamento a transferir — exibe apenas quando ha versao ativa */}
+          {activeVersion && (
+            <div className="space-y-3 rounded-lg border bg-muted/30 p-3">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Orcamento a transferir
+              </p>
+
+              {/* Resumo da versao ativa */}
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
+                  Versao v{activeVersion.version} — {activeVersion.items?.length ?? 0} categorias
+                </span>
+                <span className="font-semibold tabular-nums">
+                  {formatCurrency(activeVersion.total_value)}
+                </span>
+              </div>
+
+              {/* Preview dos top 4 itens com valor */}
+              {activeVersion.items && activeVersion.items.filter((i) => i.value > 0).length > 0 && (
+                <div className="space-y-0.5 text-xs text-muted-foreground">
+                  {activeVersion.items
+                    .filter((i) => i.value > 0)
+                    .slice(0, 4)
+                    .map((item) => (
+                      <div key={item.item_number} className="flex items-center justify-between gap-2">
+                        <span className="truncate">{item.display_name}</span>
+                        <span className="tabular-nums shrink-0">{formatCurrency(item.value)}</span>
+                      </div>
+                    ))}
+                  {activeVersion.items.filter((i) => i.value > 0).length > 4 && (
+                    <p className="text-muted-foreground/70 pt-0.5">
+                      +{activeVersion.items.filter((i) => i.value > 0).length - 4} categorias adicionais
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Checkbox de transferencia */}
+              <div className="flex items-start gap-2 pt-1">
+                <Checkbox
+                  id="transfer-budget"
+                  checked={transferBudget}
+                  onCheckedChange={(checked) => setTransferBudget(!!checked)}
+                  className="mt-0.5"
+                />
+                <label
+                  htmlFor="transfer-budget"
+                  className="text-sm cursor-pointer leading-snug"
+                >
+                  Criar cost_items a partir deste orcamento
+                </label>
+              </div>
+            </div>
+          )}
 
           {/* Info */}
           <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50/50 p-3 text-xs text-blue-800 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-300">

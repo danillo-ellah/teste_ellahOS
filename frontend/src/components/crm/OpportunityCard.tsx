@@ -78,9 +78,16 @@ export const OpportunityCard = memo(function OpportunityCard({ opportunity, onCl
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-1.5 min-w-0">
           <GripVertical className="mt-0.5 size-4 shrink-0 text-muted-foreground/40 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" aria-hidden="true" />
-          <span className="text-sm font-medium leading-snug line-clamp-2">
-            {opportunity.title}
-          </span>
+          <div className="min-w-0">
+            <span className="text-sm font-medium leading-snug line-clamp-2">
+              {opportunity.title}
+            </span>
+            {opportunity.orc_code && (
+              <span className="block text-[10px] font-mono text-muted-foreground leading-tight mt-0.5">
+                {opportunity.orc_code}
+              </span>
+            )}
+          </div>
         </div>
         <ChevronRight className="mt-0.5 size-3.5 shrink-0 text-muted-foreground opacity-60 sm:opacity-0 transition-opacity sm:group-hover:opacity-100" />
       </div>
