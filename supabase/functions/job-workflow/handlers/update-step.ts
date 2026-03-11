@@ -114,7 +114,8 @@ export async function handleUpdateStep(
     if (updateErr.message?.includes('Rejeicao exige')) {
       throw new AppError('VALIDATION_ERROR', 'Rejeicao exige motivo (rejection_reason)', 400);
     }
-    throw new AppError('INTERNAL_ERROR', updateErr.message, 500);
+    console.error('[update-step] update error:', updateErr.message);
+    throw new AppError('INTERNAL_ERROR', 'Erro interno ao atualizar passo do workflow', 500);
   }
 
   // Historico

@@ -489,6 +489,10 @@ const EVIDENCE_TYPE_ICONS: Record<EvidenceType, typeof Image> = {
   outro: File,
 }
 
+// Tipos e tamanhos permitidos para upload
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+
 function EvidenceUploadPanel({
   stepId,
   jobId,
@@ -506,6 +510,18 @@ function EvidenceUploadPanel({
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleUpload = useCallback(async (file: globalThis.File) => {
+    // S4: Validar tipo e tamanho ANTES do upload
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+      toast.error('Tipo nao permitido. Use JPEG, PNG, WebP ou PDF.')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
+    if (file.size === 0 || file.size > MAX_FILE_SIZE) {
+      toast.error('Arquivo invalido. Tamanho maximo: 10MB.')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
+
     setIsUploading(true)
     try {
       const supabase = createClient()
@@ -519,23 +535,25 @@ function EvidenceUploadPanel({
         .eq('id', user.id)
         .single()
 
-      const tenantId = profile?.tenant_id ?? 'default'
+      // S4: Sem fallback 'default' — erro se tenant nao identificado
+      if (!profile?.tenant_id) {
+        throw new Error('Erro ao identificar tenant. Recarregue a pagina.')
+      }
+
+      const tenantId = profile.tenant_id
       const ext = file.name.split('.').pop() ?? 'bin'
-      const path = `${tenantId}/${jobId}/${stepId}/${Date.now()}.${ext}`
+      const storagePath = `${tenantId}/${jobId}/${stepId}/${Date.now()}.${ext}`
 
       const { error: uploadError } = await supabase.storage
         .from('workflow-evidence')
-        .upload(path, file, { contentType: file.type })
+        .upload(storagePath, file, { contentType: file.type })
 
       if (uploadError) throw uploadError
 
-      const { data: urlData } = supabase.storage
-        .from('workflow-evidence')
-        .getPublicUrl(path)
-
+      // S2: Armazena o PATH relativo (nao URL publica) — backend gera signed URLs
       await addEvidence({
         evidence_type: evidenceType,
-        file_url: urlData.publicUrl,
+        file_url: storagePath,
         file_name: file.name,
         ...(notes.trim() ? { notes: notes.trim() } : {}),
       })
@@ -559,11 +577,11 @@ function EvidenceUploadPanel({
       {canManage && (
         <div className="flex flex-wrap items-end gap-2">
           <div className="flex-1 min-w-[180px]">
-            <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Arquivo</label>
+            <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Arquivo (JPEG, PNG, PDF, max 10MB)</label>
             <Input
               ref={fileInputRef}
               type="file"
-              accept="image/*,.pdf,.jpg,.jpeg,.png,.webp"
+              accept="image/jpeg,image/png,image/webp,application/pdf"
               disabled={busy}
               className="h-8 text-xs"
               onChange={(e) => {
@@ -622,17 +640,19 @@ function EvidenceUploadPanel({
 }
 
 // ---------------------------------------------------------------------------
-// Card de evidencia individual
+// Card de evidencia individual (usa signed_url do backend)
 // ---------------------------------------------------------------------------
 
 function EvidenceCard({ evidence }: { evidence: WorkflowEvidence }) {
   const Icon = EVIDENCE_TYPE_ICONS[evidence.evidence_type] ?? File
   const isImage = evidence.evidence_type === 'foto' ||
     /\.(jpg|jpeg|png|webp|gif)$/i.test(evidence.file_name)
+  // Backend retorna signed_url (URL temporaria autenticada)
+  const displayUrl = (evidence as WorkflowEvidence & { signed_url?: string }).signed_url ?? evidence.file_url
 
   return (
     <a
-      href={evidence.file_url}
+      href={displayUrl}
       target="_blank"
       rel="noopener noreferrer"
       className="group rounded-lg border bg-background p-2 hover:border-primary/50 transition-colors"
@@ -640,7 +660,7 @@ function EvidenceCard({ evidence }: { evidence: WorkflowEvidence }) {
       {isImage ? (
         <div className="aspect-square rounded bg-muted overflow-hidden mb-1.5">
           <img
-            src={evidence.file_url}
+            src={displayUrl}
             alt={evidence.file_name}
             className="h-full w-full object-cover group-hover:scale-105 transition-transform"
           />

@@ -11,8 +11,9 @@ const AddEvidenceSchema = z.object({
   evidence_type: z.enum(EVIDENCE_TYPES, {
     errorMap: () => ({ message: 'Tipo de evidencia invalido. Usar: foto, nota_fiscal, recibo, outro' }),
   }),
-  file_url: z.string().min(1, 'URL do arquivo e obrigatoria'),
-  file_name: z.string().min(1, 'Nome do arquivo e obrigatorio').max(500),
+  file_url: z.string().min(1, 'Path do arquivo e obrigatorio').max(1000),
+  file_name: z.string().min(1, 'Nome do arquivo e obrigatorio').max(255)
+    .transform(s => s.replace(/[/\\<>:"|?*\x00-\x1f]/g, '_').trim()),
   notes: z.string().max(2000).nullable().optional(),
 });
 
@@ -41,6 +42,12 @@ export async function handleAddEvidence(
   const body = await req.json();
   const validated = validate(AddEvidenceSchema, body);
 
+  // S3: Validar que file_url (storage path) pertence ao tenant do step
+  const expectedPrefix = `${step.tenant_id}/`;
+  if (!validated.file_url.startsWith(expectedPrefix)) {
+    throw new AppError('VALIDATION_ERROR', 'Path do arquivo deve pertencer ao tenant correto', 400);
+  }
+
   const { data: evidence, error: insertErr } = await supabase
     .from('job_workflow_evidence')
     .insert({
@@ -59,7 +66,8 @@ export async function handleAddEvidence(
     .single();
 
   if (insertErr) {
-    throw new AppError('INTERNAL_ERROR', insertErr.message, 500);
+    console.error('[add-evidence] insert error:', insertErr.message);
+    throw new AppError('INTERNAL_ERROR', 'Erro ao salvar evidencia', 500);
   }
 
   console.log(`[job-workflow/add-evidence] step=${stepId} type=${validated.evidence_type} file=${validated.file_name}`);

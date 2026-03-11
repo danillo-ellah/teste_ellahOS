@@ -3,6 +3,8 @@ import { success } from '../../_shared/response.ts';
 import { AppError } from '../../_shared/errors.ts';
 import type { AuthContext } from '../../_shared/auth.ts';
 
+const SIGNED_URL_TTL = 3600; // 1 hora
+
 export async function handleListEvidence(
   req: Request,
   auth: AuthContext,
@@ -32,9 +34,28 @@ export async function handleListEvidence(
     .order('created_at', { ascending: false });
 
   if (fetchErr) {
-    throw new AppError('INTERNAL_ERROR', fetchErr.message, 500);
+    console.error('[list-evidence] fetch error:', fetchErr.message);
+    throw new AppError('INTERNAL_ERROR', 'Erro ao carregar evidencias', 500);
   }
 
-  console.log(`[job-workflow/list-evidence] step=${stepId} count=${evidence?.length ?? 0}`);
-  return success(evidence ?? [], 200, req);
+  // Gerar signed URLs para cada evidencia (bucket privado)
+  const items = evidence ?? [];
+  if (items.length > 0) {
+    const paths = items.map((e: { file_url: string }) => e.file_url);
+    const { data: signedUrls } = await supabase.storage
+      .from('workflow-evidence')
+      .createSignedUrls(paths, SIGNED_URL_TTL);
+
+    if (signedUrls) {
+      for (let i = 0; i < items.length; i++) {
+        const signed = signedUrls[i];
+        if (signed && !signed.error) {
+          (items[i] as Record<string, unknown>).signed_url = signed.signedUrl;
+        }
+      }
+    }
+  }
+
+  console.log(`[job-workflow/list-evidence] step=${stepId} count=${items.length}`);
+  return success(items, 200, req);
 }
