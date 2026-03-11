@@ -63,8 +63,9 @@ export interface Opportunity {
   deliverable_format: string | null
   client_budget: number | null
   campaign_period: string | null
+  orc_code: string | null
   // Campos de analise win/loss
-  loss_category: 'preco' | 'diretor' | 'prazo' | 'escopo' | 'relacionamento' | 'outro' | null
+  loss_category: 'preco' | 'diretor' | 'prazo' | 'escopo' | 'relacionamento' | 'concorrencia' | 'outro' | null
   winner_competitor: string | null
   winner_value: number | null
   win_reason: string | null
@@ -166,7 +167,7 @@ export interface CreateOpportunityPayload {
 export interface UpdateOpportunityPayload extends Partial<CreateOpportunityPayload> {
   actual_close_date?: string | null
   // Campos de analise win/loss
-  loss_category?: 'preco' | 'diretor' | 'prazo' | 'escopo' | 'relacionamento' | 'outro' | null
+  loss_category?: 'preco' | 'diretor' | 'prazo' | 'escopo' | 'relacionamento' | 'concorrencia' | 'outro' | null
   winner_competitor?: string | null
   winner_value?: number | null
   win_reason?: string | null
@@ -199,6 +200,7 @@ export interface ConvertToJobPayload {
   description?: string | null
   deliverable_format?: string | null
   campaign_period?: string | null
+  transfer_budget?: boolean
 }
 
 // ---------------------------------------------------------------------------

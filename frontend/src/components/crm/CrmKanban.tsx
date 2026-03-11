@@ -22,6 +22,7 @@ import type { Opportunity, OpportunityStage, PipelineData } from '@/hooks/useCrm
 import { useUpdateOpportunity } from '@/hooks/useCrm'
 import { OpportunityCard } from './OpportunityCard'
 import { OpportunityDialog } from './OpportunityDialog'
+import { LossFeedbackDialog, type LossFeedback } from './LossFeedbackDialog'
 
 // ---------------------------------------------------------------------------
 // Configuracao visual de cada stage
@@ -102,7 +103,8 @@ const ALL_STAGES: OpportunityStage[] = [
 ]
 
 // Stages para os quais nao e permitido drop via DnD (requerem fluxo de detalhe)
-const DND_BLOCKED_TARGETS = new Set<OpportunityStage>(['ganho', 'perdido'])
+// 'perdido' foi removido — agora e interceptado pelo dialog LossFeedbackDialog antes de efetivar
+const DND_BLOCKED_TARGETS = new Set<OpportunityStage>(['ganho'])
 
 // ---------------------------------------------------------------------------
 // Validacao de transicao de stage via DnD
@@ -130,11 +132,11 @@ function validateTransition(
     }
   }
 
-  // Nao permite drop em ganho/perdido via DnD
+  // Nao permite drop em ganho via DnD (perdido agora e interceptado pelo LossFeedbackDialog)
   if (DND_BLOCKED_TARGETS.has(to)) {
     return {
       allowed: false,
-      reason: 'Use o detalhe da oportunidade para marcar como ganho ou perdido.',
+      reason: 'Use o detalhe da oportunidade para marcar como ganho.',
     }
   }
 
@@ -275,9 +277,19 @@ interface KanbanBoardProps {
   onAddClick: (stage: OpportunityStage) => void
 }
 
+// Estado pendente para o dialog de feedback de perda via DnD
+interface PendingLossMove {
+  opportunityId: string
+  opportunityTitle: string
+}
+
 function KanbanBoard({ pipeline, includeClosed, onCardClick, onAddClick }: KanbanBoardProps) {
   const { execute } = useMutationRegistry()
   const [activeCard, setActiveCard] = useState<Opportunity | null>(null)
+
+  // Estado para capturar feedback antes de efetivar o move para 'perdido'
+  const [pendingLossMove, setPendingLossMove] = useState<PendingLossMove | null>(null)
+  const [lossFeedbackOpen, setLossFeedbackOpen] = useState(false)
 
   const stages = includeClosed ? ALL_STAGES : ACTIVE_STAGES
 
@@ -323,46 +335,93 @@ function KanbanBoard({ pipeline, includeClosed, onCardClick, onAddClick }: Kanba
         return
       }
 
+      // Se destino e 'perdido', abre dialog de feedback antes de efetivar o move
+      if (targetStage === 'perdido') {
+        setPendingLossMove({ opportunityId: draggedId, opportunityTitle: opp.title })
+        setLossFeedbackOpen(true)
+        return
+      }
+
       // Executar mutation registrada pelo DraggableCard desse id
       void execute(draggedId, targetStage)
     },
-    [execute],
+    [execute, opportunityMap],
   )
 
+  // Confirma a perda com feedback — dispara CustomEvent que o DraggableCard ouve
+  // O registry so aceita { stage }, entao usamos evento para passar campos extras de perda
+  function handleLossConfirm(feedback: LossFeedback) {
+    if (!pendingLossMove) return
+    setLossFeedbackOpen(false)
+    setPendingLossMove(null)
+
+    window.dispatchEvent(
+      new CustomEvent('crm:loss-move', {
+        detail: {
+          opportunityId: pendingLossMove.opportunityId,
+          stage: 'perdido' as OpportunityStage,
+          loss_category: feedback.loss_category,
+          loss_reason: feedback.loss_reason,
+          winner_competitor: feedback.winner_competitor ?? null,
+          winner_value: feedback.winner_value ?? null,
+        },
+      }),
+    )
+  }
+
+  // Cancela o move — reverte visualmente (nao precisa de acao extra, state nao foi atualizado)
+  function handleLossCancel() {
+    setLossFeedbackOpen(false)
+    setPendingLossMove(null)
+    toast.info('Move cancelado.')
+  }
+
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      {/* Kanban horizontal com scroll */}
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {stages.map((stage) => {
-          const config = STAGE_CONFIG[stage]
-          const items = pipeline.stages[stage] ?? []
-          const summary = pipeline.summary.find((s) => s.stage === stage)
-          const totalValue = summary?.total_value ?? 0
+    <>
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        {/* Kanban horizontal com scroll */}
+        <div className="flex gap-4 overflow-x-auto pb-4">
+          {stages.map((stage) => {
+            const config = STAGE_CONFIG[stage]
+            const items = pipeline.stages[stage] ?? []
+            const summary = pipeline.summary.find((s) => s.stage === stage)
+            const totalValue = summary?.total_value ?? 0
 
-          return (
-            <KanbanColumn
-              key={stage}
-              stage={stage}
-              config={config}
-              items={items}
-              totalValue={totalValue}
-              activeCard={activeCard}
-              onCardClick={onCardClick}
-              onAddClick={() => onAddClick(stage)}
-            />
-          )
-        })}
-      </div>
+            return (
+              <KanbanColumn
+                key={stage}
+                stage={stage}
+                config={config}
+                items={items}
+                totalValue={totalValue}
+                activeCard={activeCard}
+                onCardClick={onCardClick}
+                onAddClick={() => onAddClick(stage)}
+              />
+            )
+          })}
+        </div>
 
-      {/* Preview do card enquanto arrasta */}
-      <DragOverlay dropAnimation={null}>
-        {activeCard ? (
-          <div className="w-72 rotate-1 scale-105 opacity-95 shadow-2xl pointer-events-none">
-            <OpportunityCard opportunity={activeCard} onClick={() => {}} />
-          </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+        {/* Preview do card enquanto arrasta */}
+        <DragOverlay dropAnimation={null}>
+          {activeCard ? (
+            <div className="w-72 rotate-1 scale-105 opacity-95 shadow-2xl pointer-events-none">
+              <OpportunityCard opportunity={activeCard} onClick={() => {}} />
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+
+      {/* Dialog de feedback de perda — ativado pelo drag para coluna 'perdido' */}
+      {pendingLossMove && (
+        <LossFeedbackDialog
+          open={lossFeedbackOpen}
+          opportunityTitle={pendingLossMove.opportunityTitle}
+          onConfirm={handleLossConfirm}
+          onCancel={handleLossCancel}
+        />
+      )}
+    </>
   )
 }
 
@@ -507,6 +566,40 @@ const DraggableCard = memo(function DraggableCard({ opportunity, onCardClick }: 
   useEffect(() => {
     register(opportunity.id, mutateAsync)
   }, [opportunity.id, mutateAsync, register])
+
+  // Ouve evento de loss-move para efetivar o move com campos extras de feedback
+  useEffect(() => {
+    function handleLossMove(e: Event) {
+      const detail = (e as CustomEvent<{
+        opportunityId: string
+        stage: OpportunityStage
+        loss_category: string
+        loss_reason: string
+        winner_competitor: string | null
+        winner_value: number | null
+      }>).detail
+
+      if (detail.opportunityId !== opportunity.id) return
+
+      void (async () => {
+        try {
+          await mutateAsync({
+            stage: detail.stage,
+            loss_category: detail.loss_category as 'preco' | 'diretor' | 'prazo' | 'escopo' | 'relacionamento' | 'concorrencia' | 'outro' | null,
+            loss_reason: detail.loss_reason,
+            winner_competitor: detail.winner_competitor,
+            winner_value: detail.winner_value,
+          })
+          toast.success(`Movido para ${STAGE_CONFIG[detail.stage].label}`, { duration: 2500 })
+        } catch {
+          toast.error('Erro ao registrar perda. Tente novamente.', { duration: 4000 })
+        }
+      })()
+    }
+
+    window.addEventListener('crm:loss-move', handleLossMove)
+    return () => window.removeEventListener('crm:loss-move', handleLossMove)
+  }, [opportunity.id, mutateAsync])
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: opportunity.id,

@@ -64,6 +64,7 @@ import { ProposalSection } from './ProposalSection'
 import { AgencyHistoryPanel } from './AgencyHistoryPanel'
 import { OpportunityDialog } from './OpportunityDialog'
 import { ConvertToJobDialog } from './ConvertToJobDialog'
+import { OpportunityBudgetSection } from './OpportunityBudgetSection'
 import { useUserRole } from '@/hooks/useUserRole'
 
 // ---------------------------------------------------------------------------
@@ -113,6 +114,7 @@ const LOSS_CATEGORY_OPTIONS: { value: string; label: string }[] = [
   { value: 'prazo', label: 'Prazo' },
   { value: 'escopo', label: 'Escopo' },
   { value: 'relacionamento', label: 'Relacionamento' },
+  { value: 'concorrencia', label: 'Concorrencia' },
   { value: 'outro', label: 'Outro' },
 ]
 
@@ -122,6 +124,7 @@ const LOSS_CATEGORY_LABEL: Record<string, string> = {
   prazo: 'Prazo',
   escopo: 'Escopo',
   relacionamento: 'Relacionamento',
+  concorrencia: 'Concorrencia',
   outro: 'Outro',
 }
 
@@ -356,6 +359,19 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
           <p className="text-sm text-emerald-800 dark:text-emerald-300">{opportunity.win_reason}</p>
         </div>
       )}
+
+      {/* Secao de orcamento pre-Job — visivel a partir do stage proposta */}
+      <OpportunityBudgetSection
+        opportunity={{
+          id: opportunity.id,
+          stage: opportunity.stage,
+          orc_code: opportunity.orc_code,
+          project_type: opportunity.project_type,
+        }}
+        onBudgetSaved={() => {
+          // Sem acao adicional necessaria — React Query invalida automaticamente
+        }}
+      />
 
       {/* Layout 3 colunas */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

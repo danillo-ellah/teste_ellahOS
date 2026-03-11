@@ -284,6 +284,8 @@ export const crmKeys = {
   alerts: () => [...crmKeys.all, 'alerts'] as const,
   directorRanking: (months?: number) => [...crmKeys.all, 'director-ranking', months] as const,
   monthlyReport: (month?: string) => [...crmKeys.all, 'report', month] as const,
+  budgetVersions: (oppId: string) => [...crmKeys.detail(oppId), 'budget'] as const,
+  lossAnalytics: (filters?: Record<string, unknown>) => [...crmKeys.all, 'loss-analytics', filters] as const,
 }
 
 export const bankReconciliationKeys = {
