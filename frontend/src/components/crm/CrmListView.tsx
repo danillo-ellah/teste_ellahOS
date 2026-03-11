@@ -72,14 +72,14 @@ interface SortableColumn {
 }
 
 const COLUMNS: SortableColumn[] = [
-  { label: 'CRIADO EM', key: 'created_at', sortable: true, headerClassName: 'w-24' },
+  { label: 'CRIADO EM', key: 'created_at', sortable: true, headerClassName: 'w-24 hidden md:table-cell' },
   { label: 'TITULO', key: 'title', sortable: true, headerClassName: 'min-w-[200px]' },
-  { label: 'AGENCIA', key: 'agency', sortable: true, headerClassName: 'w-36' },
+  { label: 'AGENCIA', key: 'agency', sortable: true, headerClassName: 'w-36 hidden lg:table-cell' },
   { label: 'CLIENTE', key: 'client', sortable: true, headerClassName: 'w-36' },
   { label: 'VALOR', key: 'estimated_value', sortable: true, headerClassName: 'w-28 text-right' },
   { label: 'ETAPA', key: 'stage', sortable: true, headerClassName: 'w-32' },
-  { label: 'PE', key: 'assigned', sortable: true, headerClassName: 'w-32' },
-  { label: 'RETORNO', key: 'response_deadline', sortable: true, headerClassName: 'w-28' },
+  { label: 'PE', key: 'assigned', sortable: true, headerClassName: 'w-32 hidden lg:table-cell' },
+  { label: 'RETORNO', key: 'response_deadline', sortable: true, headerClassName: 'w-28 hidden md:table-cell' },
 ]
 
 // ---------------------------------------------------------------------------
@@ -264,7 +264,7 @@ export function CrmListView({ pipeline, includeClosed, onOpportunityClick }: Crm
               onClick={() => handleRowClick(opp.id)}
             >
               {/* Data */}
-              <TableCell className="text-[13px] text-muted-foreground whitespace-nowrap">
+              <TableCell className="text-[13px] text-muted-foreground whitespace-nowrap hidden md:table-cell">
                 {formatDate(opp.created_at)}
               </TableCell>
 
@@ -283,7 +283,7 @@ export function CrmListView({ pipeline, includeClosed, onOpportunityClick }: Crm
               </TableCell>
 
               {/* Agencia */}
-              <TableCell>
+              <TableCell className="hidden lg:table-cell">
                 {opp.agencies?.name ? (
                   <span className="inline-flex items-center gap-1.5 text-[13px]">
                     <Building2 className="size-3.5 text-muted-foreground shrink-0" />
@@ -332,7 +332,7 @@ export function CrmListView({ pipeline, includeClosed, onOpportunityClick }: Crm
               </TableCell>
 
               {/* PE Responsavel */}
-              <TableCell>
+              <TableCell className="hidden lg:table-cell">
                 {opp.assigned_profile?.full_name ? (
                   <span className="inline-flex items-center gap-1.5 text-[13px]">
                     <User className="size-3.5 text-muted-foreground shrink-0" />
@@ -346,7 +346,7 @@ export function CrmListView({ pipeline, includeClosed, onOpportunityClick }: Crm
               </TableCell>
 
               {/* Retorno */}
-              <TableCell>
+              <TableCell className="hidden md:table-cell">
                 <DeadlineBadge deadline={opp.response_deadline} />
               </TableCell>
             </TableRow>

@@ -128,7 +128,7 @@ export default function PosProducaoPage() {
         <div className="flex items-center rounded-lg border p-0.5">
           <button
             onClick={() => setViewMode('kanban')}
-            className={`hidden md:flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+            className={`hidden md:flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-colors min-h-[36px] ${
               viewMode === 'kanban'
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:text-foreground'
@@ -139,7 +139,7 @@ export default function PosProducaoPage() {
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+            className={`flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-colors min-h-[36px] ${
               viewMode === 'list'
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:text-foreground'

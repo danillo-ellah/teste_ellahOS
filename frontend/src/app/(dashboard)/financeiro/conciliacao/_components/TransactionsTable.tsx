@@ -115,7 +115,7 @@ export function TransactionsTable({
 
   return (
     <div className="space-y-2">
-      <div className="rounded-md border overflow-hidden">
+      <div className="rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="bg-zinc-50 dark:bg-zinc-900">

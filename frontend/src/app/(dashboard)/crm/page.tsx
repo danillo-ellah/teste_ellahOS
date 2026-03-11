@@ -94,7 +94,7 @@ export default function CrmPage() {
         <span className="text-sm text-muted-foreground">Visualizar:</span>
         <button
           onClick={() => setIncludeClosed(false)}
-          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+          className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors min-h-[36px] ${
             !includeClosed
               ? 'bg-primary text-primary-foreground'
               : 'bg-muted text-muted-foreground hover:bg-muted/80'
@@ -104,7 +104,7 @@ export default function CrmPage() {
         </button>
         <button
           onClick={() => setIncludeClosed(true)}
-          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+          className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors min-h-[36px] ${
             includeClosed
               ? 'bg-primary text-primary-foreground'
               : 'bg-muted text-muted-foreground hover:bg-muted/80'
@@ -118,7 +118,7 @@ export default function CrmPage() {
         <div className="flex items-center rounded-lg border p-0.5">
           <button
             onClick={() => setViewMode('kanban')}
-            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+            className={`flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-colors min-h-[36px] ${
               viewMode === 'kanban'
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:text-foreground'
@@ -129,7 +129,7 @@ export default function CrmPage() {
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+            className={`flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-colors min-h-[36px] ${
               viewMode === 'list'
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:text-foreground'
