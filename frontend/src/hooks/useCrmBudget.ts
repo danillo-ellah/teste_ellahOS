@@ -93,14 +93,15 @@ export function useOpportunityBudgetVersions(opportunityId: string) {
   return useQuery({
     queryKey: crmKeys.budgetVersions(opportunityId),
     queryFn: () =>
-      apiGet<OpportunityBudgetVersion[]>(
+      apiGet<{ versions: OpportunityBudgetVersion[]; orc_code: string | null }>(
         'crm',
         undefined,
         `opportunities/${opportunityId}/budget/versions`,
       ),
     enabled: !!opportunityId,
     staleTime: 30_000,
-    select: (res) => res.data,
+    // D4 fix: API retorna { versions: [...], orc_code } — extrair array de versoes
+    select: (res) => res.data?.versions ?? [],
   })
 }
 

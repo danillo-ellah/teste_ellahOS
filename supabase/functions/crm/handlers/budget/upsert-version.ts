@@ -232,47 +232,18 @@ export async function handleUpsertBudgetVersion(
   if (isFirstVersion && !orcCode) {
     const currentYear = new Date().getFullYear();
 
-    // INSERT ON CONFLICT para garantir atomicidade (sem race conditions)
+    // D2 fix: RPC atomica para gerar ORC code (INSERT ON CONFLICT RETURNING)
     const { data: seqRow, error: seqError } = await client.rpc('upsert_orc_code_sequence', {
       p_tenant_id: auth.tenantId,
       p_year: currentYear,
     });
 
     if (seqError || seqRow === null) {
-      // Fallback: tentar INSERT ON CONFLICT direto via from()
-      console.error('[crm/budget/upsert-version] rpc nao disponivel, usando fallback:', seqError?.message);
-
-      // Buscar sequencia atual
-      const { data: existingSeq } = await client
-        .from('orc_code_sequences')
-        .select('last_index')
-        .eq('tenant_id', auth.tenantId)
-        .eq('year', currentYear)
-        .maybeSingle();
-
-      const nextIndex = (existingSeq?.last_index ?? 0) + 1;
-
-      const { error: seqUpsertError } = await client
-        .from('orc_code_sequences')
-        .upsert(
-          {
-            tenant_id: auth.tenantId,
-            year: currentYear,
-            last_index: nextIndex,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'tenant_id,year' },
-        );
-
-      if (seqUpsertError) {
-        console.error('[crm/budget/upsert-version] erro no upsert de sequencia:', seqUpsertError.message);
-        throw new AppError('INTERNAL_ERROR', 'Erro ao gerar codigo ORC', 500);
-      }
-
-      orcCode = `ORC-${currentYear}-${String(nextIndex).padStart(4, '0')}`;
-    } else {
-      orcCode = `ORC-${currentYear}-${String(seqRow).padStart(4, '0')}`;
+      console.error('[crm/budget/upsert-version] erro ao gerar ORC code:', seqError?.message);
+      throw new AppError('INTERNAL_ERROR', 'Erro ao gerar codigo ORC', 500);
     }
+
+    orcCode = `ORC-${currentYear}-${String(seqRow).padStart(4, '0')}`;
 
     // Atualizar orc_code na oportunidade para consulta rapida
     await client
