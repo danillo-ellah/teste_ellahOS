@@ -53,7 +53,7 @@ const UpdateOpportunitySchema = z.object({
   client_budget: z.number().min(0).optional().nullable(),
   campaign_period: z.string().max(200).optional().nullable(),
   // Campos de analise win/loss
-  loss_category: z.enum(['preco', 'diretor', 'prazo', 'escopo', 'relacionamento', 'outro']).optional().nullable(),
+  loss_category: z.enum(['preco', 'diretor', 'prazo', 'escopo', 'relacionamento', 'concorrencia', 'outro']).optional().nullable(),
   winner_competitor: z.string().max(200).optional().nullable(),
   winner_value: z.number().min(0).optional().nullable(),
   win_reason: z.string().max(500).optional().nullable(),
@@ -126,11 +126,11 @@ export async function handleUpdateOpportunity(
       data.actual_close_date = new Date().toISOString().slice(0, 10);
     }
 
-    // Quando marca como perdido, precisa de loss_category OU loss_reason
-    if (data.stage === 'perdido' && !data.loss_category && !data.loss_reason) {
+    // Quando marca como perdido, precisa de loss_category E loss_reason (ambos obrigatorios)
+    if (data.stage === 'perdido' && (!data.loss_category || !data.loss_reason)) {
       throw new AppError(
         'VALIDATION_ERROR',
-        'Informe o motivo da perda (loss_category ou loss_reason) ao marcar como perdido',
+        'Informe a categoria (loss_category) E o motivo detalhado (loss_reason) ao marcar como perdido',
         400,
       );
     }

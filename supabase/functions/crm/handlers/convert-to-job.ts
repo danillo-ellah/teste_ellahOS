@@ -16,6 +16,8 @@ const ConvertToJobSchema = z.object({
   description: z.string().max(5000).optional().nullable(),
   deliverable_format: z.string().max(500).optional().nullable(),
   campaign_period: z.string().max(200).optional().nullable(),
+  // Onda 2.4: transferir orcamento ativo como cost_items no job
+  transfer_budget: z.boolean().optional().default(false),
 });
 
 /**
@@ -160,12 +162,132 @@ export async function handleConvertToJob(
     });
   }
 
+  // ------------------------------------------------------------------
+  // Onda 2.4: Transferir orcamento ativo como cost_items (se solicitado)
+  // A transferencia NAO bloqueia a conversao — se falhar, o job existe normalmente
+  // ------------------------------------------------------------------
+  let budgetTransfer: {
+    success: boolean;
+    cost_items_created: number;
+    job_budget_id: string | null;
+    error?: string;
+  } | null = null;
+
+  if (data.transfer_budget) {
+    try {
+      // 1. Buscar versao ativa do orcamento
+      const { data: activeVersion, error: budgetError } = await client
+        .from('opportunity_budget_versions')
+        .select('id, orc_code, version, total_value, items:opportunity_budget_items(item_number, display_name, value, notes)')
+        .eq('opportunity_id', opportunityId)
+        .eq('tenant_id', auth.tenantId)
+        .eq('status', 'ativa')
+        .is('deleted_at', null)
+        .maybeSingle();
+
+      if (budgetError || !activeVersion) {
+        budgetTransfer = {
+          success: false,
+          cost_items_created: 0,
+          job_budget_id: null,
+          error: 'Nenhuma versao ativa de orcamento encontrada',
+        };
+      } else {
+        // 2. Criar job_budget vinculado ao job
+        const { data: jobBudget, error: jbError } = await client
+          .from('job_budgets')
+          .insert({
+            tenant_id: auth.tenantId,
+            job_id: createdJob.id,
+            client_id: opp.client_id,
+            agency_id: opp.agency_id,
+            title: `Orcamento importado do CRM (${activeVersion.orc_code ?? 'ORC'} v${activeVersion.version})`,
+            version: 1,
+            status: 'rascunho',
+            total_value: activeVersion.total_value,
+            notes: `Importado da oportunidade "${opp.title}" em ${new Date().toISOString().slice(0, 10)}.`,
+          })
+          .select('id')
+          .single();
+
+        if (jbError) {
+          console.error('[convert-to-job] erro ao criar job_budget:', jbError.message);
+        }
+
+        // 3. Para cada item com value > 0: criar cost_item header
+        const budgetItems = (activeVersion.items ?? []) as Array<{
+          item_number: number;
+          display_name: string;
+          value: number;
+          notes: string | null;
+        }>;
+
+        const itemsToCreate = budgetItems
+          .filter((item) => item.value > 0)
+          .map((item) => ({
+            tenant_id: auth.tenantId,
+            job_id: createdJob.id,
+            item_number: item.item_number,
+            sub_item_number: 0,
+            service_description: item.display_name,
+            unit_value: item.value,
+            quantity: 1,
+            sort_order: item.item_number,
+            item_status: 'orcado',
+            import_source: `crm_opportunity_${opportunityId}`,
+            notes: item.notes,
+          }));
+
+        if (itemsToCreate.length > 0) {
+          const { data: createdItems, error: itemsError } = await client
+            .from('cost_items')
+            .insert(itemsToCreate)
+            .select('id');
+
+          if (itemsError) {
+            console.error('[convert-to-job] erro ao criar cost_items:', itemsError.message);
+            budgetTransfer = {
+              success: false,
+              cost_items_created: 0,
+              job_budget_id: jobBudget?.id ?? null,
+              error: `Erro ao criar cost_items: ${itemsError.message}`,
+            };
+          } else {
+            budgetTransfer = {
+              success: true,
+              cost_items_created: createdItems?.length ?? 0,
+              job_budget_id: jobBudget?.id ?? null,
+            };
+          }
+        } else {
+          budgetTransfer = {
+            success: true,
+            cost_items_created: 0,
+            job_budget_id: jobBudget?.id ?? null,
+          };
+        }
+      }
+    } catch (transferError) {
+      console.error('[convert-to-job] erro na transferencia de orcamento:', transferError);
+      budgetTransfer = {
+        success: false,
+        cost_items_created: 0,
+        job_budget_id: null,
+        error: 'Erro inesperado na transferencia de orcamento',
+      };
+    }
+  }
+
   // Registrar atividade
+  const budgetNote = budgetTransfer?.success
+    ? ` ${budgetTransfer.cost_items_created} categorias de custo transferidas.`
+    : '';
+
   await client.from('opportunity_activities').insert({
     tenant_id: auth.tenantId,
     opportunity_id: opportunityId,
     activity_type: 'note',
-    description: `Oportunidade convertida em job: "${createdJob.title}" (${createdJob.code ?? createdJob.id}).`,
+    description: `Oportunidade convertida em job: "${createdJob.title}" (${createdJob.code ?? createdJob.id}).${budgetNote}`,
     created_by: auth.userId,
     completed_at: new Date().toISOString(),
   });
@@ -173,12 +295,14 @@ export async function handleConvertToJob(
   console.log('[crm/convert-to-job] conversao concluida', {
     opportunityId,
     jobId: createdJob.id,
+    budgetTransferred: budgetTransfer?.success ?? false,
   });
 
   return success(
     {
       opportunity: updatedOpp,
       job: createdJob,
+      budget_transfer: budgetTransfer,
     },
     200,
     req,
