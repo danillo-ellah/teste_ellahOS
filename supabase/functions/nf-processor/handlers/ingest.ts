@@ -51,16 +51,25 @@ function verifyCronSecret(req: Request): void {
   }
 }
 
-// Extrai o codigo do job do assunto do email.
+// Extrai o codigo do job do assunto do email ou do nome do arquivo (fallback).
 // Formato do assunto original: "038 - Senac - Titulo / Fornecedor / SOLICITAÇÃO DE NOTA"
 // Quando o fornecedor responde: "Re: 038 - Senac - Titulo / Fornecedor / SOLICITAÇÃO DE NOTA"
-// O codigo e um numero de 3 digitos no inicio (apos "Re:" opcional)
-function extractJobCodeFromSubject(subject: string): string | null {
+// Formato do filename: "038 - Senac - Quer fazer_Senac.pdf"
+// O codigo e um numero de 1-4 digitos no inicio (apos prefixos opcionais)
+function extractJobCode(subject: string, fileName?: string): string | null {
   // Remove prefixos de resposta (Re:, Fwd:, Enc:, RES:, ENC:) e espacos
   const cleaned = subject.replace(/^(Re|Fwd|Enc|RES|ENC|Res|Fw):\s*/gi, '').trim();
   // Extrai o codigo numerico no inicio (1-4 digitos)
   const match = cleaned.match(/^(\d{1,4})\b/);
-  return match ? match[1] : null;
+  if (match) return match[1];
+
+  // Fallback: tentar extrair do nome do arquivo (muitos PDFs tem "038 - Senac...")
+  if (fileName) {
+    const fileMatch = fileName.match(/^(\d{1,4})\s*[-_]/);
+    if (fileMatch) return fileMatch[1];
+  }
+
+  return null;
 }
 
 // Busca perfis de usuarios com roles financeiro/admin/ceo para notificar
@@ -99,6 +108,7 @@ async function trySmartAutoMatch(
   tenantId: string,
   senderEmail: string,
   subject: string,
+  fileName?: string,
 ): Promise<{
   autoLinkedCostItemId: string | null;
   matchMethod: string | null;
@@ -106,11 +116,13 @@ async function trySmartAutoMatch(
   jobCode: string | null;
   matchedJobId: string | null;
 }> {
-  const jobCode = extractJobCodeFromSubject(subject);
+  // Extrair codigo do job do subject OU do filename (fallback)
+  const jobCode = extractJobCode(subject, fileName);
 
-  console.log(`[ingest] smart-match: subject="${subject}" extracted_code="${jobCode}" email="${senderEmail}"`);
+  console.log(`[ingest] smart-match: subject="${subject}" file="${fileName}" extracted_code="${jobCode}" email="${senderEmail}"`);
 
-  // ETAPA 1: Se tem codigo do job no assunto, busca por job.code + email
+  // ETAPA 1: Se tem codigo do job (subject ou filename), busca por job.code + email
+  // Usa ILIKE para comparacao case-insensitive de email (corrige bug de case)
   if (jobCode) {
     // Pad do codigo para 3 digitos (ex: "38" → "038") para comparar com jobs.code
     const paddedCode = jobCode.padStart(3, '0');
@@ -122,7 +134,7 @@ async function trySmartAutoMatch(
         jobs!inner(id, code, title)
       `)
       .eq('tenant_id', tenantId)
-      .eq('vendor_email_snapshot', senderEmail)
+      .ilike('vendor_email_snapshot', senderEmail)
       .like('jobs.code', `${paddedCode}_%`)
       .is('deleted_at', null)
       .is('nf_document_id', null)
@@ -165,34 +177,56 @@ async function trySmartAutoMatch(
       };
     }
 
-    console.log(`[ingest] smart-match ETAPA1: nenhum match por subject code=${paddedCode}* + email`);
+    console.log(`[ingest] smart-match ETAPA1: nenhum match por code=${paddedCode}* + email`);
   }
 
-  // ETAPA 2: Sem codigo no subject ou nao encontrou — busca so por email
-  // NAO vincula automaticamente (pode ser do job errado)
+  // ETAPA 2: Sem codigo ou nao encontrou — busca so por email (case-insensitive)
+  // Se exatamente 1 match → auto-link com confianca 0.80 (fornecedor conhecido, cost_item unico)
+  // Se multiplos → review manual (pode ser de jobs diferentes)
   const { data: emailMatches, error: emailError } = await serviceClient
     .from('cost_items')
-    .select('id')
+    .select(`
+      id, service_description, job_id,
+      jobs!inner(id, code, title)
+    `)
     .eq('tenant_id', tenantId)
-    .eq('vendor_email_snapshot', senderEmail)
+    .ilike('vendor_email_snapshot', senderEmail)
     .is('deleted_at', null)
     .is('nf_document_id', null)
     .eq('is_category_header', false)
     .gt('total_value', 0)
     .in('nf_request_status', ['pedido', 'pendente', 'enviado'])
+    .order('created_at', { ascending: true })
     .limit(10);
 
   if (emailError) {
     console.error('[ingest] smart-match etapa2 erro:', emailError.message);
   }
 
-  const emailCandidates = emailMatches?.length ?? 0;
-  console.log(`[ingest] smart-match ETAPA2: ${emailCandidates} candidatos por email (vinculacao manual)`);
+  const emailCandidates = emailMatches ?? [];
+
+  if (emailCandidates.length === 1) {
+    // Match unico por email — auto-link com confianca um pouco menor
+    const m = emailCandidates[0];
+    // deno-lint-ignore no-explicit-any
+    const matchedCode = (m.jobs as any)?.code ?? null;
+    console.log(`[ingest] smart-match ETAPA2: match unico por email! cost_item=${m.id} job_code=${matchedCode}`);
+    return {
+      autoLinkedCostItemId: m.id,
+      matchMethod: 'auto_email_only',
+      candidateCount: 1,
+      jobCode: matchedCode,
+      // deno-lint-ignore no-explicit-any
+      matchedJobId: (m.jobs as any)?.id ?? m.job_id,
+    };
+  }
+
+  console.log(`[ingest] smart-match ETAPA2: ${emailCandidates.length} candidatos por email${emailCandidates.length > 1 ? ' (review manual)' : ''}`);
 
   return {
     autoLinkedCostItemId: null,
     matchMethod: null,
-    candidateCount: emailCandidates,
+    candidateCount: emailCandidates.length,
     jobCode: jobCode ? jobCode.padStart(3, '0') : null,
     matchedJobId: null,
   };
@@ -244,12 +278,13 @@ export async function ingestNf(req: Request): Promise<Response> {
     });
   }
 
-  // 4. Smart auto-match: por subject (codigo do job) + email do fornecedor
+  // 4. Smart auto-match: por subject/filename (codigo do job) + email do fornecedor
   const smartMatch = await trySmartAutoMatch(
     serviceClient,
     input.tenant_id,
     input.sender_email,
     input.subject,
+    input.file_name,
   );
 
   // 5. Determinar status e vincular cost_item se auto-matched
