@@ -128,11 +128,11 @@ export function Sidebar({ collapsed, onToggle, badges }: SidebarProps) {
               {areaConfig && !collapsed && (
                 <div className="mb-1 flex items-center gap-2 px-3 pt-1">
                   <span
-                    className={cn('h-1.5 w-1.5 rounded-full', areaConfig.dotClass)}
+                    className={cn('h-2 w-2 rounded-full', areaConfig.dotClass)}
                   />
                   <span
                     className={cn(
-                      'text-[11px] font-semibold uppercase tracking-wider',
+                      'text-xs font-semibold uppercase tracking-wider',
                       areaConfig.textClass,
                     )}
                   >

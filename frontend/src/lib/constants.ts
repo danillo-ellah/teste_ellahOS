@@ -208,7 +208,7 @@ export const JOB_DETAIL_TABS: ReadonlyArray<{
   label: string
   icon: string
 }> = [
-  { id: 'geral', label: 'Geral', icon: 'FileText' },
+  { id: 'geral', label: 'Resumo', icon: 'FileText' },
   { id: 'equipe', label: 'Equipe', icon: 'Users' },
   { id: 'entregaveis', label: 'Entregaveis', icon: 'Package' },
   { id: 'financeiro', label: 'Financeiro', icon: 'DollarSign' },
@@ -216,13 +216,13 @@ export const JOB_DETAIL_TABS: ReadonlyArray<{
   { id: 'locacoes', label: 'Locacoes', icon: 'MapPin' },
   { id: 'aprovacoes', label: 'Aprovacoes', icon: 'CheckSquare' },
   { id: 'contratos', label: 'Contratos', icon: 'PenLine' },
-  { id: 'ppm', label: 'PPM', icon: 'FileCheck' },
+  { id: 'ppm', label: 'Checklist Pre-Prod', icon: 'FileCheck' },
   { id: 'claquete', label: 'Claquete', icon: 'Clapperboard' },
   { id: 'diario', label: 'Relatorio de Set', icon: 'BookOpen' },
   { id: 'figurino', label: 'Figurino/Arte', icon: 'Shirt' },
   { id: 'horas-extras', label: 'Horas Extras', icon: 'Timer' },
   { id: 'historico', label: 'Historico', icon: 'Clock' },
-  { id: 'portal', label: 'Portal', icon: 'Globe' },
+  { id: 'portal', label: 'Aprovacao Cliente', icon: 'Globe' },
 ] as const
 
 // --- Cadastros: Segmento de cliente ---
@@ -377,7 +377,7 @@ export const FINANCIAL_STATUS_STYLE_MAP: Record<
 // AREA SYSTEM — Navegacao por areas com color-coding
 // =========================================================================
 
-export type AreaType = 'producao' | 'comercial' | 'financeiro' | 'equipe' | 'admin'
+export type AreaType = 'producao' | 'comercial' | 'financeiro' | 'relatorios' | 'admin'
 
 export const AREA_CONFIG: Record<
   AreaType,
@@ -414,8 +414,8 @@ export const AREA_CONFIG: Record<
     dotClass: 'bg-emerald-500',
     tintClass: 'from-emerald-500/3',
   },
-  equipe: {
-    label: 'Equipe',
+  relatorios: {
+    label: 'Relatorios',
     color: '#F59E0B',
     bgClass: 'bg-amber-500/10',
     textClass: 'text-amber-600 dark:text-amber-400',
@@ -448,60 +448,60 @@ export interface SidebarSection {
 }
 
 export const SIDEBAR_SECTIONS: SidebarSection[] = [
+  // --- INICIO: Minha Semana primeiro (PE comeca aqui) ---
   {
     area: null,
     items: [
-      { label: 'Dashboard', href: '/', icon: 'LayoutDashboard', exact: true },
       { label: 'Minha Semana', href: '/minha-semana', icon: 'CalendarDays' },
+      { label: 'Painel Geral', href: '/', icon: 'LayoutDashboard', exact: true },
     ],
   },
+  // --- PRODUCAO: tudo do job esta DENTRO do job ---
   {
     area: 'producao',
     items: [
       { label: 'Jobs', href: '/jobs', icon: 'Clapperboard' },
       { label: 'Calendario', href: '/team/calendar', icon: 'CalendarDays' },
-      { label: 'Aprovacoes', href: '/approvals', icon: 'ClipboardCheck' },
       { label: 'Pos-Producao', href: '/pos-producao', icon: 'Scissors' },
     ],
   },
+  // --- COMERCIAL: CRM + cadastros ---
   {
     area: 'comercial',
     items: [
-      { label: 'Dashboard', href: '/crm/dashboard', icon: 'BarChart3' },
-      { label: 'Relatorio', href: '/crm/report', icon: 'FileBarChart' },
-      { label: 'Pipeline', href: '/crm', icon: 'Target' },
-      { label: 'Analise de Perdas', href: '/crm/perdas', icon: 'TrendingDown' },
+      { label: 'Oportunidades', href: '/crm', icon: 'Target' },
       { label: 'Clientes', href: '/clients', icon: 'Building2' },
       { label: 'Agencias', href: '/agencies', icon: 'Briefcase' },
     ],
   },
+  // --- FINANCEIRO: consolidado (sem itens duplicados) ---
   {
     area: 'financeiro',
     items: [
       { label: 'Visao Geral', href: '/financeiro', icon: 'DollarSign', exact: true },
-      { label: 'Fornecedores', href: '/financeiro/vendors', icon: 'UserRoundSearch' },
-      { label: 'Calendario Pgtos', href: '/financeiro/calendario', icon: 'CalendarClock' },
+      { label: 'Pagamentos', href: '/financeiro/calendario', icon: 'CalendarClock' },
       { label: 'Fluxo de Caixa', href: '/financeiro/fluxo-caixa', icon: 'TrendingUp' },
-      { label: 'Validacao NFs', href: '/financeiro/nf-validation', icon: 'FileCheck2' },
-      { label: 'Solicitar NFs', href: '/financeiro/nf-request', icon: 'MailPlus' },
-      { label: 'Conciliacao', href: '/financeiro/conciliacao', icon: 'Landmark' },
+      { label: 'Notas Fiscais', href: '/financeiro/nf-validation', icon: 'FileCheck2' },
+      { label: 'Fornecedores', href: '/financeiro/vendors', icon: 'UserRoundSearch' },
     ],
   },
+  // --- RELATORIOS: saiu de "Equipe" + consolidou CRM analytics ---
   {
-    area: 'equipe',
+    area: 'relatorios',
     items: [
-      { label: 'Pessoas', href: '/people', icon: 'Users' },
-      { label: 'Atendimento', href: '/atendimento', icon: 'Headset' },
-      { label: 'Portal', href: '/portal', icon: 'Globe' },
       { label: 'Relatorios', href: '/reports', icon: 'BarChart3' },
+      { label: 'Resumo CRM', href: '/crm/dashboard', icon: 'Target' },
+      { label: 'Analise de Perdas', href: '/crm/perdas', icon: 'TrendingDown' },
     ],
   },
+  // --- ADMIN: gestao de equipe, configs, ferramentas ---
   {
     area: 'admin',
     items: [
-      { label: 'Equipe', href: '/admin/equipe', icon: 'Users', adminOnly: true },
+      { label: 'Cadastro de Pessoas', href: '/people', icon: 'Users' },
+      { label: 'Usuarios & Acessos', href: '/admin/equipe', icon: 'Users', adminOnly: true },
       { label: 'Configuracoes', href: '/settings', icon: 'Settings', adminOnly: true },
-      { label: 'Pre-Producao', href: '/admin/pre-producao', icon: 'ClipboardCheck', adminOnly: true },
+      { label: 'Checklist Pre-Prod', href: '/admin/pre-producao', icon: 'ClipboardCheck', adminOnly: true },
       { label: 'Categorias Custo', href: '/admin/financeiro/categorias', icon: 'ListTree', adminOnly: true },
       { label: 'Importar Dados', href: '/admin/import', icon: 'Upload', adminOnly: true },
       { label: 'Audit Log', href: '/admin/audit-log', icon: 'FileCheck2', adminOnly: true },
@@ -518,61 +518,59 @@ export interface JobTabGroup {
 
 export const JOB_TAB_GROUPS: JobTabGroup[] = [
   {
-    group: 'Info',
+    group: 'Visao Geral',
     area: 'producao',
     tabs: [
-      { id: 'geral', label: 'Geral', icon: 'FileText' },
+      { id: 'geral', label: 'Resumo', icon: 'FileText' },
       { id: 'equipe', label: 'Equipe', icon: 'Users' },
-      { id: 'entregaveis', label: 'Entregaveis', icon: 'Package' },
+      { id: 'cronograma', label: 'Cronograma', icon: 'GanttChartSquare' },
+      { id: 'historico', label: 'Historico', icon: 'Clock' },
     ],
   },
   {
-    group: 'Producao',
+    group: 'Pre-Producao',
     area: 'producao',
     tabs: [
-      { id: 'ppm', label: 'PPM', icon: 'FileCheck' },
+      { id: 'ppm', label: 'Checklist Pre-Prod', icon: 'FileCheck' },
       { id: 'diarias', label: 'Diarias', icon: 'Calendar' },
       { id: 'locacoes', label: 'Locacoes', icon: 'MapPin' },
-      { id: 'storyboard', label: 'Storyboard', icon: 'Film' },
       { id: 'elenco', label: 'Elenco', icon: 'Users' },
-      { id: 'ordem-do-dia', label: 'Ordem do Dia', icon: 'ClipboardList' },
-      { id: 'diario', label: 'Relatorio de Set', icon: 'BookOpen' },
       { id: 'figurino', label: 'Figurino/Arte', icon: 'Shirt' },
+      { id: 'storyboard', label: 'Storyboard', icon: 'Film' },
+      { id: 'ordem-do-dia', label: 'Ordem do Dia', icon: 'ClipboardList' },
     ],
   },
   {
-    group: 'Gestao',
-    area: 'financeiro',
+    group: 'Producao & Set',
+    area: 'producao',
     tabs: [
-      { id: 'financeiro', label: 'Financeiro', icon: 'DollarSign' },
-      { id: 'cronograma', label: 'Cronograma', icon: 'GanttChartSquare' },
-      { id: 'aprovacoes', label: 'Aprovacoes', icon: 'CheckSquare' },
-      { id: 'contratos', label: 'Contratos', icon: 'PenLine' },
+      { id: 'diario', label: 'Relatorio de Set', icon: 'BookOpen' },
       { id: 'claquete', label: 'Claquete', icon: 'Clapperboard' },
-      { id: 'atendimento', label: 'Atendimento', icon: 'Headset' },
       { id: 'horas-extras', label: 'Horas Extras', icon: 'Timer' },
     ],
   },
   {
-    group: 'Pos-Producao',
-    area: 'producao',
+    group: 'Entrega & Financeiro',
+    area: 'financeiro',
     tabs: [
+      { id: 'financeiro', label: 'Financeiro', icon: 'DollarSign' },
+      { id: 'entregaveis', label: 'Entregaveis', icon: 'Package' },
+      { id: 'contratos', label: 'Contratos', icon: 'PenLine' },
       { id: 'pos-producao', label: 'Pos-Producao', icon: 'Scissors' },
-    ],
-  },
-  {
-    group: 'Registro',
-    area: 'admin',
-    tabs: [
-      { id: 'historico', label: 'Historico', icon: 'Clock' },
-      { id: 'portal', label: 'Portal', icon: 'Globe' },
+      { id: 'aprovacoes', label: 'Aprovacoes', icon: 'CheckSquare' },
+      { id: 'portal', label: 'Aprovacao Cliente', icon: 'Globe' },
+      { id: 'atendimento', label: 'Atendimento', icon: 'Headset' },
     ],
   },
 ]
 
 // Helper: detectar area ativa pelo pathname
 export function getActiveArea(pathname: string): AreaType | null {
-  if (pathname.startsWith('/jobs') || pathname.startsWith('/approvals') || pathname.startsWith('/team/calendar') || pathname.startsWith('/pos-producao')) {
+  // Rotas especificas primeiro (antes das gerais)
+  if (pathname === '/crm/dashboard' || pathname === '/crm/perdas' || pathname.startsWith('/reports')) {
+    return 'relatorios'
+  }
+  if (pathname.startsWith('/jobs') || pathname.startsWith('/approvals') || pathname.startsWith('/team/calendar') || pathname.startsWith('/pos-producao') || pathname.startsWith('/atendimento')) {
     return 'producao'
   }
   if (pathname.startsWith('/crm') || pathname.startsWith('/clients') || pathname.startsWith('/agencies')) {
@@ -581,10 +579,7 @@ export function getActiveArea(pathname: string): AreaType | null {
   if (pathname.startsWith('/financeiro')) {
     return 'financeiro'
   }
-  if (pathname.startsWith('/people') || pathname.startsWith('/atendimento') || pathname.startsWith('/portal') || pathname.startsWith('/reports')) {
-    return 'equipe'
-  }
-  if (pathname.startsWith('/settings') || pathname.startsWith('/admin')) {
+  if (pathname.startsWith('/people') || pathname.startsWith('/settings') || pathname.startsWith('/admin') || pathname.startsWith('/portal')) {
     return 'admin'
   }
   return null

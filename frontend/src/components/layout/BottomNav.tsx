@@ -22,7 +22,7 @@ const BOTTOM_NAV_ITEMS: Array<{
   { label: 'Inicio', href: '/', icon: LayoutDashboard, area: null },
   { label: 'Jobs', href: '/jobs', icon: Clapperboard, area: 'producao' },
   { label: 'Pipeline', href: '/crm', icon: Target, area: 'comercial' },
-  { label: 'Equipe', href: '/people', icon: Users, area: 'equipe' },
+  { label: 'Pessoas', href: '/people', icon: Users, area: 'admin' },
   { label: 'Financeiro', href: '/financeiro', icon: DollarSign, area: 'financeiro' },
 ]
 
