@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useRef, useCallback, useEffect } from 'react'
 import {
   ChevronDown,
   ChevronRight,
@@ -48,7 +48,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useDeleteCostItem } from '@/hooks/useCostItems'
+import { useDeleteCostItem, useUpdateCostItem } from '@/hooks/useCostItems'
 import { toast } from 'sonner'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { PAYMENT_CONDITION_LABELS, NF_REQUEST_STATUS_CONFIG } from '@/types/cost-management'
@@ -81,6 +81,13 @@ function getCategorySubtotal(items: CostItem[]): number {
     if (item.is_category_header) return sum
     return sum + item.total_with_overtime
   }, 0)
+}
+
+// Converte string no formato BR (ex: "1.234,50" ou "1234,50" ou "1234.50") para number
+function parseBRL(raw: string): number {
+  // Remove pontos de milhar, troca virgula por ponto decimal
+  const normalized = raw.replace(/\./g, '').replace(',', '.')
+  return parseFloat(normalized)
 }
 
 // ---- DeleteConfirmDialog ----
@@ -119,6 +126,207 @@ function DeleteConfirmDialog({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+  )
+}
+
+// ---- InlineEditCell ----
+// Gerencia o estado de edicao de uma unica celula.
+// Suporta tipos: 'currency' | 'integer' | 'text'
+// Tab navigation: usa data-attributes [data-row-id] e [data-field] na celula pai (TableCell).
+
+type InlineFieldType = 'currency' | 'integer' | 'text'
+
+interface InlineEditCellProps {
+  itemId: string
+  field: string
+  value: string | number | null | undefined
+  fieldType: InlineFieldType
+  /** Funcao de mutacao que recebe { id, [field]: newValue } */
+  onSave: (payload: Record<string, unknown> & { id: string }) => Promise<unknown>
+  /** Classe(s) adicionais para o span/input */
+  className?: string
+  /** Placeholder exibido quando vazio */
+  placeholder?: string
+  /** Alinhamento do texto (padrao: left) */
+  align?: 'left' | 'right'
+}
+
+function InlineEditCell({
+  itemId,
+  field,
+  value,
+  fieldType,
+  onSave,
+  className,
+  placeholder = '-',
+  align = 'left',
+}: InlineEditCellProps) {
+  const [isEditing, setIsEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  // Guarda o valor original para rollback em caso de erro ou Escape
+  const originalRef = useRef<string | number | null | undefined>(value)
+
+  // Sincroniza referencia se o item for atualizado externamente
+  useEffect(() => {
+    if (!isEditing) {
+      originalRef.current = value
+    }
+  }, [value, isEditing])
+
+  function formatDisplay(v: string | number | null | undefined): string {
+    if (v == null || v === '') return ''
+    if (fieldType === 'currency') {
+      const n = typeof v === 'string' ? parseFloat(v) : v
+      return isNaN(n) ? '' : formatCurrency(n)
+    }
+    return String(v)
+  }
+
+  function getInitialDraft(v: string | number | null | undefined): string {
+    if (v == null || v === '') return ''
+    if (fieldType === 'currency') {
+      const n = typeof v === 'string' ? parseFloat(v) : v
+      // Usa virgula como separador decimal para facilitar digitacao em pt-BR
+      return isNaN(n) ? '' : String(n).replace('.', ',')
+    }
+    return String(v)
+  }
+
+  function startEditing() {
+    originalRef.current = value
+    setDraft(getInitialDraft(value))
+    setIsEditing(true)
+  }
+
+  // Garante foco e selecao quando entra no modo edicao
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus()
+      inputRef.current.select()
+    }
+  }, [isEditing])
+
+  const commitSave = useCallback(async () => {
+    if (!isEditing) return
+
+    let parsedValue: string | number | null
+    if (fieldType === 'currency') {
+      parsedValue = isNaN(parseBRL(draft)) ? (originalRef.current as number) : parseBRL(draft)
+    } else if (fieldType === 'integer') {
+      const n = parseInt(draft, 10)
+      parsedValue = isNaN(n) || n < 0 ? (originalRef.current as number) : n
+    } else {
+      parsedValue = draft.trim() === '' ? null : draft.trim()
+    }
+
+    // Nao faz request se o valor nao mudou
+    const originalStr = getInitialDraft(originalRef.current)
+    const draftStr = fieldType === 'text' ? (parsedValue ?? '') : getInitialDraft(parsedValue)
+    if (String(draftStr) === String(originalStr)) {
+      setIsEditing(false)
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      await onSave({ id: itemId, [field]: parsedValue })
+    } catch (err) {
+      toast.error(safeErrorMessage(err))
+      // Reverte o draft para o valor original
+      setDraft(getInitialDraft(originalRef.current))
+    } finally {
+      setIsSaving(false)
+      setIsEditing(false)
+    }
+  }, [isEditing, draft, fieldType, itemId, field, onSave]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function cancelEdit() {
+    setDraft(getInitialDraft(originalRef.current))
+    setIsEditing(false)
+  }
+
+  // Navega para a proxima celula editavel da mesma linha usando data-attributes
+  function focusNextCell(direction: 'next' | 'prev' = 'next') {
+    if (!inputRef.current) return
+    // Sobe ate o TableCell (td) que tem data-field
+    const td = inputRef.current.closest('[data-field]') as HTMLElement | null
+    if (!td) return
+    const rowId = td.dataset.rowId
+    if (!rowId) return
+
+    // Todas as celulas editaveis da linha, em ordem DOM
+    const allCells = Array.from(
+      document.querySelectorAll<HTMLElement>(`[data-row-id="${rowId}"][data-field]`)
+    )
+    const currentIndex = allCells.indexOf(td)
+    const targetIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1
+    const targetCell = allCells[targetIndex]
+    if (!targetCell) return
+
+    // Dispara clique para ativar edicao na celula alvo
+    targetCell.click()
+  }
+
+  async function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      cancelEdit()
+      return
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      await commitSave()
+      return
+    }
+    if (e.key === 'Tab') {
+      e.preventDefault()
+      await commitSave()
+      focusNextCell(e.shiftKey ? 'prev' : 'next')
+      return
+    }
+  }
+
+  const displayText = formatDisplay(value)
+
+  if (isEditing) {
+    return (
+      <input
+        ref={inputRef}
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onBlur={commitSave}
+        inputMode={fieldType === 'text' ? 'text' : 'decimal'}
+        className={cn(
+          'w-full bg-transparent outline-none border-0 p-0 m-0 text-inherit font-inherit',
+          'ring-1 ring-inset rounded-sm px-1',
+          isSaving ? 'ring-blue-400 animate-pulse' : 'ring-primary',
+          align === 'right' && 'text-right',
+          className,
+        )}
+        aria-label={field}
+      />
+    )
+  }
+
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      onClick={startEditing}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startEditing() } }}
+      className={cn(
+        'block w-full cursor-pointer rounded-sm px-1',
+        'hover:bg-muted/60 transition-colors duration-100',
+        align === 'right' && 'text-right',
+        !displayText && 'text-muted-foreground',
+        className,
+      )}
+    >
+      {displayText || placeholder}
+    </span>
   )
 }
 
@@ -383,6 +591,7 @@ interface ItemRowProps {
   onEdit: () => void
   onPay: () => void
   onDelete: (id: string) => void
+  onSave: (payload: Record<string, unknown> & { id: string }) => Promise<unknown>
 }
 
 function ItemRow({
@@ -392,6 +601,7 @@ function ItemRow({
   onEdit,
   onPay,
   onDelete,
+  onSave,
 }: ItemRowProps) {
   const isCancelled = item.item_status === 'cancelado' || item.payment_status === 'cancelado'
   const canSelect = !item.is_category_header && item.payment_status === 'pendente' && !isCancelled
@@ -400,6 +610,9 @@ function ItemRow({
     item.payment_due_date &&
     item.payment_status === 'pendente' &&
     new Date(item.payment_due_date) < new Date()
+
+  // Celulas inline so ficam ativas para itens nao-header
+  const editable = !item.is_category_header
 
   return (
     <TableRow
@@ -425,48 +638,132 @@ function ItemRow({
         {item.item_number}.{item.sub_item_number}
       </TableCell>
 
-      {/* Descricao */}
-      <TableCell className="max-w-[200px]">
-        <span className={cn('truncate block', item.is_category_header && 'font-semibold')}>
-          {item.service_description}
-        </span>
-        {item.notes && (
-          <span className="text-xs text-muted-foreground truncate block">{item.notes}</span>
+      {/* Descricao — editavel apenas para sub-items */}
+      <TableCell
+        className="max-w-[200px]"
+        data-row-id={editable ? item.id : undefined}
+        data-field={editable ? 'service_description' : undefined}
+      >
+        {editable ? (
+          <>
+            <InlineEditCell
+              itemId={item.id}
+              field="service_description"
+              value={item.service_description}
+              fieldType="text"
+              onSave={onSave}
+              className="text-sm truncate"
+            />
+            {/* notes — editavel inline abaixo da descricao */}
+            <InlineEditCell
+              itemId={item.id}
+              field="notes"
+              value={item.notes}
+              fieldType="text"
+              onSave={onSave}
+              placeholder="Notas..."
+              className="text-xs text-muted-foreground truncate mt-0.5"
+            />
+          </>
+        ) : (
+          <>
+            <span className={cn('truncate block', item.is_category_header && 'font-semibold')}>
+              {item.service_description}
+            </span>
+            {item.notes && (
+              <span className="text-xs text-muted-foreground truncate block">{item.notes}</span>
+            )}
+          </>
         )}
       </TableCell>
 
-      {/* Fornecedor */}
-      <TableCell className="text-sm">
-        {!item.is_category_header && <VendorCell item={item} />}
+      {/* Fornecedor — editavel inline */}
+      <TableCell
+        className="text-sm"
+        data-row-id={editable ? item.id : undefined}
+        data-field={editable ? 'vendor_name_snapshot' : undefined}
+      >
+        {editable ? (
+          <InlineEditCell
+            itemId={item.id}
+            field="vendor_name_snapshot"
+            value={item.vendor_name_snapshot}
+            fieldType="text"
+            onSave={onSave}
+            className="text-sm truncate max-w-[120px]"
+          />
+        ) : null}
       </TableCell>
 
-      {/* Valor Unit. */}
-      <TableCell className="text-right tabular-nums text-sm">
-        {!item.is_category_header && item.unit_value != null
-          ? formatCurrency(item.unit_value)
-          : <span className="text-muted-foreground">-</span>}
+      {/* Valor Unit. — editavel inline */}
+      <TableCell
+        className="text-right tabular-nums text-sm"
+        data-row-id={editable ? item.id : undefined}
+        data-field={editable ? 'unit_value' : undefined}
+      >
+        {editable ? (
+          <InlineEditCell
+            itemId={item.id}
+            field="unit_value"
+            value={item.unit_value}
+            fieldType="currency"
+            onSave={onSave}
+            align="right"
+            className="tabular-nums text-sm"
+          />
+        ) : (
+          <span className="text-muted-foreground">-</span>
+        )}
       </TableCell>
 
-      {/* Qtd */}
-      <TableCell className="text-right tabular-nums text-sm">
-        {!item.is_category_header ? item.quantity : ''}
+      {/* Qtd — editavel inline */}
+      <TableCell
+        className="text-right tabular-nums text-sm"
+        data-row-id={editable ? item.id : undefined}
+        data-field={editable ? 'quantity' : undefined}
+      >
+        {editable ? (
+          <InlineEditCell
+            itemId={item.id}
+            field="quantity"
+            value={item.quantity}
+            fieldType="integer"
+            onSave={onSave}
+            align="right"
+            className="tabular-nums text-sm"
+          />
+        ) : null}
       </TableCell>
 
-      {/* Total */}
+      {/* Total — calculado (nao editavel) */}
       <TableCell className="text-right tabular-nums text-sm font-medium">
-        {!item.is_category_header ? formatCurrency(item.total_value) : ''}
+        {editable ? formatCurrency(item.total_value) : ''}
       </TableCell>
 
-      {/* HE */}
-      <TableCell className="text-right tabular-nums text-sm">
-        {!item.is_category_header && item.overtime_value > 0
-          ? formatCurrency(item.overtime_value)
-          : <span className="text-muted-foreground">-</span>}
+      {/* HE — editavel inline */}
+      <TableCell
+        className="text-right tabular-nums text-sm"
+        data-row-id={editable ? item.id : undefined}
+        data-field={editable ? 'overtime_value' : undefined}
+      >
+        {editable ? (
+          <InlineEditCell
+            itemId={item.id}
+            field="overtime_value"
+            value={item.overtime_value > 0 ? item.overtime_value : null}
+            fieldType="currency"
+            onSave={onSave}
+            align="right"
+            className="tabular-nums text-sm"
+          />
+        ) : (
+          <span className="text-muted-foreground">-</span>
+        )}
       </TableCell>
 
-      {/* Total+HE */}
+      {/* Total+HE — calculado (nao editavel) */}
       <TableCell className="text-right tabular-nums text-sm font-semibold">
-        {!item.is_category_header ? (
+        {editable ? (
           <div className="flex flex-col items-end gap-0.5">
             {formatCurrency(item.total_with_overtime)}
             {item.payment_status === 'pago' && item.actual_paid_value != null && (
@@ -481,29 +778,29 @@ function ItemRow({
 
       {/* Cond. Pgto */}
       <TableCell className="text-xs">
-        {!item.is_category_header && item.payment_condition
+        {editable && item.payment_condition
           ? PAYMENT_CONDITION_LABELS[item.payment_condition]
           : <span className="text-muted-foreground">-</span>}
       </TableCell>
 
       {/* Vencimento */}
       <TableCell className={cn('text-xs tabular-nums', isOverdue && 'text-destructive font-medium')}>
-        {!item.is_category_header ? formatDate(item.payment_due_date) : ''}
+        {editable ? formatDate(item.payment_due_date) : ''}
       </TableCell>
 
       {/* Status */}
       <TableCell>
-        {!item.is_category_header && <StatusCell item={item} />}
+        {editable && <StatusCell item={item} />}
       </TableCell>
 
       {/* NF */}
       <TableCell className="w-10 text-center">
-        {!item.is_category_header && <NfCell item={item} />}
+        {editable && <NfCell item={item} />}
       </TableCell>
 
       {/* Pgto */}
       <TableCell className="text-xs">
-        {!item.is_category_header && (
+        {editable && (
           <span
             className={cn(
               'capitalize',
@@ -523,12 +820,12 @@ function ItemRow({
 
       {/* Comprovante */}
       <TableCell className="w-10 text-center">
-        {!item.is_category_header && <PaymentProofCell item={item} />}
+        {editable && <PaymentProofCell item={item} />}
       </TableCell>
 
       {/* Acoes */}
       <TableCell className="w-10">
-        {!item.is_category_header && (
+        {editable && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-7 w-7">
@@ -603,6 +900,7 @@ export function CostItemsTable({
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
   const { mutateAsync: deleteItem, isPending: isDeleting } = useDeleteCostItem()
+  const { mutateAsync: updateItem } = useUpdateCostItem()
 
   const grouped = groupByCategoryNumber(items)
   const sortedKeys = Array.from(grouped.keys()).sort((a, b) => a - b)
@@ -629,6 +927,12 @@ export function CostItemsTable({
       toast.error(safeErrorMessage(err))
     }
   }
+
+  // Wrapper estavel para nao recriar closures por item
+  const handleSave = useCallback(
+    (payload: Record<string, unknown> & { id: string }) => updateItem(payload),
+    [updateItem],
+  )
 
   if (isLoading) {
     return (
@@ -722,6 +1026,7 @@ export function CostItemsTable({
                           onEdit={() => onEdit(item)}
                           onPay={() => onPay(item)}
                           onDelete={id => setDeleteId(id)}
+                          onSave={handleSave}
                         />
                       ))}
                 </React.Fragment>
