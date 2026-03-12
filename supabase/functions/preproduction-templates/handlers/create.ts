@@ -17,6 +17,7 @@ const CreateTemplateSchema = z.object({
     'institucional',
     'motion_graphics',
     'fotografia',
+    'monstro_animatic',
     'outro',
   ]).nullable().default(null),
   name: z.string().min(1, 'nome obrigatorio').max(200),

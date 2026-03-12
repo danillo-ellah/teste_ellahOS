@@ -71,6 +71,7 @@ export const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {
   institucional: 'Institucional',
   motion_graphics: 'Motion Graphics',
   fotografia: 'Fotografia',
+  monstro_animatic: 'Monstro / Animatic',
   outro: 'Outro',
 }
 
@@ -85,6 +86,7 @@ export const PROJECT_TYPE_SHORT_LABELS: Record<ProjectType, string> = {
   institucional: 'Institucional',
   motion_graphics: 'Motion',
   fotografia: 'Fotografia',
+  monstro_animatic: 'Monstro',
   outro: 'Outro',
 }
 

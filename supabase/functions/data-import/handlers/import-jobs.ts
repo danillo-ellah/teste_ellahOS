@@ -14,6 +14,7 @@ const PROJECT_TYPE_VALUES = [
   'serie_programa',
   'clipe_musical',
   'fotografia',
+  'monstro_animatic',
 ] as const;
 
 const JOB_STATUS_VALUES = [
