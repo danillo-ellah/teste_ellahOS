@@ -6,15 +6,17 @@ import type { AuthContext } from '../../_shared/auth.ts';
 
 // ENUMs validos do banco
 const PROJECT_TYPE_VALUES = [
-  'institucional',
-  'publicitario',
+  'filme_publicitario',
+  'branded_content',
+  'videoclipe',
+  'documentario',
   'conteudo_digital',
   'evento_livestream',
-  'documentario',
-  'serie_programa',
-  'clipe_musical',
+  'institucional',
+  'motion_graphics',
   'fotografia',
   'monstro_animatic',
+  'outro',
 ] as const;
 
 const JOB_STATUS_VALUES = [

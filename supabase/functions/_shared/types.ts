@@ -27,6 +27,7 @@ export const PROJECT_TYPES = [
   'institucional',
   'motion_graphics',
   'fotografia',
+  'monstro_animatic',
   'outro',
 ] as const;
 

@@ -154,7 +154,7 @@ export function ApplyTemplateDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Aplicar Template de Custos</DialogTitle>
           <DialogDescription>
@@ -163,61 +163,63 @@ export function ApplyTemplateDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-2">
-          {TEMPLATE_OPTIONS.map((template) => (
-            <TemplateCard
-              key={template.id}
-              template={template}
-              selected={selectedId === template.id}
-              onSelect={() => handleSelect(template.id)}
-            />
-          ))}
+        <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+          <div className="space-y-2">
+            {TEMPLATE_OPTIONS.map((template) => (
+              <TemplateCard
+                key={template.id}
+                template={template}
+                selected={selectedId === template.id}
+                onSelect={() => handleSelect(template.id)}
+              />
+            ))}
+          </div>
+
+          {selectedTemplate && (
+            <div className="rounded-lg border border-border bg-muted/30">
+              <button
+                type="button"
+                onClick={() => setShowCategories((prev) => !prev)}
+                className="flex w-full items-center justify-between px-3 py-2.5 text-sm font-medium hover:bg-muted/50 rounded-lg transition-colors"
+              >
+                <span>
+                  {selectedTemplate.categories.length} categorias &middot;{' '}
+                  {selectedTemplate.total_items} itens no total
+                </span>
+                <ChevronDown
+                  className={cn('size-4 text-muted-foreground transition-transform', {
+                    'rotate-180': showCategories,
+                  })}
+                />
+              </button>
+
+              {showCategories && (
+                <ScrollArea className="max-h-[200px]">
+                  <div className="px-3 pb-2 space-y-0.5">
+                    {selectedTemplate.categories.map((cat) => (
+                      <div
+                        key={cat.item_number}
+                        className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-muted/50"
+                      >
+                        <span>
+                          <span className="font-mono text-xs text-muted-foreground mr-2">
+                            {String(cat.item_number).padStart(2, '0')}
+                          </span>
+                          {cat.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground tabular-nums">
+                          {cat.items_count} {cat.items_count === 1 ? 'item' : 'itens'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+            </div>
+          )}
         </div>
 
-        {selectedTemplate && (
-          <div className="rounded-lg border border-border bg-muted/30">
-            <button
-              type="button"
-              onClick={() => setShowCategories((prev) => !prev)}
-              className="flex w-full items-center justify-between px-3 py-2.5 text-sm font-medium hover:bg-muted/50 rounded-lg transition-colors"
-            >
-              <span>
-                {selectedTemplate.categories.length} categorias &middot;{' '}
-                {selectedTemplate.total_items} itens no total
-              </span>
-              <ChevronDown
-                className={cn('size-4 text-muted-foreground transition-transform', {
-                  'rotate-180': showCategories,
-                })}
-              />
-            </button>
-
-            {showCategories && (
-              <ScrollArea className="max-h-[200px]">
-                <div className="px-3 pb-2 space-y-0.5">
-                  {selectedTemplate.categories.map((cat) => (
-                    <div
-                      key={cat.item_number}
-                      className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-muted/50"
-                    >
-                      <span>
-                        <span className="font-mono text-xs text-muted-foreground mr-2">
-                          {String(cat.item_number).padStart(2, '0')}
-                        </span>
-                        {cat.name}
-                      </span>
-                      <span className="text-xs text-muted-foreground tabular-nums">
-                        {cat.items_count} {cat.items_count === 1 ? 'item' : 'itens'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            )}
-          </div>
-        )}
-
-        <DialogFooter>
+        <DialogFooter className="shrink-0 border-t pt-4">
           <Button
             variant="outline"
             onClick={() => handleOpenChange(false)}
