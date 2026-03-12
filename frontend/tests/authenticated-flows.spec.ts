@@ -270,9 +270,6 @@ async function ensureAuth(page: Page, label: string): Promise<boolean> {
 // SETUP GLOBAL — login uma vez, reutiliza token em todas as suites
 // ---------------------------------------------------------------------------
 
-// Flag para saber se o login ja foi feito neste processo
-let globalAuthDone = false;
-
 // Funcao chamada por cada suite para garantir autenticacao
 // Com o setup project (auth.setup.ts), o storageState ja deve estar injetado
 // loginViaForm so e usado como fallback se o storageState nao funcionar
