@@ -1683,3 +1683,29 @@ A Fase 10 adiciona 6 tabelas financeiras (cost_categories, vendors, bank_account
 | ONDA15-BAIXO-002 | BAIXA | CNPJ sem validacao de digitos verificadores | ABERTO |
 | ONDA15-BAIXO-003 | BAIXA | Email enumeration via mensagem diferenciada | ABERTO |
 | ONDA15-BAIXO-004 | BAIXA | Cache de token singleton em api.ts - risco SSR | ABERTO |
+
+
+
+---
+
+## AUDITORIA: cost-items Edge Function 2026-03-12
+
+**Data:** 2026-03-12  
+**Detalhe completo:** docs/security/audit-cost-items-2026-03-12.md  
+**Resumo:** 0 CRITICOS | 2 ALTOS | 4 MEDIOS | 4 BAIXOS | 3 INFOS
+
+| ID | Severidade | Descricao | Status |
+|----|------------|-----------|--------|
+| FASE10-ALTO-001 | ALTA | fetchVendorSnapshot sem filtro tenant: leak PIX/banco cross-tenant potencial | ABERTO |
+| FASE10-ALTO-002 | ALTA | CORS wildcard em 4 respostas 409 de vendors/create.ts | ABERTO |
+| FASE10-MEDIO-001 | MEDIA | Campos URL sem validacao de formato/dominio | ABERTO |
+| FASE10-MEDIO-002 | MEDIA | RBAC inconsistente entre handlers | ABERTO |
+| FASE10-MEDIO-003 | MEDIA | batch.ts nao valida job_id pertence ao tenant | ABERTO |
+| FASE10-MEDIO-004 | MEDIA | reference-jobs: parametro q interpolado em .or() sem sanitizacao | ABERTO |
+| FASE10-BAIXO-001 | BAIXA | vendors/suggest exibe 6 de 11 digitos do CPF | ABERTO |
+| FASE10-BAIXO-002 | BAIXA | Race condition no guard count=0 de apply-template e import-from-job | ABERTO |
+| FASE10-BAIXO-003 | BAIXA | console.log expoe tenantId/userId em producao | ABERTO |
+| FASE10-BAIXO-004 | BAIXA | insertError.message exposto em detail de respostas 500 | ABERTO |
+| FASE10-INFO-001 | INFO | RLS ativo e correto em cost_items, vendors, bank_accounts | OK |
+| FASE10-INFO-002 | INFO | IMMUTABLE_FIELDS + Zod strict() em update.ts | OK |
+| FASE10-INFO-003 | INFO | JWT validado antes de qualquer handler | OK |

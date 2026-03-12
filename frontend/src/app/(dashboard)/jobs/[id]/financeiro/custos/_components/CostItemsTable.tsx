@@ -211,8 +211,11 @@ function InlineEditCell({
     }
   }, [isEditing])
 
+  const isSavingRef = useRef(false)
+
   const commitSave = useCallback(async () => {
-    if (!isEditing) return
+    if (!isEditing || isSavingRef.current) return
+    isSavingRef.current = true
 
     let parsedValue: string | number | null
     if (fieldType === 'currency') {
@@ -242,6 +245,7 @@ function InlineEditCell({
     } finally {
       setIsSaving(false)
       setIsEditing(false)
+      isSavingRef.current = false
     }
   }, [isEditing, draft, fieldType, itemId, field, onSave]) // eslint-disable-line react-hooks/exhaustive-deps
 

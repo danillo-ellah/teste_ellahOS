@@ -87,6 +87,7 @@ async function fetchJobBaseDate(
 async function fetchVendorSnapshot(
   client: ReturnType<typeof getSupabaseClient>,
   vendorId: string,
+  tenantId: string,
 ): Promise<{
   vendor_name_snapshot: string | null;
   vendor_email_snapshot: string | null;
@@ -97,6 +98,7 @@ async function fetchVendorSnapshot(
     .from('vendors')
     .select('id, full_name, email')
     .eq('id', vendorId)
+    .eq('tenant_id', tenantId)
     .single();
 
   if (vendorError || !vendor) {
@@ -107,6 +109,7 @@ async function fetchVendorSnapshot(
     .from('bank_accounts')
     .select('pix_key, bank_name')
     .eq('vendor_id', vendorId)
+    .eq('tenant_id', tenantId)
     .eq('is_primary', true)
     .is('deleted_at', null)
     .maybeSingle();
@@ -213,7 +216,7 @@ export async function handleCreate(req: Request, auth: AuthContext): Promise<Res
   };
 
   if (data.vendor_id) {
-    vendorSnapshot = await fetchVendorSnapshot(client, data.vendor_id);
+    vendorSnapshot = await fetchVendorSnapshot(client, data.vendor_id, auth.tenantId);
   }
 
   // Montar objeto para INSERT

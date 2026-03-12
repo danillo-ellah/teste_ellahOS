@@ -127,6 +127,7 @@ const UpdateCostItemSchema = z.object({
 async function fetchVendorSnapshot(
   client: ReturnType<typeof getSupabaseClient>,
   vendorId: string,
+  tenantId: string,
 ): Promise<{
   vendor_name_snapshot: string | null;
   vendor_email_snapshot: string | null;
@@ -137,12 +138,14 @@ async function fetchVendorSnapshot(
     .from('vendors')
     .select('full_name, email')
     .eq('id', vendorId)
+    .eq('tenant_id', tenantId)
     .single();
 
   const { data: primaryBank } = await client
     .from('bank_accounts')
     .select('pix_key, bank_name')
     .eq('vendor_id', vendorId)
+    .eq('tenant_id', tenantId)
     .eq('is_primary', true)
     .is('deleted_at', null)
     .maybeSingle();
@@ -331,7 +334,7 @@ export async function handleUpdate(req: Request, auth: AuthContext, id: string):
   let vendorSnapshot: Record<string, string | null> = {};
   if ('vendor_id' in updates && updates.vendor_id !== current.vendor_id) {
     if (updates.vendor_id) {
-      const snapshot = await fetchVendorSnapshot(client, updates.vendor_id);
+      const snapshot = await fetchVendorSnapshot(client, updates.vendor_id, auth.tenantId);
       vendorSnapshot = snapshot;
     } else {
       // Limpar snapshots se vendor_id foi removido

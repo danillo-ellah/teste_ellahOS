@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { toast } from 'sonner'
 import {
   Dialog,
@@ -102,6 +102,7 @@ export function ApplyTemplateDialog({
 }: ApplyTemplateDialogProps) {
   const applyTemplate = useApplyTemplate()
   const [isApplying, setIsApplying] = useState(false)
+  const isApplyingRef = useRef(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showCategories, setShowCategories] = useState(false)
 
@@ -117,7 +118,8 @@ export function ApplyTemplateDialog({
   }
 
   async function handleApply() {
-    if (!selectedTemplate) return
+    if (!selectedTemplate || isApplyingRef.current) return
+    isApplyingRef.current = true
     setIsApplying(true)
     try {
       await applyTemplate.mutateAsync({ jobId, template: selectedTemplate.id })
@@ -141,6 +143,7 @@ export function ApplyTemplateDialog({
       }
     } finally {
       setIsApplying(false)
+      isApplyingRef.current = false
     }
   }
 

@@ -20,21 +20,23 @@ const PROJECT_TYPE_VALUES = [
 ] as const;
 
 const JOB_STATUS_VALUES = [
-  'lead',
   'briefing_recebido',
   'orcamento_elaboracao',
   'orcamento_enviado',
-  'orcamento_aprovado',
+  'aguardando_aprovacao',
+  'aprovado_selecao_diretor',
+  'cronograma_planejamento',
   'pre_producao',
   'producao_filmagem',
   'pos_producao',
-  'entrega',
+  'aguardando_aprovacao_final',
+  'entregue',
   'finalizado',
   'cancelado',
   'pausado',
 ] as const;
 
-const PRIORITY_LEVEL_VALUES = ['baixa', 'media', 'alta', 'urgente'] as const;
+const PRIORITY_LEVEL_VALUES = ['alta', 'media', 'baixa'] as const;
 
 // Schema de uma linha de job
 const JobRowSchema = z.object({
@@ -198,7 +200,7 @@ export async function handleImportJobs(
 
     // Campos opcionais — incluir apenas se fornecidos
     if (row.project_type != null) jobPayload.project_type = row.project_type;
-    if (row.priority_level != null) jobPayload.priority_level = row.priority_level;
+    if (row.priority_level != null) jobPayload.priority = row.priority_level;
     if (row.closed_value != null) jobPayload.closed_value = row.closed_value;
     if (row.production_cost != null) jobPayload.production_cost = row.production_cost;
     if (row.tax_percentage != null) jobPayload.tax_percentage = row.tax_percentage;

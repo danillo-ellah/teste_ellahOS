@@ -3,6 +3,7 @@ import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 import { created } from '../../_shared/response.ts';
 import { AppError } from '../../_shared/errors.ts';
 import { validate } from '../../_shared/validation.ts';
+import { getCorsHeaders } from '../../_shared/cors.ts';
 import type { AuthContext } from '../../_shared/auth.ts';
 
 // Roles permitidos para criar vendors
@@ -106,10 +107,8 @@ export async function createVendor(
       {
         status: 409,
         headers: {
+          ...getCorsHeaders(req),
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers':
-            'authorization, x-client-info, apikey, content-type',
         },
       },
     );
