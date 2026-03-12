@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react'
 import {
+  Check,
   ChevronDown,
   ChevronRight,
   AlertTriangle,
@@ -13,6 +14,7 @@ import {
   TrendingDown,
   CheckCircle2,
   Receipt,
+  X,
 } from 'lucide-react'
 import {
   Table,
@@ -49,10 +51,11 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useDeleteCostItem, useUpdateCostItem } from '@/hooks/useCostItems'
+import { useVendorSuggest } from '@/hooks/useVendors'
 import { toast } from 'sonner'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { PAYMENT_CONDITION_LABELS, NF_REQUEST_STATUS_CONFIG } from '@/types/cost-management'
-import type { CostItem, NfRequestStatus } from '@/types/cost-management'
+import type { CostItem, NfRequestStatus, VendorSuggestion } from '@/types/cost-management'
 import { CostItemStatusBadge } from './CostItemStatusBadge'
 import { safeErrorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -327,6 +330,177 @@ function InlineEditCell({
     >
       {displayText || placeholder}
     </span>
+  )
+}
+
+// ---- InlineVendorAutocomplete ----
+// Autocomplete de fornecedor inline na tabela, identico ao do drawer.
+// Clique abre input + dropdown com sugestoes da API.
+
+interface InlineVendorAutocompleteProps {
+  itemId: string
+  currentName: string | null | undefined
+  onSave: (payload: Record<string, unknown> & { id: string }) => Promise<unknown>
+}
+
+function InlineVendorAutocomplete({
+  itemId,
+  currentName,
+  onSave,
+}: InlineVendorAutocompleteProps) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const { data: suggestions } = useVendorSuggest(search, open)
+  const vendors = suggestions?.data ?? []
+
+  // Fechar ao clicar fora
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    if (open) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [open])
+
+  // Foco no input quando abre
+  useEffect(() => {
+    if (open) {
+      setTimeout(() => inputRef.current?.focus(), 30)
+    }
+  }, [open])
+
+  async function handleSelect(vendor: VendorSuggestion) {
+    if (vendor.full_name === currentName) {
+      setOpen(false)
+      return
+    }
+    setIsSaving(true)
+    try {
+      await onSave({
+        id: itemId,
+        vendor_id: vendor.id,
+        vendor_name_snapshot: vendor.full_name,
+        vendor_email_snapshot: vendor.email ?? null,
+      })
+    } catch (err) {
+      toast.error(safeErrorMessage(err))
+    } finally {
+      setIsSaving(false)
+      setOpen(false)
+      setSearch('')
+    }
+  }
+
+  async function handleClear() {
+    setIsSaving(true)
+    try {
+      await onSave({
+        id: itemId,
+        vendor_id: null,
+        vendor_name_snapshot: null,
+        vendor_email_snapshot: null,
+        vendor_pix_snapshot: null,
+      })
+    } catch (err) {
+      toast.error(safeErrorMessage(err))
+    } finally {
+      setIsSaving(false)
+      setOpen(false)
+      setSearch('')
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      setOpen(false)
+      setSearch('')
+    }
+  }
+
+  if (!open) {
+    return (
+      <span
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen(true)}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(true) } }}
+        className={cn(
+          'block w-full cursor-pointer rounded-sm px-1 truncate max-w-[120px]',
+          'hover:bg-muted/60 transition-colors duration-100',
+          isSaving && 'ring-1 ring-blue-400 animate-pulse',
+          !currentName && 'text-muted-foreground',
+        )}
+      >
+        {currentName || '-'}
+      </span>
+    )
+  }
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <div className="flex items-center gap-1">
+        <input
+          ref={inputRef}
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Buscar fornecedor..."
+          autoComplete="off"
+          className={cn(
+            'w-full bg-transparent outline-none border-0 p-0 m-0 text-sm',
+            'ring-1 ring-inset ring-primary rounded-sm px-1',
+            isSaving && 'ring-blue-400 animate-pulse',
+          )}
+        />
+        {currentName && (
+          <button
+            type="button"
+            onMouseDown={e => { e.preventDefault(); handleClear() }}
+            className="text-muted-foreground hover:text-foreground shrink-0"
+            aria-label="Limpar fornecedor"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+      <div className="absolute z-50 mt-1 w-56 bg-popover border border-border rounded-md shadow-md max-h-48 overflow-y-auto">
+        {vendors.length === 0 ? (
+          <div className="px-3 py-4 text-center text-xs text-muted-foreground">
+            Nenhum fornecedor encontrado
+          </div>
+        ) : (
+          vendors.map((s: VendorSuggestion) => {
+            const isSelected = s.full_name === currentName
+            return (
+              <button
+                key={s.id}
+                type="button"
+                className={cn(
+                  'w-full px-2 py-1.5 text-left text-sm hover:bg-accent flex items-center gap-1.5',
+                  isSelected && 'bg-accent/50',
+                )}
+                onMouseDown={() => handleSelect(s)}
+              >
+                <Check className={cn('h-3 w-3 shrink-0', isSelected ? 'opacity-100' : 'opacity-0')} />
+                <span className="flex-1 truncate">{s.full_name}</span>
+                {s.email && (
+                  <span className="text-xs text-muted-foreground truncate max-w-[100px]">{s.email}</span>
+                )}
+              </button>
+            )
+          })
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -677,20 +851,13 @@ function ItemRow({
         )}
       </TableCell>
 
-      {/* Fornecedor — editavel inline */}
-      <TableCell
-        className="text-sm"
-        data-row-id={editable ? item.id : undefined}
-        data-field={editable ? 'vendor_name_snapshot' : undefined}
-      >
+      {/* Fornecedor — autocomplete inline */}
+      <TableCell className="text-sm">
         {editable ? (
-          <InlineEditCell
+          <InlineVendorAutocomplete
             itemId={item.id}
-            field="vendor_name_snapshot"
-            value={item.vendor_name_snapshot}
-            fieldType="text"
+            currentName={item.vendor_name_snapshot}
             onSave={onSave}
-            className="text-sm truncate max-w-[120px]"
           />
         ) : null}
       </TableCell>
