@@ -139,10 +139,16 @@ export function useCopyCostItem() {
 export function useApplyTemplate() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (jobId: string) =>
-      apiMutate<CostItem[]>('cost-items', 'POST', undefined, `apply-template/${jobId}`),
+    mutationFn: ({ jobId, template }: { jobId: string; template?: string }) =>
+      apiMutate<CostItem[]>(
+        'cost-items',
+        'POST',
+        (template ? { template } : {}) as Record<string, unknown>,
+        `apply-template/${jobId}`,
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: costItemKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: finDashboardKeys.all })
     },
   })
 }

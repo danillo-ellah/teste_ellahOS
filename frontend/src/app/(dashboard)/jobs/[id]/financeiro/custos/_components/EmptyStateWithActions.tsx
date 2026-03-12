@@ -27,7 +27,7 @@ export function EmptyStateWithActions({
       <div className="flex flex-wrap justify-center gap-3">
         <Button onClick={onApplyTemplate}>
           <LayoutTemplate className="size-4 mr-1.5" />
-          Aplicar Template GG
+          Escolher Template
         </Button>
         <Button variant="outline" onClick={onImportFromJob}>
           <Copy className="size-4 mr-1.5" />

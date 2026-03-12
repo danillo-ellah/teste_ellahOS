@@ -2,17 +2,64 @@ import type { AuthContext } from '../../_shared/auth.ts';
 import { AppError } from '../../_shared/errors.ts';
 import { created } from '../../_shared/response.ts';
 import { getSupabaseClient } from '../../_shared/supabase-client.ts';
-import { flattenTemplate, GG_TEMPLATE } from '../data/gg-template.ts';
+import { flattenTemplate, GG_TEMPLATE, GG_TEMPLATE_NAME } from '../data/gg-template.ts';
+import { flattenMonstroTemplate, MONSTRO_TEMPLATE, MONSTRO_TEMPLATE_NAME } from '../data/monstro-template.ts';
+import { flattenDigitalTemplate, DIGITAL_TEMPLATE, DIGITAL_TEMPLATE_NAME } from '../data/digital-template.ts';
+import { flattenMotionTemplate, MOTION_TEMPLATE, MOTION_TEMPLATE_NAME } from '../data/motion-template.ts';
 
 const ALLOWED_ROLES = ['ceo', 'produtor_executivo', 'admin', 'diretor_producao', 'coordenador_producao'];
 
+const VALID_TEMPLATES = ['gg', 'monstro', 'digital', 'motion'] as const;
+type TemplateName = typeof VALID_TEMPLATES[number];
+
+function resolveTemplate(name: TemplateName) {
+  switch (name) {
+    case 'gg':
+      return { items: flattenTemplate(), categories: GG_TEMPLATE.length, templateName: GG_TEMPLATE_NAME };
+    case 'monstro':
+      return { items: flattenMonstroTemplate(), categories: MONSTRO_TEMPLATE.length, templateName: MONSTRO_TEMPLATE_NAME };
+    case 'digital':
+      return { items: flattenDigitalTemplate(), categories: DIGITAL_TEMPLATE.length, templateName: DIGITAL_TEMPLATE_NAME };
+    case 'motion':
+      return { items: flattenMotionTemplate(), categories: MOTION_TEMPLATE.length, templateName: MOTION_TEMPLATE_NAME };
+  }
+}
+
 export async function handleApplyTemplate(
-  _req: Request,
+  req: Request,
   auth: AuthContext,
   jobId: string,
 ): Promise<Response> {
-  console.log('[cost-items/apply-template] aplicando template GG ao job', {
+  // Resolver template: aceita query param ou body param, default 'gg'
+  const url = new URL(req.url);
+  let templateKey: string = url.searchParams.get('template') ?? 'gg';
+
+  // Se vier via body POST, body tem prioridade sobre query param
+  if (req.method === 'POST') {
+    try {
+      const body = await req.clone().json().catch(() => ({}));
+      if (body?.template) {
+        templateKey = body.template;
+      }
+    } catch {
+      // body invalido ou vazio — mantém o valor do query param
+    }
+  }
+
+  if (!VALID_TEMPLATES.includes(templateKey as TemplateName)) {
+    throw new AppError(
+      'VALIDATION_ERROR',
+      `Template invalido: "${templateKey}". Templates disponiveis: ${VALID_TEMPLATES.join(', ')}`,
+      400,
+      { valid_templates: VALID_TEMPLATES },
+    );
+  }
+
+  const template = templateKey as TemplateName;
+
+  console.log('[cost-items/apply-template] aplicando template ao job', {
     jobId,
+    template,
     userId: auth.userId,
     tenantId: auth.tenantId,
   });
@@ -57,8 +104,10 @@ export async function handleApplyTemplate(
     );
   }
 
+  // Resolver template selecionado
+  const { items: templateItems, categories, templateName } = resolveTemplate(template);
+
   // Gerar dados de insercao a partir do template
-  const templateItems = flattenTemplate();
   const insertData = templateItems.map((item) => ({
     tenant_id: auth.tenantId,
     job_id: jobId,
@@ -85,15 +134,19 @@ export async function handleApplyTemplate(
     });
   }
 
-  console.log('[cost-items/apply-template] template GG aplicado com sucesso', {
+  console.log('[cost-items/apply-template] template aplicado com sucesso', {
     jobId,
+    template,
+    templateName,
     created: createdItems?.length ?? 0,
-    categories: GG_TEMPLATE.length,
+    categories,
   });
 
   return created({
+    template: template,
+    template_name: templateName,
     created: createdItems?.length ?? 0,
-    categories: GG_TEMPLATE.length,
+    categories,
     items: createdItems,
   });
 }

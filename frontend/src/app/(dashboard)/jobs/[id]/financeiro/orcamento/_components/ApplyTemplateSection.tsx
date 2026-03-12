@@ -30,7 +30,7 @@ export function ApplyTemplateSection({ jobId, onApplied }: ApplyTemplateSectionP
   const { mutate, isPending } = useApplyTemplate()
 
   function handleApply() {
-    mutate(jobId, {
+    mutate({ jobId }, {
       onSuccess: res => {
         const items = (res?.data as CostItem[] | undefined) ?? []
         const created = items.length
