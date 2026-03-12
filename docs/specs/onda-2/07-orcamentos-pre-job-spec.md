@@ -1,11 +1,26 @@
-# Onda 2.4 -- Orcamentos pre-Job: CRM como Funil Financeiro
+# Onda 2.4 — Orcamentos pre-Job (CRM como funil financeiro)
 
+**Modulo:** CRM — Financeiro pre-Job
 **Data:** 2026-03-11
-**Status:** IMPLEMENTADO (11/03/2026)
+**Status:** IMPLEMENTADO
 **Autor:** PM (Claude Sonnet 4.6)
-**Onda:** 2.4 -- CRM Financeiro
-**Esforco estimado:** 4-5 dias uteis (4 sprints)
-**Depende de:** Onda 1.2 (CRM Conversao, CONCLUIDA), Fase 10 (Financeiro, CONCLUIDA)
+**Versao:** 1.0
+
+---
+
+## Indice
+
+1. Visao Geral
+2. Personas e Jornadas
+3. User Stories
+4. Fluxos Principais
+5. Regras de Negocio
+6. Wireframes Textuais
+7. Fora de Escopo
+8. Metricas de Sucesso
+9. Decisoes de Produto
+10. Perguntas Abertas para Onda 3
+11. Apendice — Rastreabilidade de Artefatos
 
 ---
 
@@ -13,599 +28,888 @@
 
 ### 1.1 Problema
 
-O ELLAHOS obriga criar um Job para ter qualquer recurso financeiro. Na pratica, produtoras audiovisuais trabalham com orcamentos detalhados **antes** de confirmar um projeto -- e muitos nunca viram Job. Hoje a Ellah Filmes mantem 10 orcamentos ativos na pasta 000_Orcamentos_em_Negociacao do Drive (ORC-2025-0001 a ORC-2026-0004, 87 itens), todos fora do sistema.
+A Ellah Filmes, como a maioria das produtoras brasileiras de publicidade, trabalha com um funil que tem dois momentos financeiros distintos: o orcamento de concorrencia (antes do job existir) e o custo real do job (depois que ganha). O ELLAHOS nao suportava o primeiro momento.
 
-Consequencias concretas do gap:
+Consequencia pratica: em marco/2026 a produtora mantinha 10 orcamentos ativos (ORC-2025-0001 a ORC-2026-0004, com 87 categorias preenchidas manualmente em planilhas) numa pasta do Google Drive chamada 000_Orcamentos_em_Negociacao. Cada orcamento era um arquivo Excel isolado, sem conexao com o CRM, sem historico de versoes e sem rastreabilidade de perdas.
 
-- O CEO nao sabe o valor real do pipeline -- estimated_value e chute manual
-- Quando perde uma concorrencia, nao ha registro estruturado do motivo: loss_reason e campo de texto livre hoje
-- Ao converter oportunidade em job, nenhum custo e pre-carregado -- o PE precisa redigitar tudo no modulo financeiro
-- Analise historica (ex: perdemos a Silimed 3 vezes) e impossivel sem dados estruturados
+Isso criava tres gaps operacionais:
 
-### 1.2 Solucao Proposta
+| Gap | Impacto | Frequencia |
+|-----|---------|------------|
+| Orcamento nao vinculado ao CRM | PE nao ve custo estimado no funil; CEO nao sabe valor total em negociacao | Toda oportunidade |
+| Nenhuma analise de perda estruturada | Impossivel saber por que se perde (preco? diretor? prazo?) | A cada derrota |
+| Conversao manual para Job | PE copia dados a mao do Drive para o ELLAHOS ao ganhar | A cada vitoria |
 
-Transformar o CRM em um funil financeiro completo:
+### 1.2 Solucao
 
-1. **Orcamento detalhado na oportunidade** -- editor de GG simplificado (categorias 1-15 + 99) dentro da oportunidade, antes do job existir
-2. **Codigo ORC automatico** -- sequencia ORC-YYYY-XXXX para identificar orcamentos externamente, espelhando o job_code
-3. **Feedback de perda estruturado** -- captura obrigatoria de categoria + texto + concorrente + valor ao marcar perdido
-4. **Conversao enriquecida** -- ao converter oportunidade para job, os itens do orcamento viram cost_items automaticamente
-5. **Dashboard de perdas** -- analytics de motivos, valores e padroes para decisao estrategica
+O CRM passa a ser o **funil financeiro completo** da produtora:
 
-### 1.3 Personas Impactadas
+- Qualquer oportunidade nos estagios proposta, negociacao ou fechamento pode ter um orcamento com versoes numeradas (ORC-YYYY-XXXX).
+- Ao mover para perdido, o sistema exige feedback estruturado (categoria + motivo + concorrente).
+- Ao converter para job, os itens de custo sao transferidos automaticamente para o financeiro do job.
+- O modulo /crm/perdas consolida a analise historica de win/loss para decisoes estrategicas.
 
-| Persona | Dor atual | Beneficio |
-|---------|-----------|----------|
-| PE (Produtor Executivo) | Monta orcamento em planilha separada, perde ao nao ganhar o job | Orcamento vive no CRM, converte automaticamente |
-| CEO | Nao entende padrao de perda de clientes | Dashboard de analise de perdas com dados estruturados |
-| Financeiro | Recebe job zerado, redigita todos os custos | cost_items ja populados ao abrir o job |
-| Atendimento | Registra motivo de perda em texto livre | Formulario guiado com campos estruturados |
+### 1.3 Estado da Implementacao (11/03/2026)
 
+| Sprint | Entregavel | Status |
+|--------|-----------|--------|
+| Sprint 1 | Migration SQL (3 tabelas + ALTER + 2 RPCs + RLS) | CONCLUIDO |
+| Sprint 2 | Edge Functions (5 handlers: list, create, update, activate, loss-analytics) | CONCLUIDO |
+| Sprint 3 | Frontend: OpportunityBudgetSection, LossFeedbackDialog, ConvertToJobDialog com budget | CONCLUIDO |
+| Sprint 4 | Frontend: /crm/perdas (dashboard win/loss analytics) | CONCLUIDO |
 
----
+### 1.4 Numeracao ORC
 
-## 1.4 Estado da Implementacao
+O codigo ORC segue o mesmo padrao atomico do codigo de job: ORC-{ANO}-{SEQUENCIA_4_DIGITOS}, por exemplo ORC-2025-0001 e ORC-2026-0004.
 
-Onda 2.4 implementada em 4 sprints entre 10-11/03/2026. Todos os entregaveis previstos foram concluidos, com excecao de US-ORC-08 (historico por cliente/agencia), que foi classificado como Could Have e adiado para onda futura.
-
-| Sprint | Escopo | Status |
-|--------|--------|--------|
-| Sprint 1 | Migration 3 tabelas (opportunity_budget_versions, opportunity_budget_items, orc_code_sequences) + ALTER TABLE opportunities (10 campos + orc_code) + EF: upsert-version, activate-version, list-versions | CONCLUIDO |
-| Sprint 2 | Frontend: OpportunityBudgetSection + BudgetVersionHistory + LossFeedbackDialog + integracao OpportunityFullDetail + CrmKanban | CONCLUIDO |
-| Sprint 3 | EF: get-loss-analytics + edicao convert-to-job (transferencia cost_items) + edicao update-opportunity (feedback obrigatorio) | CONCLUIDO |
-| Sprint 4 | Frontend: /crm/perdas + export PDF orcamento + useCrmBudget hooks | CONCLUIDO |
-
-**Rastreabilidade de artefatos:**
-
-| Artefato | Caminho | Status |
-|----------|---------|--------|
-| Migration | supabase/migrations/20260311100000_onda_2_4_orcamentos_pre_job.sql | APLICADA |
-| EF upsert-version | supabase/functions/crm/handlers/budget/upsert-version.ts | CONCLUIDO |
-| EF activate-version | supabase/functions/crm/handlers/budget/activate-version.ts | CONCLUIDO |
-| EF list-versions | supabase/functions/crm/handlers/budget/list-versions.ts | CONCLUIDO |
-| EF get-loss-analytics | supabase/functions/crm/handlers/get-loss-analytics.ts | CONCLUIDO |
-| EF convert-to-job (editado) | supabase/functions/crm/handlers/convert-to-job.ts | CONCLUIDO |
-| EF update-opportunity (editado) | supabase/functions/crm/handlers/update-opportunity.ts | CONCLUIDO |
-| OpportunityBudgetSection | frontend/src/components/crm/OpportunityBudgetSection.tsx | CONCLUIDO |
-| BudgetVersionHistory | frontend/src/components/crm/BudgetVersionHistory.tsx | CONCLUIDO |
-| LossFeedbackDialog | frontend/src/components/crm/LossFeedbackDialog.tsx | CONCLUIDO |
-| ConvertToJobDialog (editado) | frontend/src/components/crm/ConvertToJobDialog.tsx | CONCLUIDO |
-| OpportunityFullDetail (editado) | frontend/src/components/crm/OpportunityFullDetail.tsx | CONCLUIDO |
-| CrmKanban (editado) | frontend/src/components/crm/CrmKanban.tsx | CONCLUIDO |
-| Dashboard de perdas | frontend/src/app/(dashboard)/crm/perdas/page.tsx | CONCLUIDO |
-| PDF de orcamento | frontend/src/lib/pdf/opportunity-budget-pdf.ts | CONCLUIDO |
-| useCrmBudget | frontend/src/hooks/useCrmBudget.ts | CONCLUIDO |
-| US-ORC-08 AgencyHistoryPanel | components/crm/AgencyHistoryPanel.tsx (nao modificado) | NAO IMPLEMENTADO (Could Have -- onda futura) |
+- Gerado na primeira versao de orcamento de cada oportunidade.
+- Nunca reutilizado, mesmo se a oportunidade for deletada.
+- Visivel na listagem do pipeline e no detalhe da oportunidade.
 
 ---
 
-## 2. User Stories
+## 2. Personas e Jornadas
 
-### US-ORC-01 -- Criar orcamento simplificado em oportunidade (Must Have)
+### 2.1 Ana — Produtora Executiva (PE)
 
-Como PE, quero informar o valor estimado por categoria de custo diretamente na oportunidade, para ter um orcamento mais preciso do que um numero unico e poder comparar margens entre oportunidades.
+**Perfil:** 8 anos de mercado, gerencia 3 a 8 oportunidades simultaneas. Precisa de visibilidade rapida sobre o valor financeiro de cada deal sem sair do CRM.
 
-**Criterios de Aceite:**
+**Antes da Onda 2.4:**
+Ana abre o Drive toda manha, navega ate 000_Orcamentos_em_Negociacao, abre o Excel da oportunidade, ve os numeros, fecha. Quando ganha, copia manualmente as categorias para o financeiro do job no ELLAHOS — processo que leva 15 a 20 minutos e e propicio a erro. Quando perde, nao registra nada.
 
-- CA-01.1: Nas stages lead e qualificado, a secao de orcamento exibe apenas um campo de valor total (estimated_value existente) -- sem editor de categorias
-- CA-01.2: Nas stages proposta, negociacao e fechamento, aparece o editor de 16 categorias GG simplificado (item_number 1-15 + 99) carregadas da tabela cost_categories do tenant
-- CA-01.3: Cada linha de categoria exibe: nome da categoria, campo de valor total (NUMERIC), campo de notas (TEXT opcional)
-- CA-01.4: O sistema calcula e exibe o total somando todas as categorias preenchidas
-- CA-01.5: O total calculado atualiza o campo estimated_value da oportunidade automaticamente ao salvar
-- CA-01.6: Categorias com valor zero ou nulo sao salvas mas nao impactam o total
-- CA-01.7: O PE pode salvar parcialmente -- nao e obrigatorio preencher todas as categorias
-- CA-01.8: Ao mudar de qualificado para proposta, o sistema exibe mensagem encorajadora "Detalhe o orcamento por categoria para aumentar a precisao" (nao bloqueia a transicao)
-- CA-01.9: A secao funciona em dark mode e mobile (touch 44px minimo)
+**Depois da Onda 2.4:**
+Ana abre a oportunidade no CRM. A secao Orcamento mostra imediatamente a versao ativa com total e top 4 categorias. Quando ganha, clica em Converter em Job e marca Transferir categorias de custo — o financeiro do job e preenchido automaticamente em segundos. Quando perde, o sistema solicita o motivo antes de confirmar a mudanca de estagio.
 
-### US-ORC-02 -- Versionar orcamento (Must Have)
+**Jornada critica — criar primeiro orcamento:**
+1. Oportunidade chega no estagio proposta.
+2. Ana clica no botao + Novo Orcamento na aba detalhes.
+3. Preenche as 16 categorias GG com os valores estimados.
+4. Clica em Ativar para tornar aquela versao a oficial.
+5. Valor total aparece no card do Kanban.
 
-Como PE, quero criar versoes do orcamento (v1, v2, v3) dentro de uma mesma oportunidade, para registrar a evolucao da negociacao e comparar o que mudou entre versoes sem perder o historico.
+**Jornada critica — nova versao apos revisao de escopo:**
+1. Cliente pede reducao de escopo.
+2. Ana clica em Nova versao (copia da ativa).
+3. Edita apenas as categorias afetadas.
+4. Ativa a nova versao — versao anterior vai para historico, valor no Kanban atualiza.
 
-**Criterios de Aceite:**
+### 2.2 Roberto — CEO / Socio
 
-- CA-02.1: Cada oportunidade pode ter N versoes de orcamento, numeradas sequencialmente (v1, v2...)
-- CA-02.2: O botao Nova Versao copia todos os itens da versao atual para uma nova versao em status rascunho
-- CA-02.3: Apenas uma versao pode estar com status ativa por vez -- ao ativar uma versao, as demais ficam como historico
-- CA-02.4: A versao ativa e a que alimenta o estimated_value da oportunidade
-- CA-02.5: O historico de versoes e listado com: numero, data de criacao, total, status
-- CA-02.6: Versoes em historico sao somente-leitura
-- CA-02.7: Ao abrir o editor pela primeira vez em uma oportunidade sem versoes, o sistema cria automaticamente uma v1 em rascunho
+**Perfil:** Visao de negocio, foca em conversao e ticket medio. Acessa ELLAHOS 2 a 3 vezes por semana para verificar o pipeline.
 
-### US-ORC-03 -- Identificar orcamento com codigo ORC (Must Have)
+**Antes da Onda 2.4:**
+Roberto pedia relatorios manuais toda segunda-feira. "Quanto temos em negociacao agora?" era uma pergunta que demorava horas para ser respondida porque as PEs precisavam somar os Excels.
 
-Como PE, quero que cada orcamento tenha um codigo unico ORC-YYYY-XXXX, para referenciar nas comunicacoes com clientes sem expor o ID interno.
+**Depois da Onda 2.4:**
+Roberto ve no Dashboard CRM o valor total do pipeline em tempo real. Na tela /crm/perdas, ve que nos ultimos 90 dias 60% das perdas foram por preco — insumo direto para a proxima reuniao de estrategia comercial.
 
-**Criterios de Aceite:**
+**Jornada critica — reuniao estrategica mensal:**
+1. Acessa /crm/perdas.
+2. Filtra por periodo: 90 dias.
+3. Ve grafico de categorias de perda: preco 40%, diretor 25%, prazo 20%, outro 15%.
+4. Identifica o principal concorrente que aparece nas perdas de preco.
+5. Toma decisao: revisar tabela de preco para o proximo trimestre.
 
-- CA-03.1: Ao criar a primeira versao de orcamento em uma oportunidade, o sistema gera automaticamente um codigo ORC-YYYY-XXXX (ex: ORC-2026-0042) onde YYYY e o ano corrente e XXXX e a sequencia por tenant/ano com zero-fill de 4 digitos
-- CA-03.2: O codigo ORC e imutavel apos gerado -- nao muda com novas versoes
-- CA-03.3: O codigo ORC e exibido no header da oportunidade a partir do stage proposta
-- CA-03.4: O codigo ORC e exibido no export PDF do orcamento
-- CA-03.5: A sequencia e atomica por tenant/ano -- sem race conditions (mesma logica de job_code_sequences)
-- CA-03.6: O codigo ORC nao e o mesmo que o codigo do job -- sao sequencias independentes
+### 2.3 Carla — Diretora Financeira
 
-### US-ORC-04 -- Registrar feedback estruturado de perda (Must Have)
+**Perfil:** Controla o fluxo de caixa. Precisa saber quais orcamentos tem chance real de virar receita e quando.
 
-Como atendimento ou PE, quero preencher um formulario guiado ao marcar uma oportunidade como perdida, para que o CEO possa analisar padroes de perda e tomar decisoes comerciais baseadas em dados.
+**Antes da Onda 2.4:**
+Carla recebia uma planilha mensal consolidada das PEs. Nao tinha granularidade de categorias nem historico de versoes.
 
-**Criterios de Aceite:**
+**Depois da Onda 2.4:**
+Carla ve no Dashboard CRM o valor total do pipeline e o valor ponderado (valor vezes probabilidade). Quando um job e ganho, o financeiro ja chega preenchido com as categorias GG pre-aprovadas no orcamento.
 
-- CA-04.1: Ao mover uma oportunidade para o stage perdido (via Kanban drag ou botao na pagina de detalhe), o sistema exibe obrigatoriamente um dialog de feedback antes de confirmar a mudanca
-- CA-04.2: O dialog de feedback contem os seguintes campos:
-  - loss_category (obrigatorio): select com opcoes Preco, Prazo, Concorrencia, Relacionamento, Escopo, Outro
-  - loss_reason (obrigatorio): textarea de ate 1.000 caracteres com o contexto detalhado
-  - winner_competitor (opcional): nome do concorrente que ganhou
-  - winner_value (opcional): valor que o concorrente cobrou (NUMERIC)
-- CA-04.3: O botao Confirmar Perda permanece desabilitado ate que loss_category e loss_reason estejam preenchidos
-- CA-04.4: Ao confirmar, a oportunidade e atualizada atomicamente: stage = perdido, actual_close_date = today, todos os campos de feedback persistidos
-- CA-04.5: O feedback fica visivel na timeline de atividades da oportunidade com icone de perda
-- CA-04.6: O enum de loss_category e expandido para incluir concorrencia como opcao separada de relacionamento
-- CA-04.7: Ao reabrir uma oportunidade perdida (via mudanca de stage), o feedback e preservado mas pode ser editado
+### 2.4 Lucas — Atendimento
 
-### US-ORC-05 -- Converter oportunidade em job com cost_items automaticos (Must Have)
+**Perfil:** Interface com o cliente. Cria oportunidades, registra briefs. Nao gerencia orcamentos detalhados, mas precisa saber em que estagio financeiro esta cada deal.
 
-Como PE ou CEO, quero que ao converter uma oportunidade em job, os itens do orcamento sejam criados automaticamente como cost_items no modulo financeiro, para nao precisar redigitar todos os custos.
+**Antes da Onda 2.4:**
+Lucas criava a oportunidade no CRM e depois pedia para a PE abrir o Excel correspondente. Desconexao total.
 
-**Criterios de Aceite:**
-
-- CA-05.1: O ConvertToJobDialog exibe uma secao Orcamento a transferir quando a oportunidade tem uma versao ativa de orcamento, listando o total por categoria
-- CA-05.2: O PE pode optar por Transferir orcamento para o job (checkbox, marcado por padrao quando ha orcamento ativo)
-- CA-05.3: Quando a opcao estiver marcada, a Edge Function convert-to-job cria automaticamente um job_budget vinculado ao job com os dados do orcamento
-- CA-05.4: Cada categoria com valor maior que zero no orcamento gera um cost_item com is_category_header = true (sub_item_number = 0) no job recem-criado
-- CA-05.5: Os cost_items criados automaticamente tem item_status = orcado e import_source = crm_opportunity_{opportunity_id}
-- CA-05.6: O job criado exibe um banner Custos importados do orcamento CRM -- revise os valores na aba Financeiro
-- CA-05.7: Se a transferencia falhar (erro de banco), o job e criado sem os custos e um aviso e exibido -- a conversao nao e revertida por falha na criacao dos cost_items
-- CA-05.8: Oportunidades sem versao de orcamento ativa seguem o fluxo atual sem nenhuma mudanca
-
-### US-ORC-06 -- Exportar PDF do orcamento pre-job (Should Have)
-
-Como PE, quero gerar um PDF do orcamento da oportunidade para enviar ao cliente antes da existencia do job, com o cabecalho da produtora e o codigo ORC.
-
-**Criterios de Aceite:**
-
-- CA-06.1: O botao Exportar PDF aparece na secao de orcamento da oportunidade quando ha uma versao ativa
-- CA-06.2: O PDF gerado reutiliza pdf-core.ts e budget-pdf.ts existentes, adaptados para receber dados da opportunity_budget_version em vez de job_budget
-- CA-06.3: O PDF contem: codigo ORC, titulo da oportunidade, cliente/agencia, data de geracao, tabela de categorias com valores, total, validade da proposta
-- CA-06.4: O PDF e gerado client-side (jsPDF) -- sem chamada ao backend
-- CA-06.5: O nome do arquivo segue o padrao ORC-2026-0042_v2_NomeCliente.pdf
-- CA-06.6: Versoes historicas tambem podem ser exportadas (somente-leitura)
-
-### US-ORC-07 -- Visualizar dashboard de analise de perdas (Should Have)
-
-Como CEO, quero uma pagina dedicada a analise de oportunidades perdidas, para entender padroes (por que perdemos, para quem, quanto), identificar clientes recorrentes e tomar decisoes sobre pricing e posicionamento.
-
-**Criterios de Aceite:**
-
-- CA-07.1: A pagina /crm/perdas exibe KPIs: total de oportunidades perdidas (periodo selecionavel), valor total perdido, taxa de perda (perdidas / total fechadas), concorrente mais frequente
-- CA-07.2: Grafico de barras com distribuicao por loss_category
-- CA-07.3: Tabela de oportunidades perdidas com colunas: titulo, cliente, data de perda, valor, categoria, concorrente vencedor, PE responsavel
-- CA-07.4: Filtros: periodo (30d / 90d / 6m / 12m / personalizado), categoria de perda, PE responsavel, cliente
-- CA-07.5: Destaque visual para clientes que aparecem em 2 ou mais perdas no periodo selecionado (clientes recorrentes perdidos)
-- CA-07.6: Ranking dos top 5 concorrentes por frequencia de aparicao em winner_competitor
-- CA-07.7: Exportacao da tabela em CSV
-- CA-07.8: RBAC: acessivel para admin, ceo, produtor_executivo. Inacessivel para roles operacionais
-
-### US-ORC-08 -- Visualizar historico de orcamentos por cliente ou agencia (Could Have)
-
-Como PE ou CEO, quero ver no painel lateral da oportunidade o historico de orcamentos enviados para aquele cliente ou agencia, para calibrar melhor o proximo orcamento.
-
-**Criterios de Aceite:**
-
-- CA-08.1: O AgencyHistoryPanel existente e expandido com uma secao Orcamentos historicos quando a oportunidade tem client_id ou agency_id
-- CA-08.2: A secao lista ate 5 orcamentos mais recentes (ganhos e perdidos) com: codigo ORC ou codigo do job, titulo, valor, resultado (ganho/perdido), data
-- CA-08.3: Taxa de win/loss do cliente/agencia e exibida como badge no topo da secao
-- CA-08.4: Link Ver todos abre listagem filtrada em /crm com o cliente/agencia selecionado
+**Depois da Onda 2.4:**
+Lucas cria a oportunidade. Na aba de detalhe, ve o badge ORC-YYYY-XXXX assim que a PE criar o primeiro orcamento. Pode criar versao rascunho (permissao de atendimento), mas nao pode ativar versoes.
 
 ---
 
-## 3. Fluxos Principais
+## 3. User Stories
 
-### Fluxo 1 -- Criar orcamento em oportunidade
+### US-ORC-01 — Ver orcamento no detalhe da oportunidade
 
-Modo simplificado (lead/qualificado): PE informa apenas estimated_value como hoje.
+**Como** Ana (PE), **quero** ver o orcamento ativo da oportunidade diretamente na pagina de detalhe do CRM, **para** nao precisar abrir o Drive para consultar o valor estimado.
 
-Modo detalhado (proposta+):
+**Criterios de Aceite:**
 
-1. Sistema exibe editor de 16 categorias GG ao entrar em stage proposta
-2. PE preenche valor por categoria (campos NUMERIC com notas opcionais)
-3. Sistema calcula total em tempo real e exibe no rodape
-4. PE clica Salvar Orcamento
-5. Sistema cria opportunity_budget_version v1 (status: rascunho) e gera codigo ORC-YYYY-XXXX na primeira vez
-6. estimated_value da oportunidade e atualizado com o total calculado
-7. Codigo ORC aparece no header da oportunidade
+- [ ] CA-01: A aba de detalhe exibe a secao Orcamento para estagios proposta, negociacao, fechamento, ganho ou perdido.
+- [ ] CA-02: Com versao ativa: exibe codigo ORC, numero da versao, total em R$, data de criacao, top 4 categorias por valor.
+- [ ] CA-03: Sem versao: exibe botao + Novo Orcamento (apenas para roles com permissao de escrita).
+- [ ] CA-04: Codigo ORC exibido no header da oportunidade quando ja tem orcamento.
+- [ ] CA-05: Secao ocultada para estagios lead e qualificado.
+- [ ] CA-06: Carregamento independente do restante da pagina (nao bloqueia renderizacao inicial).
 
-### Fluxo 2 -- Versionar orcamento
-
-1. Oportunidade tem orcamento v1 ativo
-2. PE clica Nova Versao (cliente pediu revisao)
-3. Sistema copia todos os itens de v1 para v2 (status: rascunho); v1 fica como historico
-4. PE edita os valores de v2
-5. PE clica Ativar esta versao
-6. Sistema seta v2 como ativa e atualiza estimated_value com total de v2
-7. Historico exibe: v1 historico (R$ X) | v2 ativa (R$ Y)
-
-### Fluxo 3 -- Marcar oportunidade como perdida
-
-1. PE arrasta card para coluna Perdido no Kanban OU clica botao Marcar como Perdida na pagina de detalhe
-2. Sistema exibe LossFeedbackDialog -- oportunidade NAO avanca ate feedback ser preenchido
-3. PE preenche campos obrigatorios: loss_category (select) e loss_reason (textarea)
-4. PE preenche campos opcionais: winner_competitor (nome) e winner_value (valor)
-5. PE clica Confirmar Perda
-6. Sistema faz PATCH na oportunidade: stage=perdido, actual_close_date=today, todos os campos de feedback persistidos
-7. Oportunidade movida para coluna Perdido, atividade criada na timeline
-8. Cache invalidado: pipeline, dashboard, stats
-
-### Fluxo 4 -- Converter oportunidade em job
-
-1. Oportunidade em stage fechamento tem orcamento v2 ativo (ex: R$ 85.000)
-2. PE clica Converter em Job -> ConvertToJobDialog
-3. Dialog exibe campos editaveis existentes mais secao nova: Orcamento a transferir
-   - Exibe: Versao v2 -- R$ 85.000 (8 categorias)
-   - Checkbox: Criar cost_items a partir deste orcamento (marcado por padrao)
-4. PE confirma -> POST /crm/opportunities/:id/convert-to-job com transferir_orcamento=true
-5. Backend executa em sequencia:
-   a. Cria job (logica atual)
-   b. Marca oportunidade como ganho
-   c. Cria job_budget vinculado ao job
-   d. Para cada categoria com valor > 0: INSERT cost_item com item_number da categoria, unit_value=valor, quantity=1, item_status=orcado, import_source=crm_opportunity_{id}
-   e. Registra atividade
-6. Frontend: redirect para /jobs/{id} com banner Custos importados do CRM -- revise os valores na aba Financeiro
-
-### Fluxo 5 -- Dashboard de analise de perdas
-
-1. CEO acessa /crm/perdas
-2. Pagina carrega com filtro padrao (ultimos 90 dias): KPIs, grafico por loss_category, tabela de perdas, destaque de clientes recorrentes
-3. CEO ajusta filtros: periodo, categoria, PE responsavel, cliente
-4. Tabela e ranking de concorrentes atualizam com base nos filtros
-5. CEO clica Exportar CSV e faz download da tabela filtrada
+**Validacao manual:**
+1. Criar oportunidade no estagio proposta.
+2. Verificar que secao Orcamento aparece com botao + Novo Orcamento.
+3. Criar versao e ativar.
+4. Verificar total e categorias corretas.
+5. Verificar codigo ORC no header.
 
 ---
 
-## 4. Regras de Negocio
+### US-ORC-02 — Criar e editar orcamento com categorias GG
 
-### RN-01 -- Progressao de categorias por stage
+**Como** Ana (PE), **quero** criar um orcamento com as 16 categorias padrao GG diretamente no CRM, **para** substituir os Excels manuais do Drive.
 
-| Stage | Modo do orcamento |
-|-------|-------------------|
-| lead | Apenas estimated_value (campo simples) |
-| qualificado | Apenas estimated_value (campo simples) |
-| proposta | Editor de 16 categorias habilitado |
-| negociacao | Editor de 16 categorias habilitado |
-| fechamento | Editor de 16 categorias habilitado |
-| ganho | Somente-leitura (orcamento congelado) |
-| perdido | Somente-leitura |
-| pausado | Somente-leitura |
+**Criterios de Aceite:**
 
-### RN-02 -- Codigo ORC
+- [ ] CA-01: Formulario exibe categorias organizadas por numero de item (01 a 16).
+- [ ] CA-02: Cada categoria tem: numero, nome editavel, campo de valor em R$, observacoes (opcional).
+- [ ] CA-03: Total calculado automaticamente em tempo real.
+- [ ] CA-04: Categorias com valor zero exibidas em cor mais suave mas editaveis.
+- [ ] CA-05: Botao Salvar rascunho persiste sem ativar.
+- [ ] CA-06: Apenas roles admin, ceo, produtor_executivo, atendimento podem criar/editar versoes.
+- [ ] CA-07: Versoes ativa ou historico sao somente leitura.
+- [ ] CA-08: Feedback visual imediato ao salvar (toast sucesso ou erro).
 
-- Formato: ORC-YYYY-XXXX onde YYYY = ano de criacao da primeira versao, XXXX = sequencia 4 digitos zero-fill por tenant/ano
-- Gerado uma unica vez por oportunidade -- na criacao da primeira versao de orcamento
-- Independente de job_code -- sao sequencias separadas
-- Imutavel apos geracao
-- Implementacao: tabela orc_code_sequences (tenant_id, year, last_index) com INSERT ON CONFLICT (mesmo padrao de job_code_sequences)
-- O orc_code e copiado para o campo orc_code da tabela opportunities para consulta rapida sem join
-
-### RN-03 -- Versionamento de orcamento
-
-- Versoes sao imutaveis apos ativacao -- para editar, cria-se uma nova versao
-- Nova versao copia todos os itens da versao ativa para uma nova em rascunho
-- Apenas uma versao por oportunidade pode estar ativa -- a EF garante via transacao
-- Versao rascunho pode ser editada e depois ativada ou descartada
-- Versao historico e somente-leitura e nunca pode ser reativada
-
-### RN-04 -- Feedback de perda obrigatorio
-
-- O endpoint PATCH /crm/opportunities/:id ja valida que loss_category OU loss_reason sao obrigatorios ao marcar stage = perdido
-- A Onda 2.4 torna ambos obrigatorios (AND, nao OR)
-- A mudanca e backwards-compatible pois nenhuma oportunidade existente e remarcada automaticamente pelo sistema
-- winner_competitor e winner_value permanecem opcionais
-- O enum loss_category (preco, diretor, prazo, escopo, relacionamento, outro) e expandido para incluir concorrencia
-
-### RN-05 -- Transferencia de orcamento para job
-
-- Apenas a versao ativa pode ser transferida na conversao
-- Categorias com valor igual a 0 ou nulo NAO geram cost_items
-- Os cost_items criados sao do tipo is_category_header = true (sub_item_number = 0)
-- O campo import_source nos cost_items permite identificar e excluir em massa se necessario
-- A transferencia e opcional -- PE pode desmarcar o checkbox
-- Falha na criacao dos cost_items NAO reverte a criacao do job
+**Validacao manual:**
+1. Como PE, abrir oportunidade em proposta.
+2. Clicar em + Novo Orcamento.
+3. Preencher 5 categorias com valores.
+4. Verificar total calculado automaticamente.
+5. Salvar como rascunho. Verificar badge Rascunho.
+6. Tentar editar como coordenador — deve ser impedido.
 
 ---
-## 5. Wireframes Textuais
 
-### Tela 5.1 -- Secao de orcamento na pagina de detalhe
+### US-ORC-03 — Ativar versao de orcamento
 
-Stage proposta ou superior -- renderizada como secao expansivel na coluna central de OpportunityFullDetail:
+**Como** Ana (PE), **quero** ativar uma versao de orcamento para que ela seja considerada a oficial, **para** que o valor total apareca no pipeline e possa ser usado na conversao para job.
 
-    +--------------------------------------------------+
-    | ORCAMENTO   ORC-2026-0042   v2 (ativa)           |
-    |--------------------------------------------------|
-    | [Nova Versao]   [Exportar PDF]                   |
-    |                                                  |
-    | Categoria           Valor (R$)       Notas       |
-    |  1. Producao      [  45.000  ]  [...........]   |
-    |  2. Equipe Tecn.  [  18.000  ]  [...........]   |
-    |  3. Elenco        [   5.500  ]  [...........]   |
-    |  4. Locacoes      [   8.000  ]  [...........]   |
-    |  ...                                             |
-    | 99. BDI/Outros    [   2.000  ]  [...........]   |
-    |--------------------------------------------------|
-    | TOTAL                     R$ 82.700              |
-    |                                                  |
-    | [Salvar Orcamento]                               |
-    |                                                  |
-    | Historico de versoes:                            |
-    | v1 - 05/03/2026 - R$ 78.000 - historico         |
-    | v2 - 09/03/2026 - R$ 82.700 - ativa             |
-    +--------------------------------------------------+
+**Criterios de Aceite:**
 
-### Tela 5.2 -- LossFeedbackDialog
+- [ ] CA-01: Botao Ativar aparece apenas em versoes com status rascunho.
+- [ ] CA-02: Versao so pode ser ativada se tiver ao menos 1 categoria com valor maior que zero.
+- [ ] CA-03: Ao ativar, versao anterior ativa vai para status historico.
+- [ ] CA-04: estimated_value da oportunidade atualizado para total da nova versao ativa.
+- [ ] CA-05: Operacao atomica: nunca existem duas versoes ativas simultaneamente.
+- [ ] CA-06: Apenas roles admin, ceo, produtor_executivo podem ativar.
+- [ ] CA-07: Card no Kanban exibe valor atualizado apos ativacao.
+- [ ] CA-08: Historico de versoes preservado e consultavel.
 
-Exibido ao tentar mover oportunidade para stage perdido:
-
-    +--------------------------------------------------+
-    | Registrar perda                             [X]  |
-    |--------------------------------------------------|
-    | Por que perdemos esta oportunidade?              |
-    |                                                  |
-    | Motivo principal *                               |
-    | [Select: Preco / Prazo / Concorrencia /         |
-    |          Relacionamento / Escopo / Outro ]       |
-    |                                                  |
-    | Descricao detalhada *                            |
-    | [textarea -- max 1.000 chars                  ]  |
-    |                                                  |
-    | Concorrente vencedor (opcional)                  |
-    | [input                                        ]  |
-    |                                                  |
-    | Valor cobrado pelo concorrente (opcional)        |
-    | [R$ ___________]                                 |
-    |                                                  |
-    | [Cancelar]           [Confirmar Perda]           |
-    +--------------------------------------------------+
-
-### Tela 5.3 -- ConvertToJobDialog (versao expandida)
-
-Nova secao adicionada ao dialog existente:
-
-    +--------------------------------------------------+
-    | Converter em Job                            [X]  |
-    |--------------------------------------------------|
-    | Dados do Job (editaveis)                         |
-    | Titulo *   [Campanha Silimed Verao 2026       ]  |
-    | Valor      [R$ 82.700                         ]  |
-    | Tipo       [Filme Publicitario             v  ]  |
-    |                                                  |
-    | Dados copiados (readonly)                        |
-    | Cliente: Silimed | Agencia: NBS                  |
-    |                                                  |
-    |--------------------------------------------------|
-    | Orcamento a transferir                           |
-    | Versao v2 -- R$ 82.700 (6 categorias)           |
-    | [x] Criar cost_items a partir deste orcamento   |
-    |     Producao          R$ 45.000                 |
-    |     Equipe Tecnica    R$ 18.000                 |
-    |     Elenco            R$  5.500                 |
-    |     + 3 outras categorias                       |
-    |                                                  |
-    |     A oportunidade sera marcada como ganho       |
-    |          [Cancelar]    [Criar Job]               |
-    +--------------------------------------------------+
-
-### Tela 5.4 -- Dashboard de perdas (/crm/perdas)
-
-    +----------------------------------------------------------+
-    | Analise de Perdas    [90 dias]  [Todas categorias]       |
-    |----------------------------------------------------------|
-    | R$ 312.000 | 14 perdidas | 31% taxa perda | Produtora X  |
-    |----------------------------------------------------------|
-    | Grafico barras: Preco 6  Prazo 4  Concorrencia 2  ...   |
-    |----------------------------------------------------------|
-    | Clientes recorrentes: ATENCAO                            |
-    | Silimed -- perdeu 3x no periodo (R$ 145.000 em risco)   |
-    |----------------------------------------------------------|
-    | TITULO              CLIENTE  DATA   VALOR  MOTIVO  PE   |
-    | Camp.Verao Silimed  Silimed  05/03  82700  Preco   A    |
-    | Projeto TV Globo    Globo    02/03  45000  Prazo   B    |
-    |                                                          |
-    | [Exportar CSV]                                           |
-    +----------------------------------------------------------+
+**Validacao manual:**
+1. Criar v1 e ativar (R$100k).
+2. Criar v2 e ativar (R$80k).
+3. Verificar que v1 foi para historico.
+4. Verificar estimated_value = R$80k.
+5. Verificar valor no card do Kanban.
 
 ---
-## 6. Dependencias Tecnicas
 
-### 6.1 Tabelas novas (3)
+### US-ORC-04 — Criar nova versao baseada na versao ativa
 
-**opportunity_budget_versions** -- versoes de orcamento por oportunidade:
+**Como** Ana (PE), **quero** criar uma nova versao de orcamento copiando os itens da versao ativa, **para** revisar o escopo sem perder o historico.
 
-| Coluna | Tipo | Descricao |
-|--------|------|-----------|
-| id | UUID PK | |
-| tenant_id | UUID NOT NULL FK tenants | |
-| opportunity_id | UUID NOT NULL FK opportunities ON DELETE CASCADE | |
-| orc_code | TEXT | ORC-YYYY-XXXX, gerado na v1 e copiado para versoes seguintes |
-| version | SMALLINT NOT NULL DEFAULT 1 | sequencial por opportunity |
-| status | TEXT CHECK (rascunho, ativa, historico) | apenas uma ativa por oportunidade |
-| total_value | NUMERIC(12,2) | calculado na EF ao salvar (soma dos itens) |
-| notes | TEXT | observacoes livres sobre a versao |
-| created_by | UUID FK profiles | |
-| created_at | TIMESTAMPTZ NOT NULL DEFAULT now() | |
-| updated_at | TIMESTAMPTZ NOT NULL DEFAULT now() | |
-| deleted_at | TIMESTAMPTZ | soft delete |
+**Criterios de Aceite:**
 
-UNIQUE constraint: (opportunity_id, version, tenant_id)
-
-**opportunity_budget_items** -- itens por versao:
-
-| Coluna | Tipo | Descricao |
-|--------|------|-----------|
-| id | UUID PK | |
-| tenant_id | UUID NOT NULL FK tenants | |
-| version_id | UUID NOT NULL FK opportunity_budget_versions ON DELETE CASCADE | |
-| item_number | SMALLINT NOT NULL CHECK (1 a 99) | espelha cost_categories.item_number |
-| display_name | TEXT NOT NULL | snapshot do nome da categoria |
-| value | NUMERIC(12,2) NOT NULL DEFAULT 0 | valor total da categoria |
-| notes | TEXT | observacoes sobre esta linha |
-| created_at | TIMESTAMPTZ NOT NULL DEFAULT now() | |
-| updated_at | TIMESTAMPTZ NOT NULL DEFAULT now() | |
-
-**orc_code_sequences** -- contador atomico por tenant/ano:
-
-| Coluna | Tipo | Descricao |
-|--------|------|-----------|
-| id | UUID PK | |
-| tenant_id | UUID NOT NULL FK tenants | |
-| year | SMALLINT NOT NULL | ano de referencia |
-| last_index | INTEGER NOT NULL DEFAULT 0 | ultimo indice gerado |
-| updated_at | TIMESTAMPTZ NOT NULL DEFAULT now() | |
-
-UNIQUE constraint: (tenant_id, year)
-
-### 6.2 Alteracoes em tabelas existentes
-
-**Status: APLICADO via migration 20260311100000_onda_2_4_orcamentos_pre_job.sql**
-
-**opportunities** -- todos os campos abaixo foram adicionados via ADD COLUMN IF NOT EXISTS:
-- Campos preexistentes confirmados no banco: loss_category, winner_competitor, winner_value, is_competitive_bid, response_deadline, deliverable_format, campaign_period, competitor_count, win_reason, client_budget
-- Campo novo adicionado pela Onda 2.4: orc_code TEXT (codigo ORC copiado da versao do orcamento para consulta rapida sem join)
-
-**cost_items**: campo item_status ja aceitava o valor 'orcado' -- confirmado no banco de producao.
-
-### 6.3 Edge Functions -- alteracoes e novas
-
-**Status: TODOS CONCLUIDOS**
-
-| Arquivo | Tipo | Status |
-|---------|------|--------|
-| crm/handlers/convert-to-job.ts | EDITADO | CONCLUIDO -- aceita transfer_budget boolean; cria job_budget + cost_items (item_status=orcado, import_source=crm_opportunity_{id}); falha na transferencia NAO reverte criacao do job |
-| crm/handlers/update-opportunity.ts | EDITADO | CONCLUIDO -- loss_category E loss_reason obrigatorios ao marcar perdido (AND, nao OR); enum expandido com concorrencia |
-| crm/handlers/budget/upsert-version.ts | NOVO | CONCLUIDO -- POST cria versao com codigo ORC atomico (RPC ou fallback upsert); PATCH atualiza rascunho (DELETE + re-INSERT itens); suporta copy_from_active |
-| crm/handlers/budget/activate-version.ts | NOVO | CONCLUIDO -- usa activate_budget_version RPC com fallback 3-steps; valida pelo menos 1 item com valor > 0; atualiza opportunity.estimated_value |
-| crm/handlers/budget/list-versions.ts | NOVO | CONCLUIDO -- GET com include_items param; inclui join com perfil do created_by |
-| crm/handlers/get-loss-analytics.ts | NOVO | CONCLUIDO -- filtros: period_days (7-730, default 90), loss_category, assigned_to, client_id; retorna kpis, by_category, recurring_clients, top_competitors, opportunities |
-
-Rotas implementadas no router da EF crm:
-- GET /crm/opportunities/:id/budget/versions
-- POST /crm/opportunities/:id/budget/versions
-- PATCH /crm/opportunities/:id/budget/versions/:versionId
-- POST /crm/opportunities/:id/budget/versions/:versionId/activate
-- GET /crm/loss-analytics
-
-### 6.4 Frontend -- arquivos novos e editados
-
-**Status: TODOS CONCLUIDOS** (com uma divergencia de design: ver nota abaixo)
-
-| Arquivo | Tipo | Status |
-|---------|------|--------|
-| components/crm/OpportunityBudgetSection.tsx | NOVO | CONCLUIDO -- 670+ linhas; editor de 16 categorias GG; colapsivel; BudgetRow component; botoes salvar/ativar/nova versao/exportar PDF; integra useCostCategories + useCrmBudget |
-| components/crm/BudgetVersionHistory.tsx | NOVO | CONCLUIDO -- lista de versoes com status badges; clicavel para selecao |
-| components/crm/LossFeedbackDialog.tsx | NOVO | CONCLUIDO -- 4 campos (loss_category obrigatorio, loss_reason obrigatorio, winner_competitor opcional, winner_value opcional); 7 opcoes de categoria incluindo concorrencia; canConfirm = \!\!lossCategory AND lossReason.trim().length > 0 |
-| components/crm/ConvertToJobDialog.tsx | EDITADO | CONCLUIDO -- secao Orcamento a transferir com preview top 4 itens; checkbox marcado por padrao quando ha versao ativa |
-| components/crm/OpportunityFullDetail.tsx | EDITADO | CONCLUIDO -- OpportunityBudgetSection renderizada na coluna central; dados de feedback de perda exibidos quando stage=perdido |
-| components/crm/CrmKanban.tsx | EDITADO | CONCLUIDO -- intercept drag para coluna perdido; abre LossFeedbackDialog; STAGE_TRANSITIONS impede mover para ganho via DnD |
-| app/(dashboard)/crm/perdas/page.tsx | NOVO | CONCLUIDO -- KPIs, Recharts bar chart, alerta clientes recorrentes, ranking concorrentes, tabela ordenavel, export CSV; RBAC via access-control-map.ts (FULL_ACCESS) |
-| components/crm/LossAnalyticsDashboard.tsx | NOVO | NAO CRIADO -- logica implementada inline em perdas/page.tsx (sem componente separado) |
-| hooks/useCrmBudget.ts | NOVO | CONCLUIDO -- ver secao 6.5 |
-| lib/pdf/opportunity-budget-pdf.ts | NOVO | CONCLUIDO -- generateOpportunityBudgetPdf; reutiliza pdf-core.ts |
-
-> **Nota de divergencia (design vs implementacao):** A spec previa a criacao de  como componente separado. A implementacao colocou toda a logica inline em , o que e equivalente em funcionalidade e nao gera debito tecnico.
-
-### 6.5 Hooks novos (useCrmBudget.ts)
-
-**Status: IMPLEMENTADO** -- frontend/src/hooks/useCrmBudget.ts
-
-Tipagens implementadas: OpportunityBudgetVersion, OpportunityBudgetItem, UpsertBudgetVersionPayload, LossAnalyticsFilters, LossAnalyticsResult
-
-Hooks implementados:
-- useOpportunityBudgetVersions(opportunityId) -- GET lista de versoes com itens
-- useCreateBudgetVersion(opportunityId) -- POST criar nova versao
-- useUpdateBudgetVersion(opportunityId) -- PATCH editar versao rascunho
-- useActivateBudgetVersion(opportunityId) -- POST ativar versao
-- useLossAnalytics(filters) -- GET dados agregados para o dashboard
-
-> **Nota:** A spec previa um unico hook useUpsertBudgetVersion (POST/PATCH). A implementacao separou em useCreateBudgetVersion e useUpdateBudgetVersion, o que e mais claro e segue o padrao REST do backend.
+- [ ] CA-01: Botao Nova versao (copia da ativa) aparece quando ha versao ativa.
+- [ ] CA-02: Nova versao contem todos os itens da versao ativa com os mesmos valores.
+- [ ] CA-03: Nova versao criada com status rascunho — versao ativa permanece ativa.
+- [ ] CA-04: Nova versao recebe proximo numero sequencial.
+- [ ] CA-05: Mesmo codigo ORC mantido (nao gera novo codigo).
+- [ ] CA-06: Editar nova versao nao afeta a versao ativa.
 
 ---
+
+### US-ORC-05 — Feedback obrigatorio ao perder oportunidade
+
+**Como** Roberto (CEO), **quero** que toda oportunidade movida para perdido exija um motivo estruturado, **para** construir uma base de dados de win/loss que permita decisoes estrategicas.
+
+**Criterios de Aceite:**
+
+- [ ] CA-01: Ao mover para perdido, sistema abre LossFeedbackDialog antes de confirmar a mudanca.
+- [ ] CA-02: Dialog exibe: categoria da perda (obrigatorio), motivo detalhado (obrigatorio, min 10 chars), concorrente vencedor (opcional), valor do concorrente (opcional).
+- [ ] CA-03: Categorias: Preco, Diretor/Talento, Prazo, Escopo, Relacionamento, Concorrencia, Outro.
+- [ ] CA-04: Botao confirmar desabilitado ate categoria e motivo preenchidos.
+- [ ] CA-05: Ao confirmar, stage = perdido e campos loss_category, loss_reason, winner_competitor, winner_value, actual_close_date persistidos atomicamente.
+- [ ] CA-06: Ao cancelar, oportunidade permanece no estagio anterior.
+- [ ] CA-07: DnD no Kanban intercepta drop para perdido e abre dialog em vez de atualizar diretamente.
+
+**Validacao manual:**
+1. Arrastar oportunidade de negociacao para perdido no Kanban.
+2. Verificar que dialog abre antes de qualquer mudanca.
+3. Tentar confirmar sem campos preenchidos — botao deve estar desabilitado.
+4. Preencher categoria e motivo, confirmar.
+5. Verificar oportunidade como perdida com dados salvos.
+6. Verificar actual_close_date preenchido automaticamente.
+
+---
+
+### US-ORC-06 — Transferir orcamento ao converter para job
+
+**Como** Ana (PE), **quero** que ao converter uma oportunidade ganha em job os itens do orcamento ativo sejam copiados para o financeiro do job, **para** nao precisar redigitar as categorias de custo.
+
+**Criterios de Aceite:**
+
+- [ ] CA-01: Dialog Converter em Job exibe secao Orcamento a transferir quando existe versao ativa.
+- [ ] CA-02: Checkbox Transferir categorias de custo para o novo job aparece marcado por padrao.
+- [ ] CA-03: Se checkbox marcado, itens com valor maior que zero criados como cost_items com item_status = orcado.
+- [ ] CA-04: Campo import_source do cost_item recebe valor crm_opportunity_{id} para rastreabilidade.
+- [ ] CA-05: Falha na transferencia NAO reverte criacao do job — aviso exibido ao usuario.
+- [ ] CA-06: Apos conversao, usuario redirecionado para pagina do novo job.
+- [ ] CA-07: Oportunidade fica com estagio ganho e job_id preenchido.
+
+**Validacao manual:**
+1. Criar oportunidade com versao ativa (3 categorias, R$150k).
+2. Clicar em Converter em Job.
+3. Verificar secao de orcamento no dialog.
+4. Confirmar com checkbox marcado.
+5. No job, verificar 3 cost_items com status orcado.
+6. Verificar import_source dos cost_items.
+
+---
+
+### US-ORC-07 — Exportar orcamento como PDF
+
+**Como** Ana (PE), **quero** exportar o orcamento ativo como PDF, **para** enviar ao cliente como proposta formal.
+
+**Criterios de Aceite:**
+
+- [ ] CA-01: Botao Exportar PDF aparece na secao de orcamento quando existe versao ativa.
+- [ ] CA-02: PDF contem: nome da produtora, codigo ORC, nome da oportunidade, cliente/agencia, data, tabela de categorias, total.
+- [ ] CA-03: Geracao client-side (jsPDF) — nao requer chamada ao backend.
+- [ ] CA-04: Nome do arquivo: orc_code-v_numero_versao.pdf.
+- [ ] CA-05: PDF gerado em menos de 3 segundos para orcamentos com ate 16 categorias.
+
+---
+
+### US-ORC-08 — Analisar historico de perdas
+
+**Como** Roberto (CEO), **quero** ver um dashboard de analise de perdas com filtros por periodo e categoria, **para** identificar padroes e tomar decisoes estrategicas.
+
+**Criterios de Aceite:**
+
+- [ ] CA-01: Pagina /crm/perdas exibe KPIs: total perdas, valor total perdido, taxa de perda, principal concorrente.
+- [ ] CA-02: Grafico de barras com distribuicao de perdas por categoria.
+- [ ] CA-03: Tabela de concorrentes mais frequentes com contagem e valor total perdido.
+- [ ] CA-04: Secao destaca clientes com 2 ou mais perdas (Clientes recorrentes perdidos).
+- [ ] CA-05: Filtros por periodo (30/90/180/365 dias) e categoria de perda.
+- [ ] CA-06: Botao Exportar CSV com lista completa de perdas.
+- [ ] CA-07: Acesso restrito a roles admin, ceo, produtor_executivo.
+- [ ] CA-08: Dados atualizados em tempo real ao mudar filtros (sem reload).
+
+**Validacao manual:**
+1. Acessar /crm/perdas como PE.
+2. Verificar KPIs no topo.
+3. Alterar filtro para 30 dias — dados devem atualizar sem reload.
+4. Exportar CSV e verificar colunas e dados.
+5. Tentar acessar como coordenador — deve ser redirecionado.
+
+---
+
+## 4. Fluxos Principais
+
+### 4.1 Criar orcamento em oportunidade existente
+
+    PE abre detalhe da oportunidade (estagio: proposta)
+      |
+      v
+    Secao Orcamento exibe estado vazio: Nenhum orcamento criado
+      |
+      v
+    PE clica em + Novo Orcamento
+      |
+      v
+    Formulario abre com 16 linhas (categorias GG vazias)
+      |
+      v
+    PE preenche categorias e valores
+      |
+      +-- [Salvar rascunho] --> Versao v1 criada com status rascunho
+      |                         ORC code gerado atomicamente (1a versao)
+      |                         Badge ORC aparece no header da oportunidade
+      |
+      +-- [Ativar] --> Valida: ao menos 1 item com valor maior que zero
+                        |
+                        +-- [Falha] --> Toast: Adicione ao menos um valor acima de zero
+                        |
+                        +-- [OK] --> RPC activate_budget_version executada
+                                     estimated_value da oportunidade atualizado
+                                     Kanban card atualizado
+                                     Toast: Orcamento v1 ativado
+
+**Edge cases:**
+- Oportunidade muda de estagio para lead enquanto PE esta editando: backend rejeita com 422.
+- Dois usuarios tentam ativar versoes diferentes simultaneamente: RPC usa transacao serializada; segundo usuario recebe erro de conflito.
+
+### 4.2 Revisar orcamento apos mudanca de escopo
+
+    PE acessa oportunidade com versao ativa (v1, R$200k)
+      |
+      v
+    Cliente solicita reducao de escopo
+      |
+      v
+    PE clica em Nova versao (copia da ativa)
+      |
+      v
+    Sistema cria v2 como rascunho com os mesmos itens da v1
+    v1 permanece ativa durante o processo
+      |
+      v
+    PE edita valores na v2
+      |
+      v
+    PE ativa v2
+      |
+      v
+    v1 vai para historico
+    estimated_value atualizado para total da v2
+    Kanban card atualizado
+
+**Edge case:** PE tenta criar nova versao mas ja existe rascunho nao ativado — sistema permite (pode ter multiplos rascunhos; apenas uma versao ativa por vez).
+
+### 4.3 Mover oportunidade para perdido (via Kanban DnD)
+
+    PE arrasta card de negociacao para coluna perdido
+      |
+      v
+    STAGE_TRANSITIONS intercepta o drop
+      |
+      v
+    LossFeedbackDialog abre (antes de qualquer mudanca de estado)
+      |
+      v
+    PE preenche: categoria (obrigatorio) + motivo (obrigatorio)
+                 + concorrente + valor concorrente (opcionais)
+      |
+      +-- [Cancelar] --> Card volta para posicao original. Nenhuma mudanca.
+      |
+      +-- [Confirmar] --> PATCH /crm/opportunities/:id com stage: perdido,
+                          loss_category, loss_reason, winner_competitor,
+                          winner_value, actual_close_date: agora
+                          |
+                          +-- [Sucesso] --> Card aparece em perdido
+                                            Toast: Oportunidade registrada como perdida
+                          |
+                          +-- [Erro] --> Card volta para posicao original
+                                          Toast com mensagem de erro
+
+### 4.4 Converter oportunidade em job com transferencia de orcamento
+
+    PE abre oportunidade (estagio: fechamento, versao ativa existente)
+      |
+      v
+    PE clica em Converter em Job
+      |
+      v
+    ConvertToJobDialog abre com:
+    - Campos editaveis: titulo do job, valor fechado, tipo de producao
+    - Dados copiados: cliente, agencia, formato, periodo, notas
+    - Secao Orcamento a transferir: versao ativa, total, top 4 itens
+    - Checkbox Transferir categorias de custo (marcado por padrao)
+      |
+      v
+    PE confirma
+      |
+      v
+    POST /crm/opportunities/:id/convert-to-job
+      RPC convert_opportunity_to_job (atomica):
+        Cria job com dados da oportunidade
+        Atualiza oportunidade: stage=ganho, job_id=novo_job_id
+      |
+      +-- [transfer_budget=true] --> Busca versao ativa
+                                      Cria cost_items para cada item com valor > 0
+                                      |
+                                      +-- [Erro] --> Job criado com aviso (nao reverte)
+      |
+      v
+    Sucesso: redireciona para /jobs/novo_job_id
+
+**Edge case:** Oportunidade ja foi convertida (job_id preenchido) — backend retorna 409; frontend exibe erro e link para o job existente.
+
+### 4.5 Consultar analise de perdas
+
+    CEO acessa /crm/perdas
+      |
+      v
+    Pagina carrega com periodo padrao 90 dias
+      |
+      v
+    KPIs: total perdido (count), valor total (R$), taxa de perda (%), top concorrente
+      |
+      v
+    Graficos e tabelas de distribuicao carregam
+      |
+      v
+    CEO altera filtro para 30 dias
+      |
+      v
+    useQuery refetch automatico (filtro mudou)
+    Todos os componentes atualizam com novos dados
+      |
+      v
+    CEO exporta CSV para levar para reuniao
+
+---
+
+## 5. Regras de Negocio
+
+### RN-01: Uma versao ativa por oportunidade
+
+Cada oportunidade pode ter no maximo uma versao de orcamento com status ativa em qualquer momento. A operacao de ativacao e atomica (executada dentro de uma transacao PostgreSQL via RPC activate_budget_version): a versao anterior ativa e movida para historico antes da nova ser ativada.
+
+**Rationale PM:** Simplifica o modelo mental. O orcamento da oportunidade e sempre o da versao ativa. O historico existe para auditoria e reversao manual se necessario.
+
+### RN-02: Orcamento bloqueado apos fechamento
+
+Oportunidades nos estagios ganho ou perdido tem o orcamento em modo somente leitura. Nenhuma versao pode ser criada, editada ou ativada nesses estagios.
+
+**Rationale PM:** O orcamento de uma oportunidade fechada e um registro historico imutavel. Alteracoes depois do fechamento criariam inconsistencias nos relatorios de win/loss.
+
+**Excecao:** Nao ha excecoes. Se o orcamento precisar ser revisado, a oportunidade nao deveria estar fechada.
+
+### RN-03: Feedback obrigatorio ao perder
+
+A transicao para perdido requer campos loss_category e loss_reason (minimo 10 caracteres). Sem esses campos, a API rejeita a requisicao com HTTP 422.
+
+**Rationale PM:** Dados de win/loss so tem valor se forem coletados de forma consistente. Campos opcionais sao preenchidos em menos de 30% dos casos por experiencia de produto. A obrigatoriedade garante que o dashboard de analise de perdas tenha dados uteis para tomada de decisao.
+
+### RN-04: Codigo ORC nunca e reutilizado
+
+O codigo ORC-YYYY-XXXX e gerado na primeira versao de orcamento de uma oportunidade usando uma sequencia atomica por tenant por ano (INSERT ON CONFLICT DO UPDATE). Se a oportunidade for deletada (soft delete), o codigo nao e liberado.
+
+**Rationale PM:** Codigos de orcamento sao referenciados em emails, planilhas e conversas com clientes. Reutilizar um codigo criaria confusao operacional grave.
+
+### RN-05: Transferencia de orcamento nao e bloqueante
+
+Ao converter uma oportunidade em job com transfer_budget=true, se a criacao dos cost_items falhar, o job NAO e revertido. A falha e registrada no response (campo budget_transfer) e exibida como toast de aviso.
+
+**Rationale PM:** A conversao para job e a operacao mais critica do fluxo comercial. A transferencia de orcamento e uma conveniencia. Nao faz sentido perder um job criado por falha em uma etapa secundaria.
+
+---
+
+## 6. Wireframes Textuais
+
+### 6.1 Secao de Orcamento — Estado: sem orcamento
+
+    +-- Orcamento -----------------------------------------------+
+    |                                                             |
+    |  Nenhum orcamento criado para esta oportunidade             |
+    |                                                             |
+    |  [+ Novo Orcamento]                                         |
+    |                                                             |
+    +-------------------------------------------------------------+
+
+### 6.2 Secao de Orcamento — Estado: versao ativa
+
+    +-- Orcamento — ORC-2025-0042 ----------------------------+
+    |                                                             |
+    |  [badge verde: ATIVA] Versao v2                             |
+    |  Criada por Ana Beatriz em 15/03/2026                       |
+    |                                                             |
+    |  01 Producao e Direcao .................. R$ 45.000   |
+    |  02 Equipe Tecnica ...................... R$ 28.500   |
+    |  03 Elenco ............................. R$ 15.000   |
+    |  04 Locacao ............................ R$  8.000   |
+    |  +3 categorias adicionais                                   |
+    |                                                             |
+    |  TOTAL ................................. R$ 96.500   |
+    |                                                             |
+    |  [Exportar PDF]  [Nova versao]  [+ Novo Orcamento]          |
+    |                                                             |
+    +-------------------------------------------------------------+
+
+### 6.3 Editor de orcamento (versao em rascunho)
+
+    +-- Editando v3 (rascunho) — ORC-2025-0042 ---------------+
+    |                                                             |
+    |  N  | Categoria              | Valor (R$) | Obs          |
+    |  01 | Producao e Direcao     | [45.000   ] | [          ]  |
+    |  02 | Equipe Tecnica         | [28.500   ] | [          ]  |
+    |  03 | Elenco                 | [15.000   ] | [          ]  |
+    |  04 | Locacao                | [ 8.000   ] | [          ]  |
+    |  05 | Transportes            | [         ] | [          ]  |
+    |  06 | Alimentacao            | [         ] | [          ]  |
+    |  07 | Equipamentos Proprios  | [         ] | [          ]  |
+    |  08 | Aluguel Equipamentos   | [         ] | [          ]  |
+    |  09 | Arte e Cenografia      | [         ] | [          ]  |
+    |  10 | Figurino               | [         ] | [          ]  |
+    |  11 | Musica e Sonorizacao   | [         ] | [          ]  |
+    |  12 | VFX e Animacao         | [         ] | [          ]  |
+    |  13 | Finalizacao e Color    | [         ] | [          ]  |
+    |  14 | BTS e Making Of        | [         ] | [          ]  |
+    |  15 | Despesas Gerais        | [         ] | [          ]  |
+    |  16 | Fee de Producao        | [         ] | [          ]  |
+    |  ---|------------------------|-------------|---------------|
+    |     TOTAL                    | R$ 96.500 |               |
+    |                                                             |
+    |  [Cancelar]  [Salvar rascunho]  [Ativar versao]             |
+    |                                                             |
+    +-------------------------------------------------------------+
+
+### 6.4 LossFeedbackDialog
+
+    +-- Registrar perda ------------------------------------------+
+    |                                                             |
+    |  Campanha Verao — Agencia XYZ                            |
+    |                                                             |
+    |  Categoria da perda *                                       |
+    |  [Selecione...                                   v]         |
+    |  > Preco                                                    |
+    |  > Diretor / Talento                                        |
+    |  > Prazo                                                    |
+    |  > Escopo                                                   |
+    |  > Relacionamento                                           |
+    |  > Concorrencia                                             |
+    |  > Outro                                                    |
+    |                                                             |
+    |  Motivo detalhado *                                         |
+    |  +------------------------------------------------------+   |
+    |  | [textarea, min 10 chars, max 1000 chars]              |   |
+    |  +------------------------------------------------------+   |
+    |  0 / 1000                                                   |
+    |                                                             |
+    |  Concorrente vencedor (opcional)                            |
+    |  [___________________________]                              |
+    |                                                             |
+    |  Valor do concorrente — R$ (opcional)                  |
+    |  [___________________________]                              |
+    |                                                             |
+    |  [Cancelar]                  [Confirmar perda]              |
+    |                  (desabilitado ate campos preenchidos)       |
+    |                                                             |
+    +-------------------------------------------------------------+
+
+### 6.5 ConvertToJobDialog — com orcamento para transferir
+
+    +-- Converter em Job -----------------------------------------+
+    |                                                             |
+    |  DADOS DO JOB (voce pode editar)                            |
+    |  Titulo do job *                                            |
+    |  [Campanha Verao 2026 — Agencia XYZ         ]            |
+    |                                                             |
+    |  Valor fechado (R$)                                       |
+    |  [96500                                        ]            |
+    |                                                             |
+    |  Tipo de producao                                           |
+    |  [Publicidade TV                              v]            |
+    |                                                             |
+    |  ESTES DADOS SAO COPIADOS AUTOMATICAMENTE                   |
+    |  +---------------------------------------------------------+ |
+    |  | Cliente: Marca ABC    Agencia: Agencia XYZ               | |
+    |  | Formato: 30s + 15s    Periodo: Jan-Fev/2026              | |
+    |  +---------------------------------------------------------+ |
+    |                                                             |
+    |  ORCAMENTO A TRANSFERIR                                     |
+    |  +---------------------------------------------------------+ |
+    |  | Versao v2 — 7 categorias      R$ 96.500             | |
+    |  | Producao e Direcao ............. R$ 45.000             | |
+    |  | Equipe Tecnica ................. R$ 28.500             | |
+    |  | Elenco ......................... R$ 15.000             | |
+    |  | Locacao ........................ R$  8.000             | |
+    |  | +3 categorias adicionais                                 | |
+    |  |                                                          | |
+    |  | [x] Transferir categorias de custo para o novo job       | |
+    |  +---------------------------------------------------------+ |
+    |                                                             |
+    |  [i] A oportunidade ficara salva como Ganho. Voce sera      |
+    |      redirecionado ao novo job apos a conversao.            |
+    |                                                             |
+    |  [Cancelar]                           [Criar Job]           |
+    |                                                             |
+    +-------------------------------------------------------------+
+
+### 6.6 Dashboard /crm/perdas
+
+    +-- Analise de Perdas ----------------------------------------+
+    |                                                             |
+    |  Periodo: [90 dias v]   Categoria: [Todas v]                |
+    |                                                             |
+    |  +--------+  +--------------+  +--------+  +----------+    |
+    |  | 23     |  | R$ 4,2M    |  | 34%    |  | RivalCo  |    |
+    |  | perdas |  | val. perdido |  | taxa   |  | top comp.|    |
+    |  +--------+  +--------------+  +--------+  +----------+    |
+    |                                                             |
+    |  Distribuicao por categoria                                 |
+    |  Preco        [|||||||||||||||||||] 40%                     |
+    |  Diretor      [||||||||||||||]      25%                     |
+    |  Prazo        [||||||||||]          20%                     |
+    |  Concorrencia [|||||]               10%                     |
+    |  Outro        [||]                   5%                     |
+    |                                                             |
+    |  Top concorrentes                                           |
+    |  Rival Corp    8 perdas   R$ 1,8M                         |
+    |  Producer BR   5 perdas   R$ 0,9M                         |
+    |  Studio X      3 perdas   R$ 0,5M                         |
+    |                                                             |
+    |  [!] Clientes com multiplas perdas                          |
+    |  Agencia ABC: 3 perdas em 90 dias                           |
+    |                                                             |
+    |  Lista de oportunidades perdidas                            |
+    |  [Tabela: titulo | cliente | data | categoria | motivo]     |
+    |                                                             |
+    |  [Exportar CSV]                                             |
+    |                                                             |
+    +-------------------------------------------------------------+
+
+---
+
 ## 7. Fora de Escopo
 
-Esta onda NAO entrega:
-
-1. **Sub-itens de custo na oportunidade** -- apenas cabecalhos de categoria (sub_item_number = 0). O detalhamento acontece no modulo financeiro do job apos a conversao.
-2. **Envio de orcamento por email ou WhatsApp** diretamente do ELLAHOS -- o PDF e para download manual.
-3. **Aprovacao digital do orcamento via DocuSeal** -- fluxo de assinatura digital e da Onda 3 (Portal do Cliente).
-4. **Orcamento em multiplas moedas** -- apenas BRL nesta onda.
-5. **Importacao dos orcamentos existentes do Drive** (ORC-2025-0001 a ORC-2026-0004) -- migracao de dados e atividade operacional separada.
-6. **Comparacao lado-a-lado de versoes** -- o historico lista versoes, mas nao exibe diff visual entre elas.
-7. **Markup automatico ou calculo de margem** na oportunidade -- apenas valor bruto por categoria.
-8. **Templates de orcamento reutilizaveis** entre oportunidades -- gerenciamento de templates e onda futura.
-9. **Notificacoes** ao cliente quando orcamento e atualizado.
-10. **Integracao com planilhas GG existentes** -- os orcamentos das planilhas precisam ser inseridos manualmente no editor.
+| # | Item | Justificativa |
+|---|------|--------------|
+| 1 | Aprovacao do orcamento pelo cliente via portal | Fluxo complexo com assinatura e notificacoes. Escopo Onda 3 (Portal do Cliente). |
+| 2 | Multiplos orcamentos por versao (diferentes cenarios) | Modelo atual: 1 orcamento por versao com historico. Suficiente para o caso de uso. Revisavel no Onda 3. |
+| 3 | Integracao automatica com Google Drive | Sincronizacao bidirecional requer Service Account e polling. Escopo Fase 6 (Integracoes). |
+| 4 | Calculo de margem no orcamento (receita menos custo) | Requer modelagem de fee separado do custo bruto. Escopo Onda 3 (Financeiro avancado). |
+| 5 | Notificacoes (email/WhatsApp) ao criar ou ativar orcamento | Requer integracao n8n. Escopo Onda 3 (Comunicacao automatizada). |
+| 6 | Comparacao automatica entre versoes de orcamento (diff) | Funcionalidade de conveniencia. Pode ser feature incremental pos-Onda 2.4. |
+| 7 | Importacao de orcamentos historicos do Drive | Migracao pontual de dados. Pode ser feita via CSV import existente em /admin/import. |
+| 8 | Assinatura digital do orcamento | Depende de DocuSeal. Requer template especifico. Onda 3. |
+| 9 | Orcamento em moeda estrangeira (USD, EUR) | Requer campo de moeda e taxa de cambio. Onda 4. |
+| 10 | Versionamento de feedback de perda | Um registro de perda por oportunidade. Nao ha caso de uso para multiplos registros. |
 
 ---
 
 ## 8. Metricas de Sucesso
 
-### 8.1 Metricas de adocao (medir 30 dias apos deploy)
+### 8.1 Adocao (primeiros 30 dias)
 
 | Metrica | Meta | Como medir |
 |---------|------|-----------|
-| Percentual de oportunidades em proposta ou superior com orcamento detalhado | >= 70% | COUNT(opportunity_budget_versions) / COUNT(oportunidades em proposta+) |
-| Percentual de perdas com feedback completo (categoria + texto) | >= 90% | COUNT(perdidas com loss_category AND loss_reason preenchidos) / total perdidas |
-| Percentual de conversoes que transferem orcamento para cost_items | >= 80% | COUNT(cost_items com import_source = crm_opportunity_%) / total conversoes |
+| Percentual de oportunidades em proposta+ com orcamento | Acima de 70% | COUNT com budget / COUNT em proposta+ |
+| Percentual de perdas com feedback preenchido | 100% | Garantido por RN-03 (obrigatorio na API) |
+| Tempo medio para criar orcamento | Menos de 10 min | Coleta via entrevista/NPS |
 
-### 8.2 Metricas de negocio (medir 90 dias apos deploy)
+### 8.2 Impacto operacional (90 dias)
 
-| Metrica | Meta | Hipotese |
-|---------|------|---------|
-| Diferenca media entre estimated_value e closed_value | menor que 15% | Orcamento por categoria aumenta precisao da estimativa |
-| Tempo de retrabalho financeiro ao criar job | reducao de 60% | cost_items automaticos eliminam redigitacao |
-| CEO usa dashboard de perdas pelo menos 1x por semana | Sim | Decisoes de pricing baseadas em dados reais |
+| Metrica | Baseline | Meta |
+|---------|----------|------|
+| Orcamentos novos na pasta Drive | 10 arquivos existentes | 0 novos |
+| Tempo de conversao oportunidade para job | 15 a 20 min (manual) | Menos de 2 min |
+| Taxa de loss_reason preenchido | 0% (nao existia) | 100% |
 
-### 8.3 Qualidade tecnica
+### 8.3 Inteligencia estrategica (6 meses)
 
-- Zero regressoes no fluxo de conversao existente (testar com oportunidades sem orcamento)
-- Zero race conditions em ORC codes (testar insercoes paralelas)
-- Build TypeScript sem erros
+| Metrica | Objetivo |
+|---------|---------|
+| Volume de dados no dashboard de perdas | 30 ou mais perdas para analise significativa |
+| Identificar top-3 categorias de perda | Insumo para revisao de estrategia comercial trimestral |
+| Comparar winner_value vs estimated_value | Calibrar se orcamentos estao acima ou abaixo do mercado |
+
+### 8.4 Queries de referencia
+
+    -- Adocao de orcamentos por oportunidades ativas
+    SELECT
+      COUNT(DISTINCT o.id) FILTER (WHERE obv.id IS NOT NULL) AS with_budget,
+      COUNT(DISTINCT o.id) AS total,
+      ROUND(100.0 * COUNT(DISTINCT o.id) FILTER (WHERE obv.id IS NOT NULL)
+        / NULLIF(COUNT(DISTINCT o.id), 0), 1) AS adoption_pct
+    FROM opportunities o
+    LEFT JOIN opportunity_budget_versions obv
+      ON obv.opportunity_id = o.id AND obv.status = 'ativa'
+    WHERE o.stage IN ('proposta', 'negociacao', 'fechamento')
+      AND o.tenant_id = '{tenant_id}'
+      AND o.deleted_at IS NULL;
+
+    -- Top categorias de perda nos ultimos 90 dias
+    SELECT
+      loss_category,
+      COUNT(*) as count,
+      SUM(estimated_value) as total_value
+    FROM opportunities
+    WHERE stage = 'perdido'
+      AND tenant_id = '{tenant_id}'
+      AND actual_close_date >= NOW() - INTERVAL '90 days'
+    GROUP BY loss_category
+    ORDER BY count DESC;
 
 ---
 
-## 9. Riscos e Mitigacoes
+## 9. Decisoes de Produto
 
-| Risco | Probabilidade | Impacto | Mitigacao |
-|-------|--------------|---------|-----------|
-| Campos de loss_category etc. existem no frontend e EF mas nao no banco | Alta | Alto | Verificar via Supabase Dashboard antes de escrever qualquer migration. Adicionar campos ausentes via ADD COLUMN IF NOT EXISTS |
-| PE nao adota o editor de categorias (continua com valor unico) | Media | Medio | Nao bloquear em proposta -- apenas exibir mensagem encorajadora. Feature nao e obrigatoria |
-| Drag no Kanban para perdido interceptando LossFeedbackDialog causa UX confusa no mobile | Media | Baixo | Testar touch events; manter botao Marcar Perdida na pagina de detalhe como caminho alternativo garantido |
-| Transferencia de cost_items cria duplicatas com itens inseridos manualmente depois | Media | Baixo | Banner informativo + campo import_source permite identificar e excluir duplicatas facilmente |
-| Performance do dashboard de perdas com grande volume de oportunidades | Baixa | Medio | Filtrar server-side na EF; indice em (tenant_id, stage, actual_close_date) deve cobrir as queries |
-| LossFeedbackDialog com campos obrigatorios irrita usuarios que querem mover rapidamente | Baixa | Baixo | Campos minimos: 1 select + 1 textarea curta (menos de 30 segundos de preenchimento) |
-| Race condition no codigo ORC em insercoes simultaneas | Baixa | Alto | INSERT ON CONFLICT com UPDATE atomico -- mesmo padrao comprovado do job_code_sequences |
+### D-01: Feedback de perda — obrigatorio vs opcional
 
----
+**Opcao A (escolhida): Obrigatorio na API**
+- Dialog intercepta transicao para perdido.
+- Backend valida presenca de loss_category e loss_reason.
+- Retorna HTTP 422 se ausentes.
 
-## 10. Perguntas Respondidas
+**Opcao B (descartada): Opcional com incentivo**
+- Dialog aparece, mas pode ser pulado.
+- Campo opcional com nudge visual.
 
-Todas as perguntas abertas do rascunho foram respondidas durante a implementacao:
-
-| ID | Pergunta | Resposta |
-|----|----------|----------|
-| PA-01 | Os campos loss_category, winner_competitor, winner_value, etc. existem no banco de producao? | RESPONDIDA: campos adicionados via migration idempotente (ADD COLUMN IF NOT EXISTS) em 20260311100000. Os 10 campos preexistentes no TypeScript/EF foram confirmados e adicionados via migration; orc_code foi adicionado como campo novo. |
-| PA-02 | O editor deve mostrar so as categorias do tenant (cost_categories) ou permitir linhas livres? | RESPONDIDA: apenas as categorias do tenant (cost_categories) sao exibidas -- sem linhas livres. OpportunityBudgetSection.tsx usa useCostCategories hook para carregar as categorias configuradas. |
-| PA-03 | O codigo ORC deve aparecer no card do Kanban ou so na pagina de detalhe? | RESPONDIDA: apenas na pagina de detalhe da oportunidade (OpportunityFullDetail). O card do Kanban (OpportunityCard.tsx) nao foi modificado. |
-| PA-04 | A sequencia ORC reinicia por ano ou e continua por tenant? | RESPONDIDA: reinicia por ano -- formato ORC-YYYY-XXXX confirmado no codigo de upsert-version.ts. Tabela orc_code_sequences tem coluna year com UNIQUE(tenant_id, year). |
-| PA-05 | Analytics de perdas: pagina nova /crm/perdas ou tab no dashboard CRM? | RESPONDIDA: pagina nova /crm/perdas com entrada propria no sidebar (label Analise de Perdas, icone TrendingDown). Rota protegida via access-control-map.ts (FULL_ACCESS para admin/ceo/PE). |
+**Justificativa:** Campos opcionais sao preenchidos em menos de 30% dos casos em ferramentas similares. O valor estrategico do dashboard de perdas depende de dados completos. O custo para o usuario e baixo: 2 campos + aproximadamente 30 segundos.
 
 ---
 
-## 11. Sprints Executados
+### D-02: Transferencia de orcamento — bloqueante vs nao-bloqueante
 
-Todos os 4 sprints concluidos em 10-11/03/2026.
+**Opcao A (escolhida): Nao-bloqueante**
+- Job e criado mesmo se transferencia falhar.
+- Falha exibida como aviso, nao erro fatal.
 
-| Sprint | Escopo | Status | Observacoes |
-|--------|--------|--------|-------------|
-| Sprint 1 | Migration (3 tabelas novas + campos em opportunities + orc_code) + EF: upsert-version, activate-version, list-versions | CONCLUIDO | activate_budget_version RPC criada na migration; fallback 3-steps implementado na EF |
-| Sprint 2 | Frontend: OpportunityBudgetSection + BudgetVersionHistory + LossFeedbackDialog + integracao OpportunityFullDetail + CrmKanban | CONCLUIDO | 7 opcoes de loss_category (inclui concorrencia); STAGE_TRANSITIONS bloqueia ganho via DnD |
-| Sprint 3 | EF: get-loss-analytics + edicao convert-to-job + edicao update-opportunity | CONCLUIDO | Transferencia de budget nao reverte job em caso de falha; import_source rastreavel |
-| Sprint 4 | Frontend: /crm/perdas + export PDF + useCrmBudget hooks | CONCLUIDO | LossAnalyticsDashboard.tsx nao criado como componente separado -- inline em perdas/page.tsx |
+**Opcao B (descartada): Bloqueante com rollback**
+- Job nao e criado se cost_items nao forem inseridos.
+- Atomicidade total, porem alta friccao.
 
-**US-ORC-08 (Could Have -- nao implementado):** O historico de orcamentos por cliente/agencia no AgencyHistoryPanel nao foi implementado nesta onda. Fica no backlog para onda futura quando houver volume de dados historicos suficiente para justificar a feature.
+**Justificativa:** A conversao para job e o momento mais critico do fluxo comercial. Perder um job criado por falha em funcionalidade secundaria seria inaceitavel. A PE pode criar os cost_items manualmente se necessario.
+
+---
+
+### D-03: Categorias GG — fixas vs configuravel
+
+**Opcao A (escolhida): Categorias com nomes editaveis, numeracao fixa (01-16)**
+- Numeros de item sao fixos (padrao GG de mercado).
+- display_name e editavel por versao.
+- Consistencia nas planilhas GG enviadas para agencias.
+
+**Opcao B (descartada): Categorias totalmente livres**
+- Usuario cria quantas quiser com nomes livres.
+- Mais flexivel, porem incompativel com padrao de mercado publicitario brasileiro.
+
+**Justificativa:** O padrao GG (Grupo de Gastos) e o idioma comum entre produtoras e agencias brasileiras. Agencias esperam orcamentos no formato GG. Customizacao dos nomes mantem flexibilidade sem perder o padrao.
+
+---
+
+### D-04: Codigo ORC — por oportunidade vs por versao
+
+**Opcao A (escolhida): Um ORC por oportunidade (compartilhado entre versoes)**
+- ORC-2025-0001 para v1, v2 e v3 da mesma oportunidade.
+- Referencia externa (emails, conversas) nao precisa ser atualizada ao criar nova versao.
+
+**Opcao B (descartada): Um ORC por versao**
+- ORC-2025-0001-v1, ORC-2025-0001-v2.
+- Mais granular, porem gera confusao ao referenciar externamente.
+
+**Justificativa:** O codigo ORC identifica a oportunidade comercial, nao o documento especifico. Quando a PE envia um email dizendo segue o ORC-2025-0042, ela quer dizer o orcamento desta campanha, independente da versao.
+
+---
+
+### D-05: Estagio minimo para ter orcamento — lead vs proposta
+
+**Opcao A (escolhida): Apenas a partir de proposta**
+- Leads e qualificados nao tem orcamento.
+- Reduz ruido no pipeline.
+
+**Opcao B (descartada): A partir de lead**
+- Orcamento disponivel desde o inicio.
+- Criaria orcamentos fantasmas para leads que nunca evoluem.
+
+**Justificativa:** Na pratica da Ellah Filmes, orcamentos so sao elaborados quando a oportunidade avanca para proposta (cliente pediu proposta formal). Habilitar orcamento para leads adicionaria complexidade sem beneficio real.
+
+---
+
+## 10. Perguntas Abertas para Onda 3
+
+### PA-01: Aprovacao do orcamento pelo cliente
+
+**Contexto:** A PE hoje envia o PDF do orcamento por email e recebe aprovacao verbal ou por WhatsApp. Nao ha registro formal no sistema.
+
+**Pergunta:** A Onda 3 deve implementar um fluxo de aprovacao formal? Opcoes:
+- Portal do cliente com visualizacao do orcamento e botao de aprovacao?
+- Assinatura digital via DocuSeal?
+- Link simples com confirmacao por email?
+
+**Impacto tecnico:** Requer tabela de aprovacoes, integracao com portal do cliente (ja existe), e possivelmente DocuSeal.
+
+---
+
+### PA-02: Importacao de orcamentos historicos (Drive para ELLAHOS)
+
+**Contexto:** Existem 87 itens historicos de orcamento na pasta Drive. O wizard de importacao CSV/XLSX ja existe (/admin/import), mas nao suporta a entidade opportunity_budget_versions.
+
+**Pergunta:** Vale adicionar uma entidade de importacao para orcamentos historicos? Ou o historico e irrelevante apos a Onda 2.4 estar ativa?
+
+**Risco:** Sem importacao, os primeiros 6 meses de uso do dashboard de perdas nao terao contexto historico para analise estatistica.
+
+---
+
+### PA-03: Comparacao de delta entre versoes de orcamento
+
+**Contexto:** Quando a PE cria v2 com escopo reduzido, a diferenca entre v1 e v2 revela quanto foi sacrificado. Hoje nao ha calculo automatico dessa diferenca.
+
+**Pergunta:** O sistema deve calcular e exibir o delta entre versoes (quantidade e percentual por categoria)?
+
+**Impacto:** Feature client-side sem mudancas no backend. Baixo custo de implementacao.
+
+---
+
+### PA-04: Calibragem de preco com winner_value
+
+**Contexto:** Quando winner_competitor e winner_value sao preenchidos na perda, temos: nosso orcamento (estimated_value) vs orcamento do vencedor (winner_value).
+
+**Pergunta:** O dashboard de perdas deve exibir a diferenca media entre estimated_value e winner_value para perdas por preco? Isso indicaria se a produtora esta sistematicamente acima ou abaixo do mercado.
+
+**Risco de dado:** winner_value e opcional e pode ter vieses (cliente pode informar valor impreciso do concorrente).
+
+---
+
+### PA-05: Multi-moeda para projetos internacionais
+
+**Contexto:** A Ellah Filmes ocasionalmente recebe briefings de clientes internacionais onde o orcamento e negociado em USD.
+
+**Pergunta:** Qual e a frequencia de projetos internacionais? Justifica adicionar campo de moeda e taxa de cambio nas versoes de orcamento?
+
+**Impacto tecnico:** Requer campos currency e exchange_rate em opportunity_budget_versions, e logica de conversao para exibir valores em BRL no dashboard.
+
+---
+
+### PA-06: Alerta proativo de deadline sem orcamento
+
+**Contexto:** O campo response_deadline existe na oportunidade. Nao ha correlacao com a existencia ou ausencia de orcamento no modulo de alertas atual.
+
+**Pergunta:** O sistema deve alertar a PE quando uma oportunidade com response_deadline em menos de 48h ainda nao tem versao ativa de orcamento?
+
+**Impacto:** Requer nova logica no handler de alerts. Alta relevancia operacional para evitar perder prazos de entrega de proposta.
+
+---
+
+## 11. Apendice — Rastreabilidade de Artefatos
+
+### 11.1 Banco de Dados
+
+| Artefato | Tipo | Migration |
+|----------|------|-----------|
+| opportunity_budget_versions | Tabela nova | 20260311100000 |
+| opportunity_budget_items | Tabela nova | 20260311100000 |
+| orc_code_sequences | Tabela nova | 20260311100000 |
+| opportunities.orc_code | Coluna nova | 20260311100000 |
+| opportunities.loss_category | Coluna nova | 20260311100000 |
+| opportunities.winner_competitor | Coluna nova | 20260311100000 |
+| opportunities.winner_value | Coluna nova | 20260311100000 |
+| opportunities.win_reason | Coluna nova | 20260311100000 |
+| activate_budget_version | RPC PostgreSQL | 20260311100000 |
+| upsert_orc_code_sequence | RPC PostgreSQL | 20260311100000 |
+
+### 11.2 Edge Functions (EF crm)
+
+| Handler | Rota | Metodo |
+|---------|------|--------|
+| list-versions.ts | /crm/opportunities/:id/budget/versions | GET |
+| upsert-version.ts | /crm/opportunities/:id/budget/versions | POST |
+| upsert-version.ts | /crm/opportunities/:id/budget/versions/:versionId | PATCH |
+| activate-version.ts | /crm/opportunities/:id/budget/versions/:versionId/activate | POST |
+| get-loss-analytics.ts | /crm/loss-analytics | GET |
+| convert-to-job.ts | /crm/opportunities/:id/convert-to-job | POST (refatorado) |
+
+### 11.3 Frontend
+
+| Artefato | Tipo | Caminho |
+|----------|------|---------|
+| useCrmBudget.ts | Hook | frontend/src/hooks/useCrmBudget.ts |
+| OpportunityBudgetSection.tsx | Componente | frontend/src/components/crm/OpportunityBudgetSection.tsx |
+| LossFeedbackDialog.tsx | Componente | frontend/src/components/crm/LossFeedbackDialog.tsx |
+| ConvertToJobDialog.tsx | Componente (refatorado) | frontend/src/components/crm/ConvertToJobDialog.tsx |
+| /crm/perdas/page.tsx | Pagina | frontend/src/app/(dashboard)/crm/perdas/page.tsx |
+| opportunity-budget-pdf.ts | Gerador PDF | frontend/src/lib/pdf/opportunity-budget-pdf.ts |
+
+### 11.4 Decisoes de Arquitetura Relacionadas
+
+| ADR | Titulo | Relevancia |
+|-----|--------|-----------|
+| ADR-030 | Audit trail trigger-based | Tabela audit_log captura mudancas em opportunities (stage, loss_category) |
+
+---
+
+*Spec gerada em 2026-03-11. Para questoes tecnicas, ver 08-orcamentos-pre-job-arquitetura.md.*

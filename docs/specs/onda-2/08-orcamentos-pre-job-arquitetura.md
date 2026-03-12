@@ -1,10 +1,21 @@
 # Onda 2.4 -- Orcamentos pre-Job: Arquitetura Tecnica
 
 **Data:** 2026-03-11
-**Status:** APROVADO
+**Status:** IMPLEMENTADO (11/03/2026)
 **Autor:** Tech Lead (Claude Opus 4.6)
 **Spec de referencia:** 07-orcamentos-pre-job-spec.md
 **Esforco estimado:** 4 sprints (4-5 dias uteis)
+**Esforco real:** 4 sprints executados conforme planejado
+
+### Findings pos-implementacao (auditoria 11/03/2026)
+
+| ID | Severidade | Descricao | Status |
+|----|-----------|-----------|--------|
+| F-01 | ALTO | RPC `upsert_orc_code_sequence` chamada pela EF `upsert-version.ts` mas NAO definida em nenhuma migration. Foi criada via Supabase Dashboard. Precisa de migration retroativa. | ABERTO |
+| F-02 | ALTO | RPC `convert_opportunity_to_job` chamada pela EF `convert-to-job.ts` mas NAO definida em nenhuma migration. Mesma situacao do F-01. | ABERTO |
+| F-03 | BAIXO | Arquitetura propos `SECURITY INVOKER` na RPC (secao 3.3) mas a implementacao real usa `SECURITY DEFINER` (correto, pois INVOKER nao e suportado nesta versao do Postgres). Divergencia doc vs codigo. | CORRIGIDO nesta revisao |
+| F-04 | BAIXO | Arquitetura propos criacao de `job_budgets` record na conversao (secao 3.4, pseudocodigo) mas a implementacao real cria apenas `cost_items` sem `job_budgets`. Simplificacao valida. | ACEITO |
+| F-05 | INFORMATIVO | `copy_from_active` no `upsert-version.ts` ARQUIVA a versao ativa (muda status para historico) ao copiar. A arquitetura propunha manter a ativa durante o processo. Ambiguidade no fluxo de versionamento. | ACEITO |
 
 ---
 
@@ -54,27 +65,27 @@
 
 ### 1.3 Decisoes Arquiteturais (ADRs Inline)
 
-**ADR-031: opportunity_budget_items separados de cost_items**
+**ADR-032: opportunity_budget_items separados de cost_items**
 
 - **Contexto:** A spec propoe itens de orcamento simplificados (1 linha por categoria GG, sem sub-itens). cost_items tem 40+ colunas com NF, pagamento, vendor, etc.
 - **Decisao:** Criar tabela separada `opportunity_budget_items` com schema enxuto (6 colunas uteis). Na conversao, os dados sao copiados para cost_items com is_category_header=true.
 - **Consequencias:** Schema limpo, sem colunas nulas em massa. Trade-off: duplicacao controlada na conversao.
 - **Alternativa descartada:** Reusar cost_items com job_id NULL e opportunity_id FK -- poluiria a tabela central com semantica diferente e quebraria constraints existentes (chk_cost_items_period_month_for_fixed).
 
-**ADR-032: Versionamento imutavel de orcamentos**
+**ADR-035: Versionamento imutavel de orcamentos**
 
 - **Contexto:** O PE precisa manter historico de versoes para negociacao com cliente.
 - **Decisao:** Versoes ativas se tornam `historico` (readonly) ao criar nova versao. Apenas versao `rascunho` e editavel. Ativacao e operacao atomica via transacao.
 - **Consequencias:** Historico 100% preservado. Complexidade minima -- 3 estados (rascunho, ativa, historico).
 - **Alternativa descartada:** Versionamento via JSONB (snapshot completo) -- perderia queryability e dificultaria reports.
 
-**ADR-033: ORC code com tabela de sequencia dedicada**
+**ADR-033: Codigo ORC com tabela de sequencia dedicada**
 
 - **Contexto:** Precisamos de codigo ORC-YYYY-XXXX atomico, seguindo o padrao comprovado de job_code_sequences.
 - **Decisao:** Criar `orc_code_sequences` com INSERT ON CONFLICT, chave (tenant_id, year), identico ao padrao de job_code_sequences mas com particionamento por ano.
 - **Consequencias:** Zero race conditions. Sequencia reinicia por ano conforme formato ORC-YYYY-XXXX.
 
-**ADR-034: Campos CRM faltantes no banco**
+**ADR-034: Campos CRM faltantes corrigidos retroativamente**
 
 - **Contexto:** DESCOBERTA CRITICA durante a analise -- os campos `loss_category`, `winner_competitor`, `winner_value`, `is_competitive_bid`, `response_deadline`, `deliverable_format`, `campaign_period`, `competitor_count`, `win_reason`, `client_budget` existem NO FRONTEND (useCrm.ts types) e NA EDGE FUNCTION (update-opportunity.ts Zod schema) mas NAO existem em nenhuma migration. O stage `pausado` tambem nao esta no CHECK constraint da tabela (a migration original so tem lead..perdido, sem pausado). Esses campos foram adicionados diretamente no banco via Supabase Dashboard (provavelmente durante o CRM Sprint 1 da Onda 1.2), sem migration correspondente.
 - **Decisao:** A migration da Onda 2.4 DEVE adicionar todos esses campos via `ADD COLUMN IF NOT EXISTS` e tambem corrigir o CHECK constraint de `stage` para incluir `pausado`. Isso torna a migration a source-of-truth e permite reconstruir o schema em ambientes novos.
@@ -746,7 +757,8 @@ BEGIN
     WHERE id = p_opportunity_id
       AND tenant_id = p_tenant_id;
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+-- Nota: SECURITY DEFINER porque SECURITY INVOKER nao e suportado nesta versao do Postgres.
 ```
 
 **Decisao:** Implementar a RPC como funcao no banco e chama-la via `supabase.rpc('activate_budget_version', {...})`. Isso garante atomicidade real e segue o padrao de generate_job_code. A funcao sera adicionada na mesma migration.
@@ -1829,7 +1841,7 @@ A duplicacao e intencional e controlada. O orc_code e imutavel apos geracao, ent
 | 10 | `frontend/src/components/crm/LossAnalyticsDashboard.tsx` | Componente |
 | 11 | `frontend/src/app/(dashboard)/crm/perdas/page.tsx` | Pagina |
 | 12 | `frontend/src/lib/pdf/opportunity-budget-pdf.ts` | PDF Generator |
-| 13 | `docs/decisions/ADR-031-budget-items-separate-table.md` | ADR |
+| 13 | `docs/decisions/ADR-032-budget-items-separate-table.md` | ADR |
 
 ### Alterados (8 arquivos)
 
@@ -1857,4 +1869,185 @@ A duplicacao e intencional e controlada. O orc_code e imutavel apos geracao, ent
 
 ---
 
-*Documento gerado pelo Tech Lead como guia de implementacao. Cada sprint deve ser commitado e deployado independentemente. A spec de referencia (07-orcamentos-pre-job-spec.md) contem os wireframes textuais e criterios de aceite detalhados.*
+---
+
+## 10. Remediacao: RPCs faltantes nas migrations (F-01, F-02)
+
+As RPCs abaixo existem no banco (criadas via Supabase Dashboard) e sao chamadas pelas Edge Functions, mas nao possuem migration correspondente. Isso compromete a reproducibilidade do schema em ambientes novos.
+
+### 10.1 RPC: upsert_orc_code_sequence (F-01)
+
+Chamada por: `supabase/functions/crm/handlers/budget/upsert-version.ts` (linha 236)
+
+```sql
+-- Migration retroativa necessaria
+CREATE OR REPLACE FUNCTION upsert_orc_code_sequence(
+  p_tenant_id UUID,
+  p_year INTEGER
+) RETURNS INTEGER AS $$
+DECLARE
+  v_last_index INTEGER;
+BEGIN
+  INSERT INTO orc_code_sequences (tenant_id, year, last_index)
+  VALUES (p_tenant_id, p_year, 1)
+  ON CONFLICT (tenant_id, year)
+  DO UPDATE SET last_index = orc_code_sequences.last_index + 1,
+                updated_at = now()
+  RETURNING last_index INTO v_last_index;
+
+  RETURN v_last_index;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+COMMENT ON FUNCTION upsert_orc_code_sequence(UUID, INTEGER) IS
+  'Gera proximo indice ORC atomicamente via INSERT ON CONFLICT. Retorna o novo last_index.';
+```
+
+### 10.2 RPC: convert_opportunity_to_job (F-02)
+
+Chamada por: `supabase/functions/crm/handlers/convert-to-job.ts` (linha 64)
+
+```sql
+-- Migration retroativa necessaria
+CREATE OR REPLACE FUNCTION convert_opportunity_to_job(
+  p_opportunity_id UUID,
+  p_tenant_id UUID,
+  p_job_title TEXT,
+  p_project_type TEXT DEFAULT NULL,
+  p_client_id UUID DEFAULT NULL,
+  p_agency_id UUID DEFAULT NULL,
+  p_closed_value NUMERIC DEFAULT NULL,
+  p_description TEXT DEFAULT NULL,
+  p_deliverable_format TEXT DEFAULT NULL,
+  p_campaign_period TEXT DEFAULT NULL,
+  p_created_by UUID DEFAULT NULL
+) RETURNS JSONB AS $$
+DECLARE
+  v_opp RECORD;
+  v_job_id UUID;
+  v_job_code TEXT;
+  v_next_index INTEGER;
+  v_current_year INTEGER;
+BEGIN
+  -- Buscar oportunidade e validar
+  SELECT * INTO v_opp
+  FROM opportunities
+  WHERE id = p_opportunity_id
+    AND tenant_id = p_tenant_id
+    AND deleted_at IS NULL;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Oportunidade nao encontrada';
+  END IF;
+
+  IF v_opp.stage = 'perdido' THEN
+    RAISE EXCEPTION 'Nao e possivel converter oportunidade perdida';
+  END IF;
+
+  IF v_opp.job_id IS NOT NULL THEN
+    RAISE EXCEPTION 'Oportunidade ja convertida em job (job_id: %)', v_opp.job_id;
+  END IF;
+
+  -- Gerar codigo do job
+  v_current_year := EXTRACT(YEAR FROM now());
+
+  INSERT INTO job_code_sequences (tenant_id, last_index)
+  VALUES (p_tenant_id, 1)
+  ON CONFLICT (tenant_id)
+  DO UPDATE SET last_index = job_code_sequences.last_index + 1
+  RETURNING last_index INTO v_next_index;
+
+  v_job_code := lpad(v_next_index::TEXT, 3, '0');
+
+  -- Criar job
+  INSERT INTO jobs (
+    tenant_id, code, title, client_id, agency_id,
+    project_type, closed_value, notes,
+    status, created_by
+  ) VALUES (
+    p_tenant_id,
+    v_job_code,
+    p_job_title,
+    COALESCE(p_client_id, v_opp.client_id),
+    COALESCE(p_agency_id, v_opp.agency_id),
+    COALESCE(p_project_type, v_opp.project_type, 'outro'),
+    COALESCE(p_closed_value, v_opp.estimated_value),
+    COALESCE(p_description, v_opp.notes),
+    'briefing_recebido',
+    p_created_by
+  ) RETURNING id INTO v_job_id;
+
+  -- Atualizar oportunidade como ganho
+  UPDATE opportunities
+  SET stage = 'ganho',
+      job_id = v_job_id,
+      actual_close_date = now()::date,
+      updated_at = now()
+  WHERE id = p_opportunity_id
+    AND tenant_id = p_tenant_id;
+
+  RETURN jsonb_build_object(
+    'job_id', v_job_id,
+    'job_code', v_job_code
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+COMMENT ON FUNCTION convert_opportunity_to_job IS
+  'Converte oportunidade em job atomicamente: cria job + marca oportunidade como ganho + gera codigo.';
+```
+
+### 10.3 Plano de remediacao
+
+Criar migration `20260312XXXXXX_fix_missing_rpcs.sql` com:
+1. `CREATE OR REPLACE FUNCTION upsert_orc_code_sequence(...)` (idempotente)
+2. `CREATE OR REPLACE FUNCTION convert_opportunity_to_job(...)` (idempotente)
+
+**Prioridade:** ALTA. Sem essas RPCs, o schema nao pode ser reconstruido em um ambiente novo. As EFs que chamam essas RPCs falharao silenciosamente (no caso do `activate_budget_version`, o handler ja tem fallback para quando a RPC nao existe).
+
+---
+
+## 11. Mapa de artefatos implementados (confirmacao)
+
+### Banco de dados
+
+| Artefato | Migration | Status |
+|----------|-----------|--------|
+| `opportunity_budget_versions` | 20260311100000 | Criado |
+| `opportunity_budget_items` | 20260311100000 | Criado |
+| `orc_code_sequences` | 20260311100000 | Criado |
+| `opportunities` ALTER (+11 cols) | 20260311100000 | Aplicado |
+| `activate_budget_version` RPC | 20260311100000 | Criado |
+| `upsert_orc_code_sequence` RPC | **SEM MIGRATION** | Via Dashboard |
+| `convert_opportunity_to_job` RPC | **SEM MIGRATION** | Via Dashboard |
+
+### Edge Functions (EF crm)
+
+| Handler | Rota | Metodo | Status |
+|---------|------|--------|--------|
+| `budget/list-versions.ts` | `/crm/opportunities/:id/budget/versions` | GET | Implementado |
+| `budget/upsert-version.ts` | `/crm/opportunities/:id/budget/versions` | POST | Implementado |
+| `budget/upsert-version.ts` | `/crm/opportunities/:id/budget/versions/:vId` | PATCH | Implementado |
+| `budget/activate-version.ts` | `.../versions/:vId/activate` | POST | Implementado |
+| `get-loss-analytics.ts` | `/crm/loss-analytics` | GET | Implementado |
+| `convert-to-job.ts` | `.../convert-to-job` | POST | Refatorado (transfer_budget) |
+
+### Frontend
+
+| Artefato | Path | Status |
+|----------|------|--------|
+| `useCrmBudget.ts` | `frontend/src/hooks/useCrmBudget.ts` | Implementado (6 hooks + tipos) |
+| `OpportunityBudgetSection.tsx` | `frontend/src/components/crm/` | Implementado |
+| `BudgetVersionHistory.tsx` | `frontend/src/components/crm/` | Implementado |
+| `LossFeedbackDialog.tsx` | `frontend/src/components/crm/` | Implementado |
+| `ConvertToJobDialog.tsx` | `frontend/src/components/crm/` | Refatorado (budget transfer) |
+| `/crm/perdas/page.tsx` | `frontend/src/app/(dashboard)/crm/perdas/` | Implementado |
+| `opportunity-budget-pdf.ts` | `frontend/src/lib/pdf/` | Implementado |
+| `crmKeys.budgetVersions` | `frontend/src/lib/query-keys.ts` | Adicionado |
+| `crmKeys.lossAnalytics` | `frontend/src/lib/query-keys.ts` | Adicionado |
+
+---
+
+*Documento gerado pelo Tech Lead como guia de implementacao. Revisado em 11/03/2026 apos conclusao dos 4 sprints. A spec de referencia (07-orcamentos-pre-job-spec.md) contem os wireframes textuais e criterios de aceite detalhados.*
+
+*Findings F-01 e F-02 requerem migration retroativa para garantir reproducibilidade do schema.*
