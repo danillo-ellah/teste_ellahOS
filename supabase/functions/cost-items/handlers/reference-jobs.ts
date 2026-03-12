@@ -4,18 +4,22 @@ import { success } from '../../_shared/response.ts';
 import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 
 // Roles autorizados para ver jobs de referencia
-const ALLOWED_ROLES = ['produtor_executivo', 'admin', 'ceo'];
+const ALLOWED_ROLES = ['produtor_executivo', 'admin', 'ceo', 'diretor_producao', 'coordenador_producao'];
 
 // Status de job que indicam jobs ainda em fase de briefing/cancelamento (sem dados de custo uteis)
 const EXCLUDED_STATUSES = ['briefing_recebido', 'cancelado'];
 
 export async function handleReferenceJobs(
-  _req: Request,
+  req: Request,
   auth: AuthContext,
   jobId: string,
 ): Promise<Response> {
+  const url = new URL(req.url);
+  const q = url.searchParams.get('q') ?? '';
+
   console.log('[cost-items/reference-jobs] buscando jobs de referencia', {
     jobId,
+    q: q || undefined,
     userId: auth.userId,
     tenantId: auth.tenantId,
   });
@@ -45,7 +49,7 @@ export async function handleReferenceJobs(
   }
 
   // Buscar jobs similares (mesmo project_type, excluindo o atual e os excluidos)
-  const { data: similarJobs, error: similarError } = await client
+  let similarQuery = client
     .from('jobs')
     .select('id, code, title, status, project_type, closed_value, created_at')
     .eq('tenant_id', auth.tenantId)
@@ -54,7 +58,14 @@ export async function handleReferenceJobs(
     .not('status', 'in', `(${EXCLUDED_STATUSES.map((s) => `"${s}"`).join(',')})`)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
-    .limit(10);
+    .limit(20);
+
+  // Filtro de busca por nome ou codigo (minimo 2 caracteres)
+  if (q && q.length >= 2) {
+    similarQuery = similarQuery.or(`title.ilike.%${q}%,code.ilike.%${q}%`);
+  }
+
+  const { data: similarJobs, error: similarError } = await similarQuery;
 
   if (similarError) {
     console.error('[cost-items/reference-jobs] erro ao buscar jobs similares:', similarError.message);
@@ -104,22 +115,24 @@ export async function handleReferenceJobs(
     }
   }
 
-  // Montar resultado enriquecido
-  const referenceJobs = similarJobs.map((job) => {
-    const agg = aggByJob.get(job.id) ?? { count: 0, total_estimated: 0, total_paid: 0 };
-    return {
-      id: job.id,
-      code: job.code,
-      title: job.title,
-      status: job.status,
-      project_type: job.project_type,
-      closed_value: job.closed_value,
-      created_at: job.created_at,
-      cost_items_count: agg.count,
-      total_estimated: agg.total_estimated,
-      total_paid: agg.total_paid,
-    };
-  });
+  // Montar resultado enriquecido e filtrar apenas jobs com itens de custo
+  const referenceJobs = similarJobs
+    .map((job) => {
+      const agg = aggByJob.get(job.id) ?? { count: 0, total_estimated: 0, total_paid: 0 };
+      return {
+        id: job.id,
+        code: job.code,
+        title: job.title,
+        status: job.status,
+        project_type: job.project_type,
+        closed_value: job.closed_value,
+        created_at: job.created_at,
+        cost_items_count: agg.count,
+        total_estimated: agg.total_estimated,
+        total_paid: agg.total_paid,
+      };
+    })
+    .filter((job) => job.cost_items_count > 0);
 
   return success({
     project_type: currentJob.project_type,

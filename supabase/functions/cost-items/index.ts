@@ -14,6 +14,7 @@ import { handleCopy } from './handlers/copy.ts';
 import { handleBudgetSummary } from './handlers/budget-summary.ts';
 import { handleBudgetMode } from './handlers/budget-mode.ts';
 import { handleApplyTemplate } from './handlers/apply-template.ts';
+import { handleImportFromJob } from './handlers/import-from-job.ts';
 import { handleReferenceJobs } from './handlers/reference-jobs.ts';
 import { handleExport } from './handlers/export.ts';
 
@@ -23,6 +24,7 @@ const NAMED_ROUTES = new Set([
   'budget-summary',
   'budget-mode',
   'apply-template',
+  'import-from-job',
   'reference-jobs',
   'export',
 ]);
@@ -74,6 +76,11 @@ Deno.serve(async (req: Request) => {
     // POST /cost-items/apply-template/:jobId
     if (segment1 === 'apply-template' && segment2 && method === 'POST') {
       return await handleApplyTemplate(req, auth, segment2);
+    }
+
+    // POST /cost-items/import-from-job/:jobId
+    if (segment1 === 'import-from-job' && segment2 && method === 'POST') {
+      return await handleImportFromJob(req, auth, segment2);
     }
 
     // GET /cost-items/reference-jobs/:jobId
