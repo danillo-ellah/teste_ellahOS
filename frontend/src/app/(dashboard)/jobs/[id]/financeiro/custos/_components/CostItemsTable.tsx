@@ -384,11 +384,10 @@ function InlineVendorAutocomplete({
     }
     setIsSaving(true)
     try {
+      // So manda vendor_id — backend busca snapshots automaticamente via fetchVendorSnapshot
       await onSave({
         id: itemId,
         vendor_id: vendor.id,
-        vendor_name_snapshot: vendor.full_name,
-        vendor_email_snapshot: vendor.email ?? null,
       })
     } catch (err) {
       toast.error(safeErrorMessage(err))
@@ -402,12 +401,10 @@ function InlineVendorAutocomplete({
   async function handleClear() {
     setIsSaving(true)
     try {
+      // So manda vendor_id null — backend limpa snapshots automaticamente
       await onSave({
         id: itemId,
         vendor_id: null,
-        vendor_name_snapshot: null,
-        vendor_email_snapshot: null,
-        vendor_pix_snapshot: null,
       })
     } catch (err) {
       toast.error(safeErrorMessage(err))
@@ -1096,8 +1093,20 @@ export function CostItemsTable({
   }
 
   // Wrapper estavel para nao recriar closures por item
+  // Intercepta overtime_value (GENERATED column) e converte para overtime_hours=1 + overtime_rate=valor
   const handleSave = useCallback(
-    (payload: Record<string, unknown> & { id: string }) => updateItem(payload),
+    (payload: Record<string, unknown> & { id: string }) => {
+      if ('overtime_value' in payload) {
+        const val = payload.overtime_value as number | null
+        const { overtime_value: _, ...rest } = payload
+        return updateItem({
+          ...rest,
+          overtime_hours: val ? 1 : 0,
+          overtime_rate: val ?? 0,
+        })
+      }
+      return updateItem(payload)
+    },
     [updateItem],
   )
 
