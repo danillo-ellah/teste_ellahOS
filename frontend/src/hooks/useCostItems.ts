@@ -147,6 +147,23 @@ export function useApplyTemplate() {
   })
 }
 
+export function useImportFromJob() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ jobId, source_job_id }: { jobId: string; source_job_id: string }) =>
+      apiMutate<CostItem[]>(
+        'cost-items',
+        'POST',
+        { source_job_id } as Record<string, unknown>,
+        `import-from-job/${jobId}`,
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: costItemKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: finDashboardKeys.all })
+    },
+  })
+}
+
 export function useUpdateBudgetMode() {
   const queryClient = useQueryClient()
   return useMutation({

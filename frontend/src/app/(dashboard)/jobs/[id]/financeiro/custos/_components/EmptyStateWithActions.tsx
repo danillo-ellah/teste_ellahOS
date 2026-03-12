@@ -1,15 +1,17 @@
 'use client'
 
-import { LayoutTemplate, Plus } from 'lucide-react'
+import { LayoutTemplate, Copy, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface EmptyStateWithActionsProps {
   onApplyTemplate: () => void
+  onImportFromJob: () => void
   onAddNew: () => void
 }
 
 export function EmptyStateWithActions({
   onApplyTemplate,
+  onImportFromJob,
   onAddNew,
 }: EmptyStateWithActionsProps) {
   return (
@@ -19,13 +21,17 @@ export function EmptyStateWithActions({
       </div>
       <h3 className="text-lg font-semibold mb-1">Nenhum item de custo</h3>
       <p className="text-sm text-muted-foreground mb-6 max-w-md">
-        Comece aplicando o template padrao de producao audiovisual com 140 itens pre-configurados,
-        ou adicione itens manualmente.
+        Comece aplicando o template padrao de producao audiovisual, importe a estrutura de outro
+        job, ou adicione itens manualmente.
       </p>
-      <div className="flex gap-3">
+      <div className="flex flex-wrap justify-center gap-3">
         <Button onClick={onApplyTemplate}>
           <LayoutTemplate className="size-4 mr-1.5" />
           Aplicar Template GG
+        </Button>
+        <Button variant="outline" onClick={onImportFromJob}>
+          <Copy className="size-4 mr-1.5" />
+          Importar de Outro Job
         </Button>
         <Button variant="outline" onClick={onAddNew}>
           <Plus className="size-4 mr-1.5" />

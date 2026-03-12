@@ -7,6 +7,7 @@ import { CostItemsTable } from './_components/CostItemsTable'
 import { CostItemDrawer } from './_components/CostItemDrawer'
 import { PaymentDialog } from './_components/PaymentDialog'
 import { ApplyTemplateDialog } from './_components/ApplyTemplateDialog'
+import { ImportFromJobDialog } from './_components/ImportFromJobDialog'
 import { EmptyStateWithActions } from './_components/EmptyStateWithActions'
 import { CostItemsTotals } from './_components/CostItemsTotals'
 import { Button } from '@/components/ui/button'
@@ -64,6 +65,9 @@ export default function JobCostsPage({ params }: PageProps) {
 
   // Dialog de template
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false)
+
+  // Dialog de import from job
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
 
   // Selecao em lote
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -288,6 +292,7 @@ export default function JobCostsPage({ params }: PageProps) {
       {!isLoading && items.length === 0 && !isError && (
         <EmptyStateWithActions
           onApplyTemplate={() => setTemplateDialogOpen(true)}
+          onImportFromJob={() => setImportDialogOpen(true)}
           onAddNew={handleAddNew}
         />
       )}
@@ -337,6 +342,14 @@ export default function JobCostsPage({ params }: PageProps) {
       <ApplyTemplateDialog
         open={templateDialogOpen}
         onOpenChange={setTemplateDialogOpen}
+        jobId={jobId}
+        onSuccess={() => {}}
+      />
+
+      {/* Dialog de import from job */}
+      <ImportFromJobDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
         jobId={jobId}
         onSuccess={() => {}}
       />
