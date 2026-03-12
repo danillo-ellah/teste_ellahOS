@@ -6,6 +6,8 @@ import { JobFinancialTabs } from '../_components/JobFinancialTabs'
 import { CostItemsTable } from './_components/CostItemsTable'
 import { CostItemDrawer } from './_components/CostItemDrawer'
 import { PaymentDialog } from './_components/PaymentDialog'
+import { ApplyTemplateDialog } from './_components/ApplyTemplateDialog'
+import { EmptyStateWithActions } from './_components/EmptyStateWithActions'
 import { CostItemsTotals } from './_components/CostItemsTotals'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -59,6 +61,9 @@ export default function JobCostsPage({ params }: PageProps) {
   // Dialog de pagamento
   const [paymentOpen, setPaymentOpen] = useState(false)
   const [paymentItemIds, setPaymentItemIds] = useState<string[]>([])
+
+  // Dialog de template
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false)
 
   // Selecao em lote
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -279,15 +284,25 @@ export default function JobCostsPage({ params }: PageProps) {
         </div>
       )}
 
+      {/* Empty state */}
+      {!isLoading && items.length === 0 && !isError && (
+        <EmptyStateWithActions
+          onApplyTemplate={() => setTemplateDialogOpen(true)}
+          onAddNew={handleAddNew}
+        />
+      )}
+
       {/* Tabela */}
-      <CostItemsTable
-        items={items}
-        selectedIds={selectedIds}
-        onToggleSelect={handleToggleSelect}
-        onEdit={handleEdit}
-        onPay={handlePayItem}
-        isLoading={isLoading}
-      />
+      {(isLoading || items.length > 0) && (
+        <CostItemsTable
+          items={items}
+          selectedIds={selectedIds}
+          onToggleSelect={handleToggleSelect}
+          onEdit={handleEdit}
+          onPay={handlePayItem}
+          isLoading={isLoading}
+        />
+      )}
 
       {/* Totalizadores */}
       {!isLoading && items.length > 0 && (
@@ -316,6 +331,14 @@ export default function JobCostsPage({ params }: PageProps) {
         }}
         selectedItemIds={paymentItemIds}
         onSuccess={handlePaymentSuccess}
+      />
+
+      {/* Dialog de template */}
+      <ApplyTemplateDialog
+        open={templateDialogOpen}
+        onOpenChange={setTemplateDialogOpen}
+        jobId={jobId}
+        onSuccess={() => {}}
       />
     </div>
   )
