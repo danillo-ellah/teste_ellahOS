@@ -87,6 +87,22 @@ export async function handleBatch(req: Request, auth: AuthContext): Promise<Resp
 
   const client = getSupabaseClient(auth.token);
 
+  // Validar que o job_id pertence ao tenant
+  const batchJobId = items[0].job_id ?? null;
+  if (batchJobId) {
+    const { data: job, error: jobError } = await client
+      .from('jobs')
+      .select('id')
+      .eq('id', batchJobId)
+      .eq('tenant_id', auth.tenantId)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (jobError || !job) {
+      throw new AppError('NOT_FOUND', 'Job nao encontrado ou nao pertence ao tenant', 404);
+    }
+  }
+
   // Coletar vendor_ids unicos para busca em batch
   const vendorIds = [...new Set(items.map((item) => item.vendor_id).filter(Boolean) as string[])];
 
@@ -162,9 +178,7 @@ export async function handleBatch(req: Request, auth: AuthContext): Promise<Resp
 
   if (insertError) {
     console.error('[cost-items/batch] erro ao inserir batch:', insertError.message);
-    throw new AppError('INTERNAL_ERROR', 'Erro ao criar itens em batch', 500, {
-      detail: insertError.message,
-    });
+    throw new AppError('INTERNAL_ERROR', 'Erro ao criar itens em batch', 500);
   }
 
   console.log('[cost-items/batch] batch criado com sucesso', {

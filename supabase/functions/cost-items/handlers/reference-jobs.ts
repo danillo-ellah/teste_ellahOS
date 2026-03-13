@@ -62,7 +62,11 @@ export async function handleReferenceJobs(
 
   // Filtro de busca por nome ou codigo (minimo 2 caracteres)
   if (q && q.length >= 2) {
-    similarQuery = similarQuery.or(`title.ilike.%${q}%,code.ilike.%${q}%`);
+    // Sanitizar para evitar injecao de operadores PostgREST
+    const sanitizedQ = q.replace(/[%_(),."'\\]/g, '').slice(0, 100);
+    if (sanitizedQ.length >= 2) {
+      similarQuery = similarQuery.or(`title.ilike.%${sanitizedQ}%,code.ilike.%${sanitizedQ}%`);
+    }
   }
 
   const { data: similarJobs, error: similarError } = await similarQuery;

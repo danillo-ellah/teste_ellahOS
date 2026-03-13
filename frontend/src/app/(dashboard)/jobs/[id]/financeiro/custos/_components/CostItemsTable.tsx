@@ -354,11 +354,19 @@ function InlineVendorAutocomplete({
 }: InlineVendorAutocompleteProps) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
 
-  const { data: suggestions } = useVendorSuggest(search, open)
+  // Debounce de 300ms para evitar 1 request por keystroke
+  useEffect(() => {
+    debounceRef.current = setTimeout(() => setDebouncedSearch(search), 300)
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [search])
+
+  const { data: suggestions } = useVendorSuggest(debouncedSearch, open)
   const vendors = suggestions?.data ?? []
 
   // Fechar ao clicar fora
@@ -853,7 +861,11 @@ function ItemRow({
       </TableCell>
 
       {/* Fornecedor — autocomplete inline */}
-      <TableCell className="text-sm">
+      <TableCell
+        className="text-sm"
+        data-row-id={editable ? item.id : undefined}
+        data-field={editable ? 'vendor' : undefined}
+      >
         {editable ? (
           <InlineVendorAutocomplete
             itemId={item.id}

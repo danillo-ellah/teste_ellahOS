@@ -31,7 +31,7 @@ export const GG_TEMPLATE_PREVIEW: TemplateCategoryPreview[] = [
   { item_number: 99, name: 'Mao de Obra Interna', items_count: 1 },
 ]
 
-export const GG_TEMPLATE_TOTAL_ITEMS = 140
+export const GG_TEMPLATE_TOTAL_ITEMS = 132
 export const GG_TEMPLATE_NAME = 'Producao Audiovisual Publicitaria'
 
 export const TEMPLATE_OPTIONS: TemplateOption[] = [
@@ -39,7 +39,7 @@ export const TEMPLATE_OPTIONS: TemplateOption[] = [
     id: 'monstro',
     name: 'Monstro / Animatic',
     description: 'Para pitch e concorrencia. Rough cut com stock, locucao temp e motion basico.',
-    total_items: 18,
+    total_items: 24,
     categories: [
       { item_number: 1, name: 'Pesquisa e Referencias', items_count: 3 },
       { item_number: 2, name: 'Criacao e Roteiro', items_count: 3 },
@@ -53,7 +53,7 @@ export const TEMPLATE_OPTIONS: TemplateOption[] = [
     id: 'digital',
     name: 'Conteudo Digital / Redes Sociais',
     description: 'Para reels, TikToks, stories e videos curtos. Equipe enxuta, producao agil.',
-    total_items: 32,
+    total_items: 40,
     categories: [
       { item_number: 1, name: 'Desembolsos', items_count: 3 },
       { item_number: 2, name: 'Criacao de Conteudo', items_count: 3 },
@@ -72,7 +72,7 @@ export const TEMPLATE_OPTIONS: TemplateOption[] = [
     id: 'motion',
     name: 'Motion Graphics / Animacao',
     description: 'Para videos 100% animados, infograficos, vinhetas, explainers. Zero filmagem.',
-    total_items: 33,
+    total_items: 43,
     categories: [
       { item_number: 1, name: 'Desembolsos', items_count: 2 },
       { item_number: 2, name: 'Criacao / Direcao de Arte', items_count: 4 },
@@ -91,7 +91,7 @@ export const TEMPLATE_OPTIONS: TemplateOption[] = [
     id: 'gg',
     name: 'Producao Audiovisual Publicitaria',
     description: 'Template completo para filmes publicitarios, campanhas TV, etc.',
-    total_items: 140,
+    total_items: 132,
     categories: GG_TEMPLATE_PREVIEW,
   },
 ]
