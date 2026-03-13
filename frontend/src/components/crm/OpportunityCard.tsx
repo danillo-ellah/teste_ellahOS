@@ -1,13 +1,14 @@
 'use client'
 
 import { memo } from 'react'
-import { CalendarDays, Building2, Shield, AlertTriangle } from 'lucide-react'
+import { CalendarDays, Building2, Shield, AlertTriangle, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Opportunity } from '@/hooks/useCrm'
 
 interface OpportunityCardProps {
   opportunity: Opportunity
   onClick: () => void
+  onDelete?: () => void
 }
 
 function formatCurrency(value: number | null): string | null {
@@ -49,7 +50,7 @@ function isOverdue(dateStr: string | null, stage: string): boolean {
   }
 }
 
-export const OpportunityCard = memo(function OpportunityCard({ opportunity, onClick }: OpportunityCardProps) {
+export const OpportunityCard = memo(function OpportunityCard({ opportunity, onClick, onDelete }: OpportunityCardProps) {
   const formattedValue = formatCurrency(opportunity.estimated_value)
   const clientName = opportunity.clients?.name
   const agencyName = opportunity.agencies?.name
@@ -75,14 +76,28 @@ export const OpportunityCard = memo(function OpportunityCard({ opportunity, onCl
         'dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)] dark:hover:shadow-[0_4px_12px_rgba(0,0,0,0.3)]',
       )}
     >
-      {/* Titulo */}
-      <div className="min-w-0">
-        <span className="text-[13px] font-semibold leading-snug line-clamp-2 text-foreground">
-          {opportunity.title}
-        </span>
-        {opportunity.orc_code && (
-          <span className="block text-[10px] font-mono text-muted-foreground/70 leading-tight mt-0.5">
-            {opportunity.orc_code}
+      {/* Titulo + lixeira */}
+      <div className="flex items-start gap-1 min-w-0">
+        <div className="flex-1 min-w-0">
+          <span className="text-[13px] font-semibold leading-snug line-clamp-2 text-foreground">
+            {opportunity.title}
+          </span>
+          {opportunity.orc_code && (
+            <span className="block text-[10px] font-mono text-muted-foreground/70 leading-tight mt-0.5">
+              {opportunity.orc_code}
+            </span>
+          )}
+        </div>
+        {onDelete && !opportunity.job_id && (
+          <span
+            role="button"
+            tabIndex={0}
+            title="Excluir"
+            onClick={(e) => { e.stopPropagation(); onDelete() }}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); onDelete() } }}
+            className="shrink-0 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/50 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50"
+          >
+            <Trash2 className="size-3.5" />
           </span>
         )}
       </div>

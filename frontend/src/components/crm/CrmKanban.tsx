@@ -13,13 +13,23 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { Plus, Target } from 'lucide-react'
+import { Plus, Target, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { cn } from '@/lib/utils'
 import type { Opportunity, OpportunityStage, PipelineData } from '@/hooks/useCrm'
-import { useUpdateOpportunity } from '@/hooks/useCrm'
+import { useUpdateOpportunity, useDeleteOpportunity } from '@/hooks/useCrm'
 import { OpportunityCard } from './OpportunityCard'
 import { OpportunityDialog } from './OpportunityDialog'
 import { LossFeedbackDialog, type LossFeedback } from './LossFeedbackDialog'
@@ -220,6 +230,7 @@ interface CrmKanbanProps {
 export function CrmKanban({ pipeline, includeClosed }: CrmKanbanProps) {
   const router = useRouter()
   const [createInStage, setCreateInStage] = useState<OpportunityStage | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null)
 
   // Empty state global — quando nao ha nenhuma oportunidade
   if (pipeline.total_opportunities === 0) {
@@ -261,6 +272,7 @@ export function CrmKanban({ pipeline, includeClosed }: CrmKanbanProps) {
         includeClosed={includeClosed}
         onCardClick={(opp) => router.push(`/crm/${opp.id}`)}
         onAddClick={setCreateInStage}
+        onDeleteClick={(opp) => setDeleteTarget({ id: opp.id, title: opp.title })}
       />
 
       {/* Dialog de criacao com stage pre-selecionado */}
@@ -272,6 +284,14 @@ export function CrmKanban({ pipeline, includeClosed }: CrmKanbanProps) {
         mode="create"
         defaultStage={createInStage ?? undefined}
       />
+
+      {/* Confirmacao de exclusao */}
+      {deleteTarget && (
+        <DeleteConfirmDialog
+          target={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+        />
+      )}
     </MutationRegistryProvider>
   )
 }
@@ -285,6 +305,7 @@ interface KanbanBoardProps {
   includeClosed: boolean
   onCardClick: (opp: Opportunity) => void
   onAddClick: (stage: OpportunityStage) => void
+  onDeleteClick: (opp: Opportunity) => void
 }
 
 // Estado pendente para o dialog de feedback de perda via DnD
@@ -293,7 +314,7 @@ interface PendingLossMove {
   opportunityTitle: string
 }
 
-function KanbanBoard({ pipeline, includeClosed, onCardClick, onAddClick }: KanbanBoardProps) {
+function KanbanBoard({ pipeline, includeClosed, onCardClick, onAddClick, onDeleteClick }: KanbanBoardProps) {
   const { execute } = useMutationRegistry()
   const [activeCard, setActiveCard] = useState<Opportunity | null>(null)
 
@@ -407,6 +428,7 @@ function KanbanBoard({ pipeline, includeClosed, onCardClick, onAddClick }: Kanba
                 activeCard={activeCard}
                 onCardClick={onCardClick}
                 onAddClick={() => onAddClick(stage)}
+                onDeleteClick={onDeleteClick}
               />
             )
           })}
@@ -447,6 +469,7 @@ interface KanbanColumnProps {
   activeCard: Opportunity | null
   onCardClick: (opp: Opportunity) => void
   onAddClick: () => void
+  onDeleteClick: (opp: Opportunity) => void
 }
 
 const KanbanColumn = memo(function KanbanColumn({
@@ -457,6 +480,7 @@ const KanbanColumn = memo(function KanbanColumn({
   activeCard,
   onCardClick,
   onAddClick,
+  onDeleteClick,
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: stage })
 
@@ -546,6 +570,7 @@ const KanbanColumn = memo(function KanbanColumn({
               key={opp.id}
               opportunity={opp}
               onCardClick={onCardClick}
+              onDeleteClick={onDeleteClick}
             />
           ))
         )}
@@ -563,9 +588,10 @@ const KanbanColumn = memo(function KanbanColumn({
 interface DraggableCardProps {
   opportunity: Opportunity
   onCardClick: (opp: Opportunity) => void
+  onDeleteClick: (opp: Opportunity) => void
 }
 
-const DraggableCard = memo(function DraggableCard({ opportunity, onCardClick }: DraggableCardProps) {
+const DraggableCard = memo(function DraggableCard({ opportunity, onCardClick, onDeleteClick }: DraggableCardProps) {
   const { register } = useMutationRegistry()
 
   // Hook de mutacao fixo para este id
@@ -634,7 +660,56 @@ const DraggableCard = memo(function DraggableCard({ opportunity, onCardClick }: 
       <OpportunityCard
         opportunity={opportunity}
         onClick={() => onCardClick(opportunity)}
+        onDelete={() => onDeleteClick(opportunity)}
       />
     </div>
   )
 })
+
+// ---------------------------------------------------------------------------
+// Dialog de confirmacao de exclusao
+// ---------------------------------------------------------------------------
+
+function DeleteConfirmDialog({
+  target,
+  onClose,
+}: {
+  target: { id: string; title: string }
+  onClose: () => void
+}) {
+  const deleteMutation = useDeleteOpportunity(target.id)
+
+  async function handleConfirm() {
+    try {
+      await deleteMutation.mutateAsync()
+      toast.success('Oportunidade excluida')
+      onClose()
+    } catch {
+      toast.error('Erro ao excluir oportunidade')
+    }
+  }
+
+  return (
+    <AlertDialog open onOpenChange={(open) => { if (!open) onClose() }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Excluir oportunidade?</AlertDialogTitle>
+          <AlertDialogDescription>
+            &quot;{target.title}&quot; sera removida do pipeline. Propostas e atividades vinculadas tambem serao excluidas.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleConfirm}
+            disabled={deleteMutation.isPending}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-1.5"
+          >
+            {deleteMutation.isPending && <Loader2 className="size-3.5 animate-spin" />}
+            Excluir
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
