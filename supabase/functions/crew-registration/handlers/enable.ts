@@ -76,7 +76,7 @@ export async function handleEnable(req: Request): Promise<Response> {
     Deno.env.get('FRONTEND_URL') ??
     'https://teste-ellah-os.vercel.app'
 
-  const publicUrl = `${origin}/crew-registration/${token}`
+  const publicUrl = `${origin}/crew/${token}`
 
   console.log(
     `[crew-registration/enable] job=${job_id} enabled=${enabled} token=${token}`,
