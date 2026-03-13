@@ -54,9 +54,8 @@ import { useDeleteCostItem, useUpdateCostItem } from '@/hooks/useCostItems'
 import { useVendorSuggest } from '@/hooks/useVendors'
 import { toast } from 'sonner'
 import { formatCurrency, formatDate } from '@/lib/format'
-import { PAYMENT_CONDITION_LABELS, NF_REQUEST_STATUS_CONFIG } from '@/types/cost-management'
-import type { CostItem, NfRequestStatus, VendorSuggestion } from '@/types/cost-management'
-import { CostItemStatusBadge } from './CostItemStatusBadge'
+import { PAYMENT_CONDITION_LABELS, NF_REQUEST_STATUS_CONFIG, ITEM_STATUS_LABELS, ITEM_STATUS_COLORS } from '@/types/cost-management'
+import type { CostItem, NfRequestStatus, VendorSuggestion, ItemStatus } from '@/types/cost-management'
 import { safeErrorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
@@ -559,16 +558,83 @@ function VendorCell({ item }: { item: CostItem }) {
   )
 }
 
-// ---- StatusCell ----
+// ---- StatusCell (inline editavel via dropdown) ----
 
-function StatusCell({ item }: { item: CostItem }) {
+// Ordem logica do fluxo de status do item de custo
+const ITEM_STATUS_ORDER: ItemStatus[] = [
+  'orcado',
+  'aguardando_nf',
+  'nf_pedida',
+  'nf_recebida',
+  'nf_aprovada',
+  'pago',
+  'cancelado',
+]
+
+function StatusCell({
+  item,
+  onSave,
+}: {
+  item: CostItem
+  onSave: (payload: Record<string, unknown> & { id: string }) => Promise<unknown>
+}) {
+  const [saving, setSaving] = useState(false)
   const hasMismatch =
     item.suggested_status &&
     item.suggested_status !== item.item_status
 
+  async function handleStatusChange(newStatus: ItemStatus) {
+    if (newStatus === item.item_status) return
+    setSaving(true)
+    try {
+      await onSave({ id: item.id, item_status: newStatus })
+    } catch (err) {
+      toast.error(safeErrorMessage(err))
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <div className="flex items-center gap-1">
-      <CostItemStatusBadge status={item.item_status} />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className={cn(
+              'inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium cursor-pointer',
+              'hover:ring-1 hover:ring-border transition-all',
+              saving && 'opacity-50 pointer-events-none',
+              ITEM_STATUS_COLORS[item.item_status],
+            )}
+            disabled={saving}
+          >
+            {ITEM_STATUS_LABELS[item.item_status]}
+            <ChevronDown className="size-3 opacity-50" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="min-w-[160px]">
+          {ITEM_STATUS_ORDER.map((status) => (
+            <DropdownMenuItem
+              key={status}
+              onClick={() => handleStatusChange(status)}
+              className={cn(
+                'text-xs gap-2',
+                status === item.item_status && 'font-semibold',
+              )}
+            >
+              <span className={cn(
+                'inline-block size-2 rounded-full shrink-0',
+                ITEM_STATUS_COLORS[status]?.replace(/text-\S+/g, ''),
+              )} />
+              {ITEM_STATUS_LABELS[status]}
+              {status === item.item_status && (
+                <Check className="size-3 ml-auto text-foreground" />
+              )}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
       {hasMismatch && (
         <TooltipProvider>
           <Tooltip>
@@ -982,7 +1048,7 @@ function ItemRow({
 
       {/* Status */}
       <TableCell>
-        {editable && <StatusCell item={item} />}
+        {editable && <StatusCell item={item} onSave={onSave} />}
       </TableCell>
 
       {/* NF */}
