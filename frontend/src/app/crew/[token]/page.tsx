@@ -660,8 +660,12 @@ export default function CrewRegistrationPage({
   if (jobLoading) {
     return (
       <CrewLayout>
-        <div className="flex items-center justify-center py-24">
-          <Loader2 className="size-8 animate-spin text-zinc-400" />
+        <div className="flex flex-col items-center justify-center py-24 gap-4">
+          <div className="relative">
+            <div className="size-12 rounded-full border-2 border-rose-100 animate-pulse" />
+            <Loader2 className="size-6 animate-spin text-rose-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+          </div>
+          <p className="text-sm text-zinc-400 animate-pulse">Carregando formulario...</p>
         </div>
       </CrewLayout>
     )
@@ -670,11 +674,13 @@ export default function CrewRegistrationPage({
   if (jobError || !jobInfo) {
     return (
       <CrewLayout>
-        <Card className="max-w-lg mx-auto w-full">
+        <Card className="max-w-lg mx-auto w-full border-amber-200/60 shadow-lg shadow-amber-50">
           <CardContent className="flex flex-col items-center py-12 text-center">
-            <AlertTriangle className="size-12 text-amber-500 mb-4" />
-            <h2 className="text-lg font-semibold">Link invalido</h2>
-            <p className="text-sm text-zinc-500 mt-2">
+            <div className="size-16 rounded-2xl bg-amber-50 flex items-center justify-center mb-4">
+              <AlertTriangle className="size-8 text-amber-500" />
+            </div>
+            <h2 className="text-lg font-semibold text-zinc-800">Link invalido ou expirado</h2>
+            <p className="text-sm text-zinc-500 mt-2 max-w-xs">
               Este link de cadastro nao existe ou ja expirou. Entre em contato com a producao
               para solicitar um novo link.
             </p>
@@ -691,22 +697,45 @@ export default function CrewRegistrationPage({
   if (step === 'done' && result) {
     const total = result.num_days * result.daily_rate
     return (
-      <CrewLayout jobInfo={jobInfo}>
-        <Card className="max-w-lg mx-auto w-full">
-          <CardContent className="flex flex-col items-center py-12 text-center gap-3">
-            <CheckCircle className="size-16 text-green-500" />
-            <h2 className="text-2xl font-bold mt-1">Participacao confirmada!</h2>
-            <p className="text-zinc-500">Obrigado, {result.full_name}.</p>
+      <CrewLayout jobInfo={jobInfo} step={step}>
+        <Card className="max-w-lg mx-auto w-full border-green-200/60 shadow-lg shadow-green-50 overflow-hidden">
+          {/* Green gradient bar */}
+          <div className="h-1.5 bg-gradient-to-r from-green-400 via-emerald-500 to-teal-500" />
 
-            <div className="w-full mt-4 rounded-lg bg-zinc-50 border divide-y text-sm">
+          <CardContent className="flex flex-col items-center py-10 text-center gap-4">
+            <div className="relative">
+              <div className="size-20 rounded-full bg-green-50 flex items-center justify-center animate-[bounceIn_0.5s_ease-out]">
+                <CheckCircle className="size-10 text-green-500" />
+              </div>
+              <div className="absolute -top-1 -right-1 size-6 rounded-full bg-green-500 flex items-center justify-center shadow-md">
+                <Check className="size-3 text-white" />
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold text-zinc-800">Tudo certo!</h2>
+              <p className="text-zinc-500 mt-1">
+                Obrigado, <span className="font-semibold text-zinc-700">{result.full_name}</span>.
+              </p>
+            </div>
+
+            <div className="w-full mt-2 rounded-xl bg-gradient-to-b from-zinc-50 to-white border divide-y text-sm">
               <ConfirmRow label="Job" value={`${jobInfo.job_code} — ${jobInfo.job_title}`} />
               <ConfirmRow label="Funcao" value={result.job_role} />
               <ConfirmRow label="Diarias" value={String(result.num_days)} />
-              <ConfirmRow label="Cache por diaria" value={formatBRL(result.daily_rate)} />
+              <ConfirmRow label="Cache/diaria" value={formatBRL(result.daily_rate)} />
               <ConfirmRow label="Total" value={formatBRL(total)} highlight />
             </div>
 
-            <p className="text-xs text-zinc-400 mt-4">A producao sera notificada.</p>
+            <div className="flex items-center gap-2 mt-2 text-xs text-zinc-400">
+              <div className="size-1.5 rounded-full bg-green-400 animate-pulse" />
+              A producao sera notificada automaticamente.
+            </div>
+
+            <p className="text-[10px] text-zinc-400 mt-3 leading-relaxed max-w-xs">
+              Os valores indicados sao estimativas sujeitas a aprovacao da producao e
+              nao constituem vinculo contratual.
+            </p>
           </CardContent>
         </Card>
       </CrewLayout>
@@ -719,31 +748,35 @@ export default function CrewRegistrationPage({
 
   if (step === 'email') {
     return (
-      <CrewLayout jobInfo={jobInfo}>
-        <Card className="max-w-lg mx-auto w-full">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Users className="size-5 text-rose-500" />
+      <CrewLayout jobInfo={jobInfo} step={step}>
+        <Card className="max-w-lg mx-auto w-full shadow-lg shadow-zinc-100/80 border-zinc-200/60 overflow-hidden">
+          {/* Accent bar */}
+          <div className="h-1 bg-gradient-to-r from-rose-500 via-rose-400 to-pink-500" />
+
+          <CardHeader className="pb-3 pt-6">
+            <CardTitle className="text-xl font-bold text-zinc-800 text-center">
               Cadastro de Equipe
             </CardTitle>
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-zinc-500 text-center mt-1">
               Informe seu e-mail para comecar. Se voce ja tem cadastro, seus dados serao
               pre-preenchidos automaticamente.
             </p>
           </CardHeader>
 
-          <CardContent>
+          <CardContent className="pb-6">
             {alreadyRegistered ? (
               <div className="flex flex-col items-center py-8 text-center gap-3">
-                <CheckCircle className="size-12 text-green-500" />
-                <h3 className="font-semibold text-base">Voce ja preencheu este formulario</h3>
-                <p className="text-sm text-zinc-500">
+                <div className="size-16 rounded-2xl bg-green-50 flex items-center justify-center">
+                  <CheckCircle className="size-8 text-green-500" />
+                </div>
+                <h3 className="font-bold text-base text-zinc-800">Voce ja esta cadastrado!</h3>
+                <p className="text-sm text-zinc-500 max-w-xs">
                   Sua participacao neste job ja esta registrada. Caso precise de alteracoes,
                   entre em contato com a producao.
                 </p>
               </div>
             ) : (
-              <form onSubmit={handleEmailSubmit} className="space-y-4">
+              <form onSubmit={handleEmailSubmit} className="space-y-5">
                 <FormField label="Seu e-mail" required>
                   <Input
                     type="email"
@@ -755,20 +788,21 @@ export default function CrewRegistrationPage({
                     placeholder="voce@email.com"
                     autoComplete="email"
                     autoFocus
-                    className="h-12 text-base"
+                    className="h-12 text-base rounded-xl"
                     disabled={lookupLoading}
                   />
                 </FormField>
 
                 {lookupError && (
-                  <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+                  <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-start gap-2">
+                    <AlertTriangle className="size-4 mt-0.5 shrink-0 text-red-500" />
                     {lookupError}
                   </div>
                 )}
 
                 <Button
                   type="submit"
-                  className="w-full h-12 text-base"
+                  className="w-full h-12 text-base rounded-xl bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 shadow-md shadow-rose-200 transition-all duration-200"
                   disabled={lookupLoading}
                 >
                   {lookupLoading ? (
@@ -797,15 +831,15 @@ export default function CrewRegistrationPage({
   const estimatedTotal = numDays * dailyRateNum
 
   return (
-    <CrewLayout jobInfo={jobInfo}>
+    <CrewLayout jobInfo={jobInfo} step={step}>
       <div className="max-w-lg mx-auto w-full space-y-4 pb-16">
         <form onSubmit={handleFormSubmit} className="space-y-4">
 
           {/* ---- Veterano: banner de boas-vindas ---- */}
           {isVeteran && (
-            <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">
-              <p className="font-semibold">Bem-vindo de volta, {vendorName}!</p>
-              <p className="text-green-700 mt-0.5">
+            <div className="rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200/60 px-4 py-4 text-sm text-green-800 shadow-sm">
+              <p className="font-bold text-base">Bem-vindo de volta, {vendorName}!</p>
+              <p className="text-green-700 mt-1">
                 Seus dados estao cadastrados. Preencha apenas os campos desta participacao.
               </p>
             </div>
@@ -886,9 +920,9 @@ export default function CrewRegistrationPage({
 
               {/* Preview do total */}
               {numDays > 0 && dailyRateNum > 0 && (
-                <div className="rounded-md bg-zinc-50 border px-3 py-2 text-sm flex justify-between items-center">
-                  <span className="text-zinc-500">Total estimado</span>
-                  <span className="font-semibold text-zinc-900">{formatBRL(estimatedTotal)}</span>
+                <div className="rounded-xl bg-gradient-to-r from-zinc-50 to-rose-50/30 border border-zinc-200/60 px-4 py-3 text-sm flex justify-between items-center">
+                  <span className="text-zinc-500 font-medium">Total estimado</span>
+                  <span className="font-bold text-lg text-rose-600">{formatBRL(estimatedTotal)}</span>
                 </div>
               )}
             </CardContent>
@@ -997,15 +1031,24 @@ export default function CrewRegistrationPage({
 
           {/* Erro global */}
           {submitError && (
-            <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
-              {submitError}
+            <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-start gap-2">
+              <AlertTriangle className="size-4 mt-0.5 shrink-0 text-red-500" />
+              <span>{submitError}</span>
             </div>
           )}
+
+          {/* Aviso legal */}
+          <div className="rounded-xl bg-amber-50/60 border border-amber-200/50 px-4 py-3 text-xs text-amber-700 leading-relaxed">
+            <p className="font-semibold text-amber-800 mb-1">Aviso importante</p>
+            Os valores informados neste formulario sao apenas indicativos e nao representam
+            um contrato ou compromisso financeiro. O valor final sera definido e aprovado
+            pela producao. O preenchimento deste cadastro nao garante a contratacao.
+          </div>
 
           {/* Botao de submit */}
           <Button
             type="submit"
-            className="w-full h-12 text-base"
+            className="w-full h-12 text-base rounded-xl bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 shadow-md shadow-rose-200 transition-all duration-200"
             disabled={submitting}
           >
             {submitting ? (
@@ -1503,35 +1546,111 @@ function JobRoleCombobox({
 }
 
 // ---------------------------------------------------------------------------
+// Step progress indicator
+// ---------------------------------------------------------------------------
+
+const STEP_LABELS = ['Identificacao', 'Formulario', 'Confirmado']
+
+function StepIndicator({ current }: { current: Step }) {
+  const stepIndex = current === 'email' ? 0 : current === 'form' ? 1 : 2
+
+  return (
+    <div className="flex items-center justify-center gap-2 mb-8">
+      {STEP_LABELS.map((label, i) => {
+        const isDone = i < stepIndex
+        const isActive = i === stepIndex
+        return (
+          <div key={label} className="flex items-center gap-2">
+            {i > 0 && (
+              <div
+                className={cn(
+                  'h-px w-8 sm:w-12 transition-colors duration-500',
+                  isDone ? 'bg-rose-400' : 'bg-zinc-200',
+                )}
+              />
+            )}
+            <div className="flex flex-col items-center gap-1">
+              <div
+                className={cn(
+                  'size-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-500',
+                  isDone && 'bg-rose-500 text-white shadow-md shadow-rose-200',
+                  isActive && 'bg-rose-500 text-white shadow-lg shadow-rose-200 scale-110',
+                  !isDone && !isActive && 'bg-zinc-100 text-zinc-400 border border-zinc-200',
+                )}
+              >
+                {isDone ? (
+                  <Check className="size-4" />
+                ) : (
+                  i + 1
+                )}
+              </div>
+              <span
+                className={cn(
+                  'text-[10px] font-medium transition-colors duration-300 hidden sm:block',
+                  isActive ? 'text-rose-600' : isDone ? 'text-rose-400' : 'text-zinc-400',
+                )}
+              >
+                {label}
+              </span>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Layout publico (sem sidebar/header do dashboard)
 // ---------------------------------------------------------------------------
 
 function CrewLayout({
   children,
   jobInfo,
+  step = 'email',
 }: {
   children: React.ReactNode
   jobInfo?: JobInfo | null
+  step?: Step
 }) {
   return (
-    <div className="min-h-screen bg-zinc-50 flex flex-col items-center px-4 py-8 sm:py-12">
-      {/* Logo */}
-      <div className="mb-6 text-center">
-        <span className="text-xl font-bold tracking-tight text-zinc-900">
-          ELLAH<span className="text-rose-500">OS</span>
-        </span>
+    <div className="min-h-screen bg-gradient-to-br from-zinc-50 via-white to-rose-50/30 flex flex-col items-center px-4 py-8 sm:py-12 relative overflow-hidden">
+      {/* Decorative blobs */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-rose-100/40 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-80 h-80 bg-rose-50/60 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3 pointer-events-none" />
+
+      {/* Logo + Job info */}
+      <div className="mb-2 text-center relative z-10">
+        <div className="inline-flex items-center gap-1.5">
+          <div className="size-8 rounded-lg bg-gradient-to-br from-rose-500 to-rose-600 flex items-center justify-center shadow-md shadow-rose-200">
+            <Users className="size-4 text-white" />
+          </div>
+          <span className="text-xl font-bold tracking-tight text-zinc-900">
+            Ellah<span className="text-rose-500">OS</span>
+          </span>
+        </div>
 
         {jobInfo && (
           <div className="mt-3">
-            <span className="inline-block text-xs font-medium text-zinc-500 bg-white border rounded px-3 py-1">
-              {jobInfo.job_code} — {jobInfo.job_title}
-            </span>
-            <p className="text-xs text-zinc-400 mt-1">{jobInfo.tenant_name}</p>
+            <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm border border-zinc-200/60 rounded-full px-4 py-1.5 shadow-sm">
+              <span className="text-xs font-semibold text-rose-500">{jobInfo.job_code}</span>
+              <span className="w-px h-3 bg-zinc-200" />
+              <span className="text-xs font-medium text-zinc-600">{jobInfo.job_title}</span>
+            </div>
+            <p className="text-[11px] text-zinc-400 mt-1.5 font-medium">{jobInfo.tenant_name}</p>
           </div>
         )}
       </div>
 
-      <div className="w-full max-w-lg">{children}</div>
+      {/* Step indicator */}
+      {jobInfo && <StepIndicator current={step} />}
+
+      <div className="w-full max-w-lg relative z-10">{children}</div>
+
+      {/* Footer */}
+      <p className="text-[10px] text-zinc-300 mt-12 relative z-10">
+        Powered by EllahOS
+      </p>
     </div>
   )
 }
@@ -1553,12 +1672,17 @@ function FormField({
 }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-sm">
+      <Label className="text-sm font-medium text-zinc-700">
         {label}
-        {required && <span className="text-destructive ml-1">*</span>}
+        {required && <span className="text-rose-500 ml-0.5">*</span>}
       </Label>
       {children}
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && (
+        <p className="text-xs text-red-600 flex items-center gap-1">
+          <span className="size-1 rounded-full bg-red-500 shrink-0" />
+          {error}
+        </p>
+      )}
     </div>
   )
 }
@@ -1573,12 +1697,15 @@ function ConfirmRow({
   highlight?: boolean
 }) {
   return (
-    <div className="flex justify-between items-center px-4 py-3">
+    <div className={cn(
+      'flex justify-between items-center px-4 py-3',
+      highlight && 'bg-gradient-to-r from-rose-50/50 to-transparent',
+    )}>
       <span className="text-zinc-500 text-sm">{label}</span>
       <span
         className={
           highlight
-            ? 'font-bold text-zinc-900 text-base'
+            ? 'font-bold text-rose-600 text-base'
             : 'font-medium text-zinc-800 text-sm'
         }
       >
