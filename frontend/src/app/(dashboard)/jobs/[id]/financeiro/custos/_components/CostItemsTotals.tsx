@@ -40,42 +40,42 @@ export function CostItemsTotals({ meta, totalWithOvertime, items = [] }: CostIte
   const divergentCount = countDivergentItems(items)
 
   return (
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-md border border-border bg-muted/40 px-4 py-3 text-sm">
-      <div className="flex items-center gap-2">
-        <span className="text-muted-foreground">Total Orcado:</span>
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-lg border border-border bg-muted/40 px-5 py-3.5 text-sm">
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs text-muted-foreground uppercase tracking-wide">Orcado</span>
         <span className="font-semibold tabular-nums">{formatCurrency(totalBudgeted)}</span>
       </div>
-      <div className="h-4 w-px bg-border hidden sm:block" />
-      <div className="flex items-center gap-2">
-        <span className="text-muted-foreground">Com HE:</span>
+      <div className="h-4 w-px bg-border hidden sm:block" aria-hidden />
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs text-muted-foreground uppercase tracking-wide">C/ HE</span>
         <span className="font-semibold tabular-nums">{formatCurrency(totalWithOvertime)}</span>
       </div>
-      <div className="h-4 w-px bg-border hidden sm:block" />
-      <div className="flex items-center gap-2">
-        <span className="text-muted-foreground">Total Pago:</span>
-        <span className="font-semibold tabular-nums text-green-700">{formatCurrency(totalPaid)}</span>
+      <div className="h-4 w-px bg-border hidden sm:block" aria-hidden />
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs text-muted-foreground uppercase tracking-wide">Pago</span>
+        <span className="font-semibold tabular-nums text-green-700 dark:text-green-400">{formatCurrency(totalPaid)}</span>
       </div>
-      <div className="h-4 w-px bg-border hidden sm:block" />
-      <div className="flex items-center gap-2">
-        <span className="text-muted-foreground">Pendente:</span>
-        <span className="font-semibold tabular-nums text-amber-700">{formatCurrency(totalPending)}</span>
+      <div className="h-4 w-px bg-border hidden sm:block" aria-hidden />
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs text-muted-foreground uppercase tracking-wide">Pendente</span>
+        <span className="font-semibold tabular-nums text-amber-700 dark:text-amber-400">{formatCurrency(totalPending)}</span>
       </div>
-      <div className="h-4 w-px bg-border hidden sm:block" />
-      <div className="flex items-center gap-2">
-        <span className="text-muted-foreground">Itens:</span>
+      <div className="h-4 w-px bg-border hidden sm:block" aria-hidden />
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs text-muted-foreground uppercase tracking-wide">Itens</span>
         <span className="font-semibold tabular-nums">{itemsCount}</span>
       </div>
 
       {/* Indicador de divergencia — so aparece quando ha itens com divergencia > 10% */}
       {divergentCount > 0 && (
         <>
-          <div className="h-4 w-px bg-border hidden sm:block" />
+          <div className="h-4 w-px bg-border hidden sm:block" aria-hidden />
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="flex items-center gap-1.5 cursor-help">
+                <div className="flex items-center gap-1.5 cursor-help" role="status">
                   <TrendingUp className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-                  <span className={cn('font-semibold tabular-nums text-amber-700 dark:text-amber-400')}>
+                  <span className="font-semibold tabular-nums text-amber-700 dark:text-amber-400">
                     {divergentCount} {divergentCount === 1 ? 'item' : 'itens'} com divergencia
                   </span>
                 </div>

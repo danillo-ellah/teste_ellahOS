@@ -217,13 +217,12 @@ export default function JobCostsPage({ params }: PageProps) {
         <div>
           <h2 className="text-xl font-semibold">Custos do Job</h2>
           {meta && (
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {meta.total} itens &nbsp;|&nbsp; Orcado:{' '}
-              <span className="font-medium">{formatCurrency(meta.total_budgeted ?? 0)}</span>
-              &nbsp;|&nbsp; Pago:{' '}
-              <span className="font-medium text-green-700">
-                {formatCurrency(meta.total_paid ?? 0)}
-              </span>
+            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5 flex-wrap">
+              <span>{meta.total} itens</span>
+              <span className="text-border">|</span>
+              <span>Orcado: <span className="font-medium text-foreground">{formatCurrency(meta.total_budgeted ?? 0)}</span></span>
+              <span className="text-border">|</span>
+              <span>Pago: <span className="font-medium text-green-700 dark:text-green-400">{formatCurrency(meta.total_paid ?? 0)}</span></span>
             </p>
           )}
         </div>

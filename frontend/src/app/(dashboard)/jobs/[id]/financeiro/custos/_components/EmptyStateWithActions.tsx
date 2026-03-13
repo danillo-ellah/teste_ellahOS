@@ -15,12 +15,12 @@ export function EmptyStateWithActions({
   onAddNew,
 }: EmptyStateWithActionsProps) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 px-4 text-center">
-      <div className="rounded-full bg-muted p-3 mb-4">
-        <LayoutTemplate className="size-8 text-muted-foreground" />
+    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-muted-foreground/25 py-20 px-6 text-center">
+      <div className="rounded-full bg-muted p-4 mb-5">
+        <LayoutTemplate className="size-10 text-muted-foreground/70" />
       </div>
-      <h3 className="text-lg font-semibold mb-1">Nenhum item de custo</h3>
-      <p className="text-sm text-muted-foreground mb-6 max-w-md">
+      <h3 className="text-lg font-semibold mb-1.5">Nenhum item de custo</h3>
+      <p className="text-muted-foreground mb-8 max-w-md">
         Comece aplicando o template padrao de producao audiovisual, importe a estrutura de outro
         job, ou adicione itens manualmente.
       </p>
