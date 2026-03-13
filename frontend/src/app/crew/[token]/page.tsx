@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, use } from 'react'
+import { useState, useEffect, useRef, use } from 'react'
 import {
   CheckCircle,
   AlertTriangle,
@@ -458,6 +458,7 @@ export default function CrewRegistrationPage({
   }
 
   const [cepError, setCepError] = useState<string | null>(null)
+  const cepAbortRef = useRef<AbortController | null>(null)
 
   // Busca CEP automaticamente quando o usuario digita 8 digitos
   function handleCepChange(rawValue: string) {
@@ -467,6 +468,8 @@ export default function CrewRegistrationPage({
 
     const digits = masked.replace(/\D/g, '')
     if (digits.length === 8) {
+      // Cancela request anterior se existir
+      cepAbortRef.current?.abort()
       setCepLoading(true)
       fetchCep(digits).then((data) => {
         setCepLoading(false)
@@ -480,7 +483,7 @@ export default function CrewRegistrationPage({
             address_state: data.uf || prev.address_state,
           }))
         } else {
-          setCepError('CEP nao encontrado')
+          setCepError('CEP nao encontrado. Preencha o endereco manualmente.')
         }
       })
     }
