@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { Plus, MoreHorizontal, Pencil, Trash2, Users, Star, CalendarDays, FileSignature, Shield, Link2, Copy, Check, Loader2, ClipboardList } from 'lucide-react'
+import { Plus, MoreHorizontal, Pencil, Trash2, Users, Star, CalendarDays, FileSignature, Shield, Link2, Copy, Check, Loader2, ClipboardList, CheckCircle2, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -33,7 +33,8 @@ import {
 } from '@/hooks/useJobTeam'
 import { useUserRole, APPROVAL_PDF_ROLES } from '@/hooks/useUserRole'
 import { useJobAccess } from '@/hooks/useJobAccess'
-import { useCrewRegistrations, useToggleCrewRegistration } from '@/hooks/useCrewRegistration'
+import { useCrewRegistrations, useToggleCrewRegistration, useApproveCrewRegistration } from '@/hooks/useCrewRegistration'
+import type { CrewRegistrationStatus } from '@/hooks/useCrewRegistration'
 import { FEE_VIEW_ROLES } from '@/lib/access-control-map'
 import { ApiRequestError } from '@/lib/api'
 import { TEAM_ROLE_LABELS, HIRING_STATUS_LABELS } from '@/lib/constants'
@@ -373,11 +374,26 @@ export function TabEquipe({ job }: TabEquipeProps) {
 
 // --- Secao de cadastro de equipe (link publico) ---
 
+function CrewStatusBadge({ status }: { status: CrewRegistrationStatus }) {
+  const config: Record<CrewRegistrationStatus, { label: string; className: string }> = {
+    pendente: { label: 'Pendente', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
+    aprovado: { label: 'Aprovado', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+    reprovado: { label: 'Reprovado', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
+  }
+  const c = config[status] ?? config.pendente
+  return (
+    <Badge variant="secondary" className={`text-[10px] ${c.className}`}>
+      {c.label}
+    </Badge>
+  )
+}
+
 function CrewRegistrationSection({ job }: { job: JobDetail }) {
   const [copied, setCopied] = useState(false)
   const token = job.crew_registration_token
   const enabled = job.crew_registration_enabled
   const toggleMutation = useToggleCrewRegistration()
+  const approveMutation = useApproveCrewRegistration()
   const { data: crewData } = useCrewRegistrations(job.id)
 
   const registrations = crewData?.registrations ?? []
@@ -402,6 +418,19 @@ function CrewRegistrationSection({ job }: { job: JobDetail }) {
     setCopied(true)
     toast.success('Link copiado!')
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  async function handleApprove(registrationId: string, action: 'approve' | 'reject') {
+    try {
+      await approveMutation.mutateAsync({
+        registration_id: registrationId,
+        action,
+        job_id: job.id,
+      })
+      toast.success(action === 'approve' ? 'Profissional aprovado e adicionado a equipe!' : 'Cadastro reprovado')
+    } catch {
+      toast.error(action === 'approve' ? 'Erro ao aprovar' : 'Erro ao reprovar')
+    }
   }
 
   return (
@@ -461,11 +490,13 @@ function CrewRegistrationSection({ job }: { job: JobDetail }) {
                 <TableHead className="text-right">Cache/dia</TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead className="text-center hidden sm:table-cell">Tipo</TableHead>
+                <TableHead className="text-center">Status</TableHead>
+                <TableHead className="text-center">Acoes</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {registrations.map((r) => (
-                <TableRow key={r.id}>
+                <TableRow key={r.id} className={r.status === 'reprovado' ? 'opacity-50' : ''}>
                   <TableCell className="font-medium text-sm">{r.full_name}</TableCell>
                   <TableCell>
                     <span className="text-xs text-muted-foreground">{r.job_role}</span>
@@ -481,6 +512,41 @@ function CrewRegistrationSection({ job }: { job: JobDetail }) {
                     <Badge variant="secondary" className="text-[10px]">
                       {r.is_veteran ? 'Veterano' : 'Novo'}
                     </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <CrewStatusBadge status={r.status} />
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {r.status === 'pendente' ? (
+                      <div className="flex items-center justify-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
+                          onClick={() => handleApprove(r.id, 'approve')}
+                          disabled={approveMutation.isPending}
+                          title="Aprovar — adiciona a equipe"
+                        >
+                          {approveMutation.isPending ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="size-4" />
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          onClick={() => handleApprove(r.id, 'reject')}
+                          disabled={approveMutation.isPending}
+                          title="Reprovar"
+                        >
+                          <XCircle className="size-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

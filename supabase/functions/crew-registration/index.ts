@@ -8,11 +8,13 @@ import { handlePublicInfo } from './handlers/public-info.ts'
 import { handlePublicLookup } from './handlers/public-lookup.ts'
 import { handlePublicSubmit } from './handlers/public-submit.ts'
 import { handleListRegistrations } from './handlers/list-registrations.ts'
+import { handleApproveRegistration } from './handlers/approve.ts'
 
 // Roteamento:
 //
 // --- AUTENTICADAS ---
 // POST /crew-registration/enable                       -> enable
+// POST /crew-registration/approve                      -> approve
 // GET  /crew-registration/registrations/:jobId        -> list-registrations
 //
 // --- PUBLICAS (sem auth) ---
@@ -48,6 +50,13 @@ Deno.serve(async (req: Request) => {
     // ----------------------------------------------------------------
     if (segment1 === 'enable' && !segment2 && method === 'POST') {
       return await handleEnable(req)
+    }
+
+    // ----------------------------------------------------------------
+    // POST /crew-registration/approve (autenticado)
+    // ----------------------------------------------------------------
+    if (segment1 === 'approve' && !segment2 && method === 'POST') {
+      return await handleApproveRegistration(req)
     }
 
     // ----------------------------------------------------------------

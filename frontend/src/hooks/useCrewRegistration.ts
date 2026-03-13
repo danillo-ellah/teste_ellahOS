@@ -8,6 +8,8 @@ import { jobKeys } from '@/lib/query-keys'
 // Tipos
 // ---------------------------------------------------------------------------
 
+export type CrewRegistrationStatus = 'pendente' | 'aprovado' | 'reprovado'
+
 export interface CrewRegistration {
   id: string
   full_name: string
@@ -18,6 +20,8 @@ export interface CrewRegistration {
   total: number
   is_veteran: boolean
   vendor_id: string | null
+  status: CrewRegistrationStatus
+  approved_at: string | null
   created_at: string
 }
 
@@ -68,6 +72,24 @@ export function useToggleCrewRegistration() {
         'enable',
       ),
     onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: jobKeys.detail(variables.job_id) })
+    },
+  })
+}
+
+export function useApproveCrewRegistration() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: (payload: { registration_id: string; action: 'approve' | 'reject'; job_id: string }) =>
+      apiMutate<{ status: string }>(
+        'crew-registration',
+        'POST',
+        { registration_id: payload.registration_id, action: payload.action },
+        'approve',
+      ),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: crewKeys.registrations(variables.job_id) })
       qc.invalidateQueries({ queryKey: jobKeys.detail(variables.job_id) })
     },
   })

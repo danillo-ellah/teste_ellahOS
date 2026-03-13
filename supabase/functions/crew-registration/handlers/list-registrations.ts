@@ -41,7 +41,7 @@ export async function handleListRegistrations(
   const { data: registrations, error: listError } = await supabase
     .from('job_crew_registrations')
     .select(
-      'id, full_name, email, job_role, num_days, daily_rate, is_veteran, vendor_id, notes, created_at',
+      'id, full_name, email, job_role, num_days, daily_rate, is_veteran, vendor_id, notes, status, approved_at, created_at',
     )
     .eq('job_id', jobId)
     .is('deleted_at', null)
