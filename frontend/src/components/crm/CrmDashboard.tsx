@@ -277,12 +277,12 @@ export function CrmDashboard() {
       {/* ------------------------------------------------------------------ */}
       {/* 3 cards de KPI                                                       */}
       {/* ------------------------------------------------------------------ */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
         {/* Pipeline ativo */}
-        <Card>
+        <Card className="rounded-xl">
           <CardContent className="p-5">
-            <p className="text-xs font-medium text-muted-foreground">Pipeline Ativo</p>
-            <p className="mt-1.5 text-2xl font-bold leading-none">
+            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Pipeline Ativo</p>
+            <p className="mt-2 text-2xl font-bold leading-none tabular-nums">
               {formatShortCurrency(pipeline_summary.total_value)}
             </p>
             <p className="mt-1.5 text-sm text-muted-foreground">
@@ -296,14 +296,14 @@ export function CrmDashboard() {
         </Card>
 
         {/* Esse mes */}
-        <Card>
+        <Card className="rounded-xl">
           <CardContent className="p-5">
-            <p className="text-xs font-medium text-muted-foreground">Esse Mes</p>
-            <p className="mt-1.5 text-2xl font-bold leading-none">
+            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Esse Mes</p>
+            <p className="mt-2 text-2xl font-bold leading-none tabular-nums">
               {month_summary.jobs_closed} fechado{month_summary.jobs_closed !== 1 ? 's' : ''}
             </p>
             <div className="mt-1.5 flex items-center gap-2">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground tabular-nums">
                 {formatShortCurrency(month_summary.revenue)}
               </p>
               <PctBadge pct={month_summary.vs_last_month_revenue_pct} />
@@ -312,13 +312,13 @@ export function CrmDashboard() {
         </Card>
 
         {/* Alertas */}
-        <Card className={alerts_count > 0 ? 'border-amber-400/50 bg-amber-500/5' : ''}>
+        <Card className={`rounded-xl ${alerts_count > 0 ? 'border-amber-400/50 bg-amber-500/5' : ''}`}>
           <CardContent className="p-5">
-            <p className="text-xs font-medium text-muted-foreground">
+            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
               {alerts_count > 0 ? 'Atencao!' : 'Alertas'}
             </p>
             <p
-              className={`mt-1.5 text-2xl font-bold leading-none ${
+              className={`mt-2 text-2xl font-bold leading-none tabular-nums ${
                 alerts_count > 0 ? 'text-amber-600 dark:text-amber-400' : ''
               }`}
             >

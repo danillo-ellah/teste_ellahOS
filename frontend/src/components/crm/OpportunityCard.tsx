@@ -69,8 +69,8 @@ export const OpportunityCard = memo(function OpportunityCard({ opportunity, onCl
       onClick={onClick}
       aria-label={`Ver detalhes: ${opportunity.title}`}
       className={cn(
-        'group flex flex-col gap-2 rounded-md border bg-card p-3.5 text-left shadow-sm transition-all',
-        'hover:border-primary/40 hover:shadow-md',
+        'group flex flex-col gap-2.5 rounded-lg border bg-card p-3.5 text-left shadow-sm transition-all',
+        'hover:border-primary/40 hover:shadow-md active:scale-[0.98]',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
       )}
     >

@@ -21,14 +21,14 @@ export default function CrmDetailPage({ params }: CrmDetailPageProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Breadcrumb — ALTO-01: removed duplicate back button */}
+      {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Link
           href="/crm"
-          className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+          className="flex items-center gap-1.5 hover:text-foreground transition-colors min-h-[44px] sm:min-h-0"
         >
-          <ArrowLeft className="size-3.5" />
-          <Target className="size-3.5" />
+          <ArrowLeft className="size-4 sm:size-3.5" />
+          <Target className="size-3.5 hidden sm:block" />
           Comercial
         </Link>
         <ChevronRight className="size-3.5" />

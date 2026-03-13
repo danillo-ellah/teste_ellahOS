@@ -569,17 +569,17 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Formulario de adicao — CRIT-04: label + botao com texto */}
-              <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
+              <div className="space-y-2.5 rounded-xl border bg-muted/20 p-3.5">
                 <div>
-                  <p className="text-xs font-medium mb-0.5">Registrar atividade</p>
-                  <p className="text-xs text-muted-foreground mb-2">Anote ligacoes, emails, reunioes e follow-ups</p>
+                  <p className="text-xs font-semibold mb-0.5">Registrar atividade</p>
+                  <p className="text-[11px] text-muted-foreground">Anote ligacoes, emails, reunioes e follow-ups</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <Select
                     value={activityType}
                     onValueChange={(v) => setActivityType(v as AddActivityPayload['activity_type'])}
                   >
-                    <SelectTrigger className="h-9 w-36 text-xs" aria-label="Tipo de atividade">
+                    <SelectTrigger className="h-10 sm:h-9 sm:w-36 text-xs" aria-label="Tipo de atividade">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -594,7 +594,7 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
                   <div className="flex flex-1 gap-2">
                     <Textarea
                       rows={2}
-                      className="min-h-9 resize-none text-xs"
+                      className="min-h-10 sm:min-h-9 resize-none text-xs"
                       placeholder="O que aconteceu?"
                       value={activityText}
                       onChange={(e) => setActivityText(e.target.value)}
@@ -608,7 +608,7 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
                     />
                     <Button
                       size="sm"
-                      className="h-9 shrink-0 gap-1.5 px-3"
+                      className="h-10 sm:h-9 shrink-0 gap-1.5 px-3"
                       onClick={handleAddActivity}
                       disabled={addActivityMutation.isPending || !activityText.trim()}
                     >
@@ -690,7 +690,7 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
               {isActive && nextStage && (
                 <Button
                   size="sm"
-                  className="w-full gap-1.5 h-9"
+                  className="w-full gap-1.5 h-11 sm:h-9 text-sm"
                   onClick={handleMoveStage}
                   disabled={updateMutation.isPending}
                 >
@@ -711,7 +711,7 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
                   <Button
                     size="sm"
                     variant="default"
-                    className="w-full gap-1.5 h-9 bg-emerald-600 hover:bg-emerald-700"
+                    className="w-full gap-1.5 h-11 sm:h-9 text-sm bg-emerald-600 hover:bg-emerald-700"
                     onClick={() => setConvertOpen(true)}
                   >
                     <Briefcase className="size-3.5" />
@@ -724,7 +724,7 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full gap-2 h-9 text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 dark:border-emerald-800 dark:hover:bg-emerald-950"
+                  className="w-full gap-2 h-11 sm:h-9 text-sm text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 dark:border-emerald-800 dark:hover:bg-emerald-950"
                   asChild
                 >
                   <a href={whatsappHref} target="_blank" rel="noopener noreferrer">
@@ -798,7 +798,7 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
                     <Button
                       size="sm"
                       variant="outline"
-                      className="w-full gap-1.5 h-9"
+                      className="w-full gap-1.5 h-11 sm:h-9 text-sm"
                       onClick={handlePause}
                       disabled={updateMutation.isPending}
                     >
@@ -811,7 +811,7 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
                   <Button
                     size="sm"
                     variant="outline"
-                    className="w-full gap-1.5 h-9 border-red-200 text-destructive hover:bg-destructive/10 hover:text-destructive dark:border-red-800"
+                    className="w-full gap-1.5 h-11 sm:h-9 text-sm border-red-200 text-destructive hover:bg-destructive/10 hover:text-destructive dark:border-red-800"
                     onClick={() => setLossOpen(true)}
                   >
                     <XCircle className="size-3.5" />

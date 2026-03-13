@@ -53,26 +53,26 @@ export default function CrmPage() {
             variant="outline"
             size="sm"
             onClick={() => refetch()}
-            className="gap-2"
+            className="gap-2 min-h-[44px] sm:min-h-0"
           >
             <RefreshCw className="size-3.5" />
-            Atualizar
+            <span className="hidden sm:inline">Atualizar</span>
           </Button>
 
           <Button
             variant="outline"
             size="sm"
             onClick={() => setStatsDialogOpen(true)}
-            className="gap-2"
+            className="gap-2 min-h-[44px] sm:min-h-0"
           >
             <BarChart3 className="size-3.5" />
-            Metricas
+            <span className="hidden sm:inline">Metricas</span>
           </Button>
 
           <Button
             size="sm"
             onClick={() => setCreateDialogOpen(true)}
-            className="gap-2"
+            className="gap-2 min-h-[44px] sm:min-h-0"
           >
             <Plus className="size-3.5" />
             Nova Oportunidade
@@ -90,12 +90,12 @@ export default function CrmPage() {
 
       {/* Filtros + toggle de visualizacao */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-sm text-muted-foreground">Visualizar:</span>
+        <span className="text-sm text-muted-foreground hidden sm:inline">Visualizar:</span>
         <button
           onClick={() => setIncludeClosed(false)}
-          className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors min-h-[36px] ${
+          className={`rounded-full px-4 py-2 text-xs font-medium transition-colors min-h-[44px] sm:min-h-0 sm:py-1.5 sm:px-3 ${
             !includeClosed
-              ? 'bg-primary text-primary-foreground'
+              ? 'bg-primary text-primary-foreground shadow-sm'
               : 'bg-muted text-muted-foreground hover:bg-muted/80'
           }`}
         >
@@ -103,9 +103,9 @@ export default function CrmPage() {
         </button>
         <button
           onClick={() => setIncludeClosed(true)}
-          className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors min-h-[36px] ${
+          className={`rounded-full px-4 py-2 text-xs font-medium transition-colors min-h-[44px] sm:min-h-0 sm:py-1.5 sm:px-3 ${
             includeClosed
-              ? 'bg-primary text-primary-foreground'
+              ? 'bg-primary text-primary-foreground shadow-sm'
               : 'bg-muted text-muted-foreground hover:bg-muted/80'
           }`}
         >
@@ -114,12 +114,12 @@ export default function CrmPage() {
 
         <div className="flex-1" />
         {/* Toggle Kanban / Lista */}
-        <div className="flex items-center rounded-lg border p-0.5">
+        <div className="flex items-center rounded-lg border bg-muted/30 p-0.5">
           <button
             onClick={() => setViewMode('kanban')}
-            className={`flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-colors min-h-[36px] ${
+            className={`flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-all min-h-[44px] sm:min-h-0 ${
               viewMode === 'kanban'
-                ? 'bg-primary text-primary-foreground'
+                ? 'bg-primary text-primary-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -128,9 +128,9 @@ export default function CrmPage() {
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-colors min-h-[36px] ${
+            className={`flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-all min-h-[44px] sm:min-h-0 ${
               viewMode === 'list'
-                ? 'bg-primary text-primary-foreground'
+                ? 'bg-primary text-primary-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >

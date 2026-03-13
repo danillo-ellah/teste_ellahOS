@@ -8,6 +8,7 @@ import {
   ChevronUp,
   ChevronsUpDown,
   Shield,
+  Target,
   User,
 } from 'lucide-react'
 import {
@@ -225,17 +226,19 @@ export function CrmListView({ pipeline, includeClosed, onOpportunityClick }: Crm
 
   if (sorted.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-        <p className="text-sm">Nenhuma oportunidade encontrada.</p>
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <Target className="size-10 text-muted-foreground/30 mb-3" />
+        <p className="text-sm font-medium text-muted-foreground">Nenhuma oportunidade encontrada</p>
+        <p className="text-xs text-muted-foreground/70 mt-1">Tente ajustar os filtros ou crie uma nova oportunidade</p>
       </div>
     )
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border">
+    <div className="overflow-x-auto rounded-xl border">
       <Table>
         <TableHeader>
-          <TableRow className="hover:bg-transparent">
+          <TableRow className="hover:bg-transparent bg-muted/30">
             {COLUMNS.map((col) => (
               <TableHead
                 key={col.key}

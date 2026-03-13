@@ -217,15 +217,17 @@ export function CrmKanban({ pipeline, includeClosed }: CrmKanbanProps) {
   if (pipeline.total_opportunities === 0) {
     return (
       <>
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Target className="size-12 text-muted-foreground/30 mb-4" />
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="rounded-2xl bg-muted/50 p-5 mb-5">
+            <Target className="size-10 text-muted-foreground/40" />
+          </div>
           <h2 className="text-lg font-semibold">Nenhuma oportunidade cadastrada</h2>
-          <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+          <p className="mt-2 max-w-sm text-sm text-muted-foreground leading-relaxed">
             Registre aqui consultas e negociacoes da produtora. Cada oportunidade representa um potencial job.
           </p>
           <Button
             size="default"
-            className="mt-6 gap-2"
+            className="mt-6 gap-2 h-11"
             onClick={() => setCreateInStage('lead')}
           >
             <Plus className="size-4" />
@@ -484,10 +486,10 @@ const KanbanColumn = memo(function KanbanColumn({
       )}
     >
       {/* Header da coluna */}
-      <div className="flex items-center justify-between px-3 py-3">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">{config.label}</span>
-          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">
+      <div className="flex items-center justify-between px-3 py-2.5">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-sm font-semibold">{config.label}</span>
+          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-[11px] font-semibold text-muted-foreground">
             {items.length}
           </span>
           {isOver && transitionValid && (
@@ -498,12 +500,12 @@ const KanbanColumn = memo(function KanbanColumn({
         </div>
         <div className="flex items-center gap-1.5">
           {formattedValue && (
-            <span className="text-xs font-medium text-muted-foreground">{formattedValue}</span>
+            <span className="text-[11px] font-semibold text-muted-foreground tabular-nums">{formattedValue}</span>
           )}
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className="h-9 w-9 rounded-lg"
             onClick={onAddClick}
             title={`Nova oportunidade em ${config.label}`}
           >

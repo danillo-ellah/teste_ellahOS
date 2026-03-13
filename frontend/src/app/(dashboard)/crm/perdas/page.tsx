@@ -118,17 +118,17 @@ interface KpiCardProps {
 
 function KpiCard({ label, value, sub, highlight }: KpiCardProps) {
   return (
-    <Card className={highlight ? 'border-red-400/40 bg-red-500/5' : undefined}>
+    <Card className={`rounded-xl ${highlight ? 'border-red-400/40 bg-red-500/5' : ''}`}>
       <CardContent className="p-4">
-        <p className="text-xs text-muted-foreground mb-1">{label}</p>
+        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">{label}</p>
         <p
-          className={`text-2xl font-bold tabular-nums truncate ${
+          className={`text-xl sm:text-2xl font-bold tabular-nums truncate ${
             highlight ? 'text-red-600 dark:text-red-400' : ''
           }`}
         >
           {value}
         </p>
-        {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
+        {sub && <p className="text-[11px] text-muted-foreground mt-0.5">{sub}</p>}
       </CardContent>
     </Card>
   )
@@ -384,23 +384,23 @@ export default function CrmPerdasPage() {
       {data && (
         <>
           {/* KPI Cards */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
             <KpiCard
               label="Total Perdidas"
               value={String(data.kpis.total_lost)}
               highlight={data.kpis.total_lost > 0}
             />
             <KpiCard
-              label="Valor Total Perdido"
+              label="Valor Perdido"
               value={formatCurrency(data.kpis.total_lost_value)}
             />
             <KpiCard
               label="Taxa de Perda"
               value={`${data.kpis.loss_rate.toFixed(1)}%`}
-              sub="do total de oportunidades fechadas"
+              sub="do total fechadas"
             />
             <KpiCard
-              label="Principal Concorrente"
+              label="Top Concorrente"
               value={data.kpis.top_competitor ?? '—'}
             />
           </div>

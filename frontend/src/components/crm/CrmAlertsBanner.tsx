@@ -66,11 +66,11 @@ export function CrmAlertsBanner() {
   const shown = expanded ? data.alerts : preview
 
   return (
-    <div className="rounded-lg border border-amber-300/50 bg-amber-500/5 dark:border-amber-700/50 dark:bg-amber-900/10">
+    <div className="rounded-xl border border-amber-300/50 bg-amber-500/5 dark:border-amber-700/50 dark:bg-amber-900/10">
       {/* Header */}
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="flex w-full items-center gap-2 px-4 py-2.5 text-left"
+        className="flex w-full items-center gap-2 px-4 py-3 text-left min-h-[44px]"
       >
         <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400 shrink-0" />
         <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
@@ -96,7 +96,7 @@ export function CrmAlertsBanner() {
       {!expanded && remaining > 0 && (
         <button
           onClick={() => setExpanded(true)}
-          className="w-full px-4 py-1.5 text-center text-xs text-amber-600 dark:text-amber-400 hover:underline"
+          className="w-full px-4 py-2.5 text-center text-xs font-medium text-amber-600 dark:text-amber-400 hover:underline min-h-[44px]"
         >
           + {remaining} alerta{remaining !== 1 ? 's' : ''}
         </button>
@@ -118,39 +118,15 @@ function AlertRow({
 }) {
   return (
     <div
-      className="flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-amber-500/5 transition-colors"
+      className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-amber-500/5 transition-colors min-h-[44px]"
+      role="button"
+      tabIndex={0}
       onClick={() => router.push(`/crm/${alert.opportunity_id}`)}
+      onKeyDown={(e) => e.key === 'Enter' && router.push(`/crm/${alert.opportunity_id}`)}
     >
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{alert.title}</p>
-        <div className="flex items-center gap-1.5 mt-0.5">
-          {alert.agency_name && (
-            <span className="text-xs text-muted-foreground truncate max-w-[120px]">
-              {alert.agency_name}
-            </span>
-          )}
-          {alert.agency_name && alert.assigned_name && (
-            <span className="text-xs text-muted-foreground">·</span>
-          )}
-          {alert.assigned_name && (
-            <span className="text-xs text-muted-foreground truncate max-w-[100px]">
-              {alert.assigned_name}
-            </span>
-          )}
-          {alert.response_deadline && (
-            <>
-              <span className="text-xs text-muted-foreground">·</span>
-              <span className="text-xs text-muted-foreground">
-                Retorno: {formatDate(alert.response_deadline)}
-              </span>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Badges de alerta + acao sugerida — ALTO-05 */}
-      <div className="flex flex-col items-end gap-0.5 shrink-0">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
           {alert.alert_types.map((type) => {
             const cfg = ALERT_CONFIG[type]
             return (
@@ -165,20 +141,30 @@ function AlertRow({
               </Badge>
             )
           })}
+          {alert.agency_name && (
+            <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+              {alert.agency_name}
+            </span>
+          )}
+          {alert.response_deadline && (
+            <>
+              <span className="text-xs text-muted-foreground hidden sm:inline">·</span>
+              <span className="text-xs text-muted-foreground">
+                Retorno: {formatDate(alert.response_deadline)}
+              </span>
+            </>
+          )}
         </div>
-        <span className="text-[10px] text-muted-foreground max-w-[200px] text-right truncate">
-          {ALERT_CONFIG[alert.alert_types[0]]?.action}
-        </span>
       </div>
 
       {/* Valor */}
       {alert.estimated_value != null && (
-        <span className="text-xs font-medium tabular-nums text-muted-foreground shrink-0">
+        <span className="text-xs font-semibold tabular-nums shrink-0 hidden sm:block">
           {formatCurrency(alert.estimated_value)}
         </span>
       )}
 
-      <ExternalLink className="size-3.5 text-muted-foreground/50 shrink-0" />
+      <ExternalLink className="size-3.5 text-muted-foreground/40 shrink-0" />
     </div>
   )
 }
