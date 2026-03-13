@@ -110,6 +110,12 @@ export interface Job {
   sub_status: PosSubStatus | null // API: "sub_status" -> banco: "pos_sub_status"
   priority: PriorityLevel // API: "priority" -> banco: "priority_level"
   health_score: number | null
+  health_score_details: {
+    setup: { score: number; max: number; items: Record<string, boolean> }
+    team: { score: number; max: number; items: Record<string, boolean> }
+    financial: { score: number; max: number; items: Record<string, boolean> }
+    timeline: { score: number; max: number; items: Record<string, boolean> }
+  } | null
 
   // Datas
   expected_start_date: string | null

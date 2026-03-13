@@ -276,7 +276,7 @@ export function JobsTable({
 
                 {/* === CELULA 4: Health === */}
                 <TableCell className="px-2 py-2.5 w-20 text-center">
-                  <HealthBar score={job.health_score} />
+                  <HealthBar score={job.health_score} details={job.health_score_details} />
                 </TableCell>
 
                 {/* === Acoes === */}
