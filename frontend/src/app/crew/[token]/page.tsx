@@ -8,6 +8,8 @@ import {
   ChevronDown,
   ChevronUp,
   Users,
+  ChevronsUpDown,
+  Check,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,6 +22,20 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import { cn } from '@/lib/utils'
 
 // ---------------------------------------------------------------------------
 // Constantes
@@ -29,20 +45,21 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const EF_BASE = `${SUPABASE_URL}/functions/v1/crew-registration/public`
 
+// Lista de funcoes — DEVE estar sincronizada com backend (handlers/job-roles.ts)
 const JOB_ROLES = [
   'Diretor de Cena',
   'Roteirista',
   'Atendimento',
-  'Produtor(a) de Locacao',
-  'Diretor de Producao',
-  'Coordenador de Producao',
+  'Produtor(a) de Locação',
+  'Diretor de Produção',
+  'Coordenador de Produção',
   'Produtor',
-  'Assistente de Producao I',
-  'Assistente de Producao II',
-  'Assistente de Producao III',
-  'Assistente de Producao IV',
+  'Assistente de Produção I',
+  'Assistente de Produção II',
+  'Assistente de Produção III',
+  'Assistente de Produção IV',
   'Produtor de Casting',
-  'Produtor de Locacao',
+  'Produtor de Locação',
   'Diretor de Arte',
   'Assistente de Arte',
   'Ajudante de Arte I',
@@ -53,7 +70,7 @@ const JOB_ROLES = [
   'Contra Regra',
   'Assistente de Contra Regra',
   'Retirada de Arte',
-  'Devolucao de Arte',
+  'Devolução de Arte',
   'Efeitista',
   'Produtor de Figurino',
   'Assistente de Figurino I',
@@ -64,38 +81,38 @@ const JOB_ROLES = [
   'Cabelereiro(a)',
   'Make/Hair',
   'Assistente de Make',
-  'Assistente de Direcao I',
-  'Assistente de Direcao II',
+  'Assistente de Direção I',
+  'Assistente de Direção II',
   'Logger / Script Supervisor',
   'Diretor de Fotografia',
-  'Operador de Camera',
-  'Assistente de Camera I',
-  'Assistente de Camera II',
+  'Operador de Câmera',
+  'Assistente de Câmera I',
+  'Assistente de Câmera II',
   'DIT',
   'Video Assist',
   'Making Of',
-  'Chefe de Eletrica (Gaffer)',
-  'Assistente de Eletrica I',
-  'Assistente de Eletrica II',
-  'Chefe de Maquinaria',
-  'Assistente de Maquinaria I',
-  'Assistente de Maquinaria II',
+  'Chefe de Elétrica (Gaffer)',
+  'Assistente de Elétrica I',
+  'Assistente de Elétrica II',
+  'Chefe de Maquinária',
+  'Assistente de Maquinária I',
+  'Assistente de Maquinária II',
   'Operador de Ronin / Steadicam',
   'Operador de Drone',
-  'Tecnico de Som Direto',
+  'Técnico de Som Direto',
   'Microfonista',
   'Assistente de Som',
   'Motorista',
-  'Fotografo Still',
-  'Assistente de Fotografo',
-  'Coordenador de Pos',
-  'Editor de Video',
+  'Fotógrafo Still',
+  'Assistente de Fotógrafo',
+  'Coordenador de Pós',
+  'Editor de Vídeo',
   'Finalizador / VFX',
   'Motion Designer',
   'Colorista',
-  'Designer Grafico',
-  'Tecnico de Audio',
-  'Responsavel por Condecine',
+  'Designer Gráfico',
+  'Técnico de Áudio',
+  'Responsável por Condecine',
   'Advogado',
   'Geradorista',
   'Outros',
@@ -174,6 +191,15 @@ async function publicGet<T>(path: string): Promise<T> {
   return json.data as T
 }
 
+// Erro estruturado da API com detalhes de campo
+class ApiValidationError extends Error {
+  issues: Array<{ field: string; message: string }>
+  constructor(message: string, issues: Array<{ field: string; message: string }>) {
+    super(message)
+    this.issues = issues
+  }
+}
+
 async function publicPost<T>(path: string, body: Record<string, unknown>): Promise<T> {
   const res = await fetch(`${EF_BASE}/${path}`, {
     method: 'POST',
@@ -186,6 +212,10 @@ async function publicPost<T>(path: string, body: Record<string, unknown>): Promi
   const json = await res.json()
   if (!res.ok || json?.error) {
     const err = json?.error || {}
+    const issues = err.details?.issues as Array<{ field: string; message: string }> | undefined
+    if (issues?.length) {
+      throw new ApiValidationError(err.message || 'Erro de validacao', issues)
+    }
     throw new Error(err.message || 'Erro ao processar solicitacao')
   }
   return json.data as T
@@ -208,12 +238,29 @@ function maskCpf(v: string) {
     .slice(0, 14)
 }
 
-function maskPhone(v: string) {
-  const d = v.replace(/\D/g, '').slice(0, 11)
-  if (d.length <= 10) {
-    return d.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3').trim()
-  }
-  return d.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3').trim()
+function maskCnpj(v: string) {
+  return v
+    .replace(/\D/g, '')
+    .replace(/(\d{2})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1/$2')
+    .replace(/(\d{4})(\d{1,2})$/, '$1-$2')
+    .slice(0, 18)
+}
+
+// Formata digitos puros para exibicao de telefone
+function formatPhone(digits: string): string {
+  const d = digits.slice(0, 11)
+  if (d.length === 0) return ''
+  if (d.length <= 2) return `(${d}`
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
+}
+
+// Extrai apenas digitos de qualquer entrada
+function phoneDigits(v: string): string {
+  return v.replace(/\D/g, '').slice(0, 11)
 }
 
 function formatBRL(value: number): string {
@@ -245,12 +292,14 @@ async function fetchCep(cep: string): Promise<{
 interface FormState {
   // Participacao no job
   job_role: JobRole | ''
+  job_role_custom: string // texto livre quando "Outros" selecionado
   num_days: string
   daily_rate: string
   // Dados pessoais
   full_name: string
   entity_type: 'pf' | 'pj'
   cpf: string
+  cnpj: string
   rg: string
   birth_date: string
   drt: string
@@ -278,11 +327,13 @@ interface FormState {
 function emptyForm(email = ''): FormState {
   return {
     job_role: '',
+    job_role_custom: '',
     num_days: '',
     daily_rate: '',
     full_name: '',
     entity_type: 'pf',
     cpf: '',
+    cnpj: '',
     rg: '',
     birth_date: '',
     drt: '',
@@ -426,11 +477,12 @@ export default function CrewRegistrationPage({
           full_name: data.full_name || '',
           entity_type: data.entity_type || 'pf',
           cpf: data.cpf ? maskCpf(data.cpf) : '',
+          cnpj: data.cnpj ? maskCnpj(data.cnpj) : '',
           rg: data.rg || '',
           birth_date: data.birth_date || '',
           drt: data.drt || '',
           ctps: data.ctps || '',
-          phone: data.phone ? maskPhone(data.phone) : '',
+          phone: data.phone ? phoneDigits(data.phone) : '',
           zip_code: data.zip_code ? maskCep(data.zip_code) : '',
           address_street: data.address_street || '',
           address_number: data.address_number || '',
@@ -468,6 +520,9 @@ export default function CrewRegistrationPage({
     const errors: Record<string, string> = {}
 
     if (!form.job_role) errors.job_role = 'Selecione a funcao'
+    if (form.job_role === 'Outros' && !form.job_role_custom.trim()) {
+      errors.job_role_custom = 'Descreva a funcao'
+    }
 
     const days = Number(form.num_days)
     if (!form.num_days || isNaN(days) || days < 1) {
@@ -482,9 +537,16 @@ export default function CrewRegistrationPage({
     if (!isVeteran || showVeteranEdit) {
       if (!form.full_name.trim()) errors.full_name = 'Nome e obrigatorio'
 
-      const cpfDigits = form.cpf.replace(/\D/g, '')
-      if (cpfDigits && cpfDigits.length !== 11) {
-        errors.cpf = 'CPF deve ter 11 digitos'
+      if (form.entity_type === 'pf') {
+        const cpfDigits = form.cpf.replace(/\D/g, '')
+        if (cpfDigits && cpfDigits.length !== 11) {
+          errors.cpf = 'CPF deve ter 11 digitos'
+        }
+      } else {
+        const cnpjDigits = form.cnpj.replace(/\D/g, '')
+        if (cnpjDigits && cnpjDigits.length !== 14) {
+          errors.cnpj = 'CNPJ deve ter 14 digitos'
+        }
       }
 
       if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
@@ -492,7 +554,23 @@ export default function CrewRegistrationPage({
       }
     }
 
+    // Dados bancarios obrigatorios para novo freelancer
+    if (!isVeteran) {
+      if (!form.pix_key_type) errors.pix_key_type = 'Selecione o tipo de chave PIX'
+      if (!form.pix_key.trim()) errors.pix_key = 'Informe a chave PIX'
+    }
+
     setFieldErrors(errors)
+
+    // Scroll para o primeiro campo com erro
+    if (Object.keys(errors).length > 0) {
+      const firstErrorField = Object.keys(errors)[0]
+      setTimeout(() => {
+        const el = document.querySelector(`[data-field="${firstErrorField}"]`)
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 50)
+    }
+
     return Object.keys(errors).length === 0
   }
 
@@ -511,6 +589,10 @@ export default function CrewRegistrationPage({
       num_days: days,
       daily_rate: rate,
       email: email.trim().toLowerCase(),
+      // Se "Outros", inclui a funcao customizada nas notas
+      notes: form.job_role === 'Outros' && form.job_role_custom.trim()
+        ? `Funcao sugerida: ${form.job_role_custom.trim()}`
+        : null,
     }
 
     // Incluir dados pessoais/endereco/banco se novo ou se editou
@@ -519,6 +601,7 @@ export default function CrewRegistrationPage({
         full_name: form.full_name.trim(),
         entity_type: form.entity_type,
         cpf: form.cpf.replace(/\D/g, '') || null,
+        cnpj: form.cnpj.replace(/\D/g, '') || null,
         rg: form.rg.trim() || null,
         birth_date: form.birth_date || null,
         drt: form.drt.trim() || null,
@@ -547,7 +630,24 @@ export default function CrewRegistrationPage({
       setResult(data)
       setStep('done')
     } catch (err: unknown) {
-      setSubmitError(err instanceof Error ? err.message : 'Erro ao enviar formulario')
+      if (err instanceof ApiValidationError) {
+        // Mapear erros do backend para campos do formulario
+        const backendErrors: Record<string, string> = {}
+        for (const issue of err.issues) {
+          backendErrors[issue.field] = issue.message
+        }
+        setFieldErrors((prev) => ({ ...prev, ...backendErrors }))
+        setSubmitError(err.message)
+        // Scroll para primeiro campo com erro
+        if (err.issues.length > 0) {
+          setTimeout(() => {
+            const el = document.querySelector(`[data-field="${err.issues[0].field}"]`)
+            el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          }, 50)
+        }
+      } else {
+        setSubmitError(err instanceof Error ? err.message : 'Erro ao enviar formulario')
+      }
     } finally {
       setSubmitting(false)
     }
@@ -719,52 +819,68 @@ export default function CrewRegistrationPage({
             <CardContent className="space-y-4">
 
               <FormField label="Funcao no job" required error={fieldErrors.job_role}>
-                <Select
-                  value={form.job_role}
-                  onValueChange={(v) => setField('job_role', v as JobRole)}
-                  disabled={submitting}
-                >
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder="Selecione sua funcao..." />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-72">
-                    {JOB_ROLES.map((role) => (
-                      <SelectItem key={role} value={role}>
-                        {role}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div data-field="job_role">
+                  <JobRoleCombobox
+                    value={form.job_role}
+                    onSelect={(v) => {
+                      setField('job_role', v as JobRole)
+                      if (v !== 'Outros') setField('job_role_custom', '')
+                    }}
+                    disabled={submitting}
+                  />
+                </div>
               </FormField>
+
+              {form.job_role === 'Outros' && (
+                <FormField label="Descreva sua funcao" required error={fieldErrors.job_role_custom}>
+                  <div data-field="job_role_custom">
+                    <Input
+                      value={form.job_role_custom}
+                      onChange={(e) => setField('job_role_custom', e.target.value)}
+                      placeholder="Ex: Drone FPV, Piloto de grua..."
+                      className="h-11"
+                      maxLength={200}
+                      disabled={submitting}
+                    />
+                  </div>
+                  <p className="text-xs text-zinc-400 mt-1">
+                    Sua sugestao sera avaliada pela producao.
+                  </p>
+                </FormField>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <FormField label="Numero de diarias" required error={fieldErrors.num_days}>
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    value={form.num_days}
-                    onChange={(e) => setField('num_days', e.target.value)}
-                    placeholder="0"
-                    min={1}
-                    className="h-11"
-                    disabled={submitting}
-                  />
+                  <div data-field="num_days">
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      value={form.num_days}
+                      onChange={(e) => setField('num_days', e.target.value)}
+                      placeholder="0"
+                      min={1}
+                      className="h-11"
+                      disabled={submitting}
+                    />
+                  </div>
                 </FormField>
 
                 <FormField label="Cache por diaria (R$)" required error={fieldErrors.daily_rate}>
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    value={form.daily_rate}
-                    onChange={(e) => {
-                      // Permite apenas numeros, ponto e virgula
-                      const v = e.target.value.replace(/[^0-9.,]/g, '')
-                      setField('daily_rate', v)
-                    }}
-                    placeholder="0,00"
-                    className="h-11"
-                    disabled={submitting}
-                  />
+                  <div data-field="daily_rate">
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={form.daily_rate}
+                      onChange={(e) => {
+                        // Permite apenas numeros, ponto e virgula
+                        const v = e.target.value.replace(/[^0-9.,]/g, '')
+                        setField('daily_rate', v)
+                      }}
+                      placeholder="0,00"
+                      className="h-11"
+                      disabled={submitting}
+                    />
+                  </div>
                 </FormField>
               </div>
 
@@ -815,6 +931,7 @@ export default function CrewRegistrationPage({
                   <BankSection
                     form={form}
                     setField={setField}
+                    fieldErrors={fieldErrors}
                     submitting={submitting}
                     showBank={showBank}
                     setShowBank={setShowBank}
@@ -859,13 +976,22 @@ export default function CrewRegistrationPage({
                 </CardContent>
               </Card>
 
-              <BankSection
-                form={form}
-                setField={setField}
-                submitting={submitting}
-                showBank={showBank}
-                setShowBank={setShowBank}
-              />
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Dados Bancarios</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <BankSection
+                    form={form}
+                    setField={setField}
+                    fieldErrors={fieldErrors}
+                    submitting={submitting}
+                    showBank={showBank}
+                    setShowBank={setShowBank}
+                    alwaysOpen
+                  />
+                </CardContent>
+              </Card>
             </>
           )}
 
@@ -939,26 +1065,46 @@ function PersonalDataSection({
       </FormField>
 
       <FormField label="Nome Completo" required error={fieldErrors.full_name}>
-        <Input
-          value={form.full_name}
-          onChange={(e) => setField('full_name', e.target.value)}
-          placeholder="Seu nome completo"
-          className="h-11"
-          disabled={submitting}
-        />
+        <div data-field="full_name">
+          <Input
+            value={form.full_name}
+            onChange={(e) => setField('full_name', e.target.value)}
+            placeholder="Seu nome completo"
+            className="h-11"
+            disabled={submitting}
+          />
+        </div>
       </FormField>
 
-      <FormField label="CPF" error={fieldErrors.cpf}>
-        <Input
-          value={form.cpf}
-          onChange={(e) => setField('cpf', maskCpf(e.target.value))}
-          placeholder="000.000.000-00"
-          inputMode="numeric"
-          maxLength={14}
-          className="h-11"
-          disabled={submitting}
-        />
-      </FormField>
+      {form.entity_type === 'pf' ? (
+        <FormField label="CPF" error={fieldErrors.cpf}>
+          <div data-field="cpf">
+            <Input
+              value={form.cpf}
+              onChange={(e) => setField('cpf', maskCpf(e.target.value))}
+              placeholder="000.000.000-00"
+              inputMode="numeric"
+              maxLength={14}
+              className="h-11"
+              disabled={submitting}
+            />
+          </div>
+        </FormField>
+      ) : (
+        <FormField label="CNPJ" error={fieldErrors.cnpj}>
+          <div data-field="cnpj">
+            <Input
+              value={form.cnpj}
+              onChange={(e) => setField('cnpj', maskCnpj(e.target.value))}
+              placeholder="00.000.000/0000-00"
+              inputMode="numeric"
+              maxLength={18}
+              className="h-11"
+              disabled={submitting}
+            />
+          </div>
+        </FormField>
+      )}
 
       <FormField label="RG">
         <Input
@@ -1017,11 +1163,11 @@ function PersonalDataSection({
 
       <FormField label="Telefone / WhatsApp">
         <Input
-          value={form.phone}
-          onChange={(e) => setField('phone', maskPhone(e.target.value))}
+          value={formatPhone(form.phone)}
+          onChange={(e) => setField('phone', phoneDigits(e.target.value))}
           placeholder="(11) 99999-9999"
           inputMode="tel"
-          maxLength={15}
+          maxLength={16}
           className="h-11"
           disabled={submitting}
         />
@@ -1155,38 +1301,47 @@ function AddressSection({
 function BankSection({
   form,
   setField,
+  fieldErrors,
   submitting,
   showBank,
   setShowBank,
   inline = false,
+  alwaysOpen = false,
 }: {
   form: FormState
   setField: <K extends keyof FormState>(field: K, value: FormState[K]) => void
+  fieldErrors?: Record<string, string>
   submitting: boolean
   showBank: boolean
   setShowBank: (v: boolean) => void
   inline?: boolean
+  alwaysOpen?: boolean
 }) {
+  const isOpen = alwaysOpen || showBank
+  const errors = fieldErrors || {}
+
   const inner = (
     <>
-      <button
-        type="button"
-        onClick={() => setShowBank(!showBank)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-zinc-50 hover:bg-zinc-100 transition-colors text-sm font-medium text-zinc-700"
-        disabled={submitting}
-      >
-        <span>Dados Bancarios (opcional)</span>
-        {showBank ? (
-          <ChevronUp className="size-4 text-zinc-500" />
-        ) : (
-          <ChevronDown className="size-4 text-zinc-500" />
-        )}
-      </button>
+      {!alwaysOpen && (
+        <button
+          type="button"
+          onClick={() => setShowBank(!showBank)}
+          className="w-full flex items-center justify-between px-4 py-3 bg-zinc-50 hover:bg-zinc-100 transition-colors text-sm font-medium text-zinc-700"
+          disabled={submitting}
+        >
+          <span>Dados Bancarios</span>
+          {showBank ? (
+            <ChevronUp className="size-4 text-zinc-500" />
+          ) : (
+            <ChevronDown className="size-4 text-zinc-500" />
+          )}
+        </button>
+      )}
 
-      {showBank && (
-        <div className="p-4 space-y-4 border-t">
+      {isOpen && (
+        <div className={cn('p-4 space-y-4', !alwaysOpen && 'border-t')}>
           <p className="text-xs text-zinc-500">
-            Informe os dados da conta que deseja receber o pagamento.
+            Informe os dados da conta para receber o pagamento. Chave PIX e obrigatoria.
           </p>
 
           <FormField label="Banco">
@@ -1240,34 +1395,38 @@ function BankSection({
             </Select>
           </FormField>
 
-          <FormField label="Tipo de Chave PIX">
-            <Select
-              value={form.pix_key_type}
-              onValueChange={(v) => setField('pix_key_type', v)}
-              disabled={submitting}
-            >
-              <SelectTrigger className="h-11">
-                <SelectValue placeholder="Selecione..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cpf">CPF</SelectItem>
-                <SelectItem value="cnpj">CNPJ</SelectItem>
-                <SelectItem value="email">E-mail</SelectItem>
-                <SelectItem value="telefone">Telefone</SelectItem>
-                <SelectItem value="aleatoria">Chave Aleatoria</SelectItem>
-              </SelectContent>
-            </Select>
+          <FormField label="Tipo de Chave PIX" required error={errors.pix_key_type}>
+            <div data-field="pix_key_type">
+              <Select
+                value={form.pix_key_type}
+                onValueChange={(v) => setField('pix_key_type', v)}
+                disabled={submitting}
+              >
+                <SelectTrigger className="h-11">
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cpf">CPF</SelectItem>
+                  <SelectItem value="cnpj">CNPJ</SelectItem>
+                  <SelectItem value="email">E-mail</SelectItem>
+                  <SelectItem value="telefone">Telefone</SelectItem>
+                  <SelectItem value="aleatoria">Chave Aleatoria</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </FormField>
 
           {form.pix_key_type && (
-            <FormField label="Chave PIX">
-              <Input
-                value={form.pix_key}
-                onChange={(e) => setField('pix_key', e.target.value)}
-                placeholder="Sua chave PIX"
-                className="h-11"
-                disabled={submitting}
-              />
+            <FormField label="Chave PIX" required error={errors.pix_key}>
+              <div data-field="pix_key">
+                <Input
+                  value={form.pix_key}
+                  onChange={(e) => setField('pix_key', e.target.value)}
+                  placeholder="Sua chave PIX"
+                  className="h-11"
+                  disabled={submitting}
+                />
+              </div>
             </FormField>
           )}
         </div>
@@ -1280,6 +1439,67 @@ function BankSection({
   }
 
   return <div className="border rounded-lg overflow-hidden">{inner}</div>
+}
+
+// ---------------------------------------------------------------------------
+// Combobox de funcoes (searchable)
+// ---------------------------------------------------------------------------
+
+function JobRoleCombobox({
+  value,
+  onSelect,
+  disabled,
+}: {
+  value: string
+  onSelect: (v: string) => void
+  disabled: boolean
+}) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full h-11 justify-between font-normal"
+          disabled={disabled}
+        >
+          {value || 'Selecione ou digite sua funcao...'}
+          <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Buscar funcao..." />
+          <CommandList>
+            <CommandEmpty>Nenhuma funcao encontrada.</CommandEmpty>
+            <CommandGroup>
+              {JOB_ROLES.map((role) => (
+                <CommandItem
+                  key={role}
+                  value={role}
+                  onSelect={() => {
+                    onSelect(role)
+                    setOpen(false)
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      'mr-2 size-4',
+                      value === role ? 'opacity-100' : 'opacity-0',
+                    )}
+                  />
+                  {role}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
 }
 
 // ---------------------------------------------------------------------------

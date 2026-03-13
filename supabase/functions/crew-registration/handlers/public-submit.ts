@@ -35,6 +35,7 @@ const NewVendorSubmitSchema = BaseSubmitSchema.extend({
   full_name:          z.string().min(2, 'Nome deve ter ao menos 2 caracteres').max(300),
   entity_type:        z.enum(['pf', 'pj']).optional().default('pf'),
   cpf:                z.string().max(14).optional().nullable(),
+  cnpj:               z.string().max(18).optional().nullable(),
   rg:                 z.string().max(30).optional().nullable(),
   birth_date:         z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data invalida (YYYY-MM-DD)').optional().nullable(),
   drt:                z.string().max(50).optional().nullable(),
@@ -47,13 +48,13 @@ const NewVendorSubmitSchema = BaseSubmitSchema.extend({
   address_district:   z.string().max(200).optional().nullable(),
   address_city:       z.string().max(200).optional().nullable(),
   address_state:      z.string().length(2).optional().nullable(),
-  // Dados bancarios
+  // Dados bancarios — obrigatorios para novo freelancer (ao menos PIX)
   bank_name:          z.string().max(200).optional().nullable(),
   agency:             z.string().max(20).optional().nullable(),
   account_number:     z.string().max(30).optional().nullable(),
   account_type:       z.enum(['corrente', 'poupanca']).optional().nullable(),
-  pix_key_type:       z.enum(['cpf', 'cnpj', 'email', 'telefone', 'aleatoria']).optional().nullable(),
-  pix_key:            z.string().max(100).optional().nullable(),
+  pix_key_type:       z.enum(['cpf', 'cnpj', 'email', 'telefone', 'aleatoria']),
+  pix_key:            z.string().min(1, 'Chave PIX e obrigatoria').max(100),
 })
 
 // POST /crew-registration/public/:token/submit
@@ -128,7 +129,15 @@ async function processVeteran(
       field: i.path.join('.'),
       message: i.message,
     }))
-    return error('VALIDATION_ERROR', issues[0].message, 400, { issues })
+    const fieldNames: Record<string, string> = {
+      job_role: 'Funcao', full_name: 'Nome', email: 'E-mail',
+      num_days: 'Diarias', daily_rate: 'Cache',
+    }
+    const summary = issues.map(i => fieldNames[i.field] || i.field).filter(Boolean).join(', ')
+    const msg = issues.length === 1
+      ? `Campo invalido: ${summary} — ${issues[0].message}`
+      : `Campos invalidos: ${summary}`
+    return error('VALIDATION_ERROR', msg, 400, { issues })
   }
 
   const data = parsed.data
@@ -238,7 +247,17 @@ async function processNewVendor(
       field: i.path.join('.'),
       message: i.message,
     }))
-    return error('VALIDATION_ERROR', issues[0].message, 400, { issues })
+    // Mensagem amigavel com todos os campos invalidos
+    const fieldNames: Record<string, string> = {
+      job_role: 'Funcao', pix_key_type: 'Tipo de chave PIX', pix_key: 'Chave PIX',
+      full_name: 'Nome', email: 'E-mail', num_days: 'Diarias', daily_rate: 'Cache',
+      cpf: 'CPF', cnpj: 'CNPJ', phone: 'Telefone',
+    }
+    const summary = issues.map(i => fieldNames[i.field] || i.field).filter(Boolean).join(', ')
+    const msg = issues.length === 1
+      ? `Campo invalido: ${summary} — ${issues[0].message}`
+      : `Campos invalidos: ${summary}`
+    return error('VALIDATION_ERROR', msg, 400, { issues })
   }
 
   const data = parsed.data
@@ -257,8 +276,9 @@ async function processNewVendor(
     return error('CONFLICT', 'Este e-mail ja foi cadastrado para este job', 409)
   }
 
-  // Sanitizar CPF (remover mascara)
+  // Sanitizar CPF e CNPJ (remover mascara)
   const cpfClean = data.cpf ? data.cpf.replace(/\D/g, '') : null
+  const cnpjClean = data.cnpj ? data.cnpj.replace(/\D/g, '') : null
 
   // Criar novo vendor
   const { data: newVendor, error: vendorInsertError } = await serviceClient
@@ -269,6 +289,7 @@ async function processNewVendor(
       normalized_name:    data.full_name.toLowerCase().trim(),
       entity_type:        data.entity_type ?? 'pf',
       cpf:                cpfClean ?? null,
+      cnpj:               cnpjClean ?? null,
       rg:                 data.rg ?? null,
       birth_date:         data.birth_date ?? null,
       drt:                data.drt ?? null,
