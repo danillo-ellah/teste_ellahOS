@@ -2,7 +2,8 @@ import { z } from 'https://esm.sh/zod@3.22.4'
 import { getServiceClient } from '../../_shared/supabase-client.ts'
 import { AppError } from '../../_shared/errors.ts'
 import { success, error, fromAppError } from '../../_shared/response.ts'
-import { sendEmail, buildCrewReceiptHtml } from '../../_shared/email.ts'
+import { buildCrewReceiptHtml } from '../../_shared/email.ts'
+import { enqueueEvent } from '../../_shared/integration-client.ts'
 import { JOB_ROLES } from './job-roles.ts'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -222,24 +223,24 @@ async function processVeteran(
     `[crew-registration/submit/veteran] registro criado: id=${registration.id} job=${job.id} vendor=${vendor.id}`,
   )
 
-  // Enviar comprovante por e-mail (fire-and-forget)
+  // Enviar comprovante por e-mail via n8n (fire-and-forget)
   const total = Number(registration.num_days) * Number(registration.daily_rate)
-  sendEmail({
+  enqueueCrewReceiptEmail(serviceClient, {
+    tenant_id: job.tenant_id,
+    registration_id: registration.id,
     to: registration.email,
     subject: `Cadastro confirmado — ${job.code} ${job.title}`,
-    html: buildCrewReceiptHtml({
-      freelancer_name: registration.full_name,
-      job_code: job.code,
-      job_title: job.title,
-      tenant_name: job.tenants.name,
-      job_role: registration.job_role,
-      num_days: registration.num_days,
-      daily_rate: registration.daily_rate,
-      total,
-      is_veteran: true,
-      registered_at: registration.created_at,
-    }),
-  }).catch(() => {}) // nunca bloquear resposta por falha de email
+    freelancer_name: registration.full_name,
+    job_code: job.code,
+    job_title: job.title,
+    tenant_name: job.tenants.name,
+    job_role: registration.job_role,
+    num_days: registration.num_days,
+    daily_rate: registration.daily_rate,
+    total,
+    is_veteran: true,
+    registered_at: registration.created_at,
+  }).catch((err) => console.warn('[crew-registration/submit] falha ao enfileirar email:', err.message))
 
   return success({
     id:         registration.id,
@@ -386,24 +387,24 @@ async function processNewVendor(
     `[crew-registration/submit/new] registro criado: id=${registration.id} job=${job.id} novo vendor=${vendorId}`,
   )
 
-  // Enviar comprovante por e-mail (fire-and-forget)
+  // Enviar comprovante por e-mail via n8n (fire-and-forget)
   const total = Number(registration.num_days) * Number(registration.daily_rate)
-  sendEmail({
+  enqueueCrewReceiptEmail(serviceClient, {
+    tenant_id: job.tenant_id,
+    registration_id: registration.id,
     to: registration.email,
     subject: `Cadastro confirmado — ${job.code} ${job.title}`,
-    html: buildCrewReceiptHtml({
-      freelancer_name: registration.full_name,
-      job_code: job.code,
-      job_title: job.title,
-      tenant_name: job.tenants.name,
-      job_role: registration.job_role,
-      num_days: registration.num_days,
-      daily_rate: registration.daily_rate,
-      total,
-      is_veteran: false,
-      registered_at: registration.created_at,
-    }),
-  }).catch(() => {}) // nunca bloquear resposta por falha de email
+    freelancer_name: registration.full_name,
+    job_code: job.code,
+    job_title: job.title,
+    tenant_name: job.tenants.name,
+    job_role: registration.job_role,
+    num_days: registration.num_days,
+    daily_rate: registration.daily_rate,
+    total,
+    is_veteran: false,
+    registered_at: registration.created_at,
+  }).catch((err) => console.warn('[crew-registration/submit] falha ao enfileirar email:', err.message))
 
   return success({
     id:         registration.id,
@@ -414,4 +415,55 @@ async function processNewVendor(
     total,
     is_veteran: registration.is_veteran,
   }, 201)
+}
+
+// ----------------------------------------------------------------
+// Helper: enfileira email de comprovante via n8n
+// ----------------------------------------------------------------
+interface CrewReceiptEmailPayload {
+  tenant_id: string
+  registration_id: string
+  to: string
+  subject: string
+  freelancer_name: string
+  job_code: string
+  job_title: string
+  tenant_name: string
+  job_role: string
+  num_days: number
+  daily_rate: number
+  total: number
+  is_veteran: boolean
+  registered_at: string
+}
+
+async function enqueueCrewReceiptEmail(
+  serviceClient: ReturnType<typeof getServiceClient>,
+  data: CrewReceiptEmailPayload,
+): Promise<void> {
+  const html = buildCrewReceiptHtml({
+    freelancer_name: data.freelancer_name,
+    job_code: data.job_code,
+    job_title: data.job_title,
+    tenant_name: data.tenant_name,
+    job_role: data.job_role,
+    num_days: data.num_days,
+    daily_rate: data.daily_rate,
+    total: data.total,
+    is_veteran: data.is_veteran,
+    registered_at: data.registered_at,
+  })
+
+  await enqueueEvent(serviceClient, {
+    tenant_id: data.tenant_id,
+    event_type: 'n8n_webhook',
+    payload: {
+      workflow: 'wf-crew-registration',
+      to: data.to,
+      subject: data.subject,
+      html,
+      registration_id: data.registration_id,
+    },
+    idempotency_key: `crew-receipt:${data.registration_id}`,
+  })
 }

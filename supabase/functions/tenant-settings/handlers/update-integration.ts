@@ -50,6 +50,7 @@ const n8nSchema = z.object({
     job_approved: z.string().url().optional().nullable(),
     margin_alert: z.string().url().optional().nullable(),
     status_change: z.string().url().optional().nullable(),
+    crew_registration: z.string().url().optional().nullable(),
   }).optional(),
 });
 

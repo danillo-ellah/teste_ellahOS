@@ -1,0 +1,123 @@
+{
+  "name": "wf-crew-registration",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wf-crew-registration",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-400, 80],
+      "id": "webhook-crew-reg",
+      "name": "Webhook Crew Registration"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validar payload recebido do integration-processor\nconst body = $input.first().json.body || $input.first().json;\n\nconst required = ['to', 'subject', 'html'];\nconst missing = required.filter(f => !body[f]);\n\nif (missing.length > 0) {\n  return [{ json: { _valid: false, _error: `Campos obrigatorios ausentes: ${missing.join(', ')}` } }];\n}\n\nreturn [{ json: { _valid: true, to: body.to, subject: body.subject, html: body.html, registration_id: body.registration_id || '' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-176, 80],
+      "id": "validate-crew-reg",
+      "name": "Validate Payload"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json._valid }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [48, 80],
+      "id": "if-valid-crew",
+      "name": "Is Valid?"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.html }}",
+        "options": {
+          "senderName": "EllahOS"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [272, 0],
+      "id": "gmail-crew-reg",
+      "name": "Send Email via Gmail",
+      "onError": "continueErrorOutput",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, to: $('Validate Payload').item.json.to, registration_id: $('Validate Payload').item.json.registration_id }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [496, 0],
+      "id": "respond-success-crew",
+      "name": "Respond Success"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: $json.error?.message || 'Falha ao enviar email' }) }}",
+        "options": { "responseCode": 400 }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [496, 160],
+      "id": "respond-error-crew",
+      "name": "Respond Error"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: $('Validate Payload').item.json._error }) }}",
+        "options": { "responseCode": 400 }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [272, 240],
+      "id": "respond-validation-error-crew",
+      "name": "Respond Validation Error"
+    }
+  ],
+  "connections": {
+    "Webhook Crew Registration": {
+      "main": [[{ "node": "Validate Payload", "type": "main", "index": 0 }]]
+    },
+    "Validate Payload": {
+      "main": [[{ "node": "Is Valid?", "type": "main", "index": 0 }]]
+    },
+    "Is Valid?": {
+      "main": [
+        [{ "node": "Send Email via Gmail", "type": "main", "index": 0 }],
+        [{ "node": "Respond Validation Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send Email via Gmail": {
+      "main": [
+        [{ "node": "Respond Success", "type": "main", "index": 0 }],
+        [{ "node": "Respond Error", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
