@@ -429,20 +429,26 @@ export default function CrewRegistrationPage({
     }
   }
 
-  async function handleCepBlur() {
-    const cep = form.zip_code.replace(/\D/g, '')
-    if (cep.length !== 8) return
-    setCepLoading(true)
-    const data = await fetchCep(cep)
-    setCepLoading(false)
-    if (data) {
-      setForm((prev) => ({
-        ...prev,
-        address_street: data.logradouro || prev.address_street,
-        address_district: data.bairro || prev.address_district,
-        address_city: data.localidade || prev.address_city,
-        address_state: data.uf || prev.address_state,
-      }))
+  // Busca CEP automaticamente quando o usuario digita 8 digitos
+  function handleCepChange(rawValue: string) {
+    const masked = maskCep(rawValue)
+    setField('zip_code', masked)
+
+    const digits = masked.replace(/\D/g, '')
+    if (digits.length === 8) {
+      setCepLoading(true)
+      fetchCep(digits).then((data) => {
+        setCepLoading(false)
+        if (data) {
+          setForm((prev) => ({
+            ...prev,
+            address_street: data.logradouro || prev.address_street,
+            address_district: data.bairro || prev.address_district,
+            address_city: data.localidade || prev.address_city,
+            address_state: data.uf || prev.address_state,
+          }))
+        }
+      })
     }
   }
 
@@ -958,7 +964,7 @@ export default function CrewRegistrationPage({
                     form={form}
                     setField={setField}
                     submitting={submitting}
-                    onCepBlur={handleCepBlur}
+                    onCepChange={handleCepChange}
                     cepLoading={cepLoading}
                     showTitle={false}
                   />
@@ -1003,7 +1009,7 @@ export default function CrewRegistrationPage({
                     form={form}
                     setField={setField}
                     submitting={submitting}
-                    onCepBlur={handleCepBlur}
+                    onCepChange={handleCepChange}
                     cepLoading={cepLoading}
                     showTitle={false}
                   />
@@ -1227,14 +1233,14 @@ function AddressSection({
   form,
   setField,
   submitting,
-  onCepBlur,
+  onCepChange,
   cepLoading,
   showTitle,
 }: {
   form: FormState
   setField: <K extends keyof FormState>(field: K, value: FormState[K]) => void
   submitting: boolean
-  onCepBlur: () => void
+  onCepChange: (value: string) => void
   cepLoading: boolean
   showTitle: boolean
 }) {
@@ -1248,8 +1254,7 @@ function AddressSection({
         <div className="relative">
           <Input
             value={form.zip_code}
-            onChange={(e) => setField('zip_code', maskCep(e.target.value))}
-            onBlur={onCepBlur}
+            onChange={(e) => onCepChange(e.target.value)}
             placeholder="00000-000"
             inputMode="numeric"
             maxLength={9}
@@ -1257,11 +1262,11 @@ function AddressSection({
             disabled={submitting}
           />
           {cepLoading && (
-            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 size-4 animate-spin text-zinc-400" />
+            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 size-4 animate-spin text-rose-400" />
           )}
         </div>
         <p className="text-xs text-zinc-400 mt-1">
-          O endereco sera preenchido automaticamente ao sair do campo.
+          Preencha o CEP e o endereco sera preenchido automaticamente.
         </p>
       </FormField>
 
