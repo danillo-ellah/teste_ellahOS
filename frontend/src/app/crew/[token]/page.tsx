@@ -36,6 +36,7 @@ import {
   CommandList,
 } from '@/components/ui/command'
 import { cn } from '@/lib/utils'
+import { Clapperboard, Sparkles, ShieldCheck, ArrowRight, Mail, BadgeCheck } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
 // Constantes
@@ -704,44 +705,47 @@ export default function CrewRegistrationPage({
     const total = result.num_days * result.daily_rate
     return (
       <CrewLayout jobInfo={jobInfo} step={step}>
-        <Card className="max-w-lg mx-auto w-full border-green-200/60 shadow-lg shadow-green-50 overflow-hidden">
-          {/* Green gradient bar */}
-          <div className="h-1.5 bg-gradient-to-r from-green-400 via-emerald-500 to-teal-500" />
+        <Card className="max-w-lg mx-auto w-full shadow-xl shadow-green-900/5 border-green-200/40 overflow-hidden bg-white/90 backdrop-blur-sm">
+          {/* Celebration gradient bar */}
+          <div className="h-1.5 bg-gradient-to-r from-green-400 via-emerald-500 to-teal-400" />
 
-          <CardContent className="flex flex-col items-center py-10 text-center gap-4">
-            <div className="relative">
-              <div className="size-20 rounded-full bg-green-50 flex items-center justify-center animate-[bounceIn_0.5s_ease-out]">
-                <CheckCircle className="size-10 text-green-500" />
+          <CardContent className="flex flex-col items-center py-10 px-6 sm:px-8 text-center gap-5">
+            {/* Success icon with pulse animation */}
+            <div className="relative animate-[scaleIn_0.5s_ease-out]">
+              <div className="size-24 rounded-3xl bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center border border-green-200/40" style={{ animation: 'celebratePulse 2s infinite' }}>
+                <BadgeCheck className="size-12 text-green-500" />
               </div>
-              <div className="absolute -top-1 -right-1 size-6 rounded-full bg-green-500 flex items-center justify-center shadow-md">
-                <Check className="size-3 text-white" />
+              <div className="absolute -top-2 -right-2 size-8 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-green-500/30 animate-[scaleIn_0.3s_ease-out_0.3s_both]">
+                <Check className="size-4 text-white" />
               </div>
             </div>
 
-            <div>
-              <h2 className="text-2xl font-bold text-zinc-800">Tudo certo!</h2>
-              <p className="text-zinc-500 mt-1">
-                Obrigado, <span className="font-semibold text-zinc-700">{result.full_name}</span>.
+            <div className="animate-[fadeUp_0.5s_ease-out_0.2s_both]">
+              <h2 className="text-2xl font-extrabold text-zinc-800">Tudo certo!</h2>
+              <p className="text-zinc-500 mt-1.5">
+                Obrigado, <span className="font-bold text-zinc-700">{result.full_name}</span>.
               </p>
             </div>
 
-            <div className="w-full mt-2 rounded-xl bg-gradient-to-b from-zinc-50 to-white border divide-y text-sm">
+            <div className="w-full rounded-2xl bg-gradient-to-b from-zinc-50/80 to-white border border-zinc-200/40 divide-y divide-zinc-100 text-sm overflow-hidden shadow-sm animate-[fadeUp_0.5s_ease-out_0.3s_both]">
               <ConfirmRow label="Job" value={`${jobInfo.job_code} — ${jobInfo.job_title}`} />
               <ConfirmRow label="Funcao" value={result.job_role} />
               <ConfirmRow label="Diarias" value={String(result.num_days)} />
               <ConfirmRow label="Cache/diaria" value={formatBRL(result.daily_rate)} />
-              <ConfirmRow label="Total" value={formatBRL(total)} highlight />
+              <ConfirmRow label="Total estimado" value={formatBRL(total)} highlight />
             </div>
 
-            <div className="flex items-center gap-2 mt-2 text-xs text-zinc-400">
-              <div className="size-1.5 rounded-full bg-green-400 animate-pulse" />
+            <div className="flex items-center gap-2 text-xs text-zinc-400 animate-[fadeUp_0.5s_ease-out_0.4s_both]">
+              <div className="size-2 rounded-full bg-green-400 animate-pulse" />
               A producao sera notificada automaticamente.
             </div>
 
-            <p className="text-[10px] text-zinc-400 mt-3 leading-relaxed max-w-xs">
-              Os valores indicados sao estimativas sujeitas a aprovacao da producao e
-              nao constituem vinculo contratual.
-            </p>
+            <div className="rounded-xl bg-zinc-50 border border-zinc-200/40 px-4 py-3 text-[10px] text-zinc-400 leading-relaxed max-w-sm animate-[fadeUp_0.5s_ease-out_0.5s_both]">
+              <div className="flex items-start gap-2">
+                <ShieldCheck className="size-3 mt-0.5 shrink-0 text-zinc-400" />
+                <span>Os valores indicados sao estimativas sujeitas a aprovacao da producao e nao constituem vinculo contratual.</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </CrewLayout>
@@ -755,35 +759,40 @@ export default function CrewRegistrationPage({
   if (step === 'email') {
     return (
       <CrewLayout jobInfo={jobInfo} step={step}>
-        <Card className="max-w-lg mx-auto w-full shadow-lg shadow-zinc-100/80 border-zinc-200/60 overflow-hidden">
+        <Card className="max-w-lg mx-auto w-full shadow-xl shadow-zinc-900/5 border-zinc-200/40 overflow-hidden card-hover bg-white/80 backdrop-blur-sm">
           {/* Accent bar */}
-          <div className="h-1 bg-gradient-to-r from-rose-500 via-rose-400 to-pink-500" />
+          <div className="h-1 bg-gradient-to-r from-rose-500 via-pink-500 to-violet-500" />
 
-          <CardHeader className="pb-3 pt-6">
-            <CardTitle className="text-xl font-bold text-zinc-800 text-center">
-              Cadastro de Equipe
-            </CardTitle>
-            <p className="text-sm text-zinc-500 text-center mt-1">
-              Informe seu e-mail para comecar. Se voce ja tem cadastro, seus dados serao
-              pre-preenchidos automaticamente.
-            </p>
-          </CardHeader>
-
-          <CardContent className="pb-6">
+          <CardContent className="pt-8 pb-8 px-6 sm:px-8">
             {alreadyRegistered ? (
-              <div className="flex flex-col items-center py-8 text-center gap-3">
-                <div className="size-16 rounded-2xl bg-green-50 flex items-center justify-center">
-                  <CheckCircle className="size-8 text-green-500" />
+              <div className="flex flex-col items-center py-6 text-center gap-4 animate-[scaleIn_0.4s_ease-out]">
+                <div className="size-20 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center border border-green-200/50">
+                  <BadgeCheck className="size-10 text-green-500" />
                 </div>
-                <h3 className="font-bold text-base text-zinc-800">Voce ja esta cadastrado!</h3>
-                <p className="text-sm text-zinc-500 max-w-xs">
-                  Sua participacao neste job ja esta registrada. Caso precise de alteracoes,
-                  entre em contato com a producao.
-                </p>
+                <div>
+                  <h3 className="font-bold text-lg text-zinc-800">Voce ja esta cadastrado!</h3>
+                  <p className="text-sm text-zinc-500 max-w-xs mt-2">
+                    Sua participacao neste job ja esta registrada. Caso precise de alteracoes,
+                    entre em contato com a producao.
+                  </p>
+                </div>
               </div>
             ) : (
-              <form onSubmit={handleEmailSubmit} className="space-y-5">
-                <FormField label="Seu e-mail" required>
+              <form onSubmit={handleEmailSubmit} className="space-y-6">
+                {/* Hero icon + title */}
+                <div className="text-center space-y-3">
+                  <div className="inline-flex size-14 rounded-2xl bg-gradient-to-br from-rose-50 to-pink-50 items-center justify-center border border-rose-100/80 mx-auto">
+                    <Sparkles className="size-7 text-rose-500" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-zinc-800">Cadastro de Equipe</h2>
+                    <p className="text-sm text-zinc-500 mt-1.5 max-w-xs mx-auto leading-relaxed">
+                      Informe seu e-mail para comecar. Se voce ja tem cadastro, seus dados serao pre-preenchidos.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="input-glow rounded-xl transition-all duration-200">
                   <Input
                     type="email"
                     value={email}
@@ -794,21 +803,21 @@ export default function CrewRegistrationPage({
                     placeholder="voce@email.com"
                     autoComplete="email"
                     autoFocus
-                    className="h-12 text-base rounded-xl"
+                    className="h-13 text-base rounded-xl border-zinc-200 focus:border-rose-300 focus:ring-rose-100 px-4"
                     disabled={lookupLoading}
                   />
-                </FormField>
+                </div>
 
                 {lookupError && (
-                  <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-start gap-2">
-                    <AlertTriangle className="size-4 mt-0.5 shrink-0 text-red-500" />
-                    {lookupError}
+                  <div className="rounded-xl bg-red-50 border border-red-200/60 px-4 py-3 text-sm text-red-700 flex items-start gap-2.5 animate-[scaleIn_0.2s_ease-out]">
+                    <AlertTriangle className="size-4 mt-0.5 shrink-0 text-red-400" />
+                    <span>{lookupError}</span>
                   </div>
                 )}
 
                 <Button
                   type="submit"
-                  className="w-full h-12 text-base rounded-xl bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 shadow-md shadow-rose-200 transition-all duration-200"
+                  className="w-full h-13 text-base font-semibold rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 shadow-lg shadow-rose-500/20 hover:shadow-rose-500/30 transition-all duration-300 hover:scale-[1.01] active:scale-[0.99]"
                   disabled={lookupLoading}
                 >
                   {lookupLoading ? (
@@ -817,7 +826,10 @@ export default function CrewRegistrationPage({
                       Verificando...
                     </>
                   ) : (
-                    'Continuar'
+                    <span className="flex items-center gap-2">
+                      Continuar
+                      <ArrowRight className="size-4" />
+                    </span>
                   )}
                 </Button>
               </form>
@@ -852,9 +864,13 @@ export default function CrewRegistrationPage({
           )}
 
           {/* ======== SECAO: Participacao neste job ======== */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Participacao neste job</CardTitle>
+          <Card className="shadow-lg shadow-zinc-900/5 border-zinc-200/40 overflow-hidden card-hover bg-white/80 backdrop-blur-sm">
+            <div className="h-0.5 bg-gradient-to-r from-rose-500 via-pink-500 to-violet-500" />
+            <CardHeader className="pb-2 pt-5">
+              <CardTitle className="text-base font-bold flex items-center gap-2 text-zinc-800">
+                <Clapperboard className="size-4 text-rose-500" />
+                Participacao neste job
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
 
@@ -924,11 +940,22 @@ export default function CrewRegistrationPage({
                 </FormField>
               </div>
 
-              {/* Preview do total */}
+              {/* Preview do total + disclaimer */}
               {numDays > 0 && dailyRateNum > 0 && (
-                <div className="rounded-xl bg-gradient-to-r from-zinc-50 to-rose-50/30 border border-zinc-200/60 px-4 py-3 text-sm flex justify-between items-center">
-                  <span className="text-zinc-500 font-medium">Total estimado</span>
-                  <span className="font-bold text-lg text-rose-600">{formatBRL(estimatedTotal)}</span>
+                <div className="rounded-xl border border-rose-200/50 overflow-hidden animate-[scaleIn_0.3s_ease-out]">
+                  <div className="bg-gradient-to-r from-rose-50 via-pink-50 to-rose-50 px-4 py-3 flex justify-between items-center">
+                    <div>
+                      <span className="text-xs font-medium text-rose-400 uppercase tracking-wider">Estimativa</span>
+                      <p className="text-[10px] text-rose-300 mt-0.5">{numDays} {numDays === 1 ? 'diaria' : 'diarias'} x {formatBRL(dailyRateNum)}</p>
+                    </div>
+                    <span className="font-extrabold text-xl text-rose-600 tracking-tight">{formatBRL(estimatedTotal)}</span>
+                  </div>
+                  <div className="bg-amber-50/80 px-4 py-2 flex items-start gap-2 border-t border-amber-200/40">
+                    <ShieldCheck className="size-3.5 text-amber-500 mt-0.5 shrink-0" />
+                    <p className="text-[10px] text-amber-700 leading-relaxed">
+                      <span className="font-semibold">Valor estimativo.</span> O valor final sera definido e aprovado pela producao. Este cadastro nao constitui contrato.
+                    </p>
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -985,9 +1012,12 @@ export default function CrewRegistrationPage({
           {/* ======== NOVO: secoes abertas ======== */}
           {!isVeteran && (
             <>
-              <Card>
+              <Card className="shadow-lg shadow-zinc-900/5 border-zinc-200/40 card-hover bg-white/80 backdrop-blur-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Dados Pessoais</CardTitle>
+                  <CardTitle className="text-base font-bold flex items-center gap-2 text-zinc-800">
+                    <Users className="size-4 text-rose-500" />
+                    Dados Pessoais
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <PersonalDataSection
@@ -1000,9 +1030,12 @@ export default function CrewRegistrationPage({
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="shadow-lg shadow-zinc-900/5 border-zinc-200/40 card-hover bg-white/80 backdrop-blur-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Endereco</CardTitle>
+                  <CardTitle className="text-base font-bold flex items-center gap-2 text-zinc-800">
+                    <Mail className="size-4 text-rose-500" />
+                    Endereco
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <AddressSection
@@ -1016,9 +1049,12 @@ export default function CrewRegistrationPage({
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="shadow-lg shadow-zinc-900/5 border-zinc-200/40 card-hover bg-white/80 backdrop-blur-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Dados Bancarios</CardTitle>
+                  <CardTitle className="text-base font-bold flex items-center gap-2 text-zinc-800">
+                    <ShieldCheck className="size-4 text-rose-500" />
+                    Dados Bancarios
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <BankSection
@@ -1044,17 +1080,26 @@ export default function CrewRegistrationPage({
           )}
 
           {/* Aviso legal */}
-          <div className="rounded-xl bg-amber-50/60 border border-amber-200/50 px-4 py-3 text-xs text-amber-700 leading-relaxed">
-            <p className="font-semibold text-amber-800 mb-1">Aviso importante</p>
-            Os valores informados neste formulario sao apenas indicativos e nao representam
-            um contrato ou compromisso financeiro. O valor final sera definido e aprovado
-            pela producao. O preenchimento deste cadastro nao garante a contratacao.
+          <div className="rounded-xl bg-gradient-to-r from-amber-50 to-orange-50/50 border border-amber-200/50 px-4 py-4 text-xs leading-relaxed shadow-sm">
+            <div className="flex items-start gap-2.5">
+              <div className="size-7 rounded-lg bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
+                <ShieldCheck className="size-4 text-amber-600" />
+              </div>
+              <div>
+                <p className="font-bold text-amber-800 text-sm">Aviso importante</p>
+                <p className="text-amber-700 mt-1">
+                  Os valores informados sao <span className="font-semibold">apenas estimativos</span> e nao representam
+                  um contrato ou compromisso financeiro. O valor final sera definido e aprovado
+                  pela producao. O preenchimento deste cadastro <span className="font-semibold">nao garante a contratacao</span>.
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Botao de submit */}
           <Button
             type="submit"
-            className="w-full h-12 text-base rounded-xl bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 shadow-md shadow-rose-200 transition-all duration-200"
+            className="w-full h-13 text-base font-semibold rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 shadow-lg shadow-rose-500/20 hover:shadow-rose-500/30 transition-all duration-300 hover:scale-[1.01] active:scale-[0.99]"
             disabled={submitting}
           >
             {submitting ? (
@@ -1063,9 +1108,15 @@ export default function CrewRegistrationPage({
                 Enviando...
               </>
             ) : isVeteran ? (
-              'Confirmar participacao'
+              <span className="flex items-center gap-2">
+                Confirmar participacao
+                <ArrowRight className="size-4" />
+              </span>
             ) : (
-              'Salvar e confirmar participacao'
+              <span className="flex items-center gap-2">
+                Salvar e confirmar
+                <ArrowRight className="size-4" />
+              </span>
             )}
           </Button>
         </form>
@@ -1554,44 +1605,50 @@ function JobRoleCombobox({
 // Step progress indicator
 // ---------------------------------------------------------------------------
 
-const STEP_LABELS = ['Identificacao', 'Formulario', 'Confirmado']
+const STEP_CONFIG = [
+  { label: 'E-mail', icon: Mail },
+  { label: 'Dados', icon: Users },
+  { label: 'Pronto', icon: BadgeCheck },
+]
 
 function StepIndicator({ current }: { current: Step }) {
   const stepIndex = current === 'email' ? 0 : current === 'form' ? 1 : 2
 
   return (
-    <div className="flex items-center justify-center gap-2 mb-8">
-      {STEP_LABELS.map((label, i) => {
+    <div className="flex items-center justify-center gap-0 mb-8">
+      {STEP_CONFIG.map(({ label, icon: Icon }, i) => {
         const isDone = i < stepIndex
         const isActive = i === stepIndex
         return (
-          <div key={label} className="flex items-center gap-2">
+          <div key={label} className="flex items-center">
             {i > 0 && (
-              <div
-                className={cn(
-                  'h-px w-8 sm:w-12 transition-colors duration-500',
-                  isDone ? 'bg-rose-400' : 'bg-zinc-200',
-                )}
-              />
+              <div className="w-10 sm:w-16 h-0.5 mx-1 rounded-full overflow-hidden bg-zinc-200">
+                <div
+                  className={cn(
+                    'h-full rounded-full transition-all duration-700 ease-out',
+                    isDone ? 'w-full bg-gradient-to-r from-rose-400 to-rose-500' : 'w-0',
+                  )}
+                />
+              </div>
             )}
-            <div className="flex flex-col items-center gap-1">
+            <div className="flex flex-col items-center gap-1.5">
               <div
                 className={cn(
-                  'size-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-500',
-                  isDone && 'bg-rose-500 text-white shadow-md shadow-rose-200',
-                  isActive && 'bg-rose-500 text-white shadow-lg shadow-rose-200 scale-110',
-                  !isDone && !isActive && 'bg-zinc-100 text-zinc-400 border border-zinc-200',
+                  'size-10 rounded-xl flex items-center justify-center transition-all duration-500',
+                  isDone && 'bg-gradient-to-br from-rose-500 to-pink-500 text-white shadow-lg shadow-rose-500/25',
+                  isActive && 'bg-gradient-to-br from-rose-500 to-pink-500 text-white shadow-lg shadow-rose-500/30 scale-110',
+                  !isDone && !isActive && 'bg-white text-zinc-400 border border-zinc-200 shadow-sm',
                 )}
               >
                 {isDone ? (
-                  <Check className="size-4" />
+                  <Check className="size-4 animate-[scaleIn_0.3s_ease-out]" />
                 ) : (
-                  i + 1
+                  <Icon className="size-4" />
                 )}
               </div>
               <span
                 className={cn(
-                  'text-[10px] font-medium transition-colors duration-300 hidden sm:block',
+                  'text-[10px] font-semibold tracking-wide uppercase transition-colors duration-300',
                   isActive ? 'text-rose-600' : isDone ? 'text-rose-400' : 'text-zinc-400',
                 )}
               >
@@ -1619,43 +1676,98 @@ function CrewLayout({
   step?: Step
 }) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-50 via-white to-rose-50/30 flex flex-col items-center px-4 py-8 sm:py-12 relative overflow-hidden">
-      {/* Decorative blobs */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-rose-100/40 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-80 h-80 bg-rose-50/60 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3 pointer-events-none" />
+    <div className="min-h-screen bg-[#fafafa] flex flex-col items-center px-4 py-6 sm:py-10 relative overflow-hidden">
+      {/* Animated gradient mesh background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-gradient-to-br from-rose-200/30 via-pink-100/20 to-transparent blur-3xl animate-[drift_20s_ease-in-out_infinite]" />
+        <div className="absolute -bottom-40 -left-40 w-[400px] h-[400px] rounded-full bg-gradient-to-tr from-violet-100/20 via-rose-50/30 to-transparent blur-3xl animate-[drift_25s_ease-in-out_infinite_reverse]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-gradient-to-b from-rose-50/10 to-transparent blur-3xl" />
+      </div>
+
+      {/* Subtle dot pattern overlay */}
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{
+        backgroundImage: 'radial-gradient(circle, #000 1px, transparent 1px)',
+        backgroundSize: '24px 24px',
+      }} />
 
       {/* Logo + Job info */}
-      <div className="mb-2 text-center relative z-10">
-        <div className="inline-flex items-center gap-1.5">
-          <div className="size-8 rounded-lg bg-gradient-to-br from-rose-500 to-rose-600 flex items-center justify-center shadow-md shadow-rose-200">
-            <Users className="size-4 text-white" />
+      <div className="mb-4 text-center relative z-10 animate-[fadeDown_0.6s_ease-out]">
+        <div className="inline-flex items-center gap-2">
+          <div className="size-9 rounded-xl bg-gradient-to-br from-rose-500 via-rose-500 to-pink-600 flex items-center justify-center shadow-lg shadow-rose-500/25 rotate-[-3deg] hover:rotate-0 transition-transform duration-300">
+            <Clapperboard className="size-[18px] text-white" />
           </div>
-          <span className="text-xl font-bold tracking-tight text-zinc-900">
-            Ellah<span className="text-rose-500">OS</span>
+          <span className="text-2xl font-extrabold tracking-tight text-zinc-900">
+            Ellah<span className="bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent">OS</span>
           </span>
         </div>
 
         {jobInfo && (
-          <div className="mt-3">
-            <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm border border-zinc-200/60 rounded-full px-4 py-1.5 shadow-sm">
-              <span className="text-xs font-semibold text-rose-500">{jobInfo.job_code}</span>
-              <span className="w-px h-3 bg-zinc-200" />
+          <div className="mt-4 animate-[fadeUp_0.6s_ease-out_0.1s_both]">
+            <div className="inline-flex items-center gap-2.5 bg-white/90 backdrop-blur-md border border-zinc-200/50 rounded-full px-5 py-2 shadow-sm hover:shadow-md transition-shadow duration-300">
+              <Clapperboard className="size-3.5 text-rose-400" />
+              <span className="text-xs font-bold text-rose-500 tracking-wide">{jobInfo.job_code}</span>
+              <span className="w-px h-3.5 bg-zinc-200" />
               <span className="text-xs font-medium text-zinc-600">{jobInfo.job_title}</span>
             </div>
-            <p className="text-[11px] text-zinc-400 mt-1.5 font-medium">{jobInfo.tenant_name}</p>
+            <p className="text-[11px] text-zinc-400 mt-2 font-medium tracking-wide uppercase">{jobInfo.tenant_name}</p>
           </div>
         )}
       </div>
 
       {/* Step indicator */}
-      {jobInfo && <StepIndicator current={step} />}
+      {jobInfo && (
+        <div className="animate-[fadeUp_0.6s_ease-out_0.2s_both]">
+          <StepIndicator current={step} />
+        </div>
+      )}
 
-      <div className="w-full max-w-lg relative z-10">{children}</div>
+      <div className="w-full max-w-lg relative z-10 animate-[fadeUp_0.5s_ease-out_0.3s_both]">
+        {children}
+      </div>
 
       {/* Footer */}
-      <p className="text-[10px] text-zinc-300 mt-12 relative z-10">
-        Powered by EllahOS
-      </p>
+      <div className="mt-16 relative z-10 text-center animate-[fadeUp_0.6s_ease-out_0.5s_both]">
+        <div className="inline-flex items-center gap-1.5 text-zinc-300">
+          <Clapperboard className="size-3" />
+          <span className="text-[10px] font-medium tracking-wider uppercase">Powered by EllahOS</span>
+        </div>
+      </div>
+
+      {/* CSS Animations */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes drift {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          33% { transform: translate(30px, -20px) scale(1.05); }
+          66% { transform: translate(-20px, 15px) scale(0.95); }
+        }
+        @keyframes fadeDown {
+          from { opacity: 0; transform: translateY(-12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes scaleIn {
+          from { opacity: 0; transform: scale(0.9); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes celebratePulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.3); }
+          50% { box-shadow: 0 0 0 12px rgba(34, 197, 94, 0); }
+        }
+        .input-glow:focus-within {
+          box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.08);
+          border-color: rgba(244, 63, 94, 0.3);
+        }
+        .card-hover {
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .card-hover:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 8px 30px -8px rgba(0, 0, 0, 0.08);
+        }
+      `}} />
     </div>
   )
 }
