@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, use } from 'react'
 import {
-  CheckCircle,
   AlertTriangle,
   Loader2,
   ChevronDown,
@@ -10,6 +9,17 @@ import {
   Users,
   ChevronsUpDown,
   Check,
+  ArrowLeft,
+  ArrowRight,
+  Pencil,
+  Landmark,
+  MapPin,
+  ClipboardList,
+  Clapperboard,
+  Sparkles,
+  ShieldCheck,
+  Mail,
+  BadgeCheck,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,7 +46,6 @@ import {
   CommandList,
 } from '@/components/ui/command'
 import { cn } from '@/lib/utils'
-import { Clapperboard, Sparkles, ShieldCheck, ArrowRight, Mail, BadgeCheck } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
 // Constantes
@@ -419,6 +428,11 @@ export default function CrewRegistrationPage({
   const [showBank, setShowBank] = useState(false)
   const [cepLoading, setCepLoading] = useState(false)
 
+  // Sub-steps do formulario
+  const [formStep, setFormStep] = useState(1)
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('left')
+  const [animating, setAnimating] = useState(false)
+
   // Step 3 — confirmacao
   const [result, setResult] = useState<SubmitResult | null>(null)
 
@@ -557,6 +571,99 @@ export default function CrewRegistrationPage({
     } finally {
       setLookupLoading(false)
     }
+  }
+
+  // Numero total de sub-steps dependendo do tipo de usuario
+  const totalFormSteps = isVeteran ? 2 : 4
+
+  // Navega para o proximo sub-step com animacao e validacao
+  function goToNextFormStep() {
+    if (!validateStep(formStep)) return
+    setSlideDirection('left')
+    setAnimating(true)
+    setTimeout(() => {
+      setFormStep((s) => s + 1)
+      setAnimating(false)
+    }, 50)
+  }
+
+  // Navega para o sub-step anterior com animacao
+  function goToPrevFormStep() {
+    setSlideDirection('right')
+    setAnimating(true)
+    setTimeout(() => {
+      setFormStep((s) => s - 1)
+      setAnimating(false)
+    }, 50)
+  }
+
+  // Vai direto para um sub-step especifico (usado na revisao para editar)
+  function goToFormStep(target: number) {
+    setSlideDirection(target < formStep ? 'right' : 'left')
+    setAnimating(true)
+    setTimeout(() => {
+      setFormStep(target)
+      setAnimating(false)
+    }, 50)
+  }
+
+  // Valida apenas os campos do sub-step atual
+  function validateStep(step: number): boolean {
+    const errors: Record<string, string> = {}
+
+    if (step === 1) {
+      // Participacao
+      if (!form.job_role) errors.job_role = 'Selecione a funcao'
+      if (form.job_role === 'Outros' && !form.job_role_custom.trim()) {
+        errors.job_role_custom = 'Descreva a funcao'
+      }
+      const days = Number(form.num_days)
+      if (!form.num_days || isNaN(days) || days < 1) {
+        errors.num_days = 'Informe o numero de diarias (minimo 1)'
+      }
+      const rate = parseFloat(form.daily_rate.replace(/\./g, '').replace(',', '.'))
+      if (!form.daily_rate || isNaN(rate) || rate <= 0) {
+        errors.daily_rate = 'Informe o cache por diaria'
+      }
+    }
+
+    if (step === 2 && !isVeteran) {
+      // Dados pessoais (apenas para novos freelancers)
+      if (!form.full_name.trim()) errors.full_name = 'Nome e obrigatorio'
+      if (form.entity_type === 'pf') {
+        const cpfDigits = form.cpf.replace(/\D/g, '')
+        if (cpfDigits && cpfDigits.length !== 11) {
+          errors.cpf = 'CPF deve ter 11 digitos'
+        }
+      } else {
+        const cnpjDigits = form.cnpj.replace(/\D/g, '')
+        if (cnpjDigits && cnpjDigits.length !== 14) {
+          errors.cnpj = 'CNPJ deve ter 14 digitos'
+        }
+      }
+      if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+        errors.email = 'E-mail invalido'
+      }
+    }
+
+    if (step === 3 && !isVeteran) {
+      // Endereco & Banco — PIX obrigatorio para novos
+      if (!form.pix_key_type) errors.pix_key_type = 'Selecione o tipo de chave PIX'
+      if (!form.pix_key.trim()) errors.pix_key = 'Informe a chave PIX'
+    }
+
+    setFieldErrors((prev) => ({ ...prev, ...errors }))
+
+    if (Object.keys(errors).length > 0) {
+      const firstErrorField = Object.keys(errors)[0]
+      setTimeout(() => {
+        const el = document.querySelector(`[data-field="${firstErrorField}"]`)
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 50)
+      return false
+    }
+
+    return true
   }
 
   function validate(): boolean {
@@ -877,16 +984,233 @@ export default function CrewRegistrationPage({
   }
 
   // ---------------------------------------------------------------------------
-  // Render — Step 2: Formulario (veterano ou novo)
+  // Render — Step 2: Formulario wizard multi-step
   // ---------------------------------------------------------------------------
 
   const numDays = Number(form.num_days) || 0
   const dailyRateNum = parseFloat(form.daily_rate.replace(/\./g, '').replace(',', '.')) || 0
   const estimatedTotal = numDays * dailyRateNum
 
+  // Determina a classe de animacao para o conteudo do sub-step
+  const slideClass = animating
+    ? ''
+    : slideDirection === 'left'
+      ? 'animate-slideInRight'
+      : 'animate-slideInLeft'
+
+  // Sub-steps para novos freelancers
+  const newUserSteps = [
+    { label: 'Participacao', icon: Clapperboard },
+    { label: 'Dados', icon: Users },
+    { label: 'Endereco & Banco', icon: Landmark },
+    { label: 'Revisao', icon: ClipboardList },
+  ]
+  // Sub-steps para veteranos
+  const veteranSteps = [
+    { label: 'Participacao', icon: Clapperboard },
+    { label: 'Revisao', icon: ClipboardList },
+  ]
+  const subSteps = isVeteran ? veteranSteps : newUserSteps
+
+  // Secao de participacao — usada no step 1 de ambos os fluxos
+  const participacaoSection = (
+    <div className="space-y-4">
+      <FormField label="Funcao no job" required error={fieldErrors.job_role}>
+        <div data-field="job_role">
+          <JobRoleCombobox
+            value={form.job_role}
+            onSelect={(v) => {
+              setField('job_role', v as JobRole)
+              if (v !== 'Outros') setField('job_role_custom', '')
+            }}
+            disabled={submitting}
+          />
+        </div>
+      </FormField>
+
+      {form.job_role === 'Outros' && (
+        <FormField label="Descreva sua funcao" required error={fieldErrors.job_role_custom}>
+          <div data-field="job_role_custom">
+            <Input
+              value={form.job_role_custom}
+              onChange={(e) => setField('job_role_custom', e.target.value)}
+              placeholder="Ex: Drone FPV, Piloto de grua..."
+              className="h-11"
+              maxLength={200}
+              disabled={submitting}
+            />
+          </div>
+          <p className="text-xs text-zinc-400 mt-1">
+            Sua sugestao sera avaliada pela producao.
+          </p>
+        </FormField>
+      )}
+
+      <div className="grid grid-cols-2 gap-3">
+        <FormField label="Numero de diarias" required error={fieldErrors.num_days}>
+          <div data-field="num_days">
+            <Input
+              type="number"
+              inputMode="numeric"
+              value={form.num_days}
+              onChange={(e) => setField('num_days', e.target.value)}
+              placeholder="0"
+              min={1}
+              className="h-11"
+              disabled={submitting}
+            />
+          </div>
+        </FormField>
+
+        <FormField label="Cache por diaria (R$)" required error={fieldErrors.daily_rate}>
+          <div data-field="daily_rate">
+            <Input
+              type="text"
+              inputMode="decimal"
+              value={form.daily_rate}
+              onChange={(e) => {
+                const v = e.target.value.replace(/[^0-9.,]/g, '')
+                setField('daily_rate', v)
+              }}
+              placeholder="0,00"
+              className="h-11"
+              disabled={submitting}
+            />
+          </div>
+        </FormField>
+      </div>
+
+      {/* Preview do total + disclaimer */}
+      {numDays > 0 && dailyRateNum > 0 && (
+        <div className="rounded-xl border border-rose-200/50 overflow-hidden animate-[scaleIn_0.3s_ease-out]">
+          <div className="bg-gradient-to-r from-rose-50 via-pink-50 to-rose-50 px-4 py-3 flex justify-between items-center">
+            <div>
+              <span className="text-xs font-medium text-rose-400 uppercase tracking-wider">Estimativa</span>
+              <p className="text-[10px] text-rose-300 mt-0.5">{numDays} {numDays === 1 ? 'diaria' : 'diarias'} x {formatBRL(dailyRateNum)}</p>
+            </div>
+            <span className="font-extrabold text-xl text-rose-600 tracking-tight animate-[fadeUp_0.3s_ease-out]">{formatBRL(estimatedTotal)}</span>
+          </div>
+          <div className="bg-amber-50/80 px-4 py-2 flex items-start gap-2 border-t border-amber-200/40">
+            <ShieldCheck className="size-3.5 text-amber-500 mt-0.5 shrink-0" />
+            <p className="text-[10px] text-amber-700 leading-relaxed">
+              <span className="font-semibold">Valor estimativo.</span> O valor final sera definido e aprovado pela producao. Este cadastro nao constitui contrato.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+
+  // Conteudo de cada sub-step
+  function renderSubStepContent() {
+    // Fluxo VETERANO
+    if (isVeteran) {
+      if (formStep === 1) return participacaoSection
+      if (formStep === 2) {
+        return (
+          <ReviewStep
+            form={form}
+            isVeteran={isVeteran}
+            vendorName={vendorName}
+            estimatedTotal={estimatedTotal}
+            numDays={numDays}
+            dailyRateNum={dailyRateNum}
+            onEditStep={goToFormStep}
+            showVeteranEdit={showVeteranEdit}
+            setShowVeteranEdit={setShowVeteranEdit}
+            setField={setField}
+            fieldErrors={fieldErrors}
+            submitting={submitting}
+            handleCepChange={handleCepChange}
+            cepLoading={cepLoading}
+            cepError={cepError}
+            showBank={showBank}
+            setShowBank={setShowBank}
+          />
+        )
+      }
+    }
+
+    // Fluxo NOVO freelancer
+    if (formStep === 1) return participacaoSection
+    if (formStep === 2) {
+      return (
+        <PersonalDataSection
+          form={form}
+          setField={setField}
+          fieldErrors={fieldErrors}
+          submitting={submitting}
+          showTitle={false}
+        />
+      )
+    }
+    if (formStep === 3) {
+      return (
+        <div className="space-y-6">
+          <div>
+            <p className="text-sm font-semibold text-zinc-700 mb-3 flex items-center gap-2">
+              <MapPin className="size-4 text-rose-400" />
+              Endereco
+            </p>
+            <AddressSection
+              form={form}
+              setField={setField}
+              submitting={submitting}
+              onCepChange={handleCepChange}
+              cepLoading={cepLoading}
+              cepError={cepError}
+              showTitle={false}
+            />
+          </div>
+          <div className="border-t pt-4">
+            <p className="text-sm font-semibold text-zinc-700 mb-3 flex items-center gap-2">
+              <Landmark className="size-4 text-rose-400" />
+              Dados Bancarios
+            </p>
+            <BankSection
+              form={form}
+              setField={setField}
+              fieldErrors={fieldErrors}
+              submitting={submitting}
+              showBank={showBank}
+              setShowBank={setShowBank}
+              alwaysOpen
+            />
+          </div>
+        </div>
+      )
+    }
+    if (formStep === 4) {
+      return (
+        <ReviewStep
+          form={form}
+          isVeteran={isVeteran}
+          vendorName={vendorName}
+          estimatedTotal={estimatedTotal}
+          numDays={numDays}
+          dailyRateNum={dailyRateNum}
+          onEditStep={goToFormStep}
+          showVeteranEdit={showVeteranEdit}
+          setShowVeteranEdit={setShowVeteranEdit}
+          setField={setField}
+          fieldErrors={fieldErrors}
+          submitting={submitting}
+          handleCepChange={handleCepChange}
+          cepLoading={cepLoading}
+          cepError={cepError}
+          showBank={showBank}
+          setShowBank={setShowBank}
+        />
+      )
+    }
+    return null
+  }
+
+  const isLastFormStep = formStep === totalFormSteps
+
   return (
     <CrewLayout jobInfo={jobInfo} step={step}>
-      <div className="max-w-lg mx-auto w-full space-y-4 pb-16">
+      <div className="max-w-lg mx-auto w-full pb-16">
         <form onSubmit={handleFormSubmit} className="space-y-4">
 
           {/* ---- Veterano: banner de boas-vindas ---- */}
@@ -899,267 +1223,404 @@ export default function CrewRegistrationPage({
             </div>
           )}
 
-          {/* ======== SECAO: Participacao neste job ======== */}
-          <Card className="shadow-lg shadow-zinc-900/5 border-zinc-200/40 overflow-hidden card-hover bg-white/80 backdrop-blur-sm">
+          {/* ======== CARD do wizard ======== */}
+          <Card className="shadow-lg shadow-zinc-900/5 border-zinc-200/40 overflow-hidden bg-white/80 backdrop-blur-sm">
             <div className="h-0.5 bg-gradient-to-r from-rose-500 via-pink-500 to-violet-500" />
-            <CardHeader className="pb-2 pt-5">
-              <CardTitle className="text-base font-bold flex items-center gap-2 text-zinc-800">
-                <Clapperboard className="size-4 text-rose-500" />
-                Participacao neste job
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
 
-              <FormField label="Funcao no job" required error={fieldErrors.job_role}>
-                <div data-field="job_role">
-                  <JobRoleCombobox
-                    value={form.job_role}
-                    onSelect={(v) => {
-                      setField('job_role', v as JobRole)
-                      if (v !== 'Outros') setField('job_role_custom', '')
-                    }}
-                    disabled={submitting}
-                  />
-                </div>
-              </FormField>
-
-              {form.job_role === 'Outros' && (
-                <FormField label="Descreva sua funcao" required error={fieldErrors.job_role_custom}>
-                  <div data-field="job_role_custom">
-                    <Input
-                      value={form.job_role_custom}
-                      onChange={(e) => setField('job_role_custom', e.target.value)}
-                      placeholder="Ex: Drone FPV, Piloto de grua..."
-                      className="h-11"
-                      maxLength={200}
-                      disabled={submitting}
-                    />
-                  </div>
-                  <p className="text-xs text-zinc-400 mt-1">
-                    Sua sugestao sera avaliada pela producao.
-                  </p>
-                </FormField>
-              )}
-
-              <div className="grid grid-cols-2 gap-3">
-                <FormField label="Numero de diarias" required error={fieldErrors.num_days}>
-                  <div data-field="num_days">
-                    <Input
-                      type="number"
-                      inputMode="numeric"
-                      value={form.num_days}
-                      onChange={(e) => setField('num_days', e.target.value)}
-                      placeholder="0"
-                      min={1}
-                      className="h-11"
-                      disabled={submitting}
-                    />
-                  </div>
-                </FormField>
-
-                <FormField label="Cache por diaria (R$)" required error={fieldErrors.daily_rate}>
-                  <div data-field="daily_rate">
-                    <Input
-                      type="text"
-                      inputMode="decimal"
-                      value={form.daily_rate}
-                      onChange={(e) => {
-                        // Permite apenas numeros, ponto e virgula
-                        const v = e.target.value.replace(/[^0-9.,]/g, '')
-                        setField('daily_rate', v)
-                      }}
-                      placeholder="0,00"
-                      className="h-11"
-                      disabled={submitting}
-                    />
-                  </div>
-                </FormField>
+            <CardHeader className="pb-3 pt-5">
+              <div className="flex items-center gap-2 mb-3">
+                <CardTitle className="text-base font-bold flex items-center gap-2 text-zinc-800">
+                  {(() => {
+                    const s = subSteps[formStep - 1]
+                    const Icon = s.icon
+                    return (
+                      <>
+                        <Icon className="size-4 text-rose-500" />
+                        {s.label}
+                      </>
+                    )
+                  })()}
+                </CardTitle>
               </div>
 
-              {/* Preview do total + disclaimer */}
-              {numDays > 0 && dailyRateNum > 0 && (
-                <div className="rounded-xl border border-rose-200/50 overflow-hidden animate-[scaleIn_0.3s_ease-out]">
-                  <div className="bg-gradient-to-r from-rose-50 via-pink-50 to-rose-50 px-4 py-3 flex justify-between items-center">
-                    <div>
-                      <span className="text-xs font-medium text-rose-400 uppercase tracking-wider">Estimativa</span>
-                      <p className="text-[10px] text-rose-300 mt-0.5">{numDays} {numDays === 1 ? 'diaria' : 'diarias'} x {formatBRL(dailyRateNum)}</p>
-                    </div>
-                    <span className="font-extrabold text-xl text-rose-600 tracking-tight">{formatBRL(estimatedTotal)}</span>
+              {/* Sub-step indicator */}
+              <SubStepIndicator current={formStep} total={totalFormSteps} steps={subSteps} />
+            </CardHeader>
+
+            <CardContent className="overflow-hidden">
+              {/* Conteudo animado do sub-step */}
+              <div key={formStep} className={slideClass}>
+                {renderSubStepContent()}
+              </div>
+            </CardContent>
+
+            {/* Navegacao entre sub-steps */}
+            <div className={cn(
+              'flex gap-3 px-6 pb-6 pt-2',
+              formStep === 1 ? 'justify-end' : 'justify-between',
+            )}>
+              {formStep > 1 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-700"
+                  onClick={goToPrevFormStep}
+                  disabled={submitting}
+                >
+                  <ArrowLeft className="size-4" />
+                  Voltar
+                </Button>
+              )}
+
+              {!isLastFormStep && (
+                <Button
+                  type="button"
+                  className="flex items-center gap-1.5 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 shadow-md shadow-rose-500/20 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
+                  onClick={goToNextFormStep}
+                  disabled={submitting}
+                >
+                  Proximo
+                  <ArrowRight className="size-4" />
+                </Button>
+              )}
+            </div>
+          </Card>
+
+          {/* Erro global + aviso legal + botao de submit — apenas no ultimo step */}
+          {isLastFormStep && (
+            <>
+              {submitError && (
+                <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-start gap-2">
+                  <AlertTriangle className="size-4 mt-0.5 shrink-0 text-red-500" />
+                  <span>{submitError}</span>
+                </div>
+              )}
+
+              {/* Aviso legal */}
+              <div className="rounded-xl bg-gradient-to-r from-amber-50 to-orange-50/50 border border-amber-200/50 px-4 py-4 text-xs leading-relaxed shadow-sm">
+                <div className="flex items-start gap-2.5">
+                  <div className="size-7 rounded-lg bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
+                    <ShieldCheck className="size-4 text-amber-600" />
                   </div>
-                  <div className="bg-amber-50/80 px-4 py-2 flex items-start gap-2 border-t border-amber-200/40">
-                    <ShieldCheck className="size-3.5 text-amber-500 mt-0.5 shrink-0" />
-                    <p className="text-[10px] text-amber-700 leading-relaxed">
-                      <span className="font-semibold">Valor estimativo.</span> O valor final sera definido e aprovado pela producao. Este cadastro nao constitui contrato.
+                  <div>
+                    <p className="font-bold text-amber-800 text-sm">Aviso importante</p>
+                    <p className="text-amber-700 mt-1">
+                      Os valores informados sao <span className="font-semibold">apenas estimativos</span> e nao representam
+                      um contrato ou compromisso financeiro. O valor final sera definido e aprovado
+                      pela producao. O preenchimento deste cadastro <span className="font-semibold">nao garante a contratacao</span>.
                     </p>
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </div>
 
-          {/* ======== VETERANO: secao colapsavel de dados ======== */}
-          {isVeteran && (
-            <div className="border rounded-lg overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setShowVeteranEdit((p) => !p)}
-                className="w-full flex items-center justify-between px-4 py-3 bg-zinc-50 hover:bg-zinc-100 transition-colors text-sm font-medium text-zinc-700"
+              {/* Botao de submit */}
+              <Button
+                type="submit"
+                className="w-full h-13 text-base font-semibold rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 shadow-lg shadow-rose-500/20 hover:shadow-rose-500/30 transition-all duration-300 hover:scale-[1.01] active:scale-[0.99]"
                 disabled={submitting}
               >
-                <span>Conferir ou atualizar meus dados</span>
-                {showVeteranEdit ? (
-                  <ChevronUp className="size-4 text-zinc-500" />
+                {submitting ? (
+                  <>
+                    <Loader2 className="size-4 mr-2 animate-spin" />
+                    Enviando...
+                  </>
+                ) : isVeteran ? (
+                  <span className="flex items-center gap-2">
+                    Confirmar participacao
+                    <ArrowRight className="size-4" />
+                  </span>
                 ) : (
-                  <ChevronDown className="size-4 text-zinc-500" />
+                  <span className="flex items-center gap-2">
+                    Salvar e confirmar
+                    <ArrowRight className="size-4" />
+                  </span>
                 )}
-              </button>
-
-              {showVeteranEdit && (
-                <div className="p-4 space-y-6 border-t">
-                  <PersonalDataSection
-                    form={form}
-                    setField={setField}
-                    fieldErrors={fieldErrors}
-                    submitting={submitting}
-                    showTitle={false}
-                  />
-                  <AddressSection
-                    form={form}
-                    setField={setField}
-                    submitting={submitting}
-                    onCepChange={handleCepChange}
-                    cepLoading={cepLoading}
-                    cepError={cepError}
-                    showTitle={false}
-                  />
-                  <BankSection
-                    form={form}
-                    setField={setField}
-                    fieldErrors={fieldErrors}
-                    submitting={submitting}
-                    showBank={showBank}
-                    setShowBank={setShowBank}
-                    inline
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ======== NOVO: secoes abertas ======== */}
-          {!isVeteran && (
-            <>
-              <Card className="shadow-lg shadow-zinc-900/5 border-zinc-200/40 card-hover bg-white/80 backdrop-blur-sm">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base font-bold flex items-center gap-2 text-zinc-800">
-                    <Users className="size-4 text-rose-500" />
-                    Dados Pessoais
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <PersonalDataSection
-                    form={form}
-                    setField={setField}
-                    fieldErrors={fieldErrors}
-                    submitting={submitting}
-                    showTitle={false}
-                  />
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-lg shadow-zinc-900/5 border-zinc-200/40 card-hover bg-white/80 backdrop-blur-sm">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base font-bold flex items-center gap-2 text-zinc-800">
-                    <Mail className="size-4 text-rose-500" />
-                    Endereco
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <AddressSection
-                    form={form}
-                    setField={setField}
-                    submitting={submitting}
-                    onCepChange={handleCepChange}
-                    cepLoading={cepLoading}
-                    cepError={cepError}
-                    showTitle={false}
-                  />
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-lg shadow-zinc-900/5 border-zinc-200/40 card-hover bg-white/80 backdrop-blur-sm">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base font-bold flex items-center gap-2 text-zinc-800">
-                    <ShieldCheck className="size-4 text-rose-500" />
-                    Dados Bancarios
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <BankSection
-                    form={form}
-                    setField={setField}
-                    fieldErrors={fieldErrors}
-                    submitting={submitting}
-                    showBank={showBank}
-                    setShowBank={setShowBank}
-                    alwaysOpen
-                  />
-                </CardContent>
-              </Card>
+              </Button>
             </>
           )}
-
-          {/* Erro global */}
-          {submitError && (
-            <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-start gap-2">
-              <AlertTriangle className="size-4 mt-0.5 shrink-0 text-red-500" />
-              <span>{submitError}</span>
-            </div>
-          )}
-
-          {/* Aviso legal */}
-          <div className="rounded-xl bg-gradient-to-r from-amber-50 to-orange-50/50 border border-amber-200/50 px-4 py-4 text-xs leading-relaxed shadow-sm">
-            <div className="flex items-start gap-2.5">
-              <div className="size-7 rounded-lg bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
-                <ShieldCheck className="size-4 text-amber-600" />
-              </div>
-              <div>
-                <p className="font-bold text-amber-800 text-sm">Aviso importante</p>
-                <p className="text-amber-700 mt-1">
-                  Os valores informados sao <span className="font-semibold">apenas estimativos</span> e nao representam
-                  um contrato ou compromisso financeiro. O valor final sera definido e aprovado
-                  pela producao. O preenchimento deste cadastro <span className="font-semibold">nao garante a contratacao</span>.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Botao de submit */}
-          <Button
-            type="submit"
-            className="w-full h-13 text-base font-semibold rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 shadow-lg shadow-rose-500/20 hover:shadow-rose-500/30 transition-all duration-300 hover:scale-[1.01] active:scale-[0.99]"
-            disabled={submitting}
-          >
-            {submitting ? (
-              <>
-                <Loader2 className="size-4 mr-2 animate-spin" />
-                Enviando...
-              </>
-            ) : isVeteran ? (
-              <span className="flex items-center gap-2">
-                Confirmar participacao
-                <ArrowRight className="size-4" />
-              </span>
-            ) : (
-              <span className="flex items-center gap-2">
-                Salvar e confirmar
-                <ArrowRight className="size-4" />
-              </span>
-            )}
-          </Button>
         </form>
       </div>
     </CrewLayout>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Sub-step indicator dentro do wizard
+// ---------------------------------------------------------------------------
+
+function SubStepIndicator({
+  current,
+  total,
+  steps,
+}: {
+  current: number
+  total: number
+  steps: Array<{ label: string; icon: React.ElementType }>
+}) {
+  return (
+    <div className="flex items-center gap-0">
+      {steps.map(({ label, icon: Icon }, i) => {
+        const stepNum = i + 1
+        const isDone = stepNum < current
+        const isActive = stepNum === current
+        return (
+          <div key={label} className="flex items-center">
+            {i > 0 && (
+              <div className="w-6 sm:w-10 h-0.5 mx-1 rounded-full overflow-hidden bg-zinc-200">
+                <div
+                  className={cn(
+                    'h-full rounded-full transition-all duration-500 ease-out',
+                    isDone ? 'w-full bg-gradient-to-r from-rose-400 to-pink-400' : 'w-0',
+                  )}
+                />
+              </div>
+            )}
+            <div className="flex flex-col items-center gap-1">
+              <div
+                className={cn(
+                  'size-7 rounded-lg flex items-center justify-center transition-all duration-300',
+                  isDone && 'bg-gradient-to-br from-rose-500 to-pink-500 text-white shadow-md shadow-rose-500/20',
+                  isActive && 'bg-gradient-to-br from-rose-500 to-pink-500 text-white shadow-md shadow-rose-500/25 scale-110',
+                  !isDone && !isActive && 'bg-zinc-100 text-zinc-400 border border-zinc-200',
+                )}
+              >
+                {isDone ? (
+                  <Check className="size-3.5" />
+                ) : (
+                  <Icon className="size-3.5" />
+                )}
+              </div>
+              <span
+                className={cn(
+                  'text-[9px] font-semibold tracking-wide uppercase transition-colors duration-200 hidden sm:block',
+                  isActive ? 'text-rose-600' : isDone ? 'text-rose-400' : 'text-zinc-400',
+                )}
+              >
+                {label}
+              </span>
+            </div>
+          </div>
+        )
+      })}
+      <span className="ml-auto text-[10px] text-zinc-400 font-medium tabular-nums">
+        {current}/{total}
+      </span>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Step de Revisao — resumo antes de enviar
+// ---------------------------------------------------------------------------
+
+function ReviewStep({
+  form,
+  isVeteran,
+  vendorName,
+  estimatedTotal,
+  numDays,
+  dailyRateNum,
+  onEditStep,
+  showVeteranEdit,
+  setShowVeteranEdit,
+  setField,
+  fieldErrors,
+  submitting,
+  handleCepChange,
+  cepLoading,
+  cepError,
+  showBank,
+  setShowBank,
+}: {
+  form: FormState
+  isVeteran: boolean
+  vendorName: string
+  estimatedTotal: number
+  numDays: number
+  dailyRateNum: number
+  onEditStep: (step: number) => void
+  showVeteranEdit: boolean
+  setShowVeteranEdit: (v: boolean) => void
+  setField: <K extends keyof FormState>(field: K, value: FormState[K]) => void
+  fieldErrors: Record<string, string>
+  submitting: boolean
+  handleCepChange: (value: string) => void
+  cepLoading: boolean
+  cepError: string | null
+  showBank: boolean
+  setShowBank: (v: boolean) => void
+}) {
+  const pixTypeLabel: Record<string, string> = {
+    cpf: 'CPF',
+    cnpj: 'CNPJ',
+    email: 'E-mail',
+    telefone: 'Telefone',
+    aleatoria: 'Chave Aleatoria',
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Bloco: Participacao */}
+      <ReviewBlock
+        title="Participacao"
+        icon={Clapperboard}
+        onEdit={() => onEditStep(1)}
+      >
+        <ReviewRow label="Funcao" value={form.job_role === 'Outros' && form.job_role_custom ? form.job_role_custom : form.job_role} />
+        <ReviewRow
+          label="Diarias"
+          value={`${numDays} x ${formatBRL(dailyRateNum)}`}
+        />
+        <ReviewRow
+          label="Total estimado"
+          value={formatBRL(estimatedTotal)}
+          highlight
+        />
+      </ReviewBlock>
+
+      {/* Bloco: Dados pessoais — apenas para novos freelancers */}
+      {!isVeteran && (
+        <ReviewBlock
+          title="Dados Pessoais"
+          icon={Users}
+          onEdit={() => onEditStep(2)}
+        >
+          <ReviewRow label="Nome" value={form.full_name || '—'} />
+          {form.entity_type === 'pf' ? (
+            <ReviewRow label="CPF" value={form.cpf || '—'} />
+          ) : (
+            <ReviewRow label="CNPJ" value={form.cnpj || '—'} />
+          )}
+          <ReviewRow label="E-mail" value={form.email || '—'} />
+          {form.phone && (
+            <ReviewRow label="Telefone" value={`(${form.phone.slice(0, 2)}) ${form.phone.slice(2, 7)}-${form.phone.slice(7)}`} />
+          )}
+        </ReviewBlock>
+      )}
+
+      {/* Bloco: PIX — apenas para novos freelancers */}
+      {!isVeteran && (
+        <ReviewBlock
+          title="PIX"
+          icon={Landmark}
+          onEdit={() => onEditStep(3)}
+        >
+          {form.pix_key_type && (
+            <ReviewRow label="Tipo" value={pixTypeLabel[form.pix_key_type] || form.pix_key_type} />
+          )}
+          <ReviewRow label="Chave" value={form.pix_key || '—'} />
+          {form.bank_name && <ReviewRow label="Banco" value={form.bank_name} />}
+        </ReviewBlock>
+      )}
+
+      {/* Bloco: Veterano — link para conferir/atualizar dados */}
+      {isVeteran && (
+        <div className="border rounded-lg overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setShowVeteranEdit(!showVeteranEdit)}
+            className="w-full flex items-center justify-between px-4 py-3 bg-zinc-50 hover:bg-zinc-100 transition-colors text-sm font-medium text-zinc-700"
+            disabled={submitting}
+          >
+            <span>Conferir ou atualizar meus dados</span>
+            {showVeteranEdit ? (
+              <ChevronUp className="size-4 text-zinc-500" />
+            ) : (
+              <ChevronDown className="size-4 text-zinc-500" />
+            )}
+          </button>
+
+          {showVeteranEdit && (
+            <div className="p-4 space-y-6 border-t">
+              <PersonalDataSection
+                form={form}
+                setField={setField}
+                fieldErrors={fieldErrors}
+                submitting={submitting}
+                showTitle={false}
+              />
+              <AddressSection
+                form={form}
+                setField={setField}
+                submitting={submitting}
+                onCepChange={handleCepChange}
+                cepLoading={cepLoading}
+                cepError={cepError}
+                showTitle={false}
+              />
+              <BankSection
+                form={form}
+                setField={setField}
+                fieldErrors={fieldErrors}
+                submitting={submitting}
+                showBank={showBank}
+                setShowBank={setShowBank}
+                inline
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ReviewBlock({
+  title,
+  icon: Icon,
+  onEdit,
+  children,
+}: {
+  title: string
+  icon: React.ElementType
+  onEdit: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div className="rounded-xl border border-zinc-200/60 overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-2.5 bg-zinc-50/80 border-b border-zinc-100">
+        <span className="text-xs font-semibold text-zinc-600 uppercase tracking-wide flex items-center gap-1.5">
+          <Icon className="size-3.5 text-rose-400" />
+          {title}
+        </span>
+        <button
+          type="button"
+          onClick={onEdit}
+          className="flex items-center gap-1 text-[11px] text-rose-500 hover:text-rose-700 font-medium transition-colors"
+        >
+          <Pencil className="size-3" />
+          Editar
+        </button>
+      </div>
+      <div className="divide-y divide-zinc-100">
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function ReviewRow({
+  label,
+  value,
+  highlight,
+}: {
+  label: string
+  value: string
+  highlight?: boolean
+}) {
+  return (
+    <div className={cn(
+      'flex justify-between items-center px-4 py-2.5 text-sm',
+      highlight && 'bg-rose-50/50',
+    )}>
+      <span className="text-zinc-500">{label}</span>
+      <span className={cn(
+        'font-medium text-zinc-800',
+        highlight && 'font-bold text-rose-600',
+      )}>
+        {value}
+      </span>
+    </div>
   )
 }
 
@@ -1799,6 +2260,20 @@ function CrewLayout({
         @keyframes celebratePulse {
           0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.3); }
           50% { box-shadow: 0 0 0 12px rgba(34, 197, 94, 0); }
+        }
+        @keyframes slideInRight {
+          from { opacity: 0; transform: translateX(30px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes slideInLeft {
+          from { opacity: 0; transform: translateX(-30px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        .animate-slideInRight {
+          animation: slideInRight 0.3s ease-out both;
+        }
+        .animate-slideInLeft {
+          animation: slideInLeft 0.3s ease-out both;
         }
         .input-glow:focus-within {
           box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.08);
