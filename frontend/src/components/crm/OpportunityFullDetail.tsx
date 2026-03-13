@@ -318,15 +318,28 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
             )}
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1.5 shrink-0"
-          onClick={() => setEditOpen(true)}
-        >
-          <Pencil className="size-3.5" />
-          Editar
-        </Button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setEditOpen(true)}
+          >
+            <Pencil className="size-3.5" />
+            Editar
+          </Button>
+          {!opportunity.job_id && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              onClick={() => setDeleteOpen(true)}
+              title="Excluir oportunidade"
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Job vinculado */}
@@ -844,18 +857,6 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
                 </>
               )}
 
-              {/* Excluir — apenas se nao tem job vinculado */}
-              {!opportunity.job_id && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="w-full gap-1.5 h-11 sm:h-9 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                  onClick={() => setDeleteOpen(true)}
-                >
-                  <Trash2 className="size-3.5" />
-                  Excluir oportunidade
-                </Button>
-              )}
             </CardContent>
           </Card>
         </div>
