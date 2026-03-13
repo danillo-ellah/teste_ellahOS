@@ -296,14 +296,36 @@ export default function JobCostsPage({ params }: PageProps) {
         </div>
       )}
 
-      {/* Empty state */}
-      {!isLoading && items.length === 0 && !isError && (
-        <EmptyStateWithActions
-          onApplyTemplate={() => setTemplateDialogOpen(true)}
-          onImportFromJob={() => setImportDialogOpen(true)}
-          onAddNew={handleAddNew}
-        />
-      )}
+      {/* Empty state — distinguir "sem itens" de "filtro sem resultados" */}
+      {!isLoading && items.length === 0 && !isError && (() => {
+        const hasActiveFilters = !!(filters.item_status || filters.payment_status || filters.search)
+        if (hasActiveFilters) {
+          return (
+            <div className="flex flex-col items-center gap-3 py-16 text-center">
+              <p className="text-sm text-muted-foreground">
+                Nenhum item encontrado para os filtros selecionados.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearch('')
+                  setFilters({ job_id: jobId, page: 1, per_page: 200 })
+                }}
+              >
+                Limpar filtros
+              </Button>
+            </div>
+          )
+        }
+        return (
+          <EmptyStateWithActions
+            onApplyTemplate={() => setTemplateDialogOpen(true)}
+            onImportFromJob={() => setImportDialogOpen(true)}
+            onAddNew={handleAddNew}
+          />
+        )
+      })()}
 
       {/* Tabela */}
       {(isLoading || items.length > 0) && (
