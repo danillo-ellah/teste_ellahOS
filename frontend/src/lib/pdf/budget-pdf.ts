@@ -162,10 +162,6 @@ export async function generateBudgetPdf(params: BudgetPdfParams): Promise<void> 
     ['Total Estimado', formatBRL(totalEstimated)],
     ['Total Pago', formatBRL(totalPaid)],
     ['Valor Fechado', formatBRL(job.closed_value)],
-    ['Imposto (%)', job.tax_percentage != null ? `${job.tax_percentage}%` : '-'],
-    ['Imposto (R$)', formatBRL(job.tax_value)],
-    ['Lucro Bruto', formatBRL(job.gross_profit)],
-    ['Margem', job.margin_percentage != null ? `${job.margin_percentage.toFixed(1)}%` : '-'],
   ]
 
   const sumColW = CONTENT_W / 2

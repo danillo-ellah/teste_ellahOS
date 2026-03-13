@@ -654,6 +654,16 @@ export const PAYMENT_CONDITION_LABELS: Record<PaymentCondition, string> = {
   snf_30: 'S/NF 30 dias',
 }
 
+export const PAYMENT_CONDITION_COLORS: Record<PaymentCondition, string> = {
+  a_vista: 'bg-emerald-100 text-emerald-700',
+  cnf_30: 'bg-sky-100 text-sky-700',
+  cnf_40: 'bg-sky-100 text-sky-700',
+  cnf_45: 'bg-blue-100 text-blue-700',
+  cnf_60: 'bg-indigo-100 text-indigo-700',
+  cnf_90: 'bg-violet-100 text-violet-700',
+  snf_30: 'bg-amber-100 text-amber-700',
+}
+
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   pix: 'PIX',
   ted: 'TED',

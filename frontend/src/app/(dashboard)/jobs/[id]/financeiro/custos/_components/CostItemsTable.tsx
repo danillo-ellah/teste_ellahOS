@@ -14,6 +14,7 @@ import {
   TrendingDown,
   CheckCircle2,
   Receipt,
+  ExternalLink,
   X,
 } from 'lucide-react'
 import {
@@ -54,8 +55,8 @@ import { useDeleteCostItem, useUpdateCostItem } from '@/hooks/useCostItems'
 import { useVendorSuggest } from '@/hooks/useVendors'
 import { toast } from 'sonner'
 import { formatCurrency, formatDate } from '@/lib/format'
-import { PAYMENT_CONDITION_LABELS, NF_REQUEST_STATUS_CONFIG, ITEM_STATUS_LABELS, ITEM_STATUS_COLORS } from '@/types/cost-management'
-import type { CostItem, NfRequestStatus, VendorSuggestion, ItemStatus } from '@/types/cost-management'
+import { PAYMENT_CONDITION_LABELS, PAYMENT_CONDITION_COLORS, NF_REQUEST_STATUS_CONFIG, ITEM_STATUS_LABELS, ITEM_STATUS_COLORS } from '@/types/cost-management'
+import type { CostItem, NfRequestStatus, PaymentCondition, VendorSuggestion, ItemStatus } from '@/types/cost-management'
 import { safeErrorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
@@ -654,6 +655,93 @@ function StatusCell({
   )
 }
 
+// ---- PaymentConditionCell (inline editavel via dropdown) ----
+
+const PAYMENT_CONDITION_ORDER: PaymentCondition[] = [
+  'a_vista',
+  'cnf_30',
+  'cnf_40',
+  'cnf_45',
+  'cnf_60',
+  'cnf_90',
+  'snf_30',
+]
+
+function PaymentConditionCell({
+  item,
+  onSave,
+}: {
+  item: CostItem
+  onSave: (payload: Record<string, unknown> & { id: string }) => Promise<unknown>
+}) {
+  const [saving, setSaving] = useState(false)
+  const current = item.payment_condition
+
+  async function handleChange(value: PaymentCondition | null) {
+    if (value === current) return
+    setSaving(true)
+    try {
+      await onSave({ id: item.id, payment_condition: value })
+    } catch (err) {
+      toast.error(safeErrorMessage(err))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            'inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium cursor-pointer whitespace-nowrap',
+            'hover:ring-1 hover:ring-border transition-all',
+            saving && 'opacity-50 pointer-events-none',
+            current ? PAYMENT_CONDITION_COLORS[current] : 'text-muted-foreground',
+          )}
+          disabled={saving}
+        >
+          {current ? PAYMENT_CONDITION_LABELS[current] : 'Definir'}
+          <ChevronDown className="size-3 opacity-50" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-[160px]">
+        {PAYMENT_CONDITION_ORDER.map((cond) => (
+          <DropdownMenuItem
+            key={cond}
+            onClick={() => handleChange(cond)}
+            className={cn(
+              'text-xs gap-2',
+              cond === current && 'font-semibold',
+            )}
+          >
+            <span className={cn(
+              'inline-block size-2 rounded-full shrink-0',
+              PAYMENT_CONDITION_COLORS[cond]?.replace(/text-\S+/g, ''),
+            )} />
+            {PAYMENT_CONDITION_LABELS[cond]}
+            {cond === current && (
+              <Check className="size-3 ml-auto text-foreground" />
+            )}
+          </DropdownMenuItem>
+        ))}
+        {current && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => handleChange(null)}
+              className="text-xs text-muted-foreground"
+            >
+              Limpar
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 // ---- DivergenceBadge ----
 // Compara o valor orcado (total_with_overtime) com o valor real pago (actual_paid_value).
 // So exibido quando o item esta pago e a divergencia e >= 1%.
@@ -710,62 +798,93 @@ function DivergenceBadge({ budgeted, actual }: DivergenceBadgeProps) {
   )
 }
 
-// ---- NfCell ----
+// ---- NfCell (inline editavel via dropdown) ----
 
-function NfCell({ item }: { item: CostItem }) {
+const NF_STATUS_ORDER: NfRequestStatus[] = [
+  'nao_aplicavel',
+  'pendente',
+  'pedido',
+  'recebido',
+  'rejeitado',
+  'aprovado',
+]
+
+function NfCell({
+  item,
+  onSave,
+}: {
+  item: CostItem
+  onSave: (payload: Record<string, unknown> & { id: string }) => Promise<unknown>
+}) {
+  const [saving, setSaving] = useState(false)
   const status = item.nf_request_status
-  if (status === 'nao_aplicavel') {
-    return <span className="text-muted-foreground">-</span>
-  }
-
-  // C1: guard against unknown status values
   const config = NF_REQUEST_STATUS_CONFIG[status]
+
   if (!config) {
     return <span className="text-muted-foreground text-xs">{status}</span>
   }
 
-  const dot = (
-    <span
-      role="img"
-      aria-label={`Status NF: ${config.label}`}
-      className={cn('inline-block h-2.5 w-2.5 rounded-full', config.dotClass)}
-    />
-  )
-
-  const tooltipLines: string[] = [`Status NF: ${config.label}`]
-  if (item.nf_filename) tooltipLines.push(item.nf_filename)
-  if (item.nf_extracted_value != null) tooltipLines.push(`Valor: ${formatCurrency(item.nf_extracted_value)}`)
-
-  // m4: larger touch target for mobile
-  const content = item.nf_drive_url ? (
-    <a
-      href={item.nf_drive_url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="inline-flex items-center justify-center h-8 w-8 hover:opacity-70 rounded"
-      onClick={e => e.stopPropagation()}
-      aria-label={`Abrir NF ${item.nf_filename ?? ''} no Drive`}
-    >
-      {dot}
-    </a>
-  ) : (
-    <span className="inline-flex items-center justify-center h-8 w-8">{dot}</span>
-  )
+  async function handleChange(newStatus: NfRequestStatus) {
+    if (newStatus === status) return
+    setSaving(true)
+    try {
+      await onSave({ id: item.id, nf_request_status: newStatus })
+    } catch (err) {
+      toast.error(safeErrorMessage(err))
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          {content}
-        </TooltipTrigger>
-        <TooltipContent side="top" className="text-xs space-y-0.5">
-          {tooltipLines.map((line, i) => (
-            <p key={i}>{line}</p>
-          ))}
-          {item.nf_drive_url && <p className="text-muted-foreground">Clique para abrir no Drive</p>}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <div className="flex items-center gap-1">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs cursor-pointer whitespace-nowrap',
+              'hover:ring-1 hover:ring-border transition-all',
+              saving && 'opacity-50 pointer-events-none',
+              config.textClass,
+            )}
+            disabled={saving}
+          >
+            <span className={cn('inline-block size-2 rounded-full shrink-0', config.dotClass)} />
+            {config.label}
+            <ChevronDown className="size-3 opacity-50" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="min-w-[140px]">
+          {NF_STATUS_ORDER.map((s) => {
+            const c = NF_REQUEST_STATUS_CONFIG[s]
+            return (
+              <DropdownMenuItem
+                key={s}
+                onClick={() => handleChange(s)}
+                className={cn('text-xs gap-2', s === status && 'font-semibold')}
+              >
+                <span className={cn('inline-block size-2 rounded-full shrink-0', c.dotClass)} />
+                {c.label}
+                {s === status && <Check className="size-3 ml-auto text-foreground" />}
+              </DropdownMenuItem>
+            )
+          })}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {item.nf_drive_url && (
+        <a
+          href={item.nf_drive_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-muted-foreground hover:text-foreground transition-colors"
+          onClick={e => e.stopPropagation()}
+          aria-label="Abrir NF no Drive"
+        >
+          <ExternalLink className="size-3.5" />
+        </a>
+      )}
+    </div>
   )
 }
 
@@ -1036,9 +1155,7 @@ function ItemRow({
 
       {/* Cond. Pgto */}
       <TableCell className="text-xs">
-        {editable && item.payment_condition
-          ? PAYMENT_CONDITION_LABELS[item.payment_condition]
-          : <span className="text-muted-foreground">-</span>}
+        {editable ? <PaymentConditionCell item={item} onSave={onSave} /> : null}
       </TableCell>
 
       {/* Vencimento */}
@@ -1052,8 +1169,8 @@ function ItemRow({
       </TableCell>
 
       {/* NF */}
-      <TableCell className="w-10 text-center">
-        {editable && <NfCell item={item} />}
+      <TableCell>
+        {editable && <NfCell item={item} onSave={onSave} />}
       </TableCell>
 
       {/* Pgto */}
@@ -1230,9 +1347,9 @@ export function CostItemsTable({
 
   return (
     <>
-      <div className="rounded-md border border-border overflow-x-auto">
+      <div className="rounded-md border border-border overflow-auto max-h-[calc(100vh-260px)]">
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 z-20 bg-background shadow-[0_1px_0_0_hsl(var(--border))]">
             <TableRow className="text-xs">
               <TableHead className="w-8" />
               <TableHead className="w-14">#</TableHead>
@@ -1246,7 +1363,7 @@ export function CostItemsTable({
               <TableHead>Cond. Pgto</TableHead>
               <TableHead>Vencimento</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="w-10 text-center">
+              <TableHead>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
