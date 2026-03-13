@@ -58,9 +58,7 @@ export async function handleBudgetSummary(
 
   if (itemsError) {
     console.error('[cost-items/budget-summary] erro ao buscar itens:', itemsError.message);
-    throw new AppError('INTERNAL_ERROR', 'Erro ao buscar itens de custo', 500, {
-      detail: itemsError.message,
-    });
+    throw new AppError('INTERNAL_ERROR', 'Erro ao buscar itens de custo', 500);
   }
 
   // Calcular totais gerais

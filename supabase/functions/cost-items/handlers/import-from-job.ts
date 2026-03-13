@@ -4,7 +4,7 @@ import { AppError } from '../../_shared/errors.ts';
 import { created } from '../../_shared/response.ts';
 import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 
-const ALLOWED_ROLES = ['ceo', 'produtor_executivo', 'admin', 'diretor_producao', 'coordenador_producao'];
+const ALLOWED_ROLES = ['financeiro', 'produtor_executivo', 'admin', 'ceo', 'diretor_producao', 'coordenador_producao'];
 
 const ImportFromJobSchema = z.object({
   source_job_id: z.string().uuid(),
@@ -108,9 +108,7 @@ export async function handleImportFromJob(
 
   if (sourceItemsError) {
     console.error('[cost-items/import-from-job] erro ao buscar itens do source:', sourceItemsError.message);
-    throw new AppError('INTERNAL_ERROR', 'Erro ao importar itens', 500, {
-      detail: sourceItemsError.message,
-    });
+    throw new AppError('INTERNAL_ERROR', 'Erro ao buscar itens do job de origem', 500);
   }
 
   // 8. Validar source tem itens
@@ -141,9 +139,7 @@ export async function handleImportFromJob(
 
   if (insertError) {
     console.error('[cost-items/import-from-job] erro ao inserir itens:', insertError.message);
-    throw new AppError('INTERNAL_ERROR', 'Erro ao importar itens', 500, {
-      detail: insertError.message,
-    });
+    throw new AppError('INTERNAL_ERROR', 'Erro ao importar itens', 500);
   }
 
   console.log('[cost-items/import-from-job] importacao concluida com sucesso', {

@@ -93,9 +93,7 @@ export async function handleList(req: Request, auth: AuthContext): Promise<Respo
 
   if (listError) {
     console.error('[cost-items/list] erro na query:', listError.message);
-    throw new AppError('INTERNAL_ERROR', 'Erro ao listar itens de custo', 500, {
-      detail: listError.message,
-    });
+    throw new AppError('INTERNAL_ERROR', 'Erro ao listar itens de custo', 500);
   }
 
   const total = count ?? 0;

@@ -5,7 +5,7 @@ import { created } from '../../_shared/response.ts';
 import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 
 // Roles autorizados para criar itens de custo
-const ALLOWED_ROLES = ['financeiro', 'produtor_executivo', 'admin', 'ceo'];
+const ALLOWED_ROLES = ['financeiro', 'produtor_executivo', 'admin', 'ceo', 'diretor_producao', 'coordenador_producao'];
 
 // Schema de validacao para criacao de item de custo
 const CreateCostItemSchema = z.object({
@@ -251,9 +251,7 @@ export async function handleCreate(req: Request, auth: AuthContext): Promise<Res
 
   if (insertError) {
     console.error('[cost-items/create] erro ao inserir:', insertError.message);
-    throw new AppError('INTERNAL_ERROR', 'Erro ao criar item de custo', 500, {
-      detail: insertError.message,
-    });
+    throw new AppError('INTERNAL_ERROR', 'Erro ao criar item de custo', 500);
   }
 
   // Enriquecer resposta com indicador de calculo automatico

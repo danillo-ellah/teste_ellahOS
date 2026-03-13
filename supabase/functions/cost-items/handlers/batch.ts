@@ -5,7 +5,7 @@ import { created } from '../../_shared/response.ts';
 import { getSupabaseClient } from '../../_shared/supabase-client.ts';
 
 // Roles autorizados para criacao em batch
-const ALLOWED_ROLES = ['financeiro', 'produtor_executivo', 'admin', 'ceo'];
+const ALLOWED_ROLES = ['financeiro', 'produtor_executivo', 'admin', 'ceo', 'diretor_producao', 'coordenador_producao'];
 
 // Schema de um item individual no batch
 const BatchCostItemSchema = z.object({

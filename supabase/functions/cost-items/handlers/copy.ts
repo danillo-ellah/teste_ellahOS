@@ -125,9 +125,7 @@ export async function handleCopy(req: Request, auth: AuthContext, id: string): P
 
   if (insertError) {
     console.error('[cost-items/copy] erro ao copiar:', insertError.message);
-    throw new AppError('INTERNAL_ERROR', 'Erro ao copiar item de custo', 500, {
-      detail: insertError.message,
-    });
+    throw new AppError('INTERNAL_ERROR', 'Erro ao copiar item de custo', 500);
   }
 
   console.log('[cost-items/copy] item copiado com sucesso', {

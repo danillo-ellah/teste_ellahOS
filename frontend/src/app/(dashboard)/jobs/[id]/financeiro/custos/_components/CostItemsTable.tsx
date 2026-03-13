@@ -139,6 +139,15 @@ function DeleteConfirmDialog({
 
 type InlineFieldType = 'currency' | 'integer' | 'text'
 
+const FIELD_LABELS: Record<string, string> = {
+  service_description: 'Descricao do servico',
+  unit_value: 'Valor unitario',
+  quantity: 'Quantidade',
+  overtime_value: 'Horas extras',
+  notes: 'Notas',
+  vendor: 'Fornecedor',
+}
+
 interface InlineEditCellProps {
   itemId: string
   field: string
@@ -223,6 +232,9 @@ function InlineEditCell({
     } else if (fieldType === 'integer') {
       const n = parseInt(draft, 10)
       parsedValue = isNaN(n) || n < 0 ? (originalRef.current as number) : n
+      if (field === 'quantity' && parsedValue === 0) {
+        toast.warning('Quantidade 0 zera o valor total deste item')
+      }
     } else {
       parsedValue = draft.trim() === '' ? null : draft.trim()
     }
@@ -313,7 +325,7 @@ function InlineEditCell({
           align === 'right' && 'text-right',
           className,
         )}
-        aria-label={field}
+        aria-label={FIELD_LABELS[field] ?? field}
       />
     )
   }
@@ -385,7 +397,7 @@ function InlineVendorAutocomplete({
   // Foco no input quando abre
   useEffect(() => {
     if (open) {
-      setTimeout(() => inputRef.current?.focus(), 30)
+      requestAnimationFrame(() => inputRef.current?.focus())
     }
   }, [open])
 
@@ -1109,21 +1121,24 @@ export function CostItemsTable({
   }
 
   // Wrapper estavel para nao recriar closures por item
-  // Intercepta overtime_value (GENERATED column) e converte para overtime_hours=1 + overtime_rate=valor
+  // Intercepta overtime_value (GENERATED column) e converte para overtime_hours + overtime_rate
   const handleSave = useCallback(
     (payload: Record<string, unknown> & { id: string }) => {
       if ('overtime_value' in payload) {
         const val = payload.overtime_value as number | null
         const { overtime_value: _, ...rest } = payload
+        // Preserva overtime_hours existente do item, senao usa 1 como padrao
+        const item = items.find(i => i.id === payload.id)
+        const existingHours = item?.overtime_hours && item.overtime_hours > 0 ? item.overtime_hours : 1
         return updateItem({
           ...rest,
-          overtime_hours: val ? 1 : 0,
-          overtime_rate: val ?? 0,
+          overtime_hours: val ? existingHours : 0,
+          overtime_rate: val ? val / existingHours : 0,
         })
       }
       return updateItem(payload)
     },
-    [updateItem],
+    [updateItem, items],
   )
 
   if (isLoading) {

@@ -113,14 +113,14 @@ const UpdateCostItemSchema = z.object({
   nf_requested_at: z.string().optional().nullable(),
   nf_requested_by: z.string().uuid().optional().nullable(),
   nf_document_id: z.string().uuid().optional().nullable(),
-  nf_drive_url: z.string().optional().nullable(),
-  nf_filename: z.string().optional().nullable(),
+  nf_drive_url: z.string().url().max(2048).optional().nullable(),
+  nf_filename: z.string().max(255).optional().nullable(),
   nf_extracted_value: z.number().optional().nullable(),
   nf_validation_ok: z.boolean().optional().nullable(),
   payment_status: z.enum(['pendente', 'pago', 'cancelado']).optional(),
   payment_date: z.string().optional().nullable(),
-  payment_proof_url: z.string().optional().nullable(),
-  payment_proof_filename: z.string().optional().nullable(),
+  payment_proof_url: z.string().url().max(2048).optional().nullable(),
+  payment_proof_filename: z.string().max(255).optional().nullable(),
 }).strict();
 
 // Busca vendor e conta bancaria primaria para montar snapshot
@@ -365,9 +365,7 @@ export async function handleUpdate(req: Request, auth: AuthContext, id: string):
 
   if (updateError) {
     console.error('[cost-items/update] erro ao atualizar:', updateError.message);
-    throw new AppError('INTERNAL_ERROR', 'Erro ao atualizar item de custo', 500, {
-      detail: updateError.message,
-    });
+    throw new AppError('INTERNAL_ERROR', 'Erro ao atualizar item de custo', 500);
   }
 
   // Inserir historico se o item pertence a um job

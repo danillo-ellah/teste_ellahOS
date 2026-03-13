@@ -112,9 +112,7 @@ export async function handleExport(
 
   if (itemsError) {
     console.error('[cost-items/export] erro ao buscar itens:', itemsError.message);
-    throw new AppError('INTERNAL_ERROR', 'Erro ao buscar itens de custo para export', 500, {
-      detail: itemsError.message,
-    });
+    throw new AppError('INTERNAL_ERROR', 'Erro ao buscar itens de custo para export', 500);
   }
 
   // Definir cabecalhos do CSV

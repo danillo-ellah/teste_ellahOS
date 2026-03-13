@@ -17,11 +17,7 @@ export async function suggestVendors(
   const url = new URL(req.url);
   const q = url.searchParams.get('q') ?? '';
 
-  console.log('[vendors/suggest] sugestao de vendors', {
-    q,
-    userId: auth.userId,
-    tenantId: auth.tenantId,
-  });
+  console.log('[vendors/suggest] q=' + (q || '(vazio)'));
 
   const safeQ = q.replace(/[%_]/g, '').slice(0, 100);
   const supabase = getSupabaseClient(auth.token);
@@ -47,14 +43,14 @@ export async function suggestVendors(
     throw new AppError('INTERNAL_ERROR', dbError.message, 500);
   }
 
-  // Mascarar CPF/CNPJ para seguranca (mostra apenas ultimos 4 digitos)
+  // Mascarar CPF/CNPJ para seguranca (mostra apenas digitos verificadores)
   const maskedVendors = (vendors ?? []).map((v: Record<string, unknown>) => ({
     ...v,
-    cpf: v.cpf ? `***.***.${String(v.cpf).slice(-6, -2)}-${String(v.cpf).slice(-2)}` : null,
-    cnpj: v.cnpj ? `**.***.***/${String(v.cnpj).slice(-6, -2)}-${String(v.cnpj).slice(-2)}` : null,
+    cpf: v.cpf ? `***.***.**-${String(v.cpf).slice(-2)}` : null,
+    cnpj: v.cnpj ? `**.***.***/****-${String(v.cnpj).slice(-2)}` : null,
   }));
 
-  console.log('[vendors/suggest] retornando', maskedVendors.length, 'sugestoes');
+  console.log('[vendors/suggest]', maskedVendors.length, 'resultados');
 
   return success(maskedVendors);
 }

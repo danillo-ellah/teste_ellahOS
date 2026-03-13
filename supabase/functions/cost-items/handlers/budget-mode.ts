@@ -74,9 +74,7 @@ export async function handleBudgetMode(
 
   if (updateError) {
     console.error('[cost-items/budget-mode] erro ao atualizar:', updateError.message);
-    throw new AppError('INTERNAL_ERROR', 'Erro ao atualizar modo de orcamento', 500, {
-      detail: updateError.message,
-    });
+    throw new AppError('INTERNAL_ERROR', 'Erro ao atualizar modo de orcamento', 500);
   }
 
   console.log('[cost-items/budget-mode] modo de orcamento atualizado', {

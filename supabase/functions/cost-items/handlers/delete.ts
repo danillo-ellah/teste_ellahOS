@@ -56,9 +56,7 @@ export async function handleDelete(_req: Request, auth: AuthContext, id: string)
 
   if (deleteError) {
     console.error('[cost-items/delete] erro ao deletar:', deleteError.message);
-    throw new AppError('INTERNAL_ERROR', 'Erro ao deletar item de custo', 500, {
-      detail: deleteError.message,
-    });
+    throw new AppError('INTERNAL_ERROR', 'Erro ao deletar item de custo', 500);
   }
 
   // Inserir historico se o item pertencia a um job

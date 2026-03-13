@@ -73,9 +73,7 @@ export async function handleReferenceJobs(
 
   if (similarError) {
     console.error('[cost-items/reference-jobs] erro ao buscar jobs similares:', similarError.message);
-    throw new AppError('INTERNAL_ERROR', 'Erro ao buscar jobs de referencia', 500, {
-      detail: similarError.message,
-    });
+    throw new AppError('INTERNAL_ERROR', 'Erro ao buscar jobs de referencia', 500);
   }
 
   if (!similarJobs || similarJobs.length === 0) {

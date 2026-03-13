@@ -7,7 +7,7 @@ import { flattenMonstroTemplate, MONSTRO_TEMPLATE, MONSTRO_TEMPLATE_NAME } from 
 import { flattenDigitalTemplate, DIGITAL_TEMPLATE, DIGITAL_TEMPLATE_NAME } from '../data/digital-template.ts';
 import { flattenMotionTemplate, MOTION_TEMPLATE, MOTION_TEMPLATE_NAME } from '../data/motion-template.ts';
 
-const ALLOWED_ROLES = ['ceo', 'produtor_executivo', 'admin', 'diretor_producao', 'coordenador_producao'];
+const ALLOWED_ROLES = ['financeiro', 'produtor_executivo', 'admin', 'ceo', 'diretor_producao', 'coordenador_producao'];
 
 const VALID_TEMPLATES = ['gg', 'monstro', 'digital', 'motion'] as const;
 type TemplateName = typeof VALID_TEMPLATES[number];
@@ -129,9 +129,7 @@ export async function handleApplyTemplate(
 
   if (insertError) {
     console.error('[cost-items/apply-template] erro ao inserir template:', insertError.message);
-    throw new AppError('INTERNAL_ERROR', 'Erro ao aplicar template', 500, {
-      detail: insertError.message,
-    });
+    throw new AppError('INTERNAL_ERROR', 'Erro ao aplicar template', 500);
   }
 
   console.log('[cost-items/apply-template] template aplicado com sucesso', {
