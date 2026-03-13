@@ -1,7 +1,6 @@
 'use client'
 
 import { AlertTriangle, Clock, ChevronDown } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
 import {
   Collapsible,
   CollapsibleContent,

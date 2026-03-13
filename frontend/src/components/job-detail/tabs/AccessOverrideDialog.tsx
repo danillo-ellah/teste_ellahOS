@@ -22,7 +22,7 @@ import { Badge } from '@/components/ui/badge'
 import { useUpdateTeamMember } from '@/hooks/useJobTeam'
 import { ApiRequestError } from '@/lib/api'
 import { JOB_DETAIL_TABS } from '@/lib/constants'
-import type { JobTeamMember, AccessOverride } from '@/types/jobs'
+import type { JobTeamMember } from '@/types/jobs'
 
 interface AccessOverrideDialogProps {
   open: boolean
@@ -33,7 +33,7 @@ interface AccessOverrideDialogProps {
 
 type AccessLevel = 'view_edit' | 'view' | 'view_restricted' | 'hidden'
 
-const ACCESS_LABELS: Record<AccessLevel | 'default', string> = {
+const _ACCESS_LABELS: Record<AccessLevel | 'default', string> = {
   default: 'Padrao',
   view_edit: 'Editar',
   view: 'Visualizar',

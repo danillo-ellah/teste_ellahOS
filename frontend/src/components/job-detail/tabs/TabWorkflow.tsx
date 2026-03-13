@@ -18,12 +18,10 @@ import {
   Paperclip,
   AlertTriangle,
   Loader2,
-  Upload,
   Image,
   FileText,
   Receipt,
   File,
-  Trash2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'

@@ -36,7 +36,7 @@ import { Separator } from '@/components/ui/separator'
 import { EmptyTabState } from '@/components/shared/EmptyTabState'
 import { useScopeItems, useCreateScopeItem, useDecideScopeItem } from '@/hooks/useAttendance'
 import { ApiRequestError } from '@/lib/api'
-import { formatDate, formatRelativeDate } from '@/lib/format'
+import { formatDate } from '@/lib/format'
 import {
   EXTRA_STATUS_LABELS,
   CHANNEL_LABELS,

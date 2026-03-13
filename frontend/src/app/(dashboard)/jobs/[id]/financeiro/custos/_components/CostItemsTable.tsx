@@ -527,7 +527,7 @@ function InlineVendorAutocomplete({
 
 // ---- VendorCell ----
 
-function VendorCell({ item }: { item: CostItem }) {
+function _VendorCell({ item }: { item: CostItem }) {
   if (!item.vendor_name_snapshot) {
     return <span className="text-muted-foreground">-</span>
   }

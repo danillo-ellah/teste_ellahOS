@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { format, addMonths, subMonths } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, CalendarDays, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -210,7 +209,7 @@ export function CalendarView({
   const handleDayClick = useCallback(
     (date: Date) => {
       if (!onAddPhase) return
-      const isWeekend = date.getDay() === 0 || date.getDay() === 6
+      const _isWeekend = date.getDay() === 0 || date.getDay() === 6
       const dateStr = format(date, 'yyyy-MM-dd')
       // Passa a data; o handler do pai abre o dialog (com aviso de FDS se necessario)
       onAddPhase(dateStr)

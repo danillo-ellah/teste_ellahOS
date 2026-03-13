@@ -1,7 +1,6 @@
 'use client'
 
 import { formatCurrency } from '@/lib/format'
-import { cn } from '@/lib/utils'
 import type { CostItem, CostItemListMeta } from '@/types/cost-management'
 import { TrendingUp } from 'lucide-react'
 import {

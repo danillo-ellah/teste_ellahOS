@@ -31,7 +31,6 @@ import {
   useUpdateBudgetVersion,
   useActivateBudgetVersion,
   type OpportunityBudgetVersion,
-  type OpportunityBudgetItem,
 } from '@/hooks/useCrmBudget'
 import type { OpportunityStage } from '@/hooks/useCrm'
 import { generateOpportunityBudgetPdf } from '@/lib/pdf/opportunity-budget-pdf'

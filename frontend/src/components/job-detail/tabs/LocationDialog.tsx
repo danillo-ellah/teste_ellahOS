@@ -194,7 +194,7 @@ export function LocationDialog({
   isPending,
 }: LocationDialogProps) {
   const isEdit = !!jobLocation
-  const [mode, setMode] = useState<'existing' | 'new'>('existing')
+  const [_mode, setMode] = useState<'existing' | 'new'>('existing')
   const [locationSearch, setLocationSearch] = useState('')
   const [locationPickerOpen, setLocationPickerOpen] = useState(false)
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null)

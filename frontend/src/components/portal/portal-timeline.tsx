@@ -5,7 +5,6 @@ import { History } from 'lucide-react'
 import { format, parseISO, isToday, isYesterday, isValid } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 import type { PortalTimelineEvent } from '@/types/portal'
 
 // Cor do dot por tipo de evento

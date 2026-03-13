@@ -59,7 +59,7 @@ export function ContractDetailDrawer({
 function ContractDetailContent({
   submissionId,
   jobId,
-  onClose,
+  onClose: _onClose,
 }: {
   submissionId: string
   jobId: string

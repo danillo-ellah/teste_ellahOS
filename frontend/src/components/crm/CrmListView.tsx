@@ -4,7 +4,6 @@ import { useMemo, useState, memo } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Building2,
-  Calendar,
   ChevronDown,
   ChevronUp,
   ChevronsUpDown,
@@ -154,7 +153,7 @@ export function CrmListView({ pipeline, includeClosed, onOpportunityClick }: Crm
 
   // Flatten pipeline stages into a list
   const allOpportunities = useMemo(() => {
-    const stageKeys = Object.keys(pipeline.stages) as OpportunityStage[]
+    const _stageKeys = Object.keys(pipeline.stages) as OpportunityStage[]
     const activeStages: OpportunityStage[] = ['lead', 'qualificado', 'proposta', 'negociacao', 'fechamento']
     const closedStages: OpportunityStage[] = ['ganho', 'perdido', 'pausado']
 

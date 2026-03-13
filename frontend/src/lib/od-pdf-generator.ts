@@ -525,7 +525,7 @@ export async function generateODPdf(od: ShootingDayOrder): Promise<JsPDFType> {
   y = drawCastSchedule(pdf, od.cast_schedule || [], y)
 
   // 6. Informacoes importantes
-  y = drawImportantInfo(pdf, od.important_info || '', y)
+  drawImportantInfo(pdf, od.important_info || '', y)
 
   // 7. Footer em todas as paginas
   drawFooters(pdf, od)

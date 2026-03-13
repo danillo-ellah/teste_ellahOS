@@ -46,7 +46,7 @@ export function StepMapping({ sheet, entityType, onComplete, onBack }: StepMappi
   )
 
   // Verificar quais colunas do arquivo ja estao mapeadas
-  const mappedSourceColumns = useMemo(
+  const _mappedSourceColumns = useMemo(
     () => new Set(mappings.map((m) => m.sourceColumn)),
     [mappings],
   )
@@ -137,7 +137,7 @@ export function StepMapping({ sheet, entityType, onComplete, onBack }: StepMappi
             {sheet.headers.map((header) => {
               const currentTarget = getTargetForSource(header)
               const targetField = fields.find((f) => f.key === currentTarget)
-              const isRequired = targetField?.required
+              const _isRequired = targetField?.required
               const isMapped = currentTarget !== UNMAPPED
 
               return (

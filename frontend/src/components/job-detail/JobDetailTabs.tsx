@@ -209,7 +209,7 @@ function getTabCount(tabId: JobDetailTabId, job: JobDetail): number | null {
 }
 
 // Descobrir a qual grupo pertence uma tab
-function findGroupIndex(tabId: JobDetailTabId): number {
+function _findGroupIndex(tabId: JobDetailTabId): number {
   for (let i = 0; i < JOB_TAB_GROUPS.length; i++) {
     if (JOB_TAB_GROUPS[i].tabs.some((t) => t.id === tabId)) return i
   }

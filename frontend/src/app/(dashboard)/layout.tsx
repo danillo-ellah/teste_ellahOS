@@ -86,7 +86,7 @@ function DashboardLayoutInner({
   // Detectar area ativa para ambient tint
   const pathname = usePathname()
   const activeArea = useMemo(() => getActiveArea(pathname), [pathname])
-  const tintStyle = useMemo(() => {
+  const _tintStyle = useMemo(() => {
     if (!activeArea) return undefined
     const config = AREA_CONFIG[activeArea]
     return { borderColor: config.color } as React.CSSProperties

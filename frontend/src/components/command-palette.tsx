@@ -22,7 +22,7 @@ import { apiGet } from '@/lib/api'
 import { createClient } from '@/lib/supabase/client'
 import { JOB_STATUS_LABELS } from '@/lib/constants'
 import type { Job, JobStatus } from '@/types/jobs'
-import type { Client, ClientSegment } from '@/types/clients'
+import type { ClientSegment } from '@/types/clients'
 
 // Tipos locais para resultados da busca
 interface SearchResultJob {

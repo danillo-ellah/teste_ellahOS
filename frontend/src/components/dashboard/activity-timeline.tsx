@@ -13,7 +13,6 @@ import {
 } from 'lucide-react'
 import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { ActivityEvent } from '@/hooks/use-dashboard'
 

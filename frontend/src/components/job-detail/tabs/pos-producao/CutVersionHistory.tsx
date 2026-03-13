@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { Plus, ExternalLink, CheckCircle2, XCircle, AlertCircle, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCutVersions } from '@/hooks/usePosProducao'
 import { useUserRole } from '@/hooks/useUserRole'

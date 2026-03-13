@@ -8,7 +8,7 @@ import type { JobDetailTabId } from './constants'
 import type { Database } from '@/types/database'
 
 type UserRole = Database['public']['Enums']['user_role']
-type TeamRole = Database['public']['Enums']['team_role']
+type _TeamRole = Database['public']['Enums']['team_role']
 
 // --- Tipos ---
 

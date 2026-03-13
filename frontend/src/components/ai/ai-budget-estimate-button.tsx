@@ -16,10 +16,6 @@ import {
   SheetFooter,
 } from '@/components/ui/sheet'
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { useAiBudgetEstimate } from '@/hooks/use-ai-budget-estimate'
@@ -104,7 +100,7 @@ interface EstimateResultProps {
   isRegenerating: boolean
 }
 
-function EstimateResult({ result, onRegenerate, isRegenerating }: EstimateResultProps) {
+function EstimateResult({ result, onRegenerate: _onRegenerate, isRegenerating: _isRegenerating }: EstimateResultProps) {
   const { suggested_budget, similar_jobs, reasoning, warnings, tokens_used, cached } =
     result
 

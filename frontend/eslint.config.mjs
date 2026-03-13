@@ -23,6 +23,12 @@ const eslintConfig = defineConfig([
       "react-hooks/preserve-manual-memoization": "warn",
       "react-hooks/incompatible-library": "warn",
       "react-hooks/static-components": "warn",
+      // Permitir variaveis prefixadas com _ (padrao TypeScript)
+      "@typescript-eslint/no-unused-vars": ["warn", {
+        argsIgnorePattern: "^_",
+        varsIgnorePattern: "^_",
+        caughtErrorsIgnorePattern: "^_",
+      }],
     },
   },
 ]);

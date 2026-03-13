@@ -8,7 +8,6 @@ import {
   Search,
   FilterX,
   Wand2,
-  ChevronDown,
   CheckCircle2,
   AlertCircle,
   CircleDot,

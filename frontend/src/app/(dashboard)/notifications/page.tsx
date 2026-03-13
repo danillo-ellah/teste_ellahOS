@@ -75,7 +75,7 @@ export default function NotificationsPage() {
   // Subscription Realtime — invalida queries automaticamente quando chega nova notificacao
   useRealtimeNotifications(userId)
 
-  const { data: notifications, meta, isLoading, isError, error, refetch } = useNotifications(filters)
+  const { data: notifications, meta, isLoading, isError, error: _error, refetch } = useNotifications(filters)
   const { count: unreadCount } = useUnreadCount()
   const markRead = useMarkRead()
   const markAllRead = useMarkAllRead()

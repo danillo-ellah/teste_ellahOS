@@ -160,7 +160,7 @@ interface NfCardProps {
   onReassign: (nf: NfDocument) => void
 }
 
-function NfDocumentCard({ nf, onValidate, onReject, onReassign }: NfCardProps) {
+function NfDocumentCard({ nf, onValidate, onReject, onReassign: _onReassign }: NfCardProps) {
   const issuer = nf.nf_issuer_name ?? nf.extracted_issuer_name
   const value = nf.nf_value ?? nf.extracted_value
 

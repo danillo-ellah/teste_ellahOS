@@ -15,7 +15,6 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
@@ -97,8 +96,8 @@ export default function CustosFixosPage() {
   }), [periodMonth, debouncedSearch, statusFilter])
 
   const { data: items, meta, isLoading } = useCostItems(filters)
-  const createItem = useCreateCostItem()
-  const updateItem = useUpdateCostItem()
+  const _createItem = useCreateCostItem()
+  const _updateItem = useUpdateCostItem()
   const deleteItem = useDeleteCostItem()
 
   const costItems = items ?? []

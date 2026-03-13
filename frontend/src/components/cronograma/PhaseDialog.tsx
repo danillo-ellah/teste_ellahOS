@@ -173,7 +173,7 @@ function PhaseForm({
   const watchedEnd = watch('end_date')
   const watchedSkip = watch('skip_weekends')
   const watchedColor = watch('phase_color')
-  const watchedEmoji = watch('phase_emoji')
+  const _watchedEmoji = watch('phase_emoji')
   const watchedLabel = watch('phase_label')
 
   const workingDays =

@@ -16,7 +16,6 @@ import { BudgetsList } from './BudgetsList'
 import { ReceivablesList } from './ReceivablesList'
 import { useJobAccess } from '@/hooks/useJobAccess'
 import type { JobDetail, UpdateJobPayload } from '@/types/jobs'
-import { useFinancialSummary } from '@/hooks/useFinancialRecords'
 
 interface TabFinanceiroProps {
   job: JobDetail

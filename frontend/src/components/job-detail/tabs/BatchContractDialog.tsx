@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { toast } from 'sonner'
-import { Loader2, UserCheck, AlertCircle } from 'lucide-react'
+import { Loader2, UserCheck } from 'lucide-react'
 import {
   Dialog,
   DialogContent,

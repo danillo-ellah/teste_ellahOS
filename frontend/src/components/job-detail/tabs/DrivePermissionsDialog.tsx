@@ -234,7 +234,7 @@ export function DrivePermissionsDialog({
   onOpenChange,
 }: DrivePermissionsDialogProps) {
   const [activeOnly, setActiveOnly] = useState(true)
-  const { members, meta, isLoading, refetch } = useDrivePermissions(jobId, activeOnly, open)
+  const { members, meta, isLoading, refetch: _refetch } = useDrivePermissions(jobId, activeOnly, open)
   const grantMutation = useGrantMemberPermissions()
   const revokeMutation = useRevokeMemberPermissions()
   const syncMutation = useSyncPermissions()

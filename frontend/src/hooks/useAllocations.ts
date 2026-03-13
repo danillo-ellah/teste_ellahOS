@@ -75,7 +75,7 @@ export function useUpdateAllocation() {
   const qc = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ id, jobId, ...payload }: UpdateAllocationPayload & { id: string; jobId: string }) => {
+    mutationFn: async ({ id, jobId: _jobId, ...payload }: UpdateAllocationPayload & { id: string; jobId: string }) => {
       const res = await apiMutate<Allocation>('allocations', 'PUT', payload as unknown as Record<string, unknown>, id)
       return res
     },

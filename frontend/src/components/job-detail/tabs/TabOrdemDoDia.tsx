@@ -44,7 +44,7 @@ const OD_STATUS_CONFIG: Record<ODStatus, { label: string; className: string }> =
 
 // --- Helpers ---
 
-function formatDate(dateStr: string): string {
+function _formatDate(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00')
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }

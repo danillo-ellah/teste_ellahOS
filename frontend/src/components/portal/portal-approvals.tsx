@@ -51,7 +51,7 @@ function formatApprovalDate(dateStr: string): string {
 // Componente de card de aprovacao individual
 function ApprovalCard({
   approval,
-  token,
+  token: _token,
   onResponded,
 }: {
   approval: PortalApproval

@@ -213,7 +213,7 @@ export function useUpdateBudgetItem() {
   const mutation = useMutation({
     mutationFn: async ({
       id,
-      budgetId,
+      budgetId: _budgetId,
       payload,
     }: {
       id: string
@@ -253,7 +253,7 @@ export function useDeleteBudgetItem() {
   const mutation = useMutation({
     mutationFn: async ({
       id,
-      budgetId,
+      budgetId: _budgetId,
     }: {
       id: string
       budgetId: string

@@ -2,7 +2,6 @@
 
 import { useState, useRef, useCallback } from 'react'
 import { Upload, FileSpreadsheet, AlertCircle } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -20,7 +19,6 @@ import {
 import {
   parseFile,
   computeFileHash,
-  autoMapColumns,
   ENTITY_LABELS,
   IMPORT_LIMITS,
   type EntityType,

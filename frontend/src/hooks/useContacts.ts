@@ -142,7 +142,7 @@ export function useDeleteContact() {
   const mutation = useMutation({
     mutationFn: async ({
       id,
-      entityId,
+      entityId: _entityId,
     }: {
       id: string
       entityId: string

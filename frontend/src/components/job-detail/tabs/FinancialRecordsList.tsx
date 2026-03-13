@@ -38,7 +38,6 @@ import {
   FINANCIAL_RECORD_CATEGORY_LABELS,
   FINANCIAL_RECORD_STATUS_LABELS,
   FINANCIAL_STATUS_STYLE_MAP,
-  PAYMENT_METHOD_LABELS,
 } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import type { FinancialRecord } from '@/types/financial'

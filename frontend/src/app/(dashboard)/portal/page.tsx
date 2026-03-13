@@ -31,7 +31,6 @@ import {
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/format'
 import { usePortalSessions } from '@/hooks/use-portal'
-import { CreateSessionDialog } from '@/components/portal/create-session-dialog'
 import type { PortalSession } from '@/types/portal'
 
 // Componente para copiar link individualmente
