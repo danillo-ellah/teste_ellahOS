@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { Plus, MoreHorizontal, Pencil, Trash2, Users, Star, CalendarDays, FileSignature, Shield } from 'lucide-react'
+import { Plus, MoreHorizontal, Pencil, Trash2, Users, Star, CalendarDays, FileSignature, Shield, Link2, Copy, Check, Loader2, ClipboardList } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -33,6 +33,7 @@ import {
 } from '@/hooks/useJobTeam'
 import { useUserRole, APPROVAL_PDF_ROLES } from '@/hooks/useUserRole'
 import { useJobAccess } from '@/hooks/useJobAccess'
+import { useCrewRegistrations, useToggleCrewRegistration } from '@/hooks/useCrewRegistration'
 import { FEE_VIEW_ROLES } from '@/lib/access-control-map'
 import { ApiRequestError } from '@/lib/api'
 import { TEAM_ROLE_LABELS, HIRING_STATUS_LABELS } from '@/lib/constants'
@@ -317,6 +318,11 @@ export function TabEquipe({ job }: TabEquipeProps) {
         </Table>
       </div>
 
+      {/* Secao: Link de cadastro para equipe */}
+      {canEditTeam && (
+        <CrewRegistrationSection job={job} />
+      )}
+
       {/* Dialog de add/edit */}
       <TeamMemberDialog
         open={dialogOpen}
@@ -364,6 +370,133 @@ export function TabEquipe({ job }: TabEquipeProps) {
 }
 
 // --- Badge de status de contratacao ---
+
+// --- Secao de cadastro de equipe (link publico) ---
+
+function CrewRegistrationSection({ job }: { job: JobDetail }) {
+  const [copied, setCopied] = useState(false)
+  const token = job.crew_registration_token
+  const enabled = job.crew_registration_enabled
+  const toggleMutation = useToggleCrewRegistration()
+  const { data: crewData } = useCrewRegistrations(job.id)
+
+  const registrations = crewData?.registrations ?? []
+  const summary = crewData?.summary
+
+  const crewUrl = token
+    ? `${window.location.origin}/crew/${token}`
+    : null
+
+  async function handleToggle() {
+    try {
+      await toggleMutation.mutateAsync({ job_id: job.id, enabled: !enabled })
+      toast.success(enabled ? 'Link desativado' : 'Link ativado')
+    } catch {
+      toast.error('Erro ao alterar link de cadastro')
+    }
+  }
+
+  function handleCopy() {
+    if (!crewUrl) return
+    navigator.clipboard.writeText(crewUrl)
+    setCopied(true)
+    toast.success('Link copiado!')
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div className="mt-8 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold flex items-center gap-2">
+          <ClipboardList className="size-4 text-muted-foreground" />
+          Cadastro de Equipe
+          {registrations.length > 0 && (
+            <span className="text-xs font-normal text-muted-foreground">
+              ({registrations.length} cadastro{registrations.length !== 1 ? 's' : ''})
+            </span>
+          )}
+        </h3>
+        <Button
+          size="sm"
+          variant={enabled ? 'outline' : 'default'}
+          className="gap-1.5"
+          onClick={handleToggle}
+          disabled={toggleMutation.isPending}
+        >
+          {toggleMutation.isPending ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : (
+            <Link2 className="size-3.5" />
+          )}
+          {enabled ? 'Desativar link' : 'Gerar link de cadastro'}
+        </Button>
+      </div>
+
+      {/* Link ativo */}
+      {enabled && crewUrl && (
+        <div className="flex items-center gap-2 rounded-lg border bg-muted/30 p-3">
+          <Link2 className="size-4 text-muted-foreground shrink-0" />
+          <code className="flex-1 text-xs truncate text-muted-foreground">{crewUrl}</code>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="gap-1.5 shrink-0 h-8"
+            onClick={handleCopy}
+          >
+            {copied ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
+            {copied ? 'Copiado' : 'Copiar'}
+          </Button>
+        </div>
+      )}
+
+      {/* Lista de quem preencheu */}
+      {registrations.length > 0 && (
+        <div className="rounded-lg border border-border overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Funcao</TableHead>
+                <TableHead className="text-center">Diarias</TableHead>
+                <TableHead className="text-right">Cache/dia</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+                <TableHead className="text-center hidden sm:table-cell">Tipo</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {registrations.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell className="font-medium text-sm">{r.full_name}</TableCell>
+                  <TableCell>
+                    <span className="text-xs text-muted-foreground">{r.job_role}</span>
+                  </TableCell>
+                  <TableCell className="text-center tabular-nums">{r.num_days}</TableCell>
+                  <TableCell className="text-right tabular-nums text-sm">
+                    {formatCurrency(r.daily_rate)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums font-medium text-sm">
+                    {formatCurrency(r.total)}
+                  </TableCell>
+                  <TableCell className="text-center hidden sm:table-cell">
+                    <Badge variant="secondary" className="text-[10px]">
+                      {r.is_veteran ? 'Veterano' : 'Novo'}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          {summary && (
+            <div className="flex items-center justify-between px-4 py-2.5 border-t bg-muted/20 text-sm">
+              <span className="text-muted-foreground">{summary.count} profissiona{summary.count !== 1 ? 'is' : 'l'}</span>
+              <span className="font-semibold tabular-nums">Total: {formatCurrency(summary.grand_total)}</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function HiringStatusBadge({ status }: { status: string }) {
   const colorMap: Record<string, string> = {

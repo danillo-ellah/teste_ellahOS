@@ -186,6 +186,10 @@ export interface Job {
   created_by: string | null
   updated_by: string | null
 
+  // Cadastro de equipe (link publico)
+  crew_registration_token: string | null
+  crew_registration_enabled: boolean
+
   // Relacionamentos expandidos (joins)
   clients?: { id: string; name: string; logo_url?: string | null }
   agencies?: { id: string; name: string; logo_url?: string | null }
