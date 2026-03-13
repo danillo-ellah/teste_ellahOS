@@ -2,6 +2,7 @@ import { z } from 'https://esm.sh/zod@3.22.4'
 import { getServiceClient } from '../../_shared/supabase-client.ts'
 import { AppError } from '../../_shared/errors.ts'
 import { success, error, fromAppError } from '../../_shared/response.ts'
+import { sendEmail, buildCrewReceiptHtml } from '../../_shared/email.ts'
 import { JOB_ROLES } from './job-roles.ts'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -82,7 +83,7 @@ export async function handlePublicSubmit(
   // ----------------------------------------------------------------
   const { data: job, error: jobError } = await serviceClient
     .from('jobs')
-    .select('id, tenant_id, title, code, crew_registration_enabled')
+    .select('id, tenant_id, title, code, crew_registration_enabled, tenants!inner(name)')
     .eq('crew_registration_token', token)
     .is('deleted_at', null)
     .single()
@@ -119,7 +120,7 @@ export async function handlePublicSubmit(
 // ----------------------------------------------------------------
 async function processVeteran(
   _req: Request,
-  job: { id: string; tenant_id: string; title: string; code: string },
+  job: { id: string; tenant_id: string; title: string; code: string; tenants: { name: string } },
   rawBody: Record<string, unknown>,
   serviceClient: ReturnType<typeof getServiceClient>,
 ): Promise<Response> {
@@ -221,13 +222,32 @@ async function processVeteran(
     `[crew-registration/submit/veteran] registro criado: id=${registration.id} job=${job.id} vendor=${vendor.id}`,
   )
 
+  // Enviar comprovante por e-mail (fire-and-forget)
+  const total = Number(registration.num_days) * Number(registration.daily_rate)
+  sendEmail({
+    to: registration.email,
+    subject: `Cadastro confirmado — ${job.code} ${job.title}`,
+    html: buildCrewReceiptHtml({
+      freelancer_name: registration.full_name,
+      job_code: job.code,
+      job_title: job.title,
+      tenant_name: job.tenants.name,
+      job_role: registration.job_role,
+      num_days: registration.num_days,
+      daily_rate: registration.daily_rate,
+      total,
+      is_veteran: true,
+      registered_at: registration.created_at,
+    }),
+  }).catch(() => {}) // nunca bloquear resposta por falha de email
+
   return success({
     id:         registration.id,
     full_name:  registration.full_name,
     job_role:   registration.job_role,
     num_days:   registration.num_days,
     daily_rate: registration.daily_rate,
-    total:      Number(registration.num_days) * Number(registration.daily_rate),
+    total,
     is_veteran: registration.is_veteran,
   }, 201)
 }
@@ -237,7 +257,7 @@ async function processVeteran(
 // ----------------------------------------------------------------
 async function processNewVendor(
   _req: Request,
-  job: { id: string; tenant_id: string; title: string; code: string },
+  job: { id: string; tenant_id: string; title: string; code: string; tenants: { name: string } },
   rawBody: Record<string, unknown>,
   serviceClient: ReturnType<typeof getServiceClient>,
 ): Promise<Response> {
@@ -286,7 +306,6 @@ async function processNewVendor(
     .insert({
       tenant_id:          job.tenant_id,
       full_name:          data.full_name,
-      normalized_name:    data.full_name.toLowerCase().trim(),
       entity_type:        data.entity_type ?? 'pf',
       cpf:                cpfClean ?? null,
       cnpj:               cnpjClean ?? null,
@@ -367,13 +386,32 @@ async function processNewVendor(
     `[crew-registration/submit/new] registro criado: id=${registration.id} job=${job.id} novo vendor=${vendorId}`,
   )
 
+  // Enviar comprovante por e-mail (fire-and-forget)
+  const total = Number(registration.num_days) * Number(registration.daily_rate)
+  sendEmail({
+    to: registration.email,
+    subject: `Cadastro confirmado — ${job.code} ${job.title}`,
+    html: buildCrewReceiptHtml({
+      freelancer_name: registration.full_name,
+      job_code: job.code,
+      job_title: job.title,
+      tenant_name: job.tenants.name,
+      job_role: registration.job_role,
+      num_days: registration.num_days,
+      daily_rate: registration.daily_rate,
+      total,
+      is_veteran: false,
+      registered_at: registration.created_at,
+    }),
+  }).catch(() => {}) // nunca bloquear resposta por falha de email
+
   return success({
     id:         registration.id,
     full_name:  registration.full_name,
     job_role:   registration.job_role,
     num_days:   registration.num_days,
     daily_rate: registration.daily_rate,
-    total:      Number(registration.num_days) * Number(registration.daily_rate),
+    total,
     is_veteran: registration.is_veteran,
   }, 201)
 }
