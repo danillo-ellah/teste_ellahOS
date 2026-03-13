@@ -88,7 +88,37 @@ export function useApproveCrewRegistration() {
         { registration_id: payload.registration_id, action: payload.action },
         'approve',
       ),
-    onSuccess: (_data, variables) => {
+    // Optimistic update — muda status na tela instantaneamente
+    onMutate: async (variables) => {
+      const key = crewKeys.registrations(variables.job_id)
+      await qc.cancelQueries({ queryKey: key })
+      const previous = qc.getQueryData(key)
+
+      qc.setQueryData(key, (old: { data: CrewRegistrationListData } | undefined) => {
+        if (!old?.data) return old
+        const newStatus: CrewRegistrationStatus = variables.action === 'approve' ? 'aprovado' : 'reprovado'
+        return {
+          ...old,
+          data: {
+            ...old.data,
+            registrations: old.data.registrations.map((r) =>
+              r.id === variables.registration_id
+                ? { ...r, status: newStatus, approved_at: new Date().toISOString() }
+                : r,
+            ),
+          },
+        }
+      })
+
+      return { previous }
+    },
+    onError: (_err, variables, context) => {
+      // Rollback em caso de erro
+      if (context?.previous) {
+        qc.setQueryData(crewKeys.registrations(variables.job_id), context.previous)
+      }
+    },
+    onSettled: (_data, _err, variables) => {
       qc.invalidateQueries({ queryKey: crewKeys.registrations(variables.job_id) })
       qc.invalidateQueries({ queryKey: jobKeys.detail(variables.job_id) })
     },

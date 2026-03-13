@@ -390,6 +390,7 @@ function CrewStatusBadge({ status }: { status: CrewRegistrationStatus }) {
 
 function CrewRegistrationSection({ job }: { job: JobDetail }) {
   const [copied, setCopied] = useState(false)
+  const [processingId, setProcessingId] = useState<string | null>(null)
   const token = job.crew_registration_token
   const enabled = job.crew_registration_enabled
   const toggleMutation = useToggleCrewRegistration()
@@ -421,6 +422,8 @@ function CrewRegistrationSection({ job }: { job: JobDetail }) {
   }
 
   async function handleApprove(registrationId: string, action: 'approve' | 'reject') {
+    if (processingId) return // previne duplo clique
+    setProcessingId(registrationId)
     try {
       await approveMutation.mutateAsync({
         registration_id: registrationId,
@@ -430,6 +433,8 @@ function CrewRegistrationSection({ job }: { job: JobDetail }) {
       toast.success(action === 'approve' ? 'Profissional aprovado e adicionado a equipe!' : 'Cadastro reprovado')
     } catch {
       toast.error(action === 'approve' ? 'Erro ao aprovar' : 'Erro ao reprovar')
+    } finally {
+      setProcessingId(null)
     }
   }
 
@@ -524,10 +529,10 @@ function CrewRegistrationSection({ job }: { job: JobDetail }) {
                           variant="ghost"
                           className="h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
                           onClick={() => handleApprove(r.id, 'approve')}
-                          disabled={approveMutation.isPending}
+                          disabled={processingId !== null}
                           title="Aprovar — adiciona a equipe"
                         >
-                          {approveMutation.isPending ? (
+                          {processingId === r.id ? (
                             <Loader2 className="size-4 animate-spin" />
                           ) : (
                             <CheckCircle2 className="size-4" />
@@ -538,7 +543,7 @@ function CrewRegistrationSection({ job }: { job: JobDetail }) {
                           variant="ghost"
                           className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
                           onClick={() => handleApprove(r.id, 'reject')}
-                          disabled={approveMutation.isPending}
+                          disabled={processingId !== null}
                           title="Reprovar"
                         >
                           <XCircle className="size-4" />
