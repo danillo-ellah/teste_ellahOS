@@ -276,8 +276,35 @@ async function fetchCep(cep: string): Promise<{
 } | null> {
   const clean = cep.replace(/\D/g, '')
   if (clean.length !== 8) return null
+
+  // Tenta BrasilAPI primeiro (mais rapida), fallback para ViaCEP
   try {
-    const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`)
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 4000)
+    const res = await fetch(`https://brasilapi.com.br/api/cep/v2/${clean}`, {
+      signal: controller.signal,
+    })
+    clearTimeout(timeout)
+    if (res.ok) {
+      const data = await res.json()
+      return {
+        logradouro: data.street || '',
+        bairro: data.neighborhood || '',
+        localidade: data.city || '',
+        uf: data.state || '',
+      }
+    }
+  } catch {
+    // Fallback para ViaCEP
+  }
+
+  try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 4000)
+    const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`, {
+      signal: controller.signal,
+    })
+    clearTimeout(timeout)
     const data = await res.json()
     if (data.erro) return null
     return data
@@ -430,10 +457,13 @@ export default function CrewRegistrationPage({
     }
   }
 
+  const [cepError, setCepError] = useState<string | null>(null)
+
   // Busca CEP automaticamente quando o usuario digita 8 digitos
   function handleCepChange(rawValue: string) {
     const masked = maskCep(rawValue)
     setField('zip_code', masked)
+    setCepError(null)
 
     const digits = masked.replace(/\D/g, '')
     if (digits.length === 8) {
@@ -441,6 +471,7 @@ export default function CrewRegistrationPage({
       fetchCep(digits).then((data) => {
         setCepLoading(false)
         if (data) {
+          setCepError(null)
           setForm((prev) => ({
             ...prev,
             address_street: data.logradouro || prev.address_street,
@@ -448,6 +479,8 @@ export default function CrewRegistrationPage({
             address_city: data.localidade || prev.address_city,
             address_state: data.uf || prev.address_state,
           }))
+        } else {
+          setCepError('CEP nao encontrado')
         }
       })
     }
@@ -993,6 +1026,7 @@ export default function CrewRegistrationPage({
                     submitting={submitting}
                     onCepChange={handleCepChange}
                     cepLoading={cepLoading}
+                    cepError={cepError}
                     showTitle={false}
                   />
                   <BankSection
@@ -1044,6 +1078,7 @@ export default function CrewRegistrationPage({
                     submitting={submitting}
                     onCepChange={handleCepChange}
                     cepLoading={cepLoading}
+                    cepError={cepError}
                     showTitle={false}
                   />
                 </CardContent>
@@ -1286,6 +1321,7 @@ function AddressSection({
   submitting,
   onCepChange,
   cepLoading,
+  cepError,
   showTitle,
 }: {
   form: FormState
@@ -1293,6 +1329,7 @@ function AddressSection({
   submitting: boolean
   onCepChange: (value: string) => void
   cepLoading: boolean
+  cepError?: string | null
   showTitle: boolean
 }) {
   return (
@@ -1316,9 +1353,13 @@ function AddressSection({
             <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 size-4 animate-spin text-rose-400" />
           )}
         </div>
-        <p className="text-xs text-zinc-400 mt-1">
-          Preencha o CEP e o endereco sera preenchido automaticamente.
-        </p>
+        {cepError ? (
+          <p className="text-xs text-red-500 mt-1">{cepError}</p>
+        ) : (
+          <p className="text-xs text-zinc-400 mt-1">
+            Preencha o CEP e o endereco sera preenchido automaticamente.
+          </p>
+        )}
       </FormField>
 
       <FormField label="Rua / Avenida">
