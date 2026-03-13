@@ -25,6 +25,7 @@ import {
   Pause,
   ArrowRight,
   XCircle,
+  Trash2,
 } from 'lucide-react'
 import {
   Dialog,
@@ -33,6 +34,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -53,6 +64,7 @@ import {
   useOpportunityActivities,
   useAddActivity,
   useUpdateOpportunity,
+  useDeleteOpportunity,
   type OpportunityDetail,
   type OpportunityActivity,
   type AddActivityPayload,
@@ -173,10 +185,12 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
   const [winReason, setWinReason] = useState('')
   const [winFormOpen, setWinFormOpen] = useState(false)
   const [convertOpen, setConvertOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   const { data: activities } = useOpportunityActivities(opportunity.id)
   const addActivityMutation = useAddActivity(opportunity.id)
   const updateMutation = useUpdateOpportunity(opportunity.id)
+  const deleteMutation = useDeleteOpportunity(opportunity.id)
 
   const config = STAGE_CONFIG[opportunity.stage]
   const nextStage = NEXT_STAGE[opportunity.stage]
@@ -249,6 +263,16 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
       toast.success('Oportunidade marcada como ganha')
       setWinReason('')
       setWinFormOpen(false)
+    } catch (err) {
+      toast.error(safeErrorMessage(err as Error))
+    }
+  }
+
+  async function handleDelete() {
+    try {
+      await deleteMutation.mutateAsync()
+      toast.success('Oportunidade excluida')
+      router.push('/crm')
     } catch (err) {
       toast.error(safeErrorMessage(err as Error))
     }
@@ -819,6 +843,19 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
                   </Button>
                 </>
               )}
+
+              {/* Excluir — apenas se nao tem job vinculado */}
+              {!opportunity.job_id && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="w-full gap-1.5 h-11 sm:h-9 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  <Trash2 className="size-3.5" />
+                  Excluir oportunidade
+                </Button>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -930,6 +967,29 @@ export function OpportunityFullDetail({ opportunity }: OpportunityFullDetailProp
         onOpenChange={setConvertOpen}
         opportunity={opportunity}
       />
+
+      {/* Confirmacao de exclusao */}
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir oportunidade?</AlertDialogTitle>
+            <AlertDialogDescription>
+              &quot;{opportunity.title}&quot; sera removida do pipeline. Propostas e atividades vinculadas tambem serao excluidas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-1.5"
+            >
+              {deleteMutation.isPending && <Loader2 className="size-3.5 animate-spin" />}
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

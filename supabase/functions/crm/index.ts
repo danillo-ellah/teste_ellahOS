@@ -25,6 +25,7 @@ import { handleListBudgetVersions } from './handlers/budget/list-versions.ts';
 import { handleUpsertBudgetVersion } from './handlers/budget/upsert-version.ts';
 import { handleActivateBudgetVersion } from './handlers/budget/activate-version.ts';
 import { handleGetLossAnalytics } from './handlers/get-loss-analytics.ts';
+import { handleDeleteOpportunity } from './handlers/delete-opportunity.ts';
 
 // Rotas nomeadas que devem ser verificadas antes de interpretar segment1 como :id
 const NAMED_ROUTES_SEGMENT1 = new Set([
@@ -163,6 +164,11 @@ Deno.serve(async (req: Request) => {
       // PATCH /crm/opportunities/:id
       if (!segment3 && method === 'PATCH') {
         return await handleUpdateOpportunity(req, auth, id);
+      }
+
+      // DELETE /crm/opportunities/:id
+      if (!segment3 && method === 'DELETE') {
+        return await handleDeleteOpportunity(req, auth, id);
       }
 
       // POST /crm/opportunities/:id/proposals

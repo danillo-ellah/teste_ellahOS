@@ -516,6 +516,26 @@ export function useConvertToJob(opportunityId: string) {
   })
 }
 
+export function useDeleteOpportunity(id: string) {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: () =>
+      apiMutate<{ id: string; deleted: boolean }>(
+        'crm',
+        'DELETE',
+        undefined,
+        `opportunities/${id}`,
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: crmKeys.pipeline() })
+      qc.invalidateQueries({ queryKey: crmKeys.alerts() })
+      qc.invalidateQueries({ queryKey: crmKeys.stats() })
+      qc.invalidateQueries({ queryKey: crmKeys.dashboard() })
+    },
+  })
+}
+
 export function useGenerateBudgetLetter() {
   const qc = useQueryClient()
   return useMutation({
