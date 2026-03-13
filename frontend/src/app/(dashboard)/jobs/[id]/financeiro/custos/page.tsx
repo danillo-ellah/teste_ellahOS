@@ -10,6 +10,7 @@ import { ApplyTemplateDialog } from './_components/ApplyTemplateDialog'
 import { ImportFromJobDialog } from './_components/ImportFromJobDialog'
 import { EmptyStateWithActions } from './_components/EmptyStateWithActions'
 import { CostItemsTotals } from './_components/CostItemsTotals'
+import { CostItemHistorySheet } from './_components/CostItemHistorySheet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -19,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { FileDown } from 'lucide-react'
+import { FileDown, History } from 'lucide-react'
 import { useCostItems } from '@/hooks/useCostItems'
 import { useJob } from '@/hooks/useJob'
 import { createClient } from '@/lib/supabase/client'
@@ -68,6 +69,9 @@ export default function JobCostsPage({ params }: PageProps) {
 
   // Dialog de import from job
   const [importDialogOpen, setImportDialogOpen] = useState(false)
+
+  // Sheet de historico de alteracoes
+  const [historySheetOpen, setHistorySheetOpen] = useState(false)
 
   // Selecao em lote
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -203,6 +207,10 @@ export default function JobCostsPage({ params }: PageProps) {
           <Button variant="outline" size="sm" onClick={handleExportPdf} disabled={isExportingPdf}>
             <FileDown className="size-4 mr-1.5" />
             {isExportingPdf ? 'Gerando...' : 'Exportar PDF'}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setHistorySheetOpen(true)}>
+            <History className="size-4 mr-1.5" />
+            Historico
           </Button>
           <Button size="sm" onClick={handleAddNew}>
             Adicionar Item
@@ -352,6 +360,13 @@ export default function JobCostsPage({ params }: PageProps) {
         onOpenChange={setImportDialogOpen}
         jobId={jobId}
         onSuccess={() => {}}
+      />
+
+      {/* Sheet de historico de alteracoes dos itens de custo */}
+      <CostItemHistorySheet
+        open={historySheetOpen}
+        onOpenChange={setHistorySheetOpen}
+        jobId={jobId}
       />
     </div>
   )

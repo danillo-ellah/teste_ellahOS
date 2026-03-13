@@ -17,6 +17,7 @@ import { handleApplyTemplate } from './handlers/apply-template.ts';
 import { handleImportFromJob } from './handlers/import-from-job.ts';
 import { handleReferenceJobs } from './handlers/reference-jobs.ts';
 import { handleExport } from './handlers/export.ts';
+import { handleHistory } from './handlers/history.ts';
 
 // Rotas nomeadas que devem ser verificadas antes do :id
 const NAMED_ROUTES = new Set([
@@ -27,6 +28,7 @@ const NAMED_ROUTES = new Set([
   'import-from-job',
   'reference-jobs',
   'export',
+  'history',
 ]);
 
 Deno.serve(async (req: Request) => {
@@ -91,6 +93,11 @@ Deno.serve(async (req: Request) => {
     // GET /cost-items/export/:jobId
     if (segment1 === 'export' && segment2 && method === 'GET') {
       return await handleExport(req, auth, segment2);
+    }
+
+    // GET /cost-items/history/:jobId
+    if (segment1 === 'history' && segment2 && method === 'GET') {
+      return await handleHistory(req, auth, segment2);
     }
 
     // Rotas com :id (segment1 eh UUID, nao uma rota nomeada)

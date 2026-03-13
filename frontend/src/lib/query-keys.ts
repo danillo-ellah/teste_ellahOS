@@ -214,6 +214,8 @@ export const costItemKeys = {
   detail: (id: string) => [...costItemKeys.details(), id] as const,
   budgetSummary: (jobId: string) => [...costItemKeys.all, 'budget-summary', jobId] as const,
   referenceJobs: (jobId: string) => [...costItemKeys.all, 'reference-jobs', jobId] as const,
+  history: (jobId: string, filters?: Record<string, string>) =>
+    [...costItemKeys.all, 'history', jobId, filters] as const,
 }
 
 export const paymentKeys = {
