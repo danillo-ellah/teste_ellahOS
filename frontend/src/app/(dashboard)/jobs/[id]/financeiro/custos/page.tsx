@@ -20,17 +20,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { FileDown, History } from 'lucide-react'
-import { useCostItems } from '@/hooks/useCostItems'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { FileDown, History, ChevronDown, Loader2 } from 'lucide-react'
+import { useCostItems, useUpdateCostItem } from '@/hooks/useCostItems'
 import { useJob } from '@/hooks/useJob'
 import { createClient } from '@/lib/supabase/client'
 import { formatCurrency } from '@/lib/format'
 import {
   ITEM_STATUS_LABELS,
+  ITEM_STATUS_COLORS,
+  PAYMENT_CONDITION_LABELS,
+  PAYMENT_CONDITION_COLORS,
   type CostItem,
   type CostItemFilters,
   type ItemStatus,
   type PaymentStatus,
+  type PaymentCondition,
 } from '@/types/cost-management'
 
 interface PageProps {
@@ -77,6 +87,8 @@ export default function JobCostsPage({ params }: PageProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   const { data: costItems, meta, isLoading, isError } = useCostItems(filters)
+  const { mutateAsync: updateItem } = useUpdateCostItem()
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false)
 
   // Busca dados do job para extrair a data base de calculo de vencimento
   const { data: job } = useJob(jobId)
@@ -126,6 +138,21 @@ export default function JobCostsPage({ params }: PageProps) {
   function handlePaymentSuccess() {
     setSelectedIds(new Set())
     setPaymentItemIds([])
+  }
+
+  async function handleBulkUpdate(field: string, value: string | null) {
+    const ids = Array.from(selectedIds)
+    if (!ids.length) return
+    setIsBulkUpdating(true)
+    try {
+      await Promise.all(ids.map(id => updateItem({ id, [field]: value })))
+      toast.success(`${ids.length} item(s) atualizado(s)`)
+      setSelectedIds(new Set())
+    } catch {
+      toast.error('Erro ao atualizar itens em lote')
+    } finally {
+      setIsBulkUpdating(false)
+    }
   }
 
   const [isExportingPdf, setIsExportingPdf] = useState(false)
@@ -270,19 +297,66 @@ export default function JobCostsPage({ params }: PageProps) {
         </Select>
       </div>
 
-      {/* Selecao em lote */}
+      {/* Selecao em lote + bulk edit */}
       {selectedIds.size > 0 && (
-        <div className="flex items-center gap-3 rounded-md bg-muted px-3 py-2">
-          <span className="text-sm">
-            {selectedIds.size} item(s) selecionado(s)
+        <div className="flex items-center gap-2 flex-wrap rounded-md bg-muted px-3 py-2">
+          <span className="text-sm font-medium">
+            {selectedIds.size} item(s)
           </span>
-          <Button size="sm" onClick={handlePaySelected}>
-            Pagar Selecionados
+
+          {/* Bulk: Alterar Status */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline" disabled={isBulkUpdating}>
+                {isBulkUpdating ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : null}
+                Alterar Status
+                <ChevronDown className="size-3.5 ml-1 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[170px]">
+              {(Object.entries(ITEM_STATUS_LABELS) as [ItemStatus, string][]).map(([key, label]) => (
+                <DropdownMenuItem
+                  key={key}
+                  onClick={() => handleBulkUpdate('item_status', key)}
+                  className="text-xs gap-2"
+                >
+                  <span className={`inline-block size-2 rounded-full shrink-0 ${ITEM_STATUS_COLORS[key]?.replace(/text-\S+/g, '')}`} />
+                  {label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Bulk: Alterar Cond. Pgto */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline" disabled={isBulkUpdating}>
+                Cond. Pgto
+                <ChevronDown className="size-3.5 ml-1 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[170px]">
+              {(Object.entries(PAYMENT_CONDITION_LABELS) as [PaymentCondition, string][]).map(([key, label]) => (
+                <DropdownMenuItem
+                  key={key}
+                  onClick={() => handleBulkUpdate('payment_condition', key)}
+                  className="text-xs gap-2"
+                >
+                  <span className={`inline-block size-2 rounded-full shrink-0 ${PAYMENT_CONDITION_COLORS[key]?.replace(/text-\S+/g, '')}`} />
+                  {label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button size="sm" onClick={handlePaySelected} disabled={isBulkUpdating}>
+            Pagar
           </Button>
           <Button
             size="sm"
             variant="ghost"
             onClick={() => setSelectedIds(new Set())}
+            disabled={isBulkUpdating}
           >
             Limpar
           </Button>
