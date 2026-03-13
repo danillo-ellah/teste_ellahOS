@@ -2,10 +2,9 @@
 
 import { useState } from 'react'
 import dynamic from 'next/dynamic'
-import { Target, Plus, BarChart3, RefreshCw, LayoutGrid, List } from 'lucide-react'
+import { Plus, BarChart3, RefreshCw, LayoutGrid, List } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Separator } from '@/components/ui/separator'
 import { useCrmPipeline } from '@/hooks/useCrm'
 import { CrmKanban } from '@/components/crm/CrmKanban'
 import { CrmListView } from '@/components/crm/CrmListView'
@@ -35,25 +34,22 @@ export default function CrmPage() {
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <Target className="size-6 text-primary" />
-          <div>
-            <h1 className="text-xl font-semibold">Comercial</h1>
-            <p className="text-sm text-muted-foreground">
-              Propostas e negociacoes em andamento
-              {pipeline && (
-                <span className="ml-1">&middot; {pipeline.total_opportunities} oportunidade{pipeline.total_opportunities !== 1 ? 's' : ''}</span>
-              )}
-            </p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Comercial</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Pipeline de oportunidades
+            {pipeline && (
+              <span className="ml-1 text-foreground/60">&middot; {pipeline.total_opportunities} oportunidade{pipeline.total_opportunities !== 1 ? 's' : ''}</span>
+            )}
+          </p>
         </div>
 
         <div className="flex items-center gap-2">
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={() => refetch()}
-            className="gap-2 min-h-[44px] sm:min-h-0"
+            className="gap-1.5 min-h-[44px] sm:min-h-0 text-muted-foreground hover:text-foreground"
           >
             <RefreshCw className="size-3.5" />
             <span className="hidden sm:inline">Atualizar</span>
@@ -63,16 +59,16 @@ export default function CrmPage() {
             variant="outline"
             size="sm"
             onClick={() => setStatsDialogOpen(true)}
-            className="gap-2 min-h-[44px] sm:min-h-0"
+            className="gap-1.5 min-h-[44px] sm:min-h-0"
           >
             <BarChart3 className="size-3.5" />
-            <span className="hidden sm:inline">Metricas</span>
+            Metricas
           </Button>
 
           <Button
             size="sm"
             onClick={() => setCreateDialogOpen(true)}
-            className="gap-2 min-h-[44px] sm:min-h-0"
+            className="gap-1.5 min-h-[44px] sm:min-h-0 shadow-sm"
           >
             <Plus className="size-3.5" />
             Nova Oportunidade
@@ -86,40 +82,40 @@ export default function CrmPage() {
       {/* Alertas de follow-up */}
       <CrmAlertsBanner />
 
-      <Separator />
-
       {/* Filtros + toggle de visualizacao */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-sm text-muted-foreground hidden sm:inline">Visualizar:</span>
-        <button
-          onClick={() => setIncludeClosed(false)}
-          className={`rounded-full px-4 py-2 text-xs font-medium transition-colors min-h-[44px] sm:min-h-0 sm:py-1.5 sm:px-3 ${
-            !includeClosed
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'bg-muted text-muted-foreground hover:bg-muted/80'
-          }`}
-        >
-          Pipeline ativo
-        </button>
-        <button
-          onClick={() => setIncludeClosed(true)}
-          className={`rounded-full px-4 py-2 text-xs font-medium transition-colors min-h-[44px] sm:min-h-0 sm:py-1.5 sm:px-3 ${
-            includeClosed
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'bg-muted text-muted-foreground hover:bg-muted/80'
-          }`}
-        >
-          Historico completo
-        </button>
+      <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="flex items-center rounded-full border border-border/60 bg-muted/30 p-0.5">
+          <button
+            onClick={() => setIncludeClosed(false)}
+            className={`rounded-full px-4 py-2 text-xs font-medium transition-all min-h-[44px] sm:min-h-[32px] ${
+              !includeClosed
+                ? 'bg-card text-foreground shadow-sm border border-border/60'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Pipeline ativo
+          </button>
+          <button
+            onClick={() => setIncludeClosed(true)}
+            className={`rounded-full px-4 py-2 text-xs font-medium transition-all min-h-[44px] sm:min-h-[32px] ${
+              includeClosed
+                ? 'bg-card text-foreground shadow-sm border border-border/60'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Tudo
+          </button>
+        </div>
 
         <div className="flex-1" />
+
         {/* Toggle Kanban / Lista */}
-        <div className="flex items-center rounded-lg border bg-muted/30 p-0.5">
+        <div className="flex items-center rounded-full border border-border/60 bg-muted/30 p-0.5">
           <button
             onClick={() => setViewMode('kanban')}
-            className={`flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-all min-h-[44px] sm:min-h-0 ${
+            className={`flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-medium transition-all min-h-[44px] sm:min-h-[32px] ${
               viewMode === 'kanban'
-                ? 'bg-primary text-primary-foreground shadow-sm'
+                ? 'bg-card text-foreground shadow-sm border border-border/60'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -128,9 +124,9 @@ export default function CrmPage() {
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-all min-h-[44px] sm:min-h-0 ${
+            className={`flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-medium transition-all min-h-[44px] sm:min-h-[32px] ${
               viewMode === 'list'
-                ? 'bg-primary text-primary-foreground shadow-sm'
+                ? 'bg-card text-foreground shadow-sm border border-border/60'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >

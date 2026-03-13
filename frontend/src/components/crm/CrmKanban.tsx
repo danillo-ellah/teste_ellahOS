@@ -30,55 +30,63 @@ import { LossFeedbackDialog, type LossFeedback } from './LossFeedbackDialog'
 
 export const STAGE_CONFIG: Record<
   OpportunityStage,
-  { label: string; color: string; badgeClass: string; headerClass: string }
+  { label: string; color: string; badgeClass: string; headerClass: string; dotClass: string }
 > = {
   lead: {
     label: 'Consulta',
     color: 'bg-slate-500',
     badgeClass: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
-    headerClass: 'border-l-4 border-l-slate-400',
+    headerClass: '',
+    dotClass: 'bg-slate-400',
   },
   qualificado: {
     label: 'Em Analise',
     color: 'bg-blue-500',
     badgeClass: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
-    headerClass: 'border-l-4 border-l-blue-400',
+    headerClass: '',
+    dotClass: 'bg-blue-500',
   },
   proposta: {
     label: 'Orc. Enviado',
     color: 'bg-violet-500',
     badgeClass: 'bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300',
-    headerClass: 'border-l-4 border-l-violet-400',
+    headerClass: '',
+    dotClass: 'bg-violet-500',
   },
   negociacao: {
     label: 'Negociacao',
     color: 'bg-amber-500',
     badgeClass: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
-    headerClass: 'border-l-4 border-l-amber-400',
+    headerClass: '',
+    dotClass: 'bg-amber-500',
   },
   fechamento: {
     label: 'Aprovacao',
     color: 'bg-orange-500',
     badgeClass: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300',
-    headerClass: 'border-l-4 border-l-orange-400',
+    headerClass: '',
+    dotClass: 'bg-orange-500',
   },
   ganho: {
     label: 'Fechado',
     color: 'bg-emerald-500',
     badgeClass: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300',
-    headerClass: 'border-l-4 border-l-emerald-400',
+    headerClass: '',
+    dotClass: 'bg-emerald-500',
   },
   perdido: {
     label: 'Perdido',
     color: 'bg-red-500',
     badgeClass: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
-    headerClass: 'border-l-4 border-l-red-400',
+    headerClass: '',
+    dotClass: 'bg-red-500',
   },
   pausado: {
     label: 'Pausado',
     color: 'bg-slate-400',
     badgeClass: 'bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-400',
-    headerClass: 'border-l-4 border-l-slate-400',
+    headerClass: '',
+    dotClass: 'bg-slate-400',
   },
 }
 
@@ -472,24 +480,27 @@ const KanbanColumn = memo(function KanbanColumn({
     <div
       ref={setNodeRef}
       className={cn(
-        'flex w-72 shrink-0 flex-col rounded-lg border bg-muted/30 transition-all duration-150',
-        config.headerClass,
+        'flex w-72 shrink-0 flex-col rounded-xl border border-border/60 bg-muted/20 transition-all duration-200 overflow-hidden',
+        'dark:bg-muted/10',
         // Coluna valida com hover: borda verde + fundo sutil
         isOver && transitionValid &&
-          'border-emerald-400 bg-emerald-50/40 ring-1 ring-emerald-300 dark:bg-emerald-950/20 dark:ring-emerald-700',
+          'border-emerald-400 bg-emerald-50/30 ring-1 ring-emerald-300/50 dark:bg-emerald-950/15 dark:ring-emerald-700/50',
         // Coluna invalida com hover: borda vermelha sutil
         isOver && !transitionValid && isDragging &&
-          'border-red-300/70 bg-red-50/20 dark:bg-red-950/10',
-        // Colunas validas piscam levemente durante qualquer drag
+          'border-red-300/50 bg-red-50/10 dark:bg-red-950/10',
+        // Colunas validas indicam sutil durante qualquer drag
         !isOver && isDragging && transitionValid &&
-          'border-blue-300/50 bg-blue-50/10 dark:bg-blue-950/10',
+          'border-primary/30 bg-primary/[0.02]',
       )}
     >
+      {/* Barra de cor no topo */}
+      <div className={cn('h-1 w-full', config.color)} />
+
       {/* Header da coluna */}
-      <div className="flex items-center justify-between px-3 py-2.5">
+      <div className="flex items-center justify-between px-3.5 py-3">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-sm font-semibold">{config.label}</span>
-          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-[11px] font-semibold text-muted-foreground">
+          <span className="text-[13px] font-semibold tracking-tight">{config.label}</span>
+          <span className="flex h-5 min-w-5 items-center justify-center rounded-md bg-muted/80 px-1.5 text-[10px] font-bold text-muted-foreground tabular-nums">
             {items.length}
           </span>
           {isOver && transitionValid && (
@@ -498,39 +509,35 @@ const KanbanColumn = memo(function KanbanColumn({
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           {formattedValue && (
-            <span className="text-[11px] font-semibold text-muted-foreground tabular-nums">{formattedValue}</span>
+            <span className="text-[11px] font-semibold text-muted-foreground/80 tabular-nums">{formattedValue}</span>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 rounded-lg"
+          <button
             onClick={onAddClick}
             title={`Nova oportunidade em ${config.label}`}
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground"
           >
-            <Plus className="size-4" />
-          </Button>
+            <Plus className="size-3.5" />
+          </button>
         </div>
       </div>
 
-      <div className="h-px bg-border" />
-
       {/* Cards */}
-      <div className="flex flex-col gap-2 p-2 overflow-y-auto max-h-[calc(100vh-320px)]">
+      <div className="flex flex-col gap-2.5 px-2.5 pb-3 pt-1 overflow-y-auto max-h-[calc(100vh-320px)]">
         {items.length === 0 ? (
           <button
             onClick={onAddClick}
             className={cn(
-              'flex flex-col items-center gap-1.5 rounded-md border border-dashed p-4 text-muted-foreground',
-              'transition-colors hover:border-primary/40 hover:text-foreground',
+              'flex flex-col items-center gap-2 rounded-xl border border-dashed border-border/60 p-6 text-muted-foreground/60',
+              'transition-all hover:border-primary/30 hover:text-muted-foreground hover:bg-card/50',
               isOver && transitionValid &&
-                'border-emerald-400 bg-emerald-50/60 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400',
+                'border-emerald-400 bg-emerald-50/40 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400',
             )}
           >
-            <Plus className="size-4 opacity-50" />
-            <span className="text-xs">
-              {isOver && transitionValid ? 'Soltar aqui' : 'Adicionar oportunidade'}
+            <Plus className="size-4" />
+            <span className="text-[11px] font-medium">
+              {isOver && transitionValid ? 'Soltar aqui' : 'Adicionar'}
             </span>
           </button>
         ) : (

@@ -235,10 +235,10 @@ export function CrmListView({ pipeline, includeClosed, onOpportunityClick }: Crm
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border">
+    <div className="overflow-x-auto rounded-xl border border-border/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)]">
       <Table>
         <TableHeader>
-          <TableRow className="hover:bg-transparent bg-muted/30">
+          <TableRow className="hover:bg-transparent bg-muted/20 border-b border-border/60">
             {COLUMNS.map((col) => (
               <TableHead
                 key={col.key}

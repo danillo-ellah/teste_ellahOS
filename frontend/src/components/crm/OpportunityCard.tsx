@@ -1,7 +1,7 @@
 'use client'
 
 import { memo } from 'react'
-import { CalendarDays, Building2, ChevronRight, Shield, GripVertical, AlertTriangle } from 'lucide-react'
+import { CalendarDays, Building2, Shield, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Opportunity } from '@/hooks/useCrm'
 
@@ -55,7 +55,6 @@ export const OpportunityCard = memo(function OpportunityCard({ opportunity, onCl
   const agencyName = opportunity.agencies?.name
   const assignedName = opportunity.assigned_profile?.full_name
 
-  // Prazo de retorno (response_deadline) tem prioridade sobre expected_close_date no card
   const deadlineStr = opportunity.response_deadline ?? null
   const closeDateStr = opportunity.expected_close_date ?? null
   const deadlineDays = daysUntil(deadlineStr)
@@ -69,37 +68,33 @@ export const OpportunityCard = memo(function OpportunityCard({ opportunity, onCl
       onClick={onClick}
       aria-label={`Ver detalhes: ${opportunity.title}`}
       className={cn(
-        'group flex flex-col gap-2.5 rounded-lg border bg-card p-3.5 text-left shadow-sm transition-all',
-        'hover:border-primary/40 hover:shadow-md active:scale-[0.98]',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+        'group relative flex flex-col gap-3 rounded-xl border bg-card p-4 text-left transition-all duration-200',
+        'shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)]',
+        'hover:border-primary/30 active:scale-[0.98]',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+        'dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)] dark:hover:shadow-[0_4px_12px_rgba(0,0,0,0.3)]',
       )}
     >
-      {/* Titulo + drag handle */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-start gap-1.5 min-w-0">
-          <GripVertical className="mt-0.5 size-4 shrink-0 text-muted-foreground/40 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" aria-hidden="true" />
-          <div className="min-w-0">
-            <span className="text-sm font-medium leading-snug line-clamp-2">
-              {opportunity.title}
-            </span>
-            {opportunity.orc_code && (
-              <span className="block text-[10px] font-mono text-muted-foreground leading-tight mt-0.5">
-                {opportunity.orc_code}
-              </span>
-            )}
-          </div>
-        </div>
-        <ChevronRight className="mt-0.5 size-3.5 shrink-0 text-muted-foreground opacity-60 sm:opacity-0 transition-opacity sm:group-hover:opacity-100" />
+      {/* Titulo */}
+      <div className="min-w-0">
+        <span className="text-[13px] font-semibold leading-snug line-clamp-2 text-foreground">
+          {opportunity.title}
+        </span>
+        {opportunity.orc_code && (
+          <span className="block text-[10px] font-mono text-muted-foreground/70 leading-tight mt-0.5">
+            {opportunity.orc_code}
+          </span>
+        )}
       </div>
 
       {/* Agencia + Cliente */}
       {(agencyName || clientName) && (
-        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Building2 className="size-3.5 shrink-0" />
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Building2 className="size-3 shrink-0 opacity-60" />
           {agencyName && clientName ? (
             <span className="truncate">
               {agencyName}
-              <span className="mx-1 text-xs text-muted-foreground/60">→</span>
+              <span className="mx-1 opacity-40">/</span>
               {clientName}
             </span>
           ) : (
@@ -110,74 +105,80 @@ export const OpportunityCard = memo(function OpportunityCard({ opportunity, onCl
 
       {/* Concorrencia badge */}
       {opportunity.is_competitive_bid && (
-        <div className="flex items-center gap-1">
-          <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-400">
-            <Shield className="size-3" />
-            Concorrencia
-          </span>
-        </div>
+        <span className="inline-flex items-center gap-1 self-start rounded-full border border-amber-200/80 bg-amber-50/80 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:border-amber-700/50 dark:bg-amber-950/50 dark:text-amber-400">
+          <Shield className="size-2.5" />
+          Concorrencia
+        </span>
       )}
 
-      {/* Footer: valor + deadline/data */}
-      <div className="flex items-end justify-between gap-1 pt-0.5">
-        <div className="flex flex-col gap-1">
-          {formattedValue && (
-            <span className="text-sm font-semibold tabular-nums">{formattedValue}</span>
+      {/* Valor em destaque */}
+      {formattedValue && (
+        <span className="text-base font-bold tabular-nums tracking-tight text-foreground">
+          {formattedValue}
+        </span>
+      )}
+
+      {/* Prazo de retorno */}
+      {deadlineStr ? (
+        <div
+          className={cn(
+            'flex items-center gap-1.5 text-xs',
+            deadlineOverdue
+              ? 'text-red-600 dark:text-red-400'
+              : deadlineDays !== null && deadlineDays <= 3
+                ? 'text-amber-600 dark:text-amber-400'
+                : 'text-muted-foreground',
           )}
-
-          {/* Prazo de retorno (response_deadline) */}
-          {deadlineStr ? (
-            <div
-              className={cn(
-                'flex items-center gap-1 text-[13px]',
-                deadlineOverdue
-                  ? 'text-destructive'
-                  : deadlineDays !== null && deadlineDays <= 3
-                    ? 'text-amber-600 dark:text-amber-400'
-                    : 'text-muted-foreground',
-              )}
-            >
-              <CalendarDays className="size-3 shrink-0" />
-              {deadlineOverdue ? (
-                <span className="inline-flex items-center gap-0.5 font-medium"><AlertTriangle className="size-3" />vencido</span>
-              ) : deadlineDays !== null && deadlineDays <= 3 && deadlineDays >= 0 ? (
-                <span>
-                  retorno:{' '}
-                  <span className="font-medium">
-                    em {deadlineDays === 0 ? 'hoje' : `${deadlineDays}d`}
-                  </span>
-                </span>
-              ) : (
-                <span>retorno: {deadlineFormatted}</span>
-              )}
-            </div>
-          ) : closeDateFormatted ? (
-            <div
-              className={cn(
-                'flex items-center gap-1 text-[13px]',
-                closeDateOverdue ? 'text-destructive' : 'text-muted-foreground',
-              )}
-            >
-              <CalendarDays className="size-3 shrink-0" />
-              <span>{closeDateFormatted}</span>
-              {closeDateOverdue && <span className="inline-flex items-center gap-0.5 font-medium"><AlertTriangle className="size-3" />atrasado</span>}
-            </div>
-          ) : null}
+        >
+          <CalendarDays className="size-3 shrink-0" />
+          {deadlineOverdue ? (
+            <span className="inline-flex items-center gap-1 font-semibold">
+              <AlertTriangle className="size-3" />
+              Prazo vencido
+            </span>
+          ) : deadlineDays !== null && deadlineDays <= 3 && deadlineDays >= 0 ? (
+            <span>
+              Retorno{' '}
+              <span className="font-semibold">
+                {deadlineDays === 0 ? 'hoje' : `em ${deadlineDays}d`}
+              </span>
+            </span>
+          ) : (
+            <span>Retorno: {deadlineFormatted}</span>
+          )}
         </div>
+      ) : closeDateFormatted ? (
+        <div
+          className={cn(
+            'flex items-center gap-1.5 text-xs',
+            closeDateOverdue ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground',
+          )}
+        >
+          <CalendarDays className="size-3 shrink-0" />
+          <span>{closeDateFormatted}</span>
+          {closeDateOverdue && (
+            <span className="inline-flex items-center gap-0.5 font-semibold">
+              <AlertTriangle className="size-3" />
+              atrasado
+            </span>
+          )}
+        </div>
+      ) : null}
 
-        {/* Indicador de temperatura */}
+      {/* Footer: assignee + temperatura */}
+      <div className="flex items-center justify-between gap-2 pt-0.5 border-t border-border/50">
+        {assignedName ? (
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-bold text-primary">
+              {assignedName.charAt(0).toUpperCase()}
+            </div>
+            <span className="truncate text-xs text-muted-foreground">{assignedName.split(' ')[0]}</span>
+          </div>
+        ) : (
+          <div />
+        )}
         <HeatIndicator probability={opportunity.probability} />
       </div>
-
-      {/* Assignee */}
-      {assignedName && (
-        <div className="flex items-center gap-1.5">
-          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
-            {assignedName.charAt(0).toUpperCase()}
-          </div>
-          <span className="truncate text-xs text-muted-foreground">{assignedName}</span>
-        </div>
-      )}
     </button>
   )
 })
@@ -185,18 +186,17 @@ export const OpportunityCard = memo(function OpportunityCard({ opportunity, onCl
 function HeatIndicator({ probability }: { probability: number }) {
   const heat =
     probability >= 70
-      ? { label: 'Quente', desc: 'Alta chance de fechar', dotClass: 'bg-emerald-500', textClass: 'text-emerald-600 dark:text-emerald-400' }
+      ? { label: 'Quente', dotClass: 'bg-emerald-500', textClass: 'text-emerald-600 dark:text-emerald-400' }
       : probability >= 40
-        ? { label: 'Morno', desc: 'Chance moderada', dotClass: 'bg-amber-500', textClass: 'text-amber-600 dark:text-amber-400' }
-        : { label: 'Frio', desc: 'Baixa chance de fechar', dotClass: 'bg-blue-500', textClass: 'text-blue-600 dark:text-blue-400' }
+        ? { label: 'Morno', dotClass: 'bg-amber-500', textClass: 'text-amber-600 dark:text-amber-400' }
+        : { label: 'Frio', dotClass: 'bg-blue-500', textClass: 'text-blue-600 dark:text-blue-400' }
 
   return (
     <span
-      className={cn('inline-flex items-center gap-1 text-[13px] font-medium', heat.textClass)}
-      title={`${heat.label} — ${heat.desc} (${probability}%)`}
-      aria-label={`Temperatura: ${heat.label} (${probability}% de probabilidade)`}
+      className={cn('inline-flex items-center gap-1.5 text-[11px] font-semibold', heat.textClass)}
+      title={`${probability}% de probabilidade`}
     >
-      <span className={cn('inline-block size-2 rounded-full', heat.dotClass)} />
+      <span className={cn('inline-block size-1.5 rounded-full', heat.dotClass)} />
       {heat.label}
     </span>
   )
